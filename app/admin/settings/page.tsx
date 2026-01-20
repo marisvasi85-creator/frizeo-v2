@@ -2,146 +2,160 @@
 
 import { useEffect, useState } from "react";
 
-/* ================= TYPES ================= */
-
-type BarberSettings = {
-  slot_duration_minutes: number;
-  break_between_minutes: number;
-  cancel_limit_hours: number;
-};
-
-/* ================= PAGE ================= */
+const BARBER_ID = "11111111-1111-1111-1111-111111111111"; // ← barberul tău
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<BarberSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  /* ================= FETCH SETTINGS ================= */
+  // ===== STATE =====
+  const [workStart, setWorkStart] = useState("09:00");
+  const [workEnd, setWorkEnd] = useState("17:00");
 
+  const [slotMinutes, setSlotMinutes] = useState(30);
+  const [cancelLimitHours, setCancelLimitHours] = useState(24);
+
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5]);
+
+  const [breakStart, setBreakStart] = useState<string | null>(null);
+  const [breakEnd, setBreakEnd] = useState<string | null>(null);
+
+  // ===== LOAD EXISTING SETTINGS =====
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const res = await fetch("/api/admin/settings");
+    fetch(`/api/barber-settings?barberId=${BARBER_ID}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data) return;
 
-        if (!res.ok) {
-          throw new Error("Nu s-au putut încărca setările");
-        }
+        setWorkStart(data.work_start);
+        setWorkEnd(data.work_end);
+        setSlotMinutes(data.slot_duration);
+        setCancelLimitHours(data.cancel_limit_hours);
+        setWorkingDays(data.working_days || []);
 
-        const data = await res.json();
-        setSettings({
-          slot_duration_minutes: data.slot_duration_minutes,
-          break_between_minutes: data.break_between_minutes,
-          cancel_limit_hours: data.cancel_limit_hours,
-        });
-      } catch (err) {
-        setError("Eroare la încărcarea setărilor");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSettings();
+        setBreakStart(data.break_start);
+        setBreakEnd(data.break_end);
+      });
   }, []);
 
-  /* ================= SAVE SETTINGS ================= */
+  // ===== SAVE =====
+  async function saveSettings() {
+  setLoading(true);
 
-  const handleSave = async () => {
-    if (!settings) return;
+  const payload = {
+    barber_id: BARBER_ID,
 
-    setSaving(true);
-    setMessage(null);
-    setError(null);
+    // 🔴 OBLIGATORII
+    slot_duration: slotMinutes,
+    start_time: workStart,
+    end_time: workEnd,
+    work_start: workStart,
+    work_end: workEnd,
+    working_days: workingDays,
+    cancel_limit_hours: cancelLimitHours,
 
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(settings),
-      });
-
-      if (!res.ok) {
-        throw new Error("Eroare la salvare");
-      }
-
-      setMessage("Setările au fost salvate cu succes");
-    } catch (err) {
-      setError("Nu s-au putut salva setările");
-    } finally {
-      setSaving(false);
-    }
+    // 🟡 OPȚIONALE
+    break_enabled: !!breakStart && !!breakEnd,
+    break_start: breakStart,
+    break_end: breakEnd,
   };
 
-  /* ================= RENDER ================= */
+  const res = await fetch("/api/barber-settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
 
-  if (loading) {
-    return <p>Se încarcă setările...</p>;
+  const data = await res.json();
+  setLoading(false);
+
+  if (!res.ok) {
+    alert("EROARE: " + data.error);
+    return;
   }
 
-  if (error) {
-    return <p style={{ color: "red" }}>{error}</p>;
-  }
+  alert("Setări salvate");
+}
 
-  if (!settings) {
-    return <p>Nu există setări disponibile.</p>;
-  }
-
+  // ===== UI =====
   return (
     <div style={{ maxWidth: 420 }}>
-      <h1>Setări frizer</h1>
+      <h2>Program general</h2>
 
-      <label style={{ display: "block", marginBottom: 12 }}>
-        Durata programare (minute)
-        <input
-          type="number"
-          value={settings.slot_duration_minutes}
-          onChange={(e) =>
-            setSettings({
-              ...settings,
-              slot_duration_minutes: Number(e.target.value),
-            })
-          }
-        />
-      </label>
+      <label>Start lucru</label>
+      <input
+        type="time"
+        value={workStart}
+        onChange={(e) => setWorkStart(e.target.value)}
+      />
 
-      <label style={{ display: "block", marginBottom: 12 }}>
-        Pauză între programări (minute)
-        <input
-          type="number"
-          value={settings.break_between_minutes}
-          onChange={(e) =>
-            setSettings({
-              ...settings,
-              break_between_minutes: Number(e.target.value),
-            })
-          }
-        />
-      </label>
+      <label>Final lucru</label>
+      <input
+        type="time"
+        value={workEnd}
+        onChange={(e) => setWorkEnd(e.target.value)}
+      />
 
-      <label style={{ display: "block", marginBottom: 12 }}>
-        Limită anulare (ore)
-        <input
-          type="number"
-          value={settings.cancel_limit_hours}
-          onChange={(e) =>
-            setSettings({
-              ...settings,
-              cancel_limit_hours: Number(e.target.value),
-            })
-          }
-        />
-      </label>
+      <label>Durată slot (minute)</label>
+      <input
+        type="number"
+        min={5}
+        step={5}
+        value={slotMinutes}
+        onChange={(e) => setSlotMinutes(Number(e.target.value))}
+      />
 
-      <button onClick={handleSave} disabled={saving}>
-        {saving ? "Se salvează..." : "Salvează"}
+      <label>Limită anulare (ore)</label>
+      <input
+        type="number"
+        min={1}
+        value={cancelLimitHours}
+        onChange={(e) => setCancelLimitHours(Number(e.target.value))}
+      />
+
+      <h3>Zile lucrătoare</h3>
+      {[1, 2, 3, 4, 5, 6, 0].map((d) => (
+        <label key={d} style={{ display: "block" }}>
+          <input
+            type="checkbox"
+            checked={workingDays.includes(d)}
+            onChange={() =>
+              setWorkingDays((prev) =>
+                prev.includes(d)
+                  ? prev.filter((x) => x !== d)
+                  : [...prev, d]
+              )
+            }
+          />
+          Ziua {d === 0 ? "Duminică" : d}
+        </label>
+      ))}
+
+      <h3>Pauză (opțional)</h3>
+
+      <label>Pauză start</label>
+      <input
+        type="time"
+        value={breakStart ?? ""}
+        onChange={(e) =>
+          setBreakStart(e.target.value || null)
+        }
+      />
+
+      <label>Pauză end</label>
+      <input
+        type="time"
+        value={breakEnd ?? ""}
+        onChange={(e) =>
+          setBreakEnd(e.target.value || null)
+        }
+      />
+
+      <br />
+      <br />
+
+      <button onClick={saveSettings} disabled={loading}>
+        {loading ? "Salvare..." : "Salvează"}
       </button>
-
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
     </div>
   );
 }

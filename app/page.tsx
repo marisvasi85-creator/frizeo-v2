@@ -1,28 +1,29 @@
 import Link from "next/link";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
 export default async function Home() {
-  const { data: barbers, error } = await supabaseAdmin
+  const supabase = supabaseServer();
+
+  const { data: barbers, error } = await supabase
     .from("barbers")
-    .select("*");
+    .select("id, display_name")
+    .eq("active", true);
 
   if (error) {
-    throw new Error(error.message);
+    return <p>Eroare la încărcare frizeri</p>;
   }
 
   return (
-    <main>
-      <h1>Barbers</h1>
+    <div style={{ padding: 24 }}>
+      <h1>Alege frizerul</h1>
 
-      <ul>
-        {barbers?.map((barber) => (
-          <li key={barber.id}>
-            <Link href={`/booking/${barber.id}`}>
-              {barber.name}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
+      {barbers?.map((b) => (
+        <div key={b.id}>
+          <Link href={`/booking/${b.id}`}>
+            {b.display_name}
+          </Link>
+        </div>
+      ))}
+    </div>
   );
 }

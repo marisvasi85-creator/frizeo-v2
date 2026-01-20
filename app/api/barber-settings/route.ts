@@ -1,29 +1,36 @@
 import { NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/server";
+import { supabaseServer } from "@/lib/supabase/server";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const barberId = searchParams.get("barberId");
+export async function POST(req: Request) {
+  const supabase = supabaseServer();
+  const body = await req.json();
 
-  if (!barberId) {
-    return NextResponse.json(
-      { error: "Missing barberId" },
-      { status: 400 }
-    );
-  }
+  const { barber_id, ...rest } = body;
 
-  const { data, error } = await supabaseAdmin
-    .from("barber_settings")
-    .select("*")
-    .eq("barber_id", barberId)
+  // 1️⃣ Luăm tenant_id din barbers
+  const { data: barber } = await supabase
+    .from("barbers")
+    .select("tenant_id")
+    .eq("id", barber_id)
     .single();
 
-  if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+  if (!barber?.tenant_id) {
+    return NextResponse.json({ error: "Tenant lipsă" }, { status: 400 });
   }
 
-  return NextResponse.json(data);
+  // 2️⃣ Salvăm settings CU tenant_id
+  const { error } = await supabase
+    .from("barber_settings")
+    .upsert({
+      barber_id,
+      tenant_id: barber.tenant_id,
+      ...rest,
+    });
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
 }
+

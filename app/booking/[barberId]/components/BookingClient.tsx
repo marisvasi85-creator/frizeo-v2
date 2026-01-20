@@ -10,74 +10,83 @@ type Props = {
 };
 
 export default function BookingClient({ barberId }: Props) {
-  /* ================= STATE ================= */
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [slots, setSlots] = useState<string[]>([]);
-  const [occupiedSlots, setOccupiedSlots] = useState<string[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [slots, setSlots] = useState<string[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingDone, setBookingDone] = useState(false);
 
-  /* ================= SLOTURI FIXE (TEMPORAR) ================= */
-  const ALL_SLOTS = [
-    "09:00",
-    "10:00",
-    "11:00",
-    "12:00",
-    "13:00",
-    "14:00",
-    "15:00",
-    "16:00",
-  ];
-
-  /* ================= FETCH SLOTURI OCUPATE ================= */
   useEffect(() => {
     if (!selectedDate) return;
 
-    setLoading(true);
     setSelectedSlot(null);
+    setBookingDone(false);
 
-    fetch(
-      `/api/bookings/occupied?barberId=${barberId}&date=${selectedDate}`
-    )
-      .then((res) => res.json())
-      .then((data: string[]) => {
-        setOccupiedSlots(data);
-        setSlots(ALL_SLOTS);
-      })
-      .catch(() => {
-        setOccupiedSlots([]);
-        setSlots(ALL_SLOTS);
-      })
-      .finally(() => setLoading(false));
+    async function loadSlots() {
+      setLoadingSlots(true);
+      const res = await fetch(
+        `/api/bookings/available?barberId=${barberId}&date=${selectedDate}`
+      );
+      const data = await res.json();
+      setSlots(data);
+      setLoadingSlots(false);
+    }
+
+    loadSlots();
   }, [selectedDate, barberId]);
 
-  /* ================= UI ================= */
+  useEffect(() => {
+  if (!bookingDone) return;
+
+  // forțează reload sloturi după booking
+  async function reloadSlots() {
+    const res = await fetch(
+      `/api/bookings/available?barberId=${barberId}&date=${selectedDate}`
+    );
+    const data = await res.json();
+    setSlots(data);
+  }
+
+  reloadSlots();
+}, [bookingDone]);
+
   return (
-    <div className="space-y-6">
-      {/* CALENDAR */}
+    <div style={{ maxWidth: 500 }}>
+      <h2>Programează-te</h2>
+
       <Calendar
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
       />
 
-      {/* SLOT PICKER */}
       {selectedDate && (
-        <SlotPicker
-          slots={slots}
-          occupiedSlots={occupiedSlots}
-          selectedSlot={selectedSlot}
-          onSelectSlot={setSelectedSlot}
-          loading={loading}
-        />
+  <SlotPicker
+    barberId={barberId}      // ✅ DA
+    date={selectedDate}     // ✅ DA
+    slots={slots}
+    selectedSlot={selectedSlot}
+    onSelectSlot={setSelectedSlot}
+    loading={loadingSlots}
+  />
+)}
+
+      {selectedDate && selectedSlot && !bookingDone && (
+        <BookingForm
+  barberId={barberId}
+  date={selectedDate}
+  time={selectedSlot}
+  onSuccess={() => {
+    setBookingDone(true);
+    setSelectedSlot(null);
+  }}
+/>
+
       )}
 
-      {/* FORMULAR BOOKING */}
-      {selectedDate && selectedSlot && (
-        <BookingForm
-          barberId={barberId}
-          date={selectedDate}
-          time={selectedSlot}
-        />
+      {bookingDone && (
+        <p style={{ marginTop: 16 }}>
+          ✅ Programare confirmată. Verifică emailul!
+        </p>
       )}
     </div>
   );

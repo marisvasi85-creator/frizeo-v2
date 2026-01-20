@@ -1,48 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Props = {
   token: string;
 };
 
 export default function CancelClient({ token }: Props) {
-  const [message, setMessage] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
-  async function cancelBooking() {
-    setLoading(true);
+  useEffect(() => {
+    async function cancelBooking() {
+      try {
+        const res = await fetch("/api/bookings/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        });
 
-    const res = await fetch("/api/bookings/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token }),
-    });
+        const data = await res.json();
+console.log("TOKEN PAGE:", token);
 
-    const data = await res.json();
-
-    if (!res.ok) {
-      setMessage(data.message || "Anularea nu a reușit");
-      setLoading(false);
-      return;
+        if (!res.ok) {
+          setMessage(data.error || "Eroare la anulare");
+        } else {
+          setMessage(data.message || "Programarea a fost anulată");
+        }
+      } catch {
+        setMessage("Eroare server");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    setMessage("Programarea a fost anulată cu succes");
-    setLoading(false);
+    cancelBooking();
+  }, [token]);
+
+  if (loading) {
+    return <p>Se procesează anularea...</p>;
   }
 
-  // ✅ DOAR componenta returnează JSX
   return (
-    <div style={{ padding: 40 }}>
+    <div style={{ maxWidth: 400 }}>
       <h2>Anulare programare</h2>
-
-      {!message ? (
-        <button onClick={cancelBooking} disabled={loading}>
-          {loading ? "Se anulează..." : "Confirmă anularea"}
-        </button>
-      ) : (
-        <p>{message}</p>
-      )}
+      <p>{message}</p>
     </div>
   );
 }
