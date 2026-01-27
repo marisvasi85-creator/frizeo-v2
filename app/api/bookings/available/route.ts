@@ -1,108 +1,104 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+
+type Booking = {
+  booking_time: string;
+};
+
+type Override = {
+  is_closed: boolean;
+  start_time: string | null;
+  end_time: string | null;
+};
+
+const toMinutes = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const toTime = (m: number) => {
+  const h = String(Math.floor(m / 60)).padStart(2, "0");
+  const mm = String(m % 60).padStart(2, "0");
+  return `${h}:${mm}`;
+};
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date");
 
   if (!barberId || !date) {
-    return NextResponse.json({ error: "Parametri lipsă" }, { status: 400 });
+    return NextResponse.json({ slots: [] });
   }
 
-  const supabase = supabaseServer();
-  /* =========================
-     1️⃣ Setări frizer
-  ========================= */
+  // 🔑 AICI ERA PROBLEMA
+  const supabase = await createClient();
+
+  /* SETTINGS */
   const { data: settings } = await supabase
     .from("barber_settings")
-    .select(`
-      slot_duration,
-      start_time,
-      end_time,
-      break_enabled,
-      break_start,
-      break_end,
-      barbers (
-        tenant_id
-      )
-    `)
+    .select("*")
     .eq("barber_id", barberId)
     .single();
 
   if (!settings) {
-    return NextResponse.json({ error: "Setări frizer lipsă" }, { status: 404 });
+    return NextResponse.json({ slots: [] });
   }
 
-  const tenantId = settings.barbers?.[0]?.tenant_id;
-
-  if (!tenantId) {
-    return NextResponse.json({ error: "Tenant lipsă" }, { status: 400 });
-  }
-
-  /* =========================
-     2️⃣ Sloturi deja rezervate
-  ========================= */
+  /* BOOKINGS */
   const { data: bookings } = await supabase
     .from("bookings")
     .select("booking_time")
     .eq("barber_id", barberId)
-    .eq("tenant_id", tenantId)
-    .eq("booking_date", date)
-    .eq("status", "confirmed");
+    .eq("date", date);
 
-  const bookedSlots = bookings?.map(b => b.booking_time) || [];
+  const busy = new Set(
+    (bookings || []).map((b: Booking) => b.booking_time)
+  );
 
-  /* =========================
-     3️⃣ Generăm sloturile
-  ========================= */
-  const toMinutes = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    return h * 60 + m;
-  };
+  /* OVERRIDES */
+  const { data: overrides } = await supabase
+    .from("barber_overrides")
+    .select("*")
+    .eq("barber_id", barberId)
+    .eq("date", date);
 
-  const toTime = (m: number) => {
-    const h = Math.floor(m / 60);
-    const mm = m % 60;
-    return `${String(h).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
-  };
+  if (overrides?.some((o: Override) => o.is_closed)) {
+    return NextResponse.json({ slots: [] });
+  }
+
+  /* GENERARE SLOTURI */
+  const slots: string[] = [];
 
   const start = toMinutes(settings.start_time);
   const end = toMinutes(settings.end_time);
   const duration = settings.slot_duration;
 
-  const breakStart = settings.break_enabled
-    ? toMinutes(settings.break_start)
-    : null;
-
-  const breakEnd = settings.break_enabled
-    ? toMinutes(settings.break_end)
-    : null;
-
-  const slots: string[] = [];
-
   for (let m = start; m + duration <= end; m += duration) {
-    // ❌ eliminăm pauza
+    const time = toTime(m);
+
     if (
       settings.break_enabled &&
-      breakStart !== null &&
-      breakEnd !== null &&
-      m >= breakStart &&
-      m < breakEnd
+      m >= toMinutes(settings.break_start) &&
+      m < toMinutes(settings.break_end)
     ) {
       continue;
     }
 
-    const time = toTime(m);
+    if (busy.has(time)) continue;
 
-    // ❌ eliminăm sloturile rezervate
-    if (bookedSlots.includes(time)) {
-      continue;
+    const blocked = overrides?.some((o: Override) => {
+      if (!o.start_time || !o.end_time) return false;
+      return (
+        m >= toMinutes(o.start_time) &&
+        m < toMinutes(o.end_time)
+      );
+    });
+
+    if (!blocked) {
+      slots.push(time);
     }
-
-    slots.push(time);
   }
 
-  return NextResponse.json(slots);
+  return NextResponse.json({ slots });
 }

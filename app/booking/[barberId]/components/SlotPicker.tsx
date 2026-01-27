@@ -1,37 +1,61 @@
 "use client";
 
+import { useState } from "react";
+
 type Props = {
-  barberId: string;
-  date: string;
   slots: string[];
   selectedSlot: string | null;
-  onSelectSlot: (slot: string) => void;
-  loading: boolean;
+  onSelect: (slot: string) => void;
+  loading?: boolean;
 };
-
 
 export default function SlotPicker({
   slots,
   selectedSlot,
-  onSelectSlot,
+  onSelect,
   loading,
 }: Props) {
-  if (loading) return <p>Se încarcă sloturile…</p>;
-  if (!slots.length) return <p>Nu mai sunt sloturi disponibile</p>;
+  const [pendingSlot, setPendingSlot] = useState<string | null>(null);
+
+  const handleClick = (slot: string) => {
+    setPendingSlot(slot);
+    onSelect(slot);
+  };
+
+  if (loading) {
+    return <p>Se încarcă sloturile...</p>;
+  }
+
+  if (!slots.length) {
+    return <p>Nu mai sunt sloturi disponibile</p>;
+  }
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {slots.map((slot) => (
-        <button
-          key={slot}
-          onClick={() => onSelectSlot(slot)}
-          className={`border px-3 py-2 rounded ${
-            selectedSlot === slot ? "bg-black text-white" : "bg-white"
-          }`}
-        >
-          {slot}
-        </button>
-      ))}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {slots.map((slot) => {
+        const disabled = pendingSlot === slot;
+
+        return (
+          <button
+            key={slot}
+            disabled={disabled}
+            onClick={() => handleClick(slot)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid #ccc",
+              background:
+                selectedSlot === slot ? "#111" : "#fff",
+              color:
+                selectedSlot === slot ? "#fff" : "#000",
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? "not-allowed" : "pointer",
+            }}
+          >
+            {slot}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -1,28 +1,46 @@
-import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  const barberId = searchParams.get("barberId");
-  const date = searchParams.get("date");
+export async function POST(req: NextRequest) {
+  try {
+    const { tenant_id, barber_id, date } = await req.json();
 
-  if (!barberId || !date) {
-    return NextResponse.json([], { status: 200 });
+    if (!tenant_id || !barber_id || !date) {
+      return NextResponse.json(
+        { error: "tenant_id, barber_id și date sunt obligatorii" },
+        { status: 400 }
+      );
+    }
+
+    const { data: bookings, error } = await supabase
+      .from("bookings")
+      .select("booking_time")
+      .eq("tenant_id", tenant_id)
+      .eq("barber_id", barber_id)
+      .eq("booking_date", date)
+      .eq("status", "confirmed");
+
+    if (error) {
+      console.error(error);
+      return NextResponse.json(
+        { error: "Eroare la citirea programărilor" },
+        { status: 500 }
+      );
+    }
+
+    const occupied = bookings.map(b => b.booking_time);
+
+    return NextResponse.json({ occupied });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json(
+      { error: "Eroare server" },
+      { status: 500 }
+    );
   }
-
-  const { data, error } = await supabaseServer
-    .from("bookings")
-    .select("booking_time")
-    .eq("barber_id", barberId)
-    .eq("booking_date", date)
-    .eq("status", "confirmed");
-
-  if (error) {
-    console.error("occupied error:", error);
-    return NextResponse.json([], { status: 500 });
-  }
-
-  // ["09:00", "10:00"]
-  return NextResponse.json(data.map(b => b.booking_time));
 }

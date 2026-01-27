@@ -1,0 +1,41 @@
+.calendar {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-slot {
+  padding: 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.calendar-slot.free {
+  background: #102a10;
+  color: var(--color-success);
+}
+
+.calendar-slot.booked {
+  background: #1a263a;
+  color: var(--color-text);
+}
+
+.calendar-slot.cancelled {
+  background: #3a1a1a;
+  color: var(--color-danger);
+  text-decoration: line-through;
+}
+
+.calendar-slot.break {
+  background: #3a320f;
+  color: var(--color-warning);
+  cursor: default;
+}
+
+.calendar-slot.selected {
+  outline: 2px solid var(--color-primary);
+}

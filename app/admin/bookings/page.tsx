@@ -1,88 +1,117 @@
-import { supabaseServer } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
 
 type Booking = {
   id: string;
   booking_date: string;
   booking_time: string;
   client_name: string;
-  client_phone: string;
-  status: string;
-  barbers: {
-    display_name: string;
-  } | null;
+  services: {
+    name: string;
+  }[];
 };
 
-export default async function AdminBookingsPage() {
-  const supabase = supabaseServer();
 
-  /* 1️⃣ user logat */
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export default function AdminBookingsPage() {
+  const [grouped, setGrouped] = useState<Record<string, Booking[]>>({});
+  const [loading, setLoading] = useState(true);
 
-  if (!user) {
-    return <p>Neautorizat</p>;
+  useEffect(() => {
+    loadBookings();
+  }, []);
+
+  async function loadBookings() {
+    setLoading(true);
+
+    console.log("=== LOAD BOOKINGS START ===");
+
+    // 🔍 1. verificăm userul curent
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    console.log("AUTH USER:", user);
+    console.log("AUTH ERROR:", authError);
+
+    // 🔴 dacă user e null, ne oprim AICI
+    if (!user) {
+      console.error("❌ USER IS NULL → NU ești logat în Supabase");
+      setLoading(false);
+      return;
+    }
+
+    // 🔍 2. query bookings
+    const { data, error } = await supabase
+  .from("bookings")
+  .select(`
+    id,
+    booking_date,
+    booking_time,
+    client_name,
+    services:services!bookings_service_id_fkey (
+      name
+    )
+  `)
+  .order("booking_date", { ascending: true })
+  .order("booking_time", { ascending: true });
+
+
+    console.log("BOOKINGS DATA:", data);
+    console.log("BOOKINGS ERROR:", error);
+
+    if (error) {
+      console.error("❌ EROARE BOOKINGS:", error);
+      setLoading(false);
+      return;
+    }
+
+    const groupedByDay: Record<string, Booking[]> = {};
+
+    (data || []).forEach((b) => {
+      if (!groupedByDay[b.booking_date]) {
+        groupedByDay[b.booking_date] = [];
+      }
+      groupedByDay[b.booking_date].push(b);
+    });
+
+    console.log("GROUPED:", groupedByDay);
+
+    setGrouped(groupedByDay);
+    setLoading(false);
   }
 
-  /* 2️⃣ tenant-ul userului */
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!tenant) {
-    return <p>Tenant inexistent</p>;
+  if (loading) {
+    return <p style={{ padding: 24 }}>Se încarcă programările…</p>;
   }
 
-  /* 3️⃣ programările */
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(`
-      id,
-      booking_date,
-      booking_time,
-      client_name,
-      client_phone,
-      status,
-      barbers (
-        display_name
-      )
-    `)
-    .eq("tenant_id", tenant.id)
-    .order("booking_date", { ascending: false })
-    .order("booking_time", { ascending: true });
+  if (Object.keys(grouped).length === 0) {
+    return <p style={{ padding: 24 }}>Nu există programări.</p>;
+  }
 
   return (
     <div style={{ padding: 24 }}>
-      <h1>Programări</h1>
+      <h1>📅 Programări</h1>
 
-      {!bookings?.length && <p>Nu există programări</p>}
+      {Object.entries(grouped).map(([day, bookings]) => (
+        <div key={day} style={{ marginTop: 24 }}>
+          <h3>{day}</h3>
 
-      <table border={1} cellPadding={8} style={{ marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Ora</th>
-            <th>Frizer</th>
-            <th>Client</th>
-            <th>Telefon</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bookings?.map((b) => (
-            <tr key={b.id}>
-              <td>{b.booking_date}</td>
-              <td>{b.booking_time}</td>
-              <td>{b.barbers?.[0]?.display_name || "-"}</td>
-              <td>{b.client_name}</td>
-              <td>{b.client_phone}</td>
-              <td>{b.status}</td>
-            </tr>
+          {bookings.map((b) => (
+            <div key={b.id} style={{ paddingLeft: 12, marginTop: 6 }}>
+              <b>{b.booking_time}</b> — {b.client_name}
+              {b.services.length > 0 && (
+  <span style={{ marginLeft: 8, opacity: 0.7 }}>
+    ({b.services[0].name})
+  </span>
+)}
+
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      ))}
     </div>
   );
 }

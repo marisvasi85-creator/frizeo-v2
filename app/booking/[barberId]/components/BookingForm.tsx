@@ -6,111 +6,84 @@ type Props = {
   barberId: string;
   date: string;
   time: string;
-  onSuccess: () => void;
+  onError: () => void;
 };
 
 export default function BookingForm({
   barberId,
   date,
   time,
-  onSuccess,
+  onError,
 }: Props) {
-  const [clientName, setClientName] = useState("");
-  const [clientEmail, setClientEmail] = useState("");
-  const [clientPhone, setClientPhone] = useState("");
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
-  /* ================= VALIDARE ================= */
-  const isValidEmail = (email: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-  const isValidPhone = (phone: string) =>
-    /^[0-9+\s]{9,15}$/.test(phone);
-
-  /* ================= SUBMIT ================= */
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (!clientName.trim()) {
-      setError("Numele este obligatoriu");
-      return;
-    }
-
-    if (!isValidEmail(clientEmail)) {
-      setError("Email invalid");
-      return;
-    }
-
-    if (!isValidPhone(clientPhone)) {
-      setError("Telefon invalid");
-      return;
-    }
-
+  const handleSubmit = async () => {
     setLoading(true);
+    setMessage(null);
 
-    const res = await fetch("/api/bookings/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barberId,
-        date,
-        time,
-        clientName,
-        clientEmail,
-        clientPhone,
-      }),
-    });
+    try {
+      const res = await fetch("/api/bookings/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+  booking_date: date,
+  booking_time: time,
+  client_name: name,
+  client_phone: phone,
+  client_email: email,
+}),
 
-    const data = await res.json();
+      });
 
-    setLoading(false);
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "Eroare la programare");
-      return;
+      if (!res.ok) {
+        setMessage(data.error || "Eroare la booking");
+        onError(); // 🔁 reset slot
+        setLoading(false);
+        return;
+      }
+
+      setMessage("Programare confirmată!");
+    } catch (err) {
+      setMessage("Eroare server");
+      onError(); // 🔁 reset slot
+    } finally {
+      setLoading(false);
     }
+  };
 
-    onSuccess();
-  }
-
-  /* ================= UI ================= */
   return (
-    <form onSubmit={handleSubmit} style={{ marginTop: 20 }}>
-      <h3>Detalii programare</h3>
-
-      <p>
-        <strong>Data:</strong> {date} <br />
-        <strong>Ora:</strong> {time}
-      </p>
-
+    <div style={{ marginTop: 16 }}>
       <input
         placeholder="Nume"
-        value={clientName}
-        onChange={(e) => setClientName(e.target.value)}
-        style={{ width: "100%", marginBottom: 8 }}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
       />
-
-      <input
-        placeholder="Email"
-        value={clientEmail}
-        onChange={(e) => setClientEmail(e.target.value)}
-        style={{ width: "100%", marginBottom: 8 }}
-      />
-
+      <br />
       <input
         placeholder="Telefon"
-        value={clientPhone}
-        onChange={(e) => setClientPhone(e.target.value)}
-        style={{ width: "100%", marginBottom: 8 }}
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
       />
+      <br />
+      <input
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
+      <br />
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <button disabled={loading} style={{ marginTop: 10 }}>
+      <button onClick={handleSubmit} disabled={loading}>
         {loading ? "Se salvează..." : "Confirmă programarea"}
       </button>
-    </form>
+
+      {message && <p>{message}</p>}
+    </div>
   );
 }

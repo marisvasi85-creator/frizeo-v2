@@ -1,36 +1,59 @@
-import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-export async function POST(req: Request) {
-  const supabase = supabaseServer();
-  const body = await req.json();
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
-  const { barber_id, ...rest } = body;
+/**
+ * GET barber settings (READ-ONLY)
+ * ?barberId=UUID
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const barberId = searchParams.get("barberId");
 
-  // 1️⃣ Luăm tenant_id din barbers
-  const { data: barber } = await supabase
-    .from("barbers")
-    .select("tenant_id")
-    .eq("id", barber_id)
-    .single();
+    if (!barberId) {
+      return NextResponse.json(
+        { error: "barberId lipsă" },
+        { status: 400 }
+      );
+    }
 
-  if (!barber?.tenant_id) {
-    return NextResponse.json({ error: "Tenant lipsă" }, { status: 400 });
-  }
+    const { data, error } = await supabase
+      .from("barber_settings")
+      .select(`
+        barber_id,
+        tenant_id,
+        slot_duration,
+        start_time,
+        end_time,
+        working_days,
+        break_enabled,
+        break_start,
+        break_end
+      `)
+      .eq("barber_id", barberId)
+      .single();
 
-  // 2️⃣ Salvăm settings CU tenant_id
-  const { error } = await supabase
-    .from("barber_settings")
-    .upsert({
-      barber_id,
-      tenant_id: barber.tenant_id,
-      ...rest,
+    if (error || !data) {
+      console.error("Barber settings error:", error);
+      return NextResponse.json(
+        { error: "Setările frizerului nu au fost găsite" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      settings: data,
     });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (err) {
+    console.error("Barber settings exception:", err);
+    return NextResponse.json(
+      { error: "Eroare server" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json({ success: true });
 }
-
