@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from "@/lib/supabase/server";
 
 export async function GET() {
   const { data, error } = await supabase
     .from("services")
     .select("id, name, duration_minutes, price")
     .eq("active", true)
-    .order("name");
+    .order("duration_minutes");
 
   if (error) {
-    console.error("Services API error:", error);
-    return NextResponse.json({ error }, { status: 500 });
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
   return NextResponse.json(data);

@@ -10,10 +10,10 @@ export async function GET(req: Request) {
   }
 
   const { data, error } = await supabase
-    .from("barber_settings")
+    .from("barber_weekly_schedule")
     .select("*")
     .eq("barber_id", barberId)
-    .single();
+    .order("day_of_week");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
@@ -26,8 +26,8 @@ export async function POST(req: Request) {
   const body = await req.json();
 
   const { error } = await supabase
-    .from("barber_settings")
-    .upsert(body, { onConflict: "barber_id" });
+    .from("barber_weekly_schedule")
+    .upsert(body);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });

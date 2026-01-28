@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase/server";
 
+/**
+ * GET /api/admin/settings
+ */
 export async function GET() {
-  const { data, error } = await supabaseServer
+  const { data, error } = await supabase
     .from("barber_settings")
     .select("*")
     .single();
@@ -17,17 +20,19 @@ export async function GET() {
   return NextResponse.json(data);
 }
 
+/**
+ * POST /api/admin/settings
+ */
 export async function POST(req: Request) {
   const body = await req.json();
 
-  const { error } = await supabaseServer
+  const { error } = await supabase
     .from("barber_settings")
     .update({
       slot_duration_minutes: body.slot_duration_minutes,
       break_between_minutes: body.break_between_minutes,
       cancel_limit_hours: body.cancel_limit_hours,
-    })
-    .select();
+    });
 
   if (error) {
     return NextResponse.json(
