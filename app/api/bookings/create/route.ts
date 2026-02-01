@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       client_email,
     } = body ?? {};
 
-    // 1️⃣ Validări minime
+    /* =======================
+       1️⃣ VALIDĂRI
+    ======================= */
     if (
       !barberId ||
       !serviceId ||
@@ -43,39 +45,54 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2️⃣ Insert (DB are deja UNIQUE(barber_id, date, start_time))
+    /* =======================
+       2️⃣ RPC – CREATE SAFE
+    ======================= */
     const { data, error } = await supabase.rpc("create_booking_safe", {
-  p_barber_id: barberId,
-  p_service_id: serviceId,
-  p_date: date,
-  p_start: start_time,
-  p_end: end_time,
-  p_client_name: client_name,
-  p_client_phone: client_phone,
-  p_client_email: client_email ?? null,
-});
+      p_barber_id: barberId,
+      p_service_id: serviceId,
+      p_date: date,
+      p_start: start_time,
+      p_end: end_time,
+      p_client_name: client_name,
+      p_client_phone: client_phone,
+      p_client_email: client_email ?? null,
+    });
+
+    console.log("RPC create_booking_safe result:", data, error);
 
     if (error) {
-  if (error.message.includes("SLOT_TAKEN")) {
+      // conflict de slot
+      if (error.message?.includes("SLOT_TAKEN")) {
+        return NextResponse.json(
+          { error: "Slot already booked" },
+          { status: 409 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    /* =======================
+       3️⃣ SUCCESS
+       ⚠️ data poate fi:
+       - null
+       - obiect
+       - array (depinde de RETURNS)
+    ======================= */
     return NextResponse.json(
-      { error: "Slot already booked" },
-      { status: 409 }
+      {
+        success: true,
+        booking: data,
+      },
+      { status: 201 }
     );
-  }
 
-  return NextResponse.json(
-    { error: error.message },
-    { status: 500 }
-  );
-}
-
-    // 3️⃣ Success
-    return NextResponse.json({
-      success: true,
-      bookingId: data.id,
-      cancelToken: data.cancel_token,
-    });
-  } catch (e: any) {
+  } catch (e) {
+    console.error("CREATE BOOKING ERROR:", e);
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 }

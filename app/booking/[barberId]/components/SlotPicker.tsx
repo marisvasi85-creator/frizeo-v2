@@ -2,18 +2,24 @@
 
 import { useEffect, useState } from "react";
 
-type Slot = {
+export type Slot = {
   start: string; // "HH:mm"
   end: string;   // "HH:mm"
 };
 
 type Props = {
   barberId: string;
-  date: string | null; // YYYY-MM-DD
+  date: string;
+  selectedSlot: Slot | null;
   onSelect: (slot: Slot) => void;
 };
 
-export default function SlotPicker({ barberId, date, onSelect }: Props) {
+export default function SlotPicker({
+  barberId,
+  date,
+  selectedSlot,
+  onSelect,
+}: Props) {
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,11 +46,18 @@ export default function SlotPicker({ barberId, date, onSelect }: Props) {
           throw new Error("Nu pot încărca sloturile");
         }
 
-        const data: Slot[] = await res.json();
+        const data = await res.json();
+
+        // 🛡️ guard IMPORTANT
+        if (!Array.isArray(data)) {
+          throw new Error("Răspuns invalid de la server");
+        }
+
         setSlots(data);
       } catch (err: any) {
         if (err.name !== "AbortError") {
           setError(err.message || "Eroare la încărcarea sloturilor");
+          setSlots([]);
         }
       } finally {
         setLoading(false);
@@ -55,12 +68,8 @@ export default function SlotPicker({ barberId, date, onSelect }: Props) {
     return () => controller.abort();
   }, [barberId, date]);
 
-  if (!date) {
-    return <p className="text-sm text-gray-500">Selectează o dată</p>;
-  }
-
   if (loading) {
-    return <p className="text-sm text-gray-500">Se încarcă sloturile...</p>;
+    return <p className="text-sm text-gray-500">Se încarcă sloturile…</p>;
   }
 
   if (error) {
@@ -73,15 +82,27 @@ export default function SlotPicker({ barberId, date, onSelect }: Props) {
 
   return (
     <div className="grid grid-cols-2 gap-2">
-      {slots.map((slot) => (
-        <button
-          key={`${slot.start}-${slot.end}`}
-          onClick={() => onSelect(slot)}
-          className="rounded border px-3 py-2 text-sm hover:bg-black hover:text-white transition"
-        >
-          {slot.start} – {slot.end}
-        </button>
-      ))}
+      {slots.map((slot) => {
+        const isSelected =
+          selectedSlot?.start === slot.start &&
+          selectedSlot?.end === slot.end;
+
+        return (
+          <button
+            key={`${slot.start}-${slot.end}`}
+            type="button"
+            onClick={() => onSelect(slot)}
+            className={`rounded border px-3 py-2 text-sm transition
+              ${
+                isSelected
+                  ? "bg-black text-white"
+                  : "hover:bg-black hover:text-white"
+              }`}
+          >
+            {slot.start} – {slot.end}
+          </button>
+        );
+      })}
     </div>
   );
 }

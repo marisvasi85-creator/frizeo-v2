@@ -1,11 +1,7 @@
 "use client";
 
 import { useState } from "react";
-
-type Slot = {
-  start: string;
-  end: string;
-};
+import type { Slot } from "./SlotPicker";
 
 type Props = {
   barberId: string;
@@ -26,34 +22,52 @@ export default function BookingForm({
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/bookings/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barberId,
-        serviceId,
-        date,
-        start_time: slot.start,
-        end_time: slot.end,
-        client_name: name,
-        client_phone: phone,
-      }),
-    });
+    try {
+      const res = await fetch("/api/bookings/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // ⚠️ CHEI CORECTE PENTRU BACKEND
+          barber_id: barberId,
+          service_id: serviceId,
+          date,
+          start_time: slot.start,
+          end_time: slot.end,
+          client_name: name,
+          client_phone: phone,
+          client_email: null,
+        }),
+      });
 
-    if (!res.ok) {
-      setError("Nu s-a putut crea programarea");
+      if (!res.ok) {
+  const text = await res.text();
+  console.error("CREATE BOOKING ERROR:", text);
+  throw new Error(text || "Răspuns invalid de la server");
+}
+
+
+      setSuccess(true);
+      onSuccess();
+    } catch (err: any) {
+      setError(err.message || "Eroare la creare programare");
+    } finally {
       setLoading(false);
-      return;
     }
+  }
 
-    onSuccess();
-    setLoading(false);
+  if (success) {
+    return (
+      <div className="p-4 border rounded text-green-700 text-sm">
+        ✅ Programarea a fost creată cu succes!
+      </div>
+    );
   }
 
   return (

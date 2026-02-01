@@ -28,27 +28,28 @@ export default function BookingClient({
           setDate(newDate);
           setSelectedSlot(null);
         }}
-        disabled={!serviceId}
       />
 
       {/* SLOT PICKER */}
       {date && (
         <SlotPicker
-          barberId={barberId}
-          date={date}
-          onSelect={(slot) => setSelectedSlot(slot)}
-        />
+  barberId={barberId}
+  date={date}
+  selectedSlot={selectedSlot}
+  onSelect={(slot) => setSelectedSlot(slot)}
+/>
+
       )}
 
       {/* FORMULAR */}
-      {date && selectedSlot && serviceId && (
+      {date && selectedSlot && (
         <BookingForm
-          barberId={barberId}
-          serviceId={serviceId}
-          date={date}
-          slot={selectedSlot}
-          onSuccess={() => setSelectedSlot(null)}
-        />
+  barberId={barberId}
+  date={date}
+  slot={selectedSlot}
+  onSuccess={() => setSelectedSlot(null)}
+/>
+
       )}
     </div>
   );

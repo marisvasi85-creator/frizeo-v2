@@ -1,80 +1,77 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
 
-export async function POST(req: NextRequest) {
+import { sendEmail } from "@/lib/email/email";
+import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
+
+export async function POST(req: Request) {
   try {
     const { token } = await req.json();
 
     if (!token) {
       return NextResponse.json(
-        { error: "Missing cancel token" },
+        { error: "Missing token" },
         { status: 400 }
       );
     }
 
-    // 1️⃣ găsim booking-ul
-    const { data: booking, error: bookingError } = await supabase
+    // 1️⃣ Luăm booking-ul
+    const { data: booking, error } = await supabase
       .from("bookings")
-      .select("id, barber_id, date, start_time, status")
+      .select("*")
       .eq("cancel_token", token)
       .single();
 
-    if (bookingError || !booking) {
+    if (error || !booking) {
       return NextResponse.json(
-        { error: "Invalid cancel token" },
+        { error: "Booking not found" },
         { status: 404 }
       );
     }
 
     if (booking.status === "cancelled") {
       return NextResponse.json(
-        { error: "Booking already cancelled" },
-        { status: 400 }
+        { message: "Booking already cancelled" }
       );
     }
 
-    // 2️⃣ citim regula de anulare
-    const { data: settings } = await supabase
-      .from("barber_settings")
-      .select("cancel_limit_hours")
-      .eq("barber_id", booking.barber_id)
-      .single();
-
-    const limitHours = settings?.cancel_limit_hours ?? 24;
-
-    const bookingDateTime = new Date(
-      `${booking.date}T${booking.start_time}`
-    );
-    const now = new Date();
-
-    const diffHours =
-      (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    if (diffHours < limitHours) {
-      return NextResponse.json(
-        { error: "Cancellation window expired" },
-        { status: 400 }
-      );
-    }
-
-    // 3️⃣ anulăm booking-ul
-    const { error: updateError } = await supabase
+    // 2️⃣ Anulăm booking-ul
+    const { error: cancelError } = await supabase
       .from("bookings")
       .update({ status: "cancelled" })
       .eq("id", booking.id);
 
-    if (updateError) {
+    if (cancelError) {
       return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
+        { error: "Cancel failed" },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json({ success: true });
-  } catch {
+    // 3️⃣ Email către CLIENT (doar dacă există email)
+    if (booking.client_email) {
+      const html = cancelBookingTemplate({
+        clientName: booking.client_name,
+        date: booking.date,
+        time: `${booking.start_time} – ${booking.end_time}`,
+      });
+
+      await sendEmail({
+        to: booking.client_email,
+        subject: "❌ Programare anulată",
+        html,
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Booking cancelled",
+    });
+  } catch (err) {
+    console.error("CANCEL ERROR", err);
     return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
+      { error: "Internal server error" },
+      { status: 500 }
     );
   }
 }
