@@ -1,100 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Calendar from "./Calendar";
 import SlotPicker from "./SlotPicker";
 import BookingForm from "./BookingForm";
 
-type Service = {
-  id: string;
-  name: string;
-  duration_minutes: number;
+type Slot = {
+  start: string;
+  end: string;
 };
 
-export default function BookingClient({ barberId }: { barberId: string }) {
-  const [date, setDate] = useState("");
-  const [slots, setSlots] = useState<string[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-
-const [services, setServices] = useState<any[]>([]);
-const [serviceId, setServiceId] = useState<string>("");
-
-  const [loadingSlots, setLoadingSlots] = useState(false);
-
-  // 🔹 load services
-  useEffect(() => {
-  fetch("/api/services")
-    .then((res) => res.json())
-    .then((data) => {
-      setServices(Array.isArray(data) ? data : []);
-    })
-    .catch(() => setServices([]));
-}, []);
-
-
-  // 🔹 load slots
-  useEffect(() => {
-    if (!date || !serviceId) return;
-
-    setLoadingSlots(true);
-    setSelectedSlot(null);
-
-    fetch(
-      `/api/bookings/available?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        setSlots(data.slots ?? []);
-      })
-      .catch(() => setSlots([]))
-      .finally(() => setLoadingSlots(false));
-  }, [date, barberId, serviceId]);
+export default function BookingClient({
+  barberId,
+}: {
+  barberId: string;
+}) {
+  const [date, setDate] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(null);
 
   return (
-    <div>
-      {/* SERVICII */}
-      <select
-  value={serviceId}
-  onChange={(e) => setServiceId(e.target.value)}
->
-  <option value="">Selectează serviciul</option>
-
-  {services.map((s) => (
-    <option key={s.id} value={s.id}>
-      {s.name} ({s.duration_minutes} min)
-    </option>
-  ))}
-</select>
-
-
-
-      <br />
-
-      {/* DATA */}
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
+    <div className="space-y-6">
+      {/* CALENDAR */}
+      <Calendar
+        date={date}
+        onChange={(newDate) => {
+          setDate(newDate);
+          setSelectedSlot(null);
+        }}
         disabled={!serviceId}
       />
 
-      {/* SLOTURI */}
+      {/* SLOT PICKER */}
       {date && (
         <SlotPicker
-          slots={slots}
-          selectedSlot={selectedSlot}
-          loading={loadingSlots}
-    onSelect={setSelectedSlot}
-  />
-)}
+          barberId={barberId}
+          date={date}
+          onSelect={(slot) => setSelectedSlot(slot)}
+        />
+      )}
 
       {/* FORMULAR */}
-      {selectedSlot && (
+      {date && selectedSlot && serviceId && (
         <BookingForm
           barberId={barberId}
           serviceId={serviceId}
           date={date}
-          time={selectedSlot}
-          onError={() => setSelectedSlot(null)}
+          slot={selectedSlot}
+          onSuccess={() => setSelectedSlot(null)}
         />
       )}
     </div>

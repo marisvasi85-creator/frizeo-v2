@@ -1,61 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-type Props = {
-  slots: string[];
-  selectedSlot: string | null;
-  onSelect: (slot: string) => void;
-  loading?: boolean;
+type Slot = {
+  start: string; // "HH:mm"
+  end: string;   // "HH:mm"
 };
 
-export default function SlotPicker({
-  slots,
-  selectedSlot,
-  onSelect,
-  loading,
-}: Props) {
-  const [pendingSlot, setPendingSlot] = useState<string | null>(null);
+type Props = {
+  barberId: string;
+  date: string | null; // YYYY-MM-DD
+  onSelect: (slot: Slot) => void;
+};
 
-  const handleClick = (slot: string) => {
-    setPendingSlot(slot);
-    onSelect(slot);
-  };
+export default function SlotPicker({ barberId, date, onSelect }: Props) {
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (loading) {
-    return <p>Se încarcă sloturile...</p>;
+  useEffect(() => {
+    if (!date) {
+      setSlots([]);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadSlots() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch(
+          `/api/slots?barberId=${barberId}&date=${date}`,
+          { signal: controller.signal }
+        );
+
+        if (!res.ok) {
+          throw new Error("Nu pot încărca sloturile");
+        }
+
+        const data: Slot[] = await res.json();
+        setSlots(data);
+      } catch (err: any) {
+        if (err.name !== "AbortError") {
+          setError(err.message || "Eroare la încărcarea sloturilor");
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSlots();
+    return () => controller.abort();
+  }, [barberId, date]);
+
+  if (!date) {
+    return <p className="text-sm text-gray-500">Selectează o dată</p>;
   }
 
-  if (!slots.length) {
-    return <p>Nu mai sunt sloturi disponibile</p>;
+  if (loading) {
+    return <p className="text-sm text-gray-500">Se încarcă sloturile...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-500">{error}</p>;
+  }
+
+  if (slots.length === 0) {
+    return <p className="text-sm text-gray-500">Nu sunt sloturi disponibile</p>;
   }
 
   return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      {slots.map((slot) => {
-        const disabled = pendingSlot === slot;
-
-        return (
-          <button
-            key={slot}
-            disabled={disabled}
-            onClick={() => handleClick(slot)}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 6,
-              border: "1px solid #ccc",
-              background:
-                selectedSlot === slot ? "#111" : "#fff",
-              color:
-                selectedSlot === slot ? "#fff" : "#000",
-              opacity: disabled ? 0.5 : 1,
-              cursor: disabled ? "not-allowed" : "pointer",
-            }}
-          >
-            {slot}
-          </button>
-        );
-      })}
+    <div className="grid grid-cols-2 gap-2">
+      {slots.map((slot) => (
+        <button
+          key={`${slot.start}-${slot.end}`}
+          onClick={() => onSelect(slot)}
+          className="rounded border px-3 py-2 text-sm hover:bg-black hover:text-white transition"
+        >
+          {slot.start} – {slot.end}
+        </button>
+      ))}
     </div>
   );
 }

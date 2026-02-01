@@ -1,35 +1,19 @@
 "use client";
 
 type Props = {
-  selectedDate: string | null;
-  onSelectDate: (date: string) => void;
+  date: string | null;
+  onChange: (date: string) => void;
+  disabled?: boolean;
 };
 
-export default function Calendar({
-  selectedDate,
-  onSelectDate,
-}: Props) {
-  const days = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
-
+export default function Calendar({ date, onChange, disabled }: Props) {
   return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-      {days.map((d) => (
-        <button
-          key={d}
-          onClick={() => onSelectDate(d)}
-          style={{
-            padding: 8,
-            background: d === selectedDate ? "#111" : "#eee",
-            color: d === selectedDate ? "#fff" : "#000",
-          }}
-        >
-          {d}
-        </button>
-      ))}
-    </div>
+    <input
+      type="date"
+      value={date ?? ""}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      className="border rounded p-2 w-full"
+    />
   );
 }

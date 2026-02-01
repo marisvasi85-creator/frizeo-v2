@@ -1,4 +1,4 @@
-import CancelClient from "./CancelClient";
+import RescheduleClient from "./RescheduleClient";
 
 export default async function Page({
   params,
@@ -7,5 +7,5 @@ export default async function Page({
 }) {
   const { token } = await params;
 
-  return <CancelClient token={token} />;
+  return <RescheduleClient token={token} />;
 }

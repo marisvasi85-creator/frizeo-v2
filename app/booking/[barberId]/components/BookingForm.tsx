@@ -2,90 +2,89 @@
 
 import { useState } from "react";
 
+type Slot = {
+  start: string;
+  end: string;
+};
+
 type Props = {
   barberId: string;
   serviceId: string;
   date: string;
-  time: string;
-  onError: () => void;
+  slot: Slot;
+  onSuccess: () => void;
 };
 
 export default function BookingForm({
   barberId,
   serviceId,
   date,
-  time,
-  onError,
+  slot,
+  onSuccess,
 }: Props) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setLoading(true);
-    setMessage(null);
+    setError(null);
 
-    try {
-      const res = await fetch("/api/bookings/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          service_id: serviceId,
-          booking_date: date,
-          booking_time: time,
-          client_name: name,
-          client_phone: phone,
-          client_email: email,
-        }),
-      });
+    const res = await fetch("/api/bookings/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        barberId,
+        serviceId,
+        date,
+        start_time: slot.start,
+        end_time: slot.end,
+        client_name: name,
+        client_phone: phone,
+      }),
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.error || "Eroare la programare");
-        onError();
-        return;
-      }
-
-      setMessage("✅ Programare confirmată!");
-    } catch (err) {
-      setMessage("Eroare server");
-      onError();
-    } finally {
+    if (!res.ok) {
+      setError("Nu s-a putut crea programarea");
       setLoading(false);
+      return;
     }
-  };
+
+    onSuccess();
+    setLoading(false);
+  }
 
   return (
-    <div style={{ marginTop: 16 }}>
+    <form onSubmit={handleSubmit} className="space-y-3">
       <input
+        type="text"
         placeholder="Nume"
         value={name}
         onChange={(e) => setName(e.target.value)}
+        required
+        className="w-full border p-2 rounded"
       />
-      <br />
 
       <input
+        type="tel"
         placeholder="Telefon"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
+        required
+        className="w-full border p-2 rounded"
       />
-      <br />
 
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <br />
+      {error && <p className="text-red-500 text-sm">{error}</p>}
 
-      <button onClick={handleSubmit} disabled={loading}>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-black text-white py-2 rounded disabled:opacity-50"
+      >
         {loading ? "Se salvează..." : "Confirmă programarea"}
       </button>
-
-      {message && <p>{message}</p>}
-    </div>
+    </form>
   );
 }
