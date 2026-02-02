@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/email";
+import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 
-function isValidTime(t: string) {
-  return /^\d{2}:\d{2}$/.test(t);
-}
+/* ================= VALIDATORS ================= */
+
+const isValidName = (v: string) =>
+  typeof v === "string" && v.trim().length >= 2;
+
+const isValidPhoneRO = (v: string) =>
+  /^07\d{8}$/.test(v); // 0700000000
+
+const isValidEmail = (v: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+const isValidTime = (t: string) =>
+  /^\d{2}:\d{2}$/.test(t);
+
+/* ================= ROUTE ================= */
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,17 +26,16 @@ export async function POST(req: NextRequest) {
     const {
       barberId,
       serviceId,
-      date,            // YYYY-MM-DD
-      start_time,      // HH:mm
-      end_time,        // HH:mm
+      date,          // YYYY-MM-DD
+      start_time,    // HH:mm
+      end_time,      // HH:mm
       client_name,
       client_phone,
-      client_email,
+      client_email,  // optional
     } = body ?? {};
 
-    /* =======================
-       1️⃣ VALIDĂRI
-    ======================= */
+    /* ================= REQUIRED ================= */
+
     if (
       !barberId ||
       !serviceId ||
@@ -33,68 +46,104 @@ export async function POST(req: NextRequest) {
       !client_phone
     ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Câmpuri obligatorii lipsă" },
+        { status: 400 }
+      );
+    }
+
+    /* ================= FORMAT ================= */
+
+    if (!isValidName(client_name)) {
+      return NextResponse.json(
+        { error: "Numele este prea scurt" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidPhoneRO(client_phone)) {
+      return NextResponse.json(
+        { error: "Telefon invalid (format RO)" },
+        { status: 400 }
+      );
+    }
+
+    if (client_email && !isValidEmail(client_email)) {
+      return NextResponse.json(
+        { error: "Email invalid" },
         { status: 400 }
       );
     }
 
     if (!isValidTime(start_time) || !isValidTime(end_time)) {
       return NextResponse.json(
-        { error: "Invalid time format" },
+        { error: "Format oră invalid" },
         { status: 400 }
       );
     }
 
-    /* =======================
-       2️⃣ RPC – CREATE SAFE
-    ======================= */
+    /* ================= SAFE INSERT ================= */
+
     const { data, error } = await supabase.rpc("create_booking_safe", {
       p_barber_id: barberId,
       p_service_id: serviceId,
       p_date: date,
       p_start: start_time,
       p_end: end_time,
-      p_client_name: client_name,
-      p_client_phone: client_phone,
-      p_client_email: client_email ?? null,
+      p_client_name: client_name.trim(),
+      client_phone,
+      p_client_email: client_email || null,
     });
 
-    console.log("RPC create_booking_safe result:", data, error);
-
     if (error) {
-      // conflict de slot
-      if (error.message?.includes("SLOT_TAKEN")) {
+      // slot deja luat (concurență / refresh / retry)
+      if (
+        error.message.includes("unique_booking_slot") ||
+        error.message.includes("SLOT_TAKEN")
+      ) {
         return NextResponse.json(
-          { error: "Slot already booked" },
+          { error: "Slotul a fost deja rezervat" },
           { status: 409 }
         );
       }
 
+      console.error("CREATE BOOKING RPC ERROR:", error);
       return NextResponse.json(
-        { error: error.message },
+        { error: "Eroare la creare programare" },
         { status: 500 }
       );
     }
 
-    /* =======================
-       3️⃣ SUCCESS
-       ⚠️ data poate fi:
-       - null
-       - obiect
-       - array (depinde de RETURNS)
-    ======================= */
-    return NextResponse.json(
-      {
-        success: true,
-        booking: data,
-      },
-      { status: 201 }
-    );
+    /* ================= EMAIL CLIENT ================= */
 
-  } catch (e) {
-    console.error("CREATE BOOKING ERROR:", e);
+    if (client_email) {
+      try {
+        await sendEmail({
+          to: client_email,
+          subject: "Confirmare programare",
+          html: clientConfirmationTemplate({
+            barberName: data.barber_name,
+            date,
+            time: `${start_time} – ${end_time}`,
+            cancelLink: `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${data.cancel_token}`,
+            rescheduleLink: `${process.env.NEXT_PUBLIC_APP_URL}/reschedule/${data.reschedule_token}`,
+          }),
+        });
+      } catch (mailErr) {
+        console.error("EMAIL CLIENT ERROR:", mailErr);
+        // nu blocăm booking-ul dacă mailul pică
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      bookingId: data.id,
+      cancelToken: data.cancel_token,
+    });
+
+  } catch (err) {
+    console.error("CREATE BOOKING ERROR:", err);
     return NextResponse.json(
-      { error: "Invalid request body" },
+      { error: "Request invalid" },
       { status: 400 }
     );
   }

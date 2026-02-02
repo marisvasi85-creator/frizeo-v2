@@ -1,115 +1,111 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/email";
+import { rescheduleBookingTemplate } from "@/lib/email/templates/reschedule-booking";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { token, new_start } = body;
 
-    if (!token || !new_start) {
+    const {
+      token,
+      new_date,
+      new_start_time,
+      new_end_time,
+    } = body ?? {};
+
+    /* =========================
+       1️⃣ VALIDARE
+    ========================= */
+    if (!token || !new_date || !new_start_time || !new_end_time) {
       return NextResponse.json(
-        { error: "Missing token or new_start" },
+        { error: "Missing fields" },
         { status: 400 }
       );
     }
 
     /* =========================
-       1️⃣ FIND BOOKING BY TOKEN
+       2️⃣ BOOKING VECHI (CONFIRMED)
     ========================= */
-    const { data: booking, error: bookingError } = await supabase
+    const { data: oldBooking, error: findError } = await supabase
       .from("bookings")
       .select("*")
       .eq("reschedule_token", token)
+      .eq("status", "confirmed")
       .single();
 
-    if (bookingError || !booking) {
+    if (findError || !oldBooking) {
       return NextResponse.json(
-        { error: "Invalid or expired reschedule token" },
+        { error: "Booking not found" },
         { status: 404 }
       );
     }
 
-    if (booking.status !== "confirmed") {
-      return NextResponse.json(
-        { error: "Booking is not active" },
-        { status: 400 }
-      );
-    }
-
     /* =========================
-       2️⃣ LOAD BARBER SETTINGS
-       (limit hours)
+       3️⃣ ANULĂM BOOKING-UL VECHI
+       ⚠️ IMPORTANT: înainte de a crea noul
     ========================= */
-    const { data: settings } = await supabase
-      .from("barber_settings")
-      .select("cancel_limit_hours, slot_duration")
-      .eq("barber_id", booking.barber_id)
-      .single();
-
-    const limitHours = settings?.cancel_limit_hours ?? 3;
-    const slotDuration = settings?.slot_duration ?? 30;
-
-    /* =========================
-       3️⃣ CHECK TIME LIMIT
-    ========================= */
-    const bookingStart = new Date(
-      `${booking.date}T${booking.start_time}`
-    );
-
-    const now = new Date();
-    const diffMs = bookingStart.getTime() - now.getTime();
-    const diffHours = diffMs / (1000 * 60 * 60);
-
-    if (diffHours < limitHours) {
-      return NextResponse.json(
-        {
-          error: `Reprogramarea este permisă doar cu minimum ${limitHours} ore înainte.`,
-        },
-        { status: 400 }
-      );
-    }
-
-    /* =========================
-       4️⃣ CALCULATE NEW END TIME
-    ========================= */
-    const newStartDate = new Date(
-      `${booking.date}T${new_start}`
-    );
-
-    if (isNaN(newStartDate.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid new_start format" },
-        { status: 400 }
-      );
-    }
-
-    const newEndDate = new Date(newStartDate);
-    newEndDate.setMinutes(
-      newEndDate.getMinutes() + slotDuration
-    );
-
-    const new_end = newEndDate
-      .toTimeString()
-      .slice(0, 8); // HH:mm:ss
-
-    /* =========================
-       5️⃣ UPDATE BOOKING
-    ========================= */
-    const { error: updateError } = await supabase
+    const { error: cancelError } = await supabase
       .from("bookings")
-      .update({
-        start_time: new_start,
-        end_time: new_end,
-        rescheduled_from: booking.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", booking.id);
+      .update({ status: "cancelled" })
+      .eq("id", oldBooking.id);
 
-    if (updateError) {
+    if (cancelError) {
+      console.error("CANCEL OLD BOOKING ERROR:", cancelError);
       return NextResponse.json(
-        { error: "Failed to update booking" },
+        { error: "Could not cancel old booking" },
         { status: 500 }
       );
+    }
+
+    /* =========================
+       4️⃣ CREĂM BOOKING NOU (SAFE)
+    ========================= */
+    const { data: newBooking, error: createError } =
+      await supabase.rpc("create_booking_safe", {
+        p_barber_id: oldBooking.barber_id,
+        p_service_id: oldBooking.service_id,
+        p_date: new_date,
+        p_start: new_start_time,
+        p_end: new_end_time,
+        p_client_name: oldBooking.client_name,
+        p_client_phone: oldBooking.client_phone,
+        p_client_email: oldBooking.client_email,
+      });
+
+    if (createError || !newBooking) {
+      console.error("RESCHEDULE CREATE ERROR:", createError);
+
+      // rollback minimal: slotul vechi rămâne liber (corect)
+      return NextResponse.json(
+        { error: createError?.message ?? "Could not reschedule booking" },
+        { status: 500 }
+      );
+    }
+
+    const oldTime = `${oldBooking.start_time} – ${oldBooking.end_time}`;
+    const newTime = `${new_start_time} – ${new_end_time}`;
+
+    /* =========================
+       5️⃣ EMAIL CLIENT
+    ========================= */
+    try {
+      if (oldBooking.client_email) {
+        await sendEmail({
+          to: oldBooking.client_email,
+          subject: "Programare reprogramată",
+          html: rescheduleBookingTemplate({
+            clientName: oldBooking.client_name,
+            oldDate: oldBooking.date,
+            oldTime,
+            newDate: new_date,
+            newTime,
+            cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${newBooking.cancel_token}`,
+          }),
+        });
+      }
+    } catch (mailErr) {
+      console.error("RESCHEDULE EMAIL ERROR:", mailErr);
     }
 
     /* =========================
@@ -117,7 +113,9 @@ export async function POST(req: Request) {
     ========================= */
     return NextResponse.json({
       success: true,
-      message: "Booking rescheduled successfully",
+      bookingId: newBooking.id,
+      cancelToken: newBooking.cancel_token,
+      rescheduleToken: newBooking.reschedule_token,
     });
   } catch (err) {
     console.error("RESCHEDULE ERROR:", err);

@@ -1,3 +1,5 @@
+// lib/email/templates/barber-new-booking.ts
+
 type BarberNewBookingArgs = {
   barberName: string;
   clientName: string;
@@ -18,7 +20,7 @@ export function barberNewBookingTemplate({
   return `
     <h2>Salut ${barberName} ✂️</h2>
 
-    <p>Ai o nouă programare:</p>
+    <p>Ai o <strong>nouă programare</strong>:</p>
 
     <p>
       👤 <strong>${clientName}</strong><br/>
@@ -32,7 +34,7 @@ export function barberNewBookingTemplate({
 
     ${
       serviceName
-        ? `<p>💼 Serviciu: <strong>${serviceName}</strong></p>`
+        ? `<p>🛎 Serviciu: <strong>${serviceName}</strong></p>`
         : ""
     }
 

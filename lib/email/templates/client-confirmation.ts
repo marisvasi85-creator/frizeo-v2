@@ -1,22 +1,24 @@
+// lib/email/templates/client-confirmation.ts
+
 type ClientConfirmationArgs = {
-  clientName: string;
+  barberName: string;
   date: string;
   time: string;
-  cancelUrl: string;
-  rescheduleUrl: string;
+  cancelLink: string;
+  rescheduleLink: string;
 };
 
 export function clientConfirmationTemplate({
-  clientName,
+  barberName,
   date,
   time,
-  cancelUrl,
-  rescheduleUrl,
+  cancelLink,
+  rescheduleLink,
 }: ClientConfirmationArgs) {
   return `
-    <h2>Salut ${clientName} 👋</h2>
+    <h2>Salut 👋</h2>
 
-    <p>Programarea ta a fost confirmată.</p>
+    <p>Programarea ta la <strong>${barberName}</strong> a fost confirmată.</p>
 
     <p>
       📅 <strong>${date}</strong><br/>
@@ -24,10 +26,10 @@ export function clientConfirmationTemplate({
     </p>
 
     <p>
-      <a href="${rescheduleUrl}">🔁 Reprogramează</a><br/>
-      <a href="${cancelUrl}">❌ Anulează</a>
+      <a href="${rescheduleLink}">🔁 Reprogramează</a><br/>
+      <a href="${cancelLink}">❌ Anulează</a>
     </p>
 
-    <p>— Frizeo</p>
+    <p>— Frizeo ✂️</p>
   `;
 }

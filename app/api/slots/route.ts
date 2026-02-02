@@ -52,6 +52,9 @@ export async function GET(req: Request) {
       console.log("⛔ zi nelucrătoare");
       return NextResponse.json({ slots: [] });
     }
+console.log("🧪 date:", date);
+console.log("🧪 computed dayOfWeek:", dayOfWeek);
+console.log("🧪 weekly result:", weekly);
 
     /* =========================
        OVERRIDE (opțional)

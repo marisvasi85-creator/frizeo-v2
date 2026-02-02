@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
-
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { token } = await req.json();
 
@@ -15,14 +14,14 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1️⃣ Luăm booking-ul
-    const { data: booking, error } = await supabase
+    // 1️⃣ Găsim booking-ul
+    const { data: booking, error: findError } = await supabase
       .from("bookings")
       .select("*")
       .eq("cancel_token", token)
       .single();
 
-    if (error || !booking) {
+    if (findError || !booking) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
@@ -30,48 +29,51 @@ export async function POST(req: Request) {
     }
 
     if (booking.status === "cancelled") {
-      return NextResponse.json(
-        { message: "Booking already cancelled" }
-      );
+      return NextResponse.json({
+        success: true,
+        message: "Booking already cancelled",
+      });
     }
 
-    // 2️⃣ Anulăm booking-ul
-    const { error: cancelError } = await supabase
+    // 2️⃣ Update status
+    const { error: updateError } = await supabase
       .from("bookings")
       .update({ status: "cancelled" })
       .eq("id", booking.id);
 
-    if (cancelError) {
+    if (updateError) {
       return NextResponse.json(
-        { error: "Cancel failed" },
-        { status: 400 }
+        { error: "Could not cancel booking" },
+        { status: 500 }
       );
     }
 
-    // 3️⃣ Email către CLIENT (doar dacă există email)
+    // 3️⃣ Email client (dacă există)
     if (booking.client_email) {
-      const html = cancelBookingTemplate({
-        clientName: booking.client_name,
-        date: booking.date,
-        time: `${booking.start_time} – ${booking.end_time}`,
-      });
-
-      await sendEmail({
-        to: booking.client_email,
-        subject: "❌ Programare anulată",
-        html,
-      });
+      try {
+        await sendEmail({
+          to: booking.client_email,
+          subject: "Programare anulată",
+          html: cancelBookingTemplate({
+            clientName: booking.client_name,
+            date: booking.date,
+            time: `${booking.start_time} – ${booking.end_time}`,
+          }),
+        });
+      } catch (mailErr) {
+        console.error("CANCEL EMAIL ERROR:", mailErr);
+        // booking rămâne anulat chiar dacă mailul pică
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: "Booking cancelled",
     });
   } catch (err) {
-    console.error("CANCEL ERROR", err);
+    console.error("CANCEL BOOKING ERROR:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: "Invalid request" },
+      { status: 400 }
     );
   }
 }

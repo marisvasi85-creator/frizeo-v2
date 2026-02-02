@@ -1,29 +1,33 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase/server";
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");
 
   if (!token) {
-    return NextResponse.json(
-      { error: "Missing token" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing token" }, { status: 400 });
   }
 
-  const { data: booking, error } = await supabase
+  const { data, error } = await supabase
     .from("bookings")
     .select("*")
-    .eq("reschedule_token", token)
+    .eq("cancel_token", token)
     .single();
 
-  if (error || !booking) {
+  if (error || !data) {
     return NextResponse.json(
-      { error: "Invalid token" },
+      { error: "Booking not found" },
       { status: 404 }
     );
   }
 
-  return NextResponse.json({ booking });
+  if (data.status === "cancelled") {
+    return NextResponse.json(
+      { error: "Booking already cancelled" },
+      { status: 409 }
+    );
+  }
+
+  return NextResponse.json(data);
 }

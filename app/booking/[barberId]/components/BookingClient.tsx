@@ -2,54 +2,48 @@
 
 import { useState } from "react";
 import Calendar from "./Calendar";
-import SlotPicker from "./SlotPicker";
+import SlotPicker, { Slot } from "./SlotPicker";
 import BookingForm from "./BookingForm";
 
-type Slot = {
-  start: string;
-  end: string;
-};
-
-export default function BookingClient({
-  barberId,
-}: {
-  barberId: string;
-}) {
+export default function BookingClient({ barberId }: { barberId: string }) {
   const [date, setDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [serviceId, setServiceId] = useState<string | null>(null);
+
+  // TEMP – până introducem ServicePicker
+  const serviceId = "9b2e3f6a-4d7c-4c2c-9e3a-111111111111";
 
   return (
     <div className="space-y-6">
-      {/* CALENDAR */}
       <Calendar
-        date={date}
-        onChange={(newDate) => {
-          setDate(newDate);
-          setSelectedSlot(null);
-        }}
-      />
+  barberId={barberId}
+  date={date}
+  onChange={(newDate) => {
+    setDate(newDate);
+    setSelectedSlot(null);
+  }}
+/>
 
-      {/* SLOT PICKER */}
+
       {date && (
         <SlotPicker
-  barberId={barberId}
-  date={date}
-  selectedSlot={selectedSlot}
-  onSelect={(slot) => setSelectedSlot(slot)}
-/>
-
+          barberId={barberId}
+          date={date}
+          selectedSlot={selectedSlot}
+          onSelect={setSelectedSlot}
+        />
       )}
 
-      {/* FORMULAR */}
       {date && selectedSlot && (
         <BookingForm
-  barberId={barberId}
-  date={date}
-  slot={selectedSlot}
-  onSuccess={() => setSelectedSlot(null)}
-/>
-
+          barberId={barberId}
+          serviceId={serviceId}
+          date={date}
+          slot={selectedSlot}
+          onSuccess={() => {
+            alert("Programare creată");
+            setSelectedSlot(null);
+          }}
+        />
       )}
     </div>
   );
