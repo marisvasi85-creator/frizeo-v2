@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase/server";
 import RescheduleClient from "./components/RescheduleClient";
 
 type Props = {
@@ -7,12 +8,25 @@ type Props = {
 };
 
 export default async function ReschedulePage({ params }: Props) {
-  const { token } = await params;
+  const { token } = await params; // ✅ OBLIGATORIU
+
+  const { data: booking, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("reschedule_token", token)
+    .eq("status", "confirmed")
+    .single();
+
+  if (!booking || error) {
+    return <p>Programare invalidă sau expirată</p>;
+  }
 
   return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: 16 }}>
-      <h1>Reprogramează-te</h1>
-      <RescheduleClient token={token} />
-    </div>
+    <RescheduleClient
+  barberId={booking.barber_id}
+  bookingId={booking.id}
+  token={token}
+/>
+
   );
 }

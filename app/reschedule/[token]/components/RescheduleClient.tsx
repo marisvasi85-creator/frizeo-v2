@@ -1,89 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Calendar from "@/app/booking/[barberId]/components/Calendar";
-import SlotPicker from "@/app/booking/[barberId]/components/SlotPicker";
-import RescheduleInfo from "./RescheduleInfo";
-import RescheduleConfirm from "./RescheduleConfirm";
+import { useState } from "react";
+import Calendar from "@/app/components/Calendar";
+import SlotPicker, { Slot } from "@/app/components/SlotPicker";
 
-type Booking = {
-  id: string;
-  barber_id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  client_name: string;
+type Props = {
+  barberId: string;
+  bookingId: string; // doar pentru excludeBookingId
+  token: string;     // 🔥 ESENȚIAL
 };
 
-type Slot = {
-  start: string;
-  end: string;
-};
-
-export default function RescheduleClient({ token }: { token: string }) {
-  const [booking, setBooking] = useState<Booking | null>(null);
+export default function RescheduleClient({
+  barberId,
+  bookingId,
+  token,
+}: Props) {
   const [date, setDate] = useState<string | null>(null);
-  const [slot, setSlot] = useState<Slot | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  // 1️⃣ Load booking by token
-  useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`/api/bookings/by-token?token=${token}`);
-        const data = await res.json();
+  async function handleConfirm() {
+    if (!date || !selectedSlot) return;
 
-        if (!res.ok) {
-          setError(data.error || "Programare invalidă");
-          return;
-        }
+    setLoading(true);
+    setError(null);
 
-        setBooking(data.booking);
-        setDate(data.booking.date);
-      } catch {
-        setError("Eroare server");
-      } finally {
-        setLoading(false);
-      }
+    const res = await fetch("/api/bookings/reschedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token, // ✅ CORECT
+        new_date: date,
+        new_start_time: selectedSlot.start,
+        new_end_time: selectedSlot.end,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Nu s-a putut reprograma");
+      setLoading(false);
+      return;
     }
 
-    load();
-  }, [token]);
+    setSuccess(true);
+    setLoading(false);
+  }
 
-  if (loading) return <p>Se încarcă...</p>;
-  if (error) return <p className="text-red-500">{error}</p>;
-  if (!booking) return null;
+  if (success) {
+    return (
+      <p className="text-green-600 text-center">
+        ✅ Programarea a fost reprogramată cu succes!
+      </p>
+    );
+  }
+window.location.href = "/reschedule/confirmed";
 
   return (
     <div className="space-y-6">
-      <RescheduleInfo booking={booking} />
-
       <Calendar
-        date={date}
+        value={date}
         onChange={(d) => {
           setDate(d);
-          setSlot(null);
+          setSelectedSlot(null);
         }}
       />
 
       {date && (
         <SlotPicker
-          barberId={booking.barber_id}
+          barberId={barberId}
           date={date}
-          excludeBookingId={booking.id}
-          selectedSlot={slot}
-          onSelect={setSlot}
+          selectedSlot={selectedSlot}
+          onSelect={setSelectedSlot}
+          excludeBookingId={bookingId}
         />
       )}
 
-      {date && slot && (
-        <RescheduleConfirm
-          token={token}
-          date={date}
-          slot={slot}
-        />
+      {selectedSlot && (
+        <button
+          onClick={handleConfirm}
+          disabled={loading}
+          className="w-full bg-black text-white py-2 rounded disabled:opacity-50"
+        >
+          {loading ? "Se reprogramează..." : "Confirmă reprogramarea"}
+        </button>
       )}
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
     </div>
   );
 }

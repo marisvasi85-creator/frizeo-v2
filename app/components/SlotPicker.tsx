@@ -26,27 +26,35 @@ export default function SlotPicker({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      setLoading(true);
+  if (!barberId || !date) return;
 
-      const params = new URLSearchParams({
-        barberId,
-        date,
-      });
+  let cancelled = false;
 
-      if (excludeBookingId) {
-        params.append("excludeBookingId", excludeBookingId);
-      }
+  async function load() {
+    setLoading(true);
 
-      const res = await fetch(`/api/slots?${params.toString()}`);
-      const data = await res.json();
+    const params = new URLSearchParams({ barberId, date });
 
+    if (excludeBookingId) {
+      params.append("excludeBookingId", excludeBookingId);
+    }
+
+    const res = await fetch(`/api/slots?${params.toString()}`);
+    const data = await res.json();
+
+    if (!cancelled) {
       setSlots(data.slots || []);
       setLoading(false);
     }
+  }
 
-    load();
-  }, [barberId, date, excludeBookingId]);
+  load();
+
+  return () => {
+    cancelled = true;
+  };
+}, [barberId, date, excludeBookingId]);
+
 
   if (loading) return <p>Se încarcă sloturile…</p>;
   if (slots.length === 0) return <p>Nu sunt sloturi disponibile</p>;

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     } = body ?? {};
 
     /* =========================
-       1️⃣ VALIDARE
+       1️⃣ VALIDARE INPUT
     ========================= */
     if (!token || !new_date || !new_start_time || !new_end_time) {
       return NextResponse.json(
@@ -25,41 +25,63 @@ export async function POST(req: NextRequest) {
     }
 
     /* =========================
-       2️⃣ BOOKING VECHI (CONFIRMED)
+       2️⃣ GĂSIM BOOKING-UL VECHI (TOKEN VALID)
     ========================= */
     const { data: oldBooking, error: findError } = await supabase
       .from("bookings")
       .select("*")
       .eq("reschedule_token", token)
       .eq("status", "confirmed")
+      .gt("reschedule_token_expires_at", new Date().toISOString())
       .single();
 
     if (findError || !oldBooking) {
       return NextResponse.json(
-        { error: "Booking not found" },
+        { error: "Programare invalidă sau expirată" },
         { status: 404 }
       );
     }
+/* =========================
+   ⏰ LIMITĂ 2 ORE ÎNAINTE
+========================= */
+const bookingDateTime = new Date(
+  `${oldBooking.date}T${oldBooking.start_time}`
+);
+
+const nowPlus2h = new Date(Date.now() + 2 * 60 * 60 * 1000);
+
+if (bookingDateTime <= nowPlus2h) {
+  return NextResponse.json(
+    {
+      error:
+        "Programarea nu mai poate fi reprogramată cu mai puțin de 2 ore înainte.",
+    },
+    { status: 403 }
+  );
+}
 
     /* =========================
-       3️⃣ ANULĂM BOOKING-UL VECHI
-       ⚠️ IMPORTANT: înainte de a crea noul
+       3️⃣ MARCĂM BOOKING-UL VECHI
     ========================= */
-    const { error: cancelError } = await supabase
+    const { error: updateOldError } = await supabase
       .from("bookings")
-      .update({ status: "cancelled" })
+      .update({
+        status: "rescheduled",
+        reschedule_token: null,
+        reschedule_token_expires_at: null,
+      })
       .eq("id", oldBooking.id);
 
-    if (cancelError) {
-      console.error("CANCEL OLD BOOKING ERROR:", cancelError);
+    if (updateOldError) {
+      console.error("UPDATE OLD BOOKING ERROR:", updateOldError);
       return NextResponse.json(
-        { error: "Could not cancel old booking" },
+        { error: "Could not update old booking" },
         { status: 500 }
       );
     }
 
     /* =========================
-       4️⃣ CREĂM BOOKING NOU (SAFE)
+       4️⃣ CREĂM BOOKING NOU (RPC SAFE)
     ========================= */
     const { data: newBooking, error: createError } =
       await supabase.rpc("create_booking_safe", {
@@ -75,19 +97,30 @@ export async function POST(req: NextRequest) {
 
     if (createError || !newBooking) {
       console.error("RESCHEDULE CREATE ERROR:", createError);
-
-      // rollback minimal: slotul vechi rămâne liber (corect)
       return NextResponse.json(
         { error: createError?.message ?? "Could not reschedule booking" },
         { status: 500 }
       );
     }
 
-    const oldTime = `${oldBooking.start_time} – ${oldBooking.end_time}`;
-    const newTime = `${new_start_time} – ${new_end_time}`;
+    /* =========================
+       5️⃣ GENERĂM TOKEN NOU PENTRU BOOKING-UL NOU
+    ========================= */
+    const newRescheduleToken = crypto.randomUUID();
+    const expiresAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ).toISOString();
+
+    await supabase
+      .from("bookings")
+      .update({
+        reschedule_token: newRescheduleToken,
+        reschedule_token_expires_at: expiresAt,
+      })
+      .eq("id", newBooking.id);
 
     /* =========================
-       5️⃣ EMAIL CLIENT
+       6️⃣ EMAIL CLIENT
     ========================= */
     try {
       if (oldBooking.client_email) {
@@ -97,9 +130,9 @@ export async function POST(req: NextRequest) {
           html: rescheduleBookingTemplate({
             clientName: oldBooking.client_name,
             oldDate: oldBooking.date,
-            oldTime,
+            oldTime: `${oldBooking.start_time} – ${oldBooking.end_time}`,
             newDate: new_date,
-            newTime,
+            newTime: `${new_start_time} – ${new_end_time}`,
             cancelUrl: `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${newBooking.cancel_token}`,
           }),
         });
@@ -109,13 +142,13 @@ export async function POST(req: NextRequest) {
     }
 
     /* =========================
-       6️⃣ SUCCESS
+       7️⃣ SUCCESS
     ========================= */
     return NextResponse.json({
       success: true,
       bookingId: newBooking.id,
       cancelToken: newBooking.cancel_token,
-      rescheduleToken: newBooking.reschedule_token,
+      rescheduleToken: newRescheduleToken,
     });
   } catch (err) {
     console.error("RESCHEDULE ERROR:", err);
