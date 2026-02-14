@@ -29,6 +29,7 @@ export function getAvailableSlots(params: {
   } | null;
   settings: BarberSettings;
   bookings: Booking[];
+  serviceDuration: number;
 }): Slot[] {
   const { date, weekly, override, settings, bookings } = params;
 
@@ -85,16 +86,18 @@ export function getAvailableSlots(params: {
       : null;
 
   /* =========================
-     SLOT DURATION
-  ========================= */
-  const slotDuration =
-    override?.slot_duration ??
-    settings.slot_duration;
+   SLOT DURATION
+========================= */
 
-  if (!slotDuration || slotDuration <= 0) {
-    console.log("⛔ invalid slot_duration");
-    return [];
-  }
+const slotDuration =
+  override?.slot_duration ??
+  params.serviceDuration; // 🔥 folosim serviciul
+
+if (!slotDuration || slotDuration <= 0) {
+  console.log("⛔ invalid slot_duration");
+  return [];
+}
+
 
   /* =========================
      BUILD INTERVALS

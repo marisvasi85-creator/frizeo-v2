@@ -1,46 +1,57 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function LoginPage() {
   const router = useRouter();
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
-    setLoading(true);
+  async function login() {
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push("/admin/dashboard/barber");
+    if (error || !data.user) {
+      setError("Email sau parolă greșită");
+      return;
     }
-  };
+
+    const userId = data.user.id;
+
+    // 🔎 verificăm dacă user-ul este frizer
+    const { data: barber } = await supabase
+      .from("barbers")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    router.push("/select-tenant");
+  }
 
   return (
-    <div style={{ padding: 40, maxWidth: 400 }}>
+    <div style={{ padding: 40 }}>
       <h1>Login</h1>
 
       <input
-        type="email"
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
 
-      <br /><br />
+      <br />
 
       <input
         type="password"
@@ -49,11 +60,9 @@ export default function LoginPage() {
         onChange={(e) => setPassword(e.target.value)}
       />
 
-      <br /><br />
+      <br />
 
-      <button onClick={handleLogin} disabled={loading}>
-        {loading ? "Se conectează..." : "Login"}
-      </button>
+      <button onClick={login}>Login</button>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
     </div>

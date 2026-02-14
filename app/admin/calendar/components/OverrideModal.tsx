@@ -34,21 +34,23 @@ export default function OverrideModal({
     setLoading(true);
 
     fetch(
-      `/api/barber-overrides?barberId=${barberId}&date=${date}`
+      `/api/barber-day-overrides?barberId=${barberId}&date=${date}`
     )
       .then((res) => res.json())
       .then((data) => {
-        if (data) {
-          setIsClosed(data.is_closed ?? false);
-          setWorkStart(data.work_start ?? "");
-          setWorkEnd(data.work_end ?? "");
-          setBreakEnabled(data.break_enabled ?? false);
-          setBreakStart(data.break_start ?? "");
-          setBreakEnd(data.break_end ?? "");
-          setSlotDuration(
-            data.slot_duration ? String(data.slot_duration) : ""
-          );
-        }
+        if (!data) return;
+
+        setIsClosed(data.is_closed ?? false);
+        setWorkStart(data.work_start ?? "");
+        setWorkEnd(data.work_end ?? "");
+        setBreakEnabled(data.break_enabled ?? false);
+        setBreakStart(data.break_start ?? "");
+        setBreakEnd(data.break_end ?? "");
+        setSlotDuration(
+          data.slot_duration != null
+            ? String(data.slot_duration)
+            : ""
+        );
       })
       .finally(() => setLoading(false));
   }, [barberId, date]);
@@ -57,6 +59,11 @@ export default function OverrideModal({
      SAVE OVERRIDE
   ========================= */
   async function save() {
+    if (!isClosed && (!workStart || !workEnd)) {
+      alert("Programul zilei este incomplet");
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
@@ -74,7 +81,7 @@ export default function OverrideModal({
         isClosed || !slotDuration ? null : Number(slotDuration),
     };
 
-    const res = await fetch("/api/barber-overrides", {
+    const res = await fetch("/api/barber-day-overrides", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -100,7 +107,7 @@ export default function OverrideModal({
     setLoading(true);
 
     const res = await fetch(
-      `/api/barber-overrides?barberId=${barberId}&date=${date}`,
+      `/api/barber-day-overrides?barberId=${barberId}&date=${date}`,
       { method: "DELETE" }
     );
 
@@ -148,9 +155,7 @@ export default function OverrideModal({
               <input
                 type="checkbox"
                 checked={isClosed}
-                onChange={(e) =>
-                  setIsClosed(e.target.checked)
-                }
+                onChange={(e) => setIsClosed(e.target.checked)}
               />{" "}
               Zi închisă
             </label>
@@ -164,9 +169,7 @@ export default function OverrideModal({
                   <input
                     type="time"
                     value={workStart}
-                    onChange={(e) =>
-                      setWorkStart(e.target.value)
-                    }
+                    onChange={(e) => setWorkStart(e.target.value)}
                   />
                 </label>
 
@@ -175,9 +178,7 @@ export default function OverrideModal({
                   <input
                     type="time"
                     value={workEnd}
-                    onChange={(e) =>
-                      setWorkEnd(e.target.value)
-                    }
+                    onChange={(e) => setWorkEnd(e.target.value)}
                   />
                 </label>
 

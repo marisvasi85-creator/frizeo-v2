@@ -1,85 +1,78 @@
-type Props = {
-  booking: any;
-  onCancelled: () => void;
+"use client";
+
+import { useState } from "react";
+import BookingDetailsModal from "./BookingDetailsModal";
+
+type Booking = {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  client_name: string;
+  client_phone: string;
+  client_email?: string;
+  status: string;
+};
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: "#16a34a",     // verde
+  rescheduled: "#ea580c",   // portocaliu
+  canceled: "#dc2626",      // roșu
 };
 
-export default function BookingCard({ booking, onCancelled }: Props) {
+export default function BookingCard({
+  booking,
+  onChanged,
+}: {
+  booking: Booking;
+  onChanged: () => void;
+}) {
+  const statusColor = STATUS_COLORS[booking.status] ?? "#6b7280";
+  const [open, setOpen] = useState(false);
   const isCancelled = booking.status === "cancelled";
 
-  const handleCancel = async () => {
-    if (isCancelled) return;
-
-    const ok = confirm(
-      `Sigur vrei să anulezi programarea de la ${booking.booking_time}?`
-    );
-    if (!ok) return;
-
-    const res = await fetch("/api/bookings/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token: booking.cancel_token,
-        cancelled_by: "barber",
-      }),
-    });
-
-    if (res.ok) {
-      onCancelled();
-    } else {
-      alert("Eroare la anulare");
-    }
-  };
-
   return (
-    <div
-      style={{
-        border: "1px solid #333",
-        padding: 12,
-        marginBottom: 8,
-        borderRadius: 6,
-        opacity: isCancelled ? 0.6 : 1,
-        background: isCancelled ? "#1a1a1a" : "transparent",
-      }}
-    >
+    <>
       <div
+        onClick={() => setOpen(true)}
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
+          padding: 12,
+          marginBottom: 8,
+          borderRadius: 6,
+          border: "1px solid #ddd",
+          opacity: isCancelled ? 0.5 : 1,
+          cursor: "pointer",
         }}
       >
-        <div>
-          <strong>{booking.booking_time}</strong> – {booking.client_name}
-        </div>
+        <strong>
+          {booking.start_time} – {booking.end_time}
+        </strong>
+        <div>{booking.client_name}</div>
+        <div>{booking.client_phone}</div>
+        <div
+  style={{
+    display: "inline-block",
+    padding: "4px 10px",
+    borderRadius: 6,
+    fontSize: 12,
+    fontWeight: 600,
+    backgroundColor: statusColor,
+    color: "white",
+    marginBottom: 6,
+  }}
+>
+  {booking.status}
+</div>
 
-        <span
-          style={{
-            fontSize: 12,
-            padding: "2px 8px",
-            borderRadius: 12,
-            background: isCancelled ? "#922" : "#294",
-            color: "#fff",
-          }}
-        >
-          {isCancelled ? "Anulată" : "Confirmată"}
-        </span>
+        {isCancelled && <em>Anulată</em>}
       </div>
 
-      <div style={{ fontSize: 14, opacity: 0.8 }}>
-        {booking.client_phone}
-      </div>
-
-      <button
-        onClick={handleCancel}
-        disabled={isCancelled}
-        style={{
-          marginTop: 8,
-          color: isCancelled ? "#777" : "red",
-          cursor: isCancelled ? "not-allowed" : "pointer",
-        }}
-      >
-        Anulează
-      </button>
-    </div>
+      {open && (
+        <BookingDetailsModal
+          booking={booking}
+          onClose={() => setOpen(false)}
+          onCancelled={onChanged}
+        />
+      )}
+    </>
   );
 }

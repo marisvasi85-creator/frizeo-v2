@@ -44,7 +44,8 @@ export async function GET(req: Request) {
       .select("*")
       .eq("barber_id", barberId)
       .eq("day_of_week", dayOfWeek)
-      .single();
+      .maybeSingle();
+
 
     console.log("🗓 weekly:", weekly);
 
@@ -60,7 +61,7 @@ console.log("🧪 weekly result:", weekly);
        OVERRIDE (opțional)
     ========================= */
     const { data: override } = await supabase
-      .from("barber_overrides")
+      .from("barber_day_overrides")
       .select("*")
       .eq("barber_id", barberId)
       .eq("date", date)
@@ -99,7 +100,7 @@ console.log("🧪 weekly result:", weekly);
       .select("*")
       .eq("barber_id", barberId)
       .eq("date", date)
-      .neq("status", "cancelled");
+      .eq("status", "confirmed")
 
     const bookings =
       excludeBookingId

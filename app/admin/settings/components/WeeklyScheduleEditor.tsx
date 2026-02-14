@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from "react";
 
+type DaySchedule = {
+  day_of_week: number;
+  is_working: boolean;
+  work_start: string | null;
+  work_end: string | null;
+  break_enabled: boolean;
+  break_start: string | null;
+  break_end: string | null;
+};
+
 const DAYS = [
   { id: 1, label: "Luni" },
   { id: 2, label: "Marți" },
@@ -12,133 +22,177 @@ const DAYS = [
   { id: 7, label: "Duminică" },
 ];
 
-type Day = {
-  day_of_week: number;
-  is_working: boolean;
-  start_time: string | null;
-  end_time: string | null;
-  break_enabled: boolean;
-  break_start: string | null;
-  break_end: string | null;
-};
+export default function WeeklyScheduleEditor({
+  barberId,
+}: {
+  barberId: string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState<DaySchedule[]>([]);
 
-export default function WeeklyScheduleEditor() {
-  const barberId = "d0bc5fec-f37a-4e8a-94ab-b3ef9880374c"; // TEMP
-
-  const [days, setDays] = useState<Day[]>([]);
-
+  /* =========================
+     LOAD WEEKLY SCHEDULE
+  ========================= */
   useEffect(() => {
+    setLoading(true);
+
     fetch(`/api/barber-weekly-schedule?barberId=${barberId}`)
       .then((res) => res.json())
-      .then((data) => setDays(data));
-  }, []);
+      .then((data) => {
+        setDays(data || []);
+      })
+      .finally(() => setLoading(false));
+  }, [barberId]);
 
-  function updateDay(day: Day, changes: Partial<Day>) {
-    const updated = { ...day, ...changes };
+  /* =========================
+     UPDATE DAY
+  ========================= */
+  function updateDay(
+    day: number,
+    patch: Partial<DaySchedule>
+  ) {
+    setDays((prev) =>
+      prev.map((d) =>
+        d.day_of_week === day ? { ...d, ...patch } : d
+      )
+    );
+  }
 
-    fetch("/api/barber-weekly-schedule", {
+  /* =========================
+     SAVE ALL
+  ========================= */
+  async function save() {
+    setLoading(true);
+
+    const res = await fetch("/api/barber-weekly-schedule", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         barber_id: barberId,
-        ...updated,
+        days,
       }),
     });
 
-    setDays((prev) =>
-      prev.map((d) => (d.day_of_week === day.day_of_week ? updated : d))
-    );
+    setLoading(false);
+
+    if (!res.ok) {
+      alert("Eroare la salvare program");
+      return;
+    }
+
+    alert("Program salvat");
   }
 
-  return (
-    <div>
-      <h2>🗓 Program săptămânal</h2>
+  if (loading) return <p>Se încarcă…</p>;
 
-      {DAYS.map((d) => {
-        const day =
-          days.find((x) => x.day_of_week === d.id) ||
-          ({
-            day_of_week: d.id,
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {DAYS.map((day) => {
+        const data =
+          days.find((d) => d.day_of_week === day.id) ||
+          {
+            day_of_week: day.id,
             is_working: false,
-            start_time: null,
-            end_time: null,
+            work_start: null,
+            work_end: null,
             break_enabled: false,
             break_start: null,
             break_end: null,
-          } as Day);
+          };
 
         return (
-          <div key={d.id} style={{ borderBottom: "1px solid #ddd", padding: 12 }}>
-            <strong>{d.label}</strong>
+          <div
+            key={day.id}
+            style={{
+              border: "1px solid #ddd",
+              padding: 10,
+              borderRadius: 6,
+            }}
+          >
+            <strong>{day.label}</strong>
 
-            <div>
-              <label>
+            <label style={{ marginLeft: 12 }}>
+              <input
+                type="checkbox"
+                checked={data.is_working}
+                onChange={(e) =>
+                  updateDay(day.id, {
+                    is_working: e.target.checked,
+                  })
+                }
+              />{" "}
+              Lucrez
+            </label>
+
+            {data.is_working && (
+              <div style={{ marginTop: 8 }}>
                 <input
-                  type="checkbox"
-                  checked={day.is_working}
+                  type="time"
+                  value={data.work_start || ""}
                   onChange={(e) =>
-                    updateDay(day, { is_working: e.target.checked })
+                    updateDay(day.id, {
+                      work_start: e.target.value,
+                    })
                   }
                 />
-                Lucrează
-              </label>
-            </div>
+                {" - "}
+                <input
+                  type="time"
+                  value={data.work_end || ""}
+                  onChange={(e) =>
+                    updateDay(day.id, {
+                      work_end: e.target.value,
+                    })
+                  }
+                />
 
-            {day.is_working && (
-              <>
                 <div>
-                  <input
-                    type="time"
-                    value={day.start_time || ""}
-                    onChange={(e) =>
-                      updateDay(day, { start_time: e.target.value })
-                    }
-                  />
-                  {" - "}
-                  <input
-                    type="time"
-                    value={day.end_time || ""}
-                    onChange={(e) =>
-                      updateDay(day, { end_time: e.target.value })
-                    }
-                  />
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={data.break_enabled}
+                      onChange={(e) =>
+                        updateDay(day.id, {
+                          break_enabled: e.target.checked,
+                        })
+                      }
+                    />{" "}
+                    Pauză
+                  </label>
                 </div>
 
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={day.break_enabled}
-                    onChange={(e) =>
-                      updateDay(day, { break_enabled: e.target.checked })
-                    }
-                  />
-                  Pauză
-                </label>
-
-                {day.break_enabled && (
-                  <div>
+                {data.break_enabled && (
+                  <>
                     <input
                       type="time"
-                      value={day.break_start || ""}
+                      value={data.break_start || ""}
                       onChange={(e) =>
-                        updateDay(day, { break_start: e.target.value })
+                        updateDay(day.id, {
+                          break_start: e.target.value,
+                        })
                       }
                     />
                     {" - "}
                     <input
                       type="time"
-                      value={day.break_end || ""}
+                      value={data.break_end || ""}
                       onChange={(e) =>
-                        updateDay(day, { break_end: e.target.value })
+                        updateDay(day.id, {
+                          break_end: e.target.value,
+                        })
                       }
                     />
-                  </div>
+                  </>
                 )}
-              </>
+              </div>
             )}
           </div>
         );
       })}
+
+      <button onClick={save} style={{ marginTop: 12 }}>
+        Salvează programul
+      </button>
     </div>
   );
 }

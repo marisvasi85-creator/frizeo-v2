@@ -1,16 +1,20 @@
+"use client";
+
 import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
-import DayOverrides from "./components/DayOverrides";
 
-export default function SettingsPage() {
+export default function AdminSettingsPage() {
+  // TODO: înlocuiește cu barber-ul logat din session / context
+  const barberId = "CURRENT_BARBER_ID";
+
   return (
-    <div>
-      <WeeklyScheduleEditor />
+    <div style={{ padding: 20, maxWidth: 800 }}>
+      <h1>Setări</h1>
 
-      <hr style={{ margin: "40px 0" }} />
+      <section style={{ marginTop: 24 }}>
+        <h2>Program săptămânal</h2>
 
-
-      {/* OVERRIDES */}
-      <DayOverrides />
+        <WeeklyScheduleEditor barberId={barberId} />
+      </section>
     </div>
   );
 }

@@ -1,126 +1,137 @@
-"use client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
-import { useEffect, useState } from "react";
+export default async function AdminServicesPage() {
+  const supabase = await createSupabaseServerClient();
 
-type Service = {
-  id: string;
-  name: string;
-  duration_minutes: number;
-  price: number | null;
-  active: boolean;
-};
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-export default function AdminServicesPage() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [name, setName] = useState("");
-  const [duration, setDuration] = useState(30);
-  const [price, setPrice] = useState<number | "">("");
-  const [message, setMessage] = useState("");
+  if (!user) redirect("/login");
 
-  useEffect(() => {
-    loadServices();
-  }, []);
+  // 🔹 tenant activ
+  const { data: activeTenant } = await supabase
+    .from("user_active_tenant")
+    .select("tenant_id")
+    .eq("user_id", user.id)
+    .single();
 
-  async function loadServices() {
-    const res = await fetch("/api/admin/services");
-    const data = await res.json();
-    setServices(data.services || []);
+  if (!activeTenant) {
+    return <p>Nu ai un salon activ.</p>;
   }
 
-  async function addService() {
-    setMessage("");
+  const { data: services, error } = await supabase
+    .from("barber_services")
+    .select(`
+      id,
+      display_name,
+      duration,
+      price,
+      sort_order,
+      show_price,
+      featured,
+      active
+    `)
+    .eq("tenant_id", activeTenant.tenant_id)
+    .order("sort_order", { ascending: true });
 
-    const res = await fetch("/api/admin/services", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name,
-        duration_minutes: duration,
-        price: price === "" ? null : price,
-        active: true,
-      }),
-    });
-
-    if (res.ok) {
-      setName("");
-      setDuration(30);
-      setPrice("");
-      loadServices();
-      setMessage("✅ Serviciu adăugat");
-    } else {
-      setMessage("❌ Eroare");
-    }
-  }
-
-  async function toggleActive(service: Service) {
-    await fetch("/api/admin/services", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...service,
-        active: !service.active,
-      }),
-    });
-
-    loadServices();
+  if (error) {
+    return <p>Eroare: {error.message}</p>;
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 600 }}>
-      <h1>✂️ Servicii</h1>
+    <div style={{ padding: 24 }}>
+      <h1>Servicii</h1>
 
-      <h3>Adaugă serviciu</h3>
+      <table
+        border={1}
+        cellPadding={8}
+        style={{ marginTop: 16, width: "100%" }}
+      >
+        <thead>
+          <tr>
+            <th>Nume</th>
+            <th>Durată</th>
+            <th>Preț</th>
+            <th>Ordine</th>
+            <th>Preț vizibil</th>
+            <th>⭐ Recomandat</th>
+            <th>Activ</th>
+          </tr>
+        </thead>
 
-      <input
-        placeholder="Nume serviciu"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+        <tbody>
+          {services?.map((s) => (
+            <tr key={s.id}>
+              <td>{s.display_name}</td>
+              <td>{s.duration} min</td>
+              <td>{s.price ?? "-"}</td>
 
-      <input
-        type="number"
-        placeholder="Durată (minute)"
-        value={duration}
-        onChange={(e) => setDuration(Number(e.target.value))}
-      />
+              <td>
+                <input
+                  type="number"
+                  defaultValue={s.sort_order ?? 0}
+                  onBlur={async (e) => {
+                    await supabase
+                      .from("barber_services")
+                      .update({
+                        sort_order: Number(e.target.value),
+                      })
+                      .eq("id", s.id);
+                  }}
+                  style={{ width: 60 }}
+                />
+              </td>
 
-      <input
-        type="number"
-        placeholder="Preț (opțional)"
-        value={price}
-        onChange={(e) =>
-          setPrice(e.target.value === "" ? "" : Number(e.target.value))
-        }
-      />
+              <td>
+                <input
+                  type="checkbox"
+                  defaultChecked={s.show_price}
+                  onChange={async (e) => {
+                    await supabase
+                      .from("barber_services")
+                      .update({
+                        show_price: e.target.checked,
+                      })
+                      .eq("id", s.id);
+                  }}
+                />
+              </td>
 
-      <button onClick={addService}>Adaugă</button>
+              <td>
+                <input
+                  type="checkbox"
+                  defaultChecked={s.featured}
+                  onChange={async (e) => {
+                    await supabase
+                      .from("barber_services")
+                      .update({
+                        featured: e.target.checked,
+                      })
+                      .eq("id", s.id);
+                  }}
+                />
+              </td>
 
-      {message && <p>{message}</p>}
-
-      <hr />
-
-      <h3>Servicii existente</h3>
-
-      {services.map((s) => (
-        <div
-          key={s.id}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            padding: 8,
-            borderBottom: "1px solid #eee",
-          }}
-        >
-          <div>
-            <strong>{s.name}</strong> – {s.duration_minutes} min
-            {s.price !== null && ` – ${s.price} lei`}
-          </div>
-
-          <button onClick={() => toggleActive(s)}>
-            {s.active ? "Dezactivează" : "Activează"}
-          </button>
-        </div>
-      ))}
+              <td>
+                <input
+                  type="checkbox"
+                  defaultChecked={s.active}
+                  onChange={async (e) => {
+                    await supabase
+                      .from("barber_services")
+                      .update({
+                        active: e.target.checked,
+                      })
+                      .eq("id", s.id);
+                  }}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

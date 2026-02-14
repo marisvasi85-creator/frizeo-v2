@@ -1,77 +1,109 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Calendar from "../../../components/Calendar";
-import SlotPicker, { Slot } from "../../../components/SlotPicker";
 import BookingForm from "./BookingForm";
+
+type Slot = {
+  start: string;
+  end: string;
+};
+
+type Service = {
+  id: string;
+  name: string;
+  duration: number;
+  price: number | null;
+  featured: boolean;
+};
 
 type Props = {
   barberId: string;
+  date: string;
+  slot: Slot | null;
 };
 
-export default function BookingClient({ barberId }: Props) {
-  const [date, setDate] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
-  const [availableDays, setAvailableDays] = useState<string[]>([]);
+function formatDuration(min: number) {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
 
-  // TEMP până introducem ServicePicker
-  const serviceId = "9b2e3f6a-4d7c-4c2c-9e3a-111111111111";
+export default function BookingClient({
+  barberId,
+  date,
+  slot,
+}: Props) {
+  const [services, setServices] = useState<Service[]>([]);
+  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 🔒 limite calendar
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const maxDateISO = new Date(
-    new Date().setMonth(new Date().getMonth() + 3)
-  )
-    .toISOString()
-    .slice(0, 10);
-
-  // 📅 fetch zile disponibile (o singură dată)
   useEffect(() => {
-    async function loadAvailability() {
-      const res = await fetch(
-        `/api/availability?barberId=${barberId}&from=${todayISO}&to=${maxDateISO}`
-      );
-      const data = await res.json();
-      setAvailableDays(data.availableDays || []);
+    async function load() {
+      try {
+        const res = await fetch(
+          `/api/services?barberId=${barberId}`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || "Nu pot încărca serviciile");
+          return;
+        }
+
+        setServices(data);
+
+        if (data.length > 0) {
+          setServiceId(data[0].id);
+        }
+      } catch {
+        setError("Eroare la încărcare servicii");
+      } finally {
+        setLoading(false);
+      }
     }
 
-    loadAvailability();
-  }, [barberId, todayISO, maxDateISO]);
+    load();
+  }, [barberId]);
 
-  // reset slot când se schimbă ziua
-  useEffect(() => {
-    setSelectedSlot(null);
-  }, [date]);
+  if (loading) return <p>Se încarcă serviciile…</p>;
+  if (error) return <p className="text-red-500">{error}</p>;
 
   return (
-    <div className="space-y-6">
-      <Calendar
-        value={date}
-        onChange={setDate}
-        availableDays={availableDays}
-        minDate={todayISO}
-        maxDate={maxDateISO}
-      />
+    <div className="space-y-4">
+      <h3>Alege serviciul</h3>
 
-      {date && (
-        <SlotPicker
-          barberId={barberId}
-          date={date}
-          selectedSlot={selectedSlot}
-          onSelect={setSelectedSlot}
-        />
-      )}
+      {services.map((s) => (
+        <label
+          key={s.id}
+          className="flex items-center gap-2"
+        >
+          <input
+            type="radio"
+            name="service"
+            checked={serviceId === s.id}
+            onChange={() => setServiceId(s.id)}
+          />
 
-      {date && selectedSlot && (
+          <span>
+            {s.name} – {formatDuration(s.duration)}
+            {s.price != null && ` / ${s.price} lei`}
+            {s.featured && (
+              <strong style={{ marginLeft: 6 }}>
+                ⭐ Recomandat
+              </strong>
+            )}
+          </span>
+        </label>
+      ))}
+
+      {slot && serviceId && (
         <BookingForm
           barberId={barberId}
           serviceId={serviceId}
           date={date}
-          slot={selectedSlot}
-          onSuccess={() => {
-            setDate(null);
-            setSelectedSlot(null);
-          }}
+          slot={slot}
         />
       )}
     </div>

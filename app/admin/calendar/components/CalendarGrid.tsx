@@ -1,15 +1,17 @@
 "use client";
-import React from "react";
+
+import React, { useEffect, useState } from "react";
 import DayCell from "./DayCell";
 
-
 type Props = {
+  barberId: string;
   year: number;
-  month: number; // 0–11
+  month: number;
   onSelectDate: (date: string) => void;
 };
 
 export default function CalendarGrid({
+  barberId,
   year,
   month,
   onSelectDate,
@@ -18,7 +20,26 @@ export default function CalendarGrid({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startWeekday = (firstDay.getDay() + 6) % 7; // luni = 0
 
-const cells: React.ReactNode[] = [];
+  const [availability, setAvailability] = useState<
+    Record<string, boolean>
+  >({});
+
+  useEffect(() => {
+    const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const to = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+      daysInMonth
+    ).padStart(2, "0")}`;
+
+    fetch(
+      `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setAvailability(data.availability || {});
+      });
+  }, [barberId, year, month, daysInMonth]);
+
+  const cells: React.ReactNode[] = [];
 
   // zile goale înainte de 1
   for (let i = 0; i < startWeekday; i++) {
@@ -32,12 +53,19 @@ const cells: React.ReactNode[] = [];
       "0"
     )}-${String(day).padStart(2, "0")}`;
 
+    const isAvailable = availability[dateStr] === true;
+
     cells.push(
       <DayCell
         key={dateStr}
         date={dateStr}
         dayNumber={day}
-        onClick={() => onSelectDate(dateStr)}
+        isAvailable={isAvailable}
+        onClick={() => {
+          if (isAvailable) {
+            onSelectDate(dateStr);
+          }
+        }}
       />
     );
   }

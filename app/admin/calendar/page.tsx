@@ -6,19 +6,25 @@ import OverrideModal from "./components/OverrideModal";
 
 export default function AdminCalendarPage() {
   const today = new Date();
+
   const [selectedDate, setSelectedDate] =
     useState<string | null>(null);
 
-  const barberId = "EB_ID"; // ← înlocuiești cu barber-ul logat
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // TODO: înlocuiește cu barber-ul logat
+  const barberId = "eb120348-ec7a-4f43-8320-f3bfdb2b4f6f";
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Calendar</h1>
 
       <CalendarGrid
+        key={refreshKey}
+        barberId={barberId}
         year={today.getFullYear()}
         month={today.getMonth()}
-        onSelectDate={(date) => setSelectedDate(date)}
+        onSelectDate={setSelectedDate}
       />
 
       {selectedDate && (
@@ -27,7 +33,8 @@ export default function AdminCalendarPage() {
           date={selectedDate}
           onClose={() => setSelectedDate(null)}
           onSaved={() => {
-            /* refresh vizual dacă vrei */
+            setSelectedDate(null);
+            setRefreshKey((k) => k + 1);
           }}
         />
       )}

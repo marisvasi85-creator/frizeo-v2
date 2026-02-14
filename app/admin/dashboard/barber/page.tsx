@@ -1,40 +1,49 @@
-"use client";
+// app/admin/dashboard/barber/page.tsx
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import MyServicesClient from "./MyServicesClient";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { getCurrentBarber } from "@/lib/supabase/getCurrentBarber";
+export default async function BarberServicesPage() {
+  const supabase = await createSupabaseServerClient();
 
-export default function BarberDashboardPage() {
-  const router = useRouter();
-  const [barber, setBarber] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  useEffect(() => {
-    const load = async () => {
-      const b = await getCurrentBarber();
-
-      if (!b) {
-        // ❌ nu e barber → logout logic
-        router.replace("/login");
-        return;
-      }
-
-      setBarber(b);
-      setLoading(false);
-    };
-
-    load();
-  }, [router]);
-
-  if (loading) {
-    return <p>Se încarcă dashboard-ul...</p>;
+  if (!user) {
+    return <p>Neautorizat</p>;
   }
 
+  const { data: barber } = await supabase
+    .from("barbers")
+    .select("id")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!barber) {
+    return <p>Nu ești asociat unui frizer.</p>;
+  }
+
+  const { data: services } = await supabase
+    .from("services")
+    .select(`
+      id,
+      name,
+      duration_minutes,
+      price,
+      barber_services (
+        id,
+        display_name,
+        duration,
+        price,
+        active
+      )
+    `)
+    .order("sort_order");
+
   return (
-    <div>
-      <h1>Dashboard frizer</h1>
-      <p>ID barber: {barber.id}</p>
-      <p>Nume: {barber.display_name}</p>
-    </div>
+    <MyServicesClient
+      barberId={barber.id}
+      services={services ?? []}
+    />
   );
 }
