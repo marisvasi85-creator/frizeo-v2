@@ -9,55 +9,101 @@ export type Slot = {
 
 type Props = {
   barberId: string;
+  barberServiceId: string; // 🔥 obligatoriu
   date: string;
   selectedSlot: Slot | null;
   onSelect: (slot: Slot) => void;
-  excludeBookingId?: string; // ✅ ADĂUGAT
+  excludeBookingId?: string;
 };
 
 export default function SlotPicker({
   barberId,
+  barberServiceId,
   date,
   selectedSlot,
   onSelect,
   excludeBookingId,
 }: Props) {
+
+  /* ===============================
+     🔎 RENDER DEBUG
+  =============================== */
+  console.log("🎯 SlotPicker RENDER");
+  console.log("Props:", {
+    barberId,
+    barberServiceId,
+    date,
+    excludeBookingId,
+  });
+
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-  if (!barberId || !date) return;
 
-  let cancelled = false;
+    console.log("🚀 useEffect TRIGGERED");
+    console.log("VALUES:", {
+      barberId,
+      barberServiceId,
+      date,
+    });
 
-  async function load() {
-    setLoading(true);
-
-    const params = new URLSearchParams({ barberId, date });
-
-    if (excludeBookingId) {
-      params.append("excludeBookingId", excludeBookingId);
+    if (!barberId || !date || !barberServiceId) {
+      console.log("⛔ Missing required params → abort fetch");
+      return;
     }
 
-    const res = await fetch(`/api/slots?${params.toString()}`);
-    const data = await res.json();
+    let cancelled = false;
 
-    if (!cancelled) {
-      setSlots(data.slots || []);
-      setLoading(false);
+    async function load() {
+      try {
+        setLoading(true);
+
+        const params = new URLSearchParams({
+          barberId,
+          date,
+          barberServiceId,
+        });
+
+        if (excludeBookingId) {
+          params.append("excludeBookingId", excludeBookingId);
+        }
+
+        console.log("🌍 FETCH URL:", `/api/slots?${params.toString()}`);
+
+        const res = await fetch(`/api/slots?${params.toString()}`);
+
+        console.log("📡 Response status:", res.status);
+
+        const data = await res.json();
+
+        console.log("📦 Response data:", data);
+
+        if (!cancelled) {
+          setSlots(data.slots || []);
+          setLoading(false);
+        }
+
+      } catch (err) {
+        console.error("🔥 FETCH ERROR:", err);
+        setLoading(false);
+      }
     }
-  }
 
-  load();
+    load();
 
-  return () => {
-    cancelled = true;
-  };
-}, [barberId, date, excludeBookingId]);
+    return () => {
+      cancelled = true;
+    };
 
+  }, [barberId, date, barberServiceId, excludeBookingId]);
 
   if (loading) return <p>Se încarcă sloturile…</p>;
-  if (slots.length === 0) return <p>Nu sunt sloturi disponibile</p>;
+
+  if (slots.length === 0) {
+    console.log("⚠️ No slots returned");
+    return <p>Nu sunt sloturi disponibile</p>;
+  }
 
   return (
     <div className="grid grid-cols-2 gap-2">

@@ -72,6 +72,7 @@ window.location.href = "/reschedule/confirmed";
       {date && (
         <SlotPicker
           barberId={barberId}
+          barberServiceId={"yourBarberServiceId"} // TODO: Replace with actual barberServiceId value
           date={date}
           selectedSlot={selectedSlot}
           onSelect={setSelectedSlot}

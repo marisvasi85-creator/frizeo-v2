@@ -17,6 +17,7 @@ export function getAvailableSlots(params: {
     break_enabled: boolean;
     break_start: string | null;
     break_end: string | null;
+    serviceDuration: number;
   };
   override?: {
     is_closed?: boolean;
@@ -31,7 +32,7 @@ export function getAvailableSlots(params: {
   bookings: Booking[];
   serviceDuration: number;
 }): Slot[] {
-  const { date, weekly, override, settings, bookings } = params;
+  const { date, weekly, override, settings, bookings, serviceDuration } = params;
 
   console.log("🧮 getAvailableSlots()");
   console.log("weekly:", weekly);
@@ -91,7 +92,7 @@ export function getAvailableSlots(params: {
 
 const slotDuration =
   override?.slot_duration ??
-  params.serviceDuration; // 🔥 folosim serviciul
+  serviceDuration;
 
 if (!slotDuration || slotDuration <= 0) {
   console.log("⛔ invalid slot_duration");
@@ -116,6 +117,9 @@ if (!slotDuration || slotDuration <= 0) {
     break_start,
     break_end
   );
+console.log("WORK START:", work_start);
+console.log("WORK END:", work_end);
+console.log("INTERVALS BUILT:", intervals);
 
   console.log("☕ intervals after break:", intervals);
 

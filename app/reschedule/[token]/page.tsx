@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import RescheduleClient from "./components/RescheduleClient";
 
 type Props = {
@@ -10,7 +10,7 @@ type Props = {
 export default async function ReschedulePage({ params }: Props) {
   const { token } = await params; // ✅ OBLIGATORIU
 
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await (await createSupabaseServerClient())
     .from("bookings")
     .select("*")
     .eq("reschedule_token", token)

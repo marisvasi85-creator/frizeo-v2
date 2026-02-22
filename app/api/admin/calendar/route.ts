@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 /* ================== HELPERS ================== */
 function timeToMinutes(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -24,6 +24,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ slots: [] });
   }
 
+  const supabase = await createSupabaseServerClient();
 
   /* ================== 1️⃣ OVERRIDE ================== */
   const { data: override } = await supabase

@@ -1,27 +1,18 @@
 // app/admin/dashboard/barber/page.tsx
+
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import MyServicesClient from "./MyServicesClient";
 
 export default async function BarberServicesPage() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return <p>Neautorizat</p>;
-  }
-
-  const { data: barber } = await supabase
-    .from("barbers")
-    .select("id")
-    .eq("user_id", user.id)
-    .single();
+  const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
-    return <p>Nu ești asociat unui frizer.</p>;
+    redirect("/login");
   }
+
+  const supabase = await createSupabaseServerClient();
 
   const { data: services } = await supabase
     .from("services")
@@ -38,6 +29,7 @@ export default async function BarberServicesPage() {
         active
       )
     `)
+    .eq("tenant_id", barber.tenant_id)
     .order("sort_order");
 
   return (

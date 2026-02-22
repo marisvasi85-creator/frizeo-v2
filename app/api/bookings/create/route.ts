@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 
 export async function POST(req: NextRequest) {
   try {
+        const supabase = await createSupabaseServerClient(); // 🔥 ADĂUGAT
     const body = await req.json();
 
     const {
@@ -34,11 +35,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { data: barberService } = await supabase
+  .from("barber_services")
+  .select("service_id")
+  .eq("id", serviceId)
+  .eq("barber_id", barberId)
+  .single();
+
+if (!barberService) {
+  return NextResponse.json(
+    { error: "Invalid service" },
+    { status: 400 }
+  );
+}
     // 2️⃣ Creare booking (RPC)
     const { data, error } = await supabase.rpc("create_booking_safe", {
       p_barber_id: barberId,
-      p_service_id: serviceId,
-      p_date: date,
+p_service_id: barberService.service_id,      p_date: date,
       p_start: start_time,
       p_end: end_time,
       p_client_name: client_name,

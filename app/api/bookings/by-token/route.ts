@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,6 +9,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Missing token" }, { status: 400 });
   }
 
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("bookings")
     .select("*")

@@ -1,58 +1,24 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getActiveTenant } from "@/lib/supabase/getActiveTenant";
 import { revalidatePath } from "next/cache";
 
-export async function createService(formData: FormData) {
+export async function updateServiceField(
+  serviceId: string,
+  field: string,
+  value: any
+) {
   const supabase = await createSupabaseServerClient();
 
-  const name = formData.get("name") as string;
-  const duration = Number(formData.get("duration"));
-  const price = Number(formData.get("price"));
+  const tenant = await getActiveTenant();
+  if (!tenant) return;
 
-  if (!name || !duration) {
-    throw new Error("Date invalide");
-  }
-
-  const { data: tenant } = await supabase
-    .from("user_active_tenant")
-    .select("tenant_id")
-    .single();
-
-  if (!tenant) throw new Error("Tenant lipsă");
-
-  const { error } = await supabase.from("services").insert({
-    tenant_id: tenant.tenant_id,
-    name,
-    duration_minutes: duration,
-    price,
-  });
-
-  if (error) throw error;
-
-  revalidatePath("/admin/services");
-}
-
-export async function deleteService(id: string) {
-  const supabase = await createSupabaseServerClient();
-
-  const { error } = await supabase.from("services").delete().eq("id", id);
-
-  if (error) throw error;
-
-  revalidatePath("/admin/services");
-}
-
-/* ✅ NOU – toggle ON / OFF */
-export async function toggleServiceActive(id: string, active: boolean) {
-  const supabase = await createSupabaseServerClient();
-
-  const { error } = await supabase
-    .from("services")
-    .update({ active })
-    .eq("id", id);
-
-  if (error) throw error;
+  await supabase
+    .from("barber_services")
+    .update({ [field]: value })
+    .eq("id", serviceId)
+    .eq("tenant_id", tenant.tenant_id);
 
   revalidatePath("/admin/services");
 }

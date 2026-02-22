@@ -31,7 +31,7 @@ export default async function SelectTenantPage() {
         {barbers.map((b) => (
           <li key={b.tenant_id}>
             <a href={`/api/select-tenant?tenantId=${b.tenant_id}`}>
-              {b.tenants?.name}
+              {b.tenants?.[0]?.name}
             </a>
           </li>
         ))}

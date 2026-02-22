@@ -1,43 +1,74 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAvailableSlots } from "@/lib/scheduling/getAvailableSlots";
 
 export async function GET(req: Request) {
   try {
+    const supabase = await createSupabaseServerClient();
+
     const { searchParams } = new URL(req.url);
 
     const barberId = searchParams.get("barberId");
     const date = searchParams.get("date");
+    const barberServiceId = searchParams.get("barberServiceId");
     const excludeBookingId = searchParams.get("excludeBookingId");
+console.log("SLOTS API START");
+console.log("barberId:", barberId);
+console.log("date:", date);
 
-    console.log("📥 /api/slots HIT");
-    console.log("➡️ barberId:", barberId);
-    console.log("➡️ date:", date);
-    console.log("➡️ excludeBookingId:", excludeBookingId);
+    if (!barberId || !date || !barberServiceId) {
+      console.log("RETURNING 400 HERE");
 
-    if (!barberId || !date) {
       return NextResponse.json(
-        { error: "Missing barberId or date" },
+        { error: "Missing params" },
         { status: 400 }
       );
     }
 
     /* =========================
-       DATE → day_of_week (1–7)
+       GET SERVICE DURATION
     ========================= */
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
+    const { data: barberService } = await supabase
+  .from("barber_services")
+  .select("duration, service_id")
+  .eq("id", barberServiceId)
+  .eq("barber_id", barberId)
+  .single();
+
+    if (!barberService) {
+      console.log("RETURNING 400 HERE");
+
       return NextResponse.json(
-        { error: "Invalid date format" },
+        { error: "Invalid service" },
         { status: 400 }
       );
     }
 
-    const jsDay = dateObj.getDay(); // 0–6 (Sun–Sat)
-    const dayOfWeek = jsDay === 0 ? 7 : jsDay; // DB: 1–7 (Mon–Sun)
+    const serviceDuration = barberService.duration;
 
     /* =========================
-       WEEKLY SCHEDULE
+   DATE → day_of_week
+========================= */
+
+const dateObj = new Date(date + "T00:00:00");
+
+if (isNaN(dateObj.getTime())) {
+ console.log("RETURNING 400 HERE");
+
+  return NextResponse.json(
+    { error: "Invalid date format" },
+    { status: 400 }
+  );
+}
+
+// JS: 0 = Sunday, 1 = Monday...
+const jsDay = dateObj.getDay();
+
+// DB: 1 = Monday ... 7 = Sunday
+const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+
+    /* =========================
+       WEEKLY
     ========================= */
     const { data: weekly } = await supabase
       .from("barber_weekly_schedule")
@@ -46,19 +77,14 @@ export async function GET(req: Request) {
       .eq("day_of_week", dayOfWeek)
       .maybeSingle();
 
+    if (!weekly) {
+  console.log("❌ weekly not found for:", barberId, dayOfWeek);
+  return NextResponse.json({ slots: [] });
+}
 
-    console.log("🗓 weekly:", weekly);
-
-    if (!weekly || weekly.is_working !== true) {
-      console.log("⛔ zi nelucrătoare");
-      return NextResponse.json({ slots: [] });
-    }
-console.log("🧪 date:", date);
-console.log("🧪 computed dayOfWeek:", dayOfWeek);
-console.log("🧪 weekly result:", weekly);
 
     /* =========================
-       OVERRIDE (opțional)
+       OVERRIDE
     ========================= */
     const { data: override } = await supabase
       .from("barber_day_overrides")
@@ -67,30 +93,20 @@ console.log("🧪 weekly result:", weekly);
       .eq("date", date)
       .maybeSingle();
 
-    console.log("📌 override:", override);
-
     if (override?.is_closed === true) {
-      console.log("⛔ override closed");
+     console.log("RETURNING 400 HERE");
+
       return NextResponse.json({ slots: [] });
     }
 
     /* =========================
-       SETTINGS
+       SETTINGS (still needed)
     ========================= */
     const { data: settings } = await supabase
       .from("barber_settings")
       .select("*")
       .eq("barber_id", barberId)
       .single();
-
-    console.log("🧠 settings:", settings);
-
-    if (!settings) {
-      return NextResponse.json(
-        { error: "Missing barber settings" },
-        { status: 400 }
-      );
-    }
 
     /* =========================
        BOOKINGS
@@ -100,14 +116,12 @@ console.log("🧪 weekly result:", weekly);
       .select("*")
       .eq("barber_id", barberId)
       .eq("date", date)
-      .eq("status", "confirmed")
+      .eq("status", "confirmed");
 
     const bookings =
       excludeBookingId
         ? bookingsRaw?.filter((b) => b.id !== excludeBookingId)
         : bookingsRaw;
-
-    console.log("📅 bookings:", bookings);
 
     /* =========================
        GENERATE SLOTS
@@ -118,11 +132,12 @@ console.log("🧪 weekly result:", weekly);
       override,
       settings,
       bookings: bookings || [],
+      serviceDuration, // 🔥 NOU
     });
 
-    console.log("✅ GENERATED SLOTS:", slots);
-
-    return NextResponse.json({ slots });
+    
+    console.log("RETURNING 400 HERE");
+return NextResponse.json({ slots });
   } catch (err) {
     console.error("🔥 SLOT API ERROR", err);
     return NextResponse.json(

@@ -1,10 +1,15 @@
-"use client";
+// app/admin/settings/page.tsx
 
+import { redirect } from "next/navigation";
 import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
-export default function AdminSettingsPage() {
-  // TODO: înlocuiește cu barber-ul logat din session / context
-  const barberId = "CURRENT_BARBER_ID";
+export default async function AdminSettingsPage() {
+  const barber = await getCurrentBarberInTenant();
+
+  if (!barber) {
+    redirect("/login");
+  }
 
   return (
     <div style={{ padding: 20, maxWidth: 800 }}>
@@ -13,7 +18,7 @@ export default function AdminSettingsPage() {
       <section style={{ marginTop: 24 }}>
         <h2>Program săptămânal</h2>
 
-        <WeeklyScheduleEditor barberId={barberId} />
+        <WeeklyScheduleEditor barberId={barber.id} />
       </section>
     </div>
   );

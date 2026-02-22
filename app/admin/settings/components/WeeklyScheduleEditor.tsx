@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { saveWeeklySchedule } from "../actions";
 type DaySchedule = {
   day_of_week: number;
   is_working: boolean;
@@ -36,8 +36,7 @@ export default function WeeklyScheduleEditor({
   useEffect(() => {
     setLoading(true);
 
-    fetch(`/api/barber-weekly-schedule?barberId=${barberId}`)
-      .then((res) => res.json())
+fetch(`/api/barber-weekly-schedule`)      .then((res) => res.json())
       .then((data) => {
         setDays(data || []);
       })
@@ -62,26 +61,19 @@ export default function WeeklyScheduleEditor({
      SAVE ALL
   ========================= */
   async function save() {
-    setLoading(true);
+  setLoading(true);
 
-    const res = await fetch("/api/barber-weekly-schedule", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barber_id: barberId,
-        days,
-      }),
-    });
+  const result = await saveWeeklySchedule(days);
 
-    setLoading(false);
+  setLoading(false);
 
-    if (!res.ok) {
-      alert("Eroare la salvare program");
-      return;
-    }
-
-    alert("Program salvat");
+  if (!result?.success) {
+    alert("Eroare la salvare program");
+    return;
   }
+
+  alert("Program salvat");
+}
 
   if (loading) return <p>Se încarcă…</p>;
 

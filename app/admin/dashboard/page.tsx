@@ -1,79 +1,47 @@
-import Link from "next/link";
-import { getActiveTenant } from "@/lib/supabase/getActiveTenant";
+import { redirect } from "next/navigation";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function AdminDashboardPage() {
-  const tenant = await getActiveTenant();
+export default async function DashboardPage() {
+  const barber = await getCurrentBarberInTenant();
 
-  // Guard suplimentar (layout-ul deja face redirect,
-  // dar păstrăm pagina safe dacă e accesată direct)
-  if (!tenant) {
-    return null;
+  if (!barber) {
+    redirect("/login");
   }
 
+  const supabase = await createSupabaseServerClient();
+
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("barber_id", barber.id)
+    .order("date", { ascending: true });
+
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 600 }}>
-        Admin Dashboard
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">
+        Dashboard – {barber.name}
       </h1>
 
-      <p style={{ marginTop: 8, color: "#666" }}>
-        Salon activ: <strong>{tenant.name ?? "—"}</strong>
-      </p>
+      <div>
+        <h2 className="font-semibold mb-2">Programări</h2>
 
-      <hr style={{ margin: "24px 0" }} />
+        {bookings?.length === 0 && (
+          <p>Nu există programări.</p>
+        )}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: 16,
-        }}
-      >
-        <DashboardCard
-          title="Servicii"
-          description="Gestionează serviciile oferite"
-          href="/admin/dashboard/services"
-        />
-
-        <DashboardCard
-          title="Program"
-          description="Program săptămânal & pauze"
-          href="/admin/dashboard/settings"
-        />
-
-        <DashboardCard
-          title="Programări"
-          description="Vezi și gestionează programările"
-          href="/admin/dashboard/bookings"
-        />
+        {bookings?.map((booking) => (
+          <div
+            key={booking.id}
+            className="border p-3 rounded mb-2"
+          >
+            <div>
+              {booking.date} – {booking.start_time}
+            </div>
+            <div>{booking.customer_name}</div>
+          </div>
+        ))}
       </div>
     </div>
-  );
-}
-
-function DashboardCard({
-  title,
-  description,
-  href,
-}: {
-  title: string;
-  description: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      style={{
-        display: "block",
-        border: "1px solid #e5e7eb",
-        borderRadius: 8,
-        padding: 16,
-        textDecoration: "none",
-        color: "inherit",
-      }}
-    >
-      <h3 style={{ fontSize: 18, fontWeight: 500 }}>{title}</h3>
-      <p style={{ marginTop: 8, color: "#666" }}>{description}</p>
-    </Link>
   );
 }

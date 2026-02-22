@@ -1,5 +1,13 @@
-import BookingConfirmed from "./BookingConfirmedClient";
+import BookingConfirmedClient from "./BookingConfirmedClient";
 
-export default function Page({ params }: { params: { bookingId: string } }) {
-  return <BookingConfirmed bookingId={params.bookingId} />;
+type PageProps = {
+  params: Promise<{
+    bookingId: string;
+  }>;
+};
+
+export default async function BookingConfirmedPage({ params }: PageProps) {
+  const { bookingId } = await params;
+
+  return <BookingConfirmedClient bookingId={bookingId} />;
 }

@@ -1,5 +1,8 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+// app/admin/services/page.tsx
 import { redirect } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import ServicesClient from "./ServicesClient";
+import { getActiveTenant } from "@/lib/supabase/getActiveTenant";
 
 export default async function AdminServicesPage() {
   const supabase = await createSupabaseServerClient();
@@ -10,14 +13,9 @@ export default async function AdminServicesPage() {
 
   if (!user) redirect("/login");
 
-  // 🔹 tenant activ
-  const { data: activeTenant } = await supabase
-    .from("user_active_tenant")
-    .select("tenant_id")
-    .eq("user_id", user.id)
-    .single();
+  const tenant = await getActiveTenant();
 
-  if (!activeTenant) {
+  if (!tenant) {
     return <p>Nu ai un salon activ.</p>;
   }
 
@@ -33,7 +31,7 @@ export default async function AdminServicesPage() {
       featured,
       active
     `)
-    .eq("tenant_id", activeTenant.tenant_id)
+    .eq("tenant_id", tenant.tenant_id)
     .order("sort_order", { ascending: true });
 
   if (error) {
@@ -41,97 +39,9 @@ export default async function AdminServicesPage() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Servicii</h1>
-
-      <table
-        border={1}
-        cellPadding={8}
-        style={{ marginTop: 16, width: "100%" }}
-      >
-        <thead>
-          <tr>
-            <th>Nume</th>
-            <th>Durată</th>
-            <th>Preț</th>
-            <th>Ordine</th>
-            <th>Preț vizibil</th>
-            <th>⭐ Recomandat</th>
-            <th>Activ</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {services?.map((s) => (
-            <tr key={s.id}>
-              <td>{s.display_name}</td>
-              <td>{s.duration} min</td>
-              <td>{s.price ?? "-"}</td>
-
-              <td>
-                <input
-                  type="number"
-                  defaultValue={s.sort_order ?? 0}
-                  onBlur={async (e) => {
-                    await supabase
-                      .from("barber_services")
-                      .update({
-                        sort_order: Number(e.target.value),
-                      })
-                      .eq("id", s.id);
-                  }}
-                  style={{ width: 60 }}
-                />
-              </td>
-
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.show_price}
-                  onChange={async (e) => {
-                    await supabase
-                      .from("barber_services")
-                      .update({
-                        show_price: e.target.checked,
-                      })
-                      .eq("id", s.id);
-                  }}
-                />
-              </td>
-
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.featured}
-                  onChange={async (e) => {
-                    await supabase
-                      .from("barber_services")
-                      .update({
-                        featured: e.target.checked,
-                      })
-                      .eq("id", s.id);
-                  }}
-                />
-              </td>
-
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.active}
-                  onChange={async (e) => {
-                    await supabase
-                      .from("barber_services")
-                      .update({
-                        active: e.target.checked,
-                      })
-                      .eq("id", s.id);
-                  }}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ServicesClient
+      services={services ?? []}
+      tenantId={tenant.tenant_id}
+    />
   );
 }

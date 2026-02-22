@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { rescheduleBookingTemplate } from "@/lib/email/templates/reschedule-booking";
 
@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
     /* =========================
        2️⃣ GĂSIM BOOKING-UL VECHI (TOKEN VALID)
     ========================= */
+    const supabase = await createSupabaseServerClient();
+
     const { data: oldBooking, error: findError } = await supabase
       .from("bookings")
       .select("*")

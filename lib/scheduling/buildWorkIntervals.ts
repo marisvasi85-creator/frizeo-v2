@@ -3,14 +3,29 @@ export type DateInterval = {
   end: Date;
 };
 
+function buildLocalDate(date: string, time: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute, second] = time.split(":").map(Number);
+
+  return new Date(
+    year,
+    month - 1,
+    day,
+    hour,
+    minute,
+    second || 0,
+    0
+  );
+}
+
 /**
  * Construiește intervalele de lucru pentru o zi.
- * Suportă și cazurile când programul trece peste miezul nopții.
+ * Fără probleme de timezone.
  */
 export function buildWorkIntervals(
-  date: string,          // "2026-01-30"
-  workStart: string,     // "09:00:00"
-  workEnd: string        // "17:00:00"
+  date: string,
+  workStart: string,
+  workEnd: string
 ): DateInterval[] {
   console.log("🧱 buildWorkIntervals()", {
     date,
@@ -18,31 +33,31 @@ export function buildWorkIntervals(
     workEnd,
   });
 
-  const start = new Date(`${date}T${workStart}`);
-  const end = new Date(`${date}T${workEnd}`);
+  const start = buildLocalDate(date, workStart);
+  const end = buildLocalDate(date, workEnd);
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
     console.log("⛔ Invalid date/time in buildWorkIntervals");
     return [];
   }
 
-  // 👉 Caz normal: 09:00 → 17:00
+  // Caz normal
   if (end > start) {
     return [{ start, end }];
   }
 
-  // 👉 Caz rar: program peste miezul nopții (ex: 22:00 → 02:00)
-  const endOfDay = new Date(`${date}T23:59:59`);
+  // Caz peste miezul nopții
+  const endOfDay = buildLocalDate(date, "23:59:59");
+
   const nextDay = new Date(start);
   nextDay.setDate(nextDay.getDate() + 1);
 
-  const startNextDay = new Date(
-    nextDay.toISOString().slice(0, 10) + `T00:00:00`
-  );
+  const nextDateStr = `${nextDay.getFullYear()}-${String(
+    nextDay.getMonth() + 1
+  ).padStart(2, "0")}-${String(nextDay.getDate()).padStart(2, "0")}`;
 
-  const endNextDay = new Date(
-    nextDay.toISOString().slice(0, 10) + `T${workEnd}`
-  );
+  const startNextDay = buildLocalDate(nextDateStr, "00:00:00");
+  const endNextDay = buildLocalDate(nextDateStr, workEnd);
 
   return [
     { start, end: endOfDay },

@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
   try {
+    const supabase = await createSupabaseServerClient();
     const { searchParams } = new URL(req.url);
 
     const barberId = searchParams.get("barberId");
-    const from = searchParams.get("from");
-    const to = searchParams.get("to");
+    const date = searchParams.get("date");
 
-    if (!barberId || !from || !to) {
+    if (!barberId || !date) {
       return NextResponse.json(
         { error: "Missing params" },
         { status: 400 }
@@ -34,12 +34,12 @@ export async function GET(req: Request) {
     /* =========================
        DAY OVERRIDES
     ========================= */
-    const { data: overrides, error: overrideError } = await supabase
+    const { data: override, error: overrideError } = await supabase
       .from("barber_day_overrides")
-      .select("date, is_closed")
+      .select("is_closed")
       .eq("barber_id", barberId)
-      .gte("date", from)
-      .lte("date", to);
+      .eq("date", date)
+      .maybeSingle();
 
     if (overrideError) {
       return NextResponse.json(
@@ -48,37 +48,26 @@ export async function GET(req: Request) {
       );
     }
 
-    const weeklyMap = new Map<number, boolean>(
-      weekly?.map((w) => [w.day_of_week, w.is_working])
-    );
-
-    const overrideMap = new Map<string, boolean>(
-      overrides?.map((o) => [o.date, o.is_closed])
-    );
-
     /* =========================
-       BUILD AVAILABILITY MAP
+       DAY CHECK
     ========================= */
-    const availability: Record<string, boolean> = {};
 
-    let current = new Date(from + "T00:00:00");
-    const end = new Date(to + "T00:00:00");
+    const jsDay = new Date(date + "T00:00:00").getDay(); // 0–6
+    const dayOfWeek = jsDay === 0 ? 7 : jsDay; // 1–7
 
-    while (current <= end) {
-      const dateStr = current.toISOString().slice(0, 10);
+    const weeklyMap = new Map<number, boolean>(
+      weekly?.map((w: { day_of_week: number; is_working: boolean }) => [
+        w.day_of_week,
+        w.is_working,
+      ])
+    );
 
-      const jsDay = current.getDay(); // 0–6 (Sun–Sat)
-      const dayOfWeek = jsDay === 0 ? 7 : jsDay; // DB: 1–7 (Mon–Sun)
+    const isWorking = weeklyMap.get(dayOfWeek) === true;
+    const isClosed = override?.is_closed === true;
 
-      const isWorking = weeklyMap.get(dayOfWeek) === true;
-      const isClosed = overrideMap.get(dateStr) === true;
-
-      availability[dateStr] = isWorking && !isClosed;
-
-      current.setDate(current.getDate() + 1);
-    }
-
-    return NextResponse.json({ availability });
+    return NextResponse.json({
+      available: isWorking && !isClosed,
+    });
   } catch (err) {
     console.error("🔥 AVAILABILITY API ERROR", err);
     return NextResponse.json(

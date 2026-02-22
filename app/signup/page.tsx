@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
@@ -14,6 +14,8 @@ export default function SignupPage() {
   const handleSignup = async () => {
     setLoading(true);
     setError(null);
+
+    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase.auth.signUp({
       email,

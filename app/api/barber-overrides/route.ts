@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /* =========================
    GET override (barber + date)
@@ -8,6 +8,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date"); // YYYY-MM-DD
+
+  const supabase = await createSupabaseServerClient();
 
   if (!barberId || !date) {
     return NextResponse.json(
@@ -74,6 +76,7 @@ export async function POST(req: NextRequest) {
     };
 
     // UPSERT pe (barber_id, date)
+    const supabase = await createSupabaseServerClient();
     const { error } = await supabase
       .from("barber_day_overrides")
       .upsert(payload, {
@@ -107,6 +110,8 @@ export async function DELETE(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date");
+
+  const supabase = await createSupabaseServerClient();
 
   if (!barberId || !date) {
     return NextResponse.json(

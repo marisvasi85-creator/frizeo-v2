@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * GET /api/admin/settings
  */
 export async function GET() {
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("barber_settings")
     .select("*")
@@ -24,6 +25,7 @@ export async function GET() {
  * POST /api/admin/settings
  */
 export async function POST(req: Request) {
+  const supabase = await createSupabaseServerClient();
   const body = await req.json();
 
   const { error } = await supabase
