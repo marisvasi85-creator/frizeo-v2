@@ -14,66 +14,56 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Initialize Supabase client
     const supabase = await createSupabaseServerClient();
 
-    // 1️⃣ Găsim booking-ul
-    const { data: booking, error: findError } = await supabase
+    const { data: booking } = await supabase
       .from("bookings")
       .select("*")
       .eq("cancel_token", token)
       .single();
 
-    if (findError || !booking) {
+    if (!booking) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
 
-    if (booking.status === "cancelled") {
-      return NextResponse.json({
-        success: true,
-        message: "Booking already cancelled",
-      });
+    /* ⏰ Limită 2h */
+    const bookingDateTime = new Date(
+      `${booking.date}T${booking.start_time}`
+    );
+
+    if (bookingDateTime <= new Date(Date.now() + 2 * 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: "Nu mai poate fi anulată cu mai puțin de 2 ore înainte." },
+        { status: 403 }
+      );
     }
 
-    // 2️⃣ Update status
-    const { error: updateError } = await supabase
+    if (booking.status === "cancelled") {
+      return NextResponse.json({ success: true });
+    }
+
+    await supabase
       .from("bookings")
       .update({ status: "cancelled" })
       .eq("id", booking.id);
 
-    if (updateError) {
-      return NextResponse.json(
-        { error: "Could not cancel booking" },
-        { status: 500 }
-      );
-    }
-
-    // 3️⃣ Email client (dacă există)
     if (booking.client_email) {
-      try {
-        await sendEmail({
-          to: booking.client_email,
-          subject: "Programare anulată",
-          html: cancelBookingTemplate({
-            clientName: booking.client_name,
-            date: booking.date,
-            time: `${booking.start_time} – ${booking.end_time}`,
-          }),
-        });
-      } catch (mailErr) {
-        console.error("CANCEL EMAIL ERROR:", mailErr);
-        // booking rămâne anulat chiar dacă mailul pică
-      }
+      await sendEmail({
+        to: booking.client_email,
+        subject: "Programare anulată",
+        html: cancelBookingTemplate({
+          clientName: booking.client_name,
+          date: booking.date,
+          time: `${booking.start_time} – ${booking.end_time}`,
+        }),
+      });
     }
 
-    return NextResponse.json({
-      success: true,
-    });
-  } catch (err) {
-    console.error("CANCEL BOOKING ERROR:", err);
+    return NextResponse.json({ success: true });
+  } catch {
     return NextResponse.json(
       { error: "Invalid request" },
       { status: 400 }

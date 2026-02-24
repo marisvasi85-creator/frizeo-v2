@@ -12,13 +12,8 @@ export async function GET(req: Request) {
     const date = searchParams.get("date");
     const barberServiceId = searchParams.get("barberServiceId");
     const excludeBookingId = searchParams.get("excludeBookingId");
-console.log("SLOTS API START");
-console.log("barberId:", barberId);
-console.log("date:", date);
 
     if (!barberId || !date || !barberServiceId) {
-      console.log("RETURNING 400 HERE");
-
       return NextResponse.json(
         { error: "Missing params" },
         { status: 400 }
@@ -36,8 +31,6 @@ console.log("date:", date);
   .single();
 
     if (!barberService) {
-      console.log("RETURNING 400 HERE");
-
       return NextResponse.json(
         { error: "Invalid service" },
         { status: 400 }
@@ -53,8 +46,6 @@ console.log("date:", date);
 const dateObj = new Date(date + "T00:00:00");
 
 if (isNaN(dateObj.getTime())) {
- console.log("RETURNING 400 HERE");
-
   return NextResponse.json(
     { error: "Invalid date format" },
     { status: 400 }
@@ -78,10 +69,8 @@ const dayOfWeek = jsDay === 0 ? 7 : jsDay;
       .maybeSingle();
 
     if (!weekly) {
-  console.log("❌ weekly not found for:", barberId, dayOfWeek);
   return NextResponse.json({ slots: [] });
 }
-
 
     /* =========================
        OVERRIDE
@@ -94,8 +83,6 @@ const dayOfWeek = jsDay === 0 ? 7 : jsDay;
       .maybeSingle();
 
     if (override?.is_closed === true) {
-     console.log("RETURNING 400 HERE");
-
       return NextResponse.json({ slots: [] });
     }
 
@@ -135,9 +122,7 @@ const dayOfWeek = jsDay === 0 ? 7 : jsDay;
       serviceDuration, // 🔥 NOU
     });
 
-    
-    console.log("RETURNING 400 HERE");
-return NextResponse.json({ slots });
+    return NextResponse.json({ slots });
   } catch (err) {
     console.error("🔥 SLOT API ERROR", err);
     return NextResponse.json(

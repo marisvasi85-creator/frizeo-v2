@@ -4,10 +4,6 @@ import { subtractBreak } from "./subtractBreak";
 import { generateSlots } from "./generateSlots";
 import { filterBookedSlots } from "./filterBookedSlots";
 
-/**
- * weekly  = rând din barber_weekly_schedule
- * override = rând din barber_overrides (sau null)
- */
 export function getAvailableSlots(params: {
   date: string;
   weekly: {
@@ -17,7 +13,6 @@ export function getAvailableSlots(params: {
     break_enabled: boolean;
     break_start: string | null;
     break_end: string | null;
-    serviceDuration: number;
   };
   override?: {
     is_closed?: boolean;
@@ -32,84 +27,33 @@ export function getAvailableSlots(params: {
   bookings: Booking[];
   serviceDuration: number;
 }): Slot[] {
-  const { date, weekly, override, settings, bookings, serviceDuration } = params;
+  const { date, weekly, override, bookings, serviceDuration } = params;
 
-  console.log("🧮 getAvailableSlots()");
-  console.log("weekly:", weekly);
-  console.log("override:", override);
-  console.log("settings:", settings);
-  console.log("bookings:", bookings);
+  if (!weekly || weekly.is_working !== true) return [];
+  if (override?.is_closed === true) return [];
 
-  /* =========================
-     GUARDS
-  ========================= */
-  if (!weekly || weekly.is_working !== true) {
-    console.log("⛔ weekly not working");
-    return [];
-  }
+  const work_start = override?.work_start ?? weekly.work_start;
+  const work_end = override?.work_end ?? weekly.work_end;
 
-  if (override?.is_closed === true) {
-    console.log("⛔ override closed");
-    return [];
-  }
+  if (!work_start || !work_end) return [];
 
-  /* =========================
-     WORK INTERVAL
-  ========================= */
-  const work_start =
-    override?.work_start ??
-    weekly.work_start;
-
-  const work_end =
-    override?.work_end ??
-    weekly.work_end;
-
-  if (!work_start || !work_end) {
-    console.log("⛔ missing work_start / work_end");
-    return [];
-  }
-
-  /* =========================
-     BREAK
-  ========================= */
   const break_enabled =
-    override?.break_enabled ??
-    weekly.break_enabled;
+    override?.break_enabled ?? weekly.break_enabled;
 
-  const break_start =
-    break_enabled
-      ? override?.break_start ?? weekly.break_start
-      : null;
+  const break_start = break_enabled
+    ? override?.break_start ?? weekly.break_start
+    : null;
 
-  const break_end =
-    break_enabled
-      ? override?.break_end ?? weekly.break_end
-      : null;
+  const break_end = break_enabled
+    ? override?.break_end ?? weekly.break_end
+    : null;
 
-  /* =========================
-   SLOT DURATION
-========================= */
+  const slotDuration =
+    override?.slot_duration ?? serviceDuration;
 
-const slotDuration =
-  override?.slot_duration ??
-  serviceDuration;
+  if (!slotDuration || slotDuration <= 0) return [];
 
-if (!slotDuration || slotDuration <= 0) {
-  console.log("⛔ invalid slot_duration");
-  return [];
-}
-
-
-  /* =========================
-     BUILD INTERVALS
-  ========================= */
-  let intervals = buildWorkIntervals(
-    date,
-    work_start,
-    work_end
-  );
-
-  console.log("🕒 intervals before break:", intervals);
+  let intervals = buildWorkIntervals(date, work_start, work_end);
 
   intervals = subtractBreak(
     intervals,
@@ -117,29 +61,23 @@ if (!slotDuration || slotDuration <= 0) {
     break_start,
     break_end
   );
-console.log("WORK START:", work_start);
-console.log("WORK END:", work_end);
-console.log("INTERVALS BUILT:", intervals);
 
-  console.log("☕ intervals after break:", intervals);
+  const generated = generateSlots(intervals, slotDuration);
 
-  /* =========================
-     GENERATE SLOTS
-  ========================= */
-  const slots = generateSlots(intervals, slotDuration);
-
-  console.log("🧩 slots generated:", slots);
-
-  /* =========================
-     FILTER BOOKINGS
-  ========================= */
-  const available = filterBookedSlots(
+  const filtered = filterBookedSlots(
     date,
-    slots,
+    generated,
     bookings
   );
 
-  console.log("✅ slots available:", available);
+  /* 🔥 Eliminăm sloturile din trecut */
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
 
-  return available;
+  if (date !== todayStr) return filtered;
+
+  return filtered.filter((slot) => {
+    const slotDateTime = new Date(`${date}T${slot.start}:00`);
+    return slotDateTime > now;
+  });
 }

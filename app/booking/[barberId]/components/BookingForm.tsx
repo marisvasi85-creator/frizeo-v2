@@ -28,6 +28,8 @@ export default function BookingForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
+    if (loading) return;
+
     if (!name || !phone) {
       setError("Completează nume și telefon");
       return;
@@ -39,9 +41,7 @@ export default function BookingForm({
     try {
       const res = await fetch("/api/bookings/create", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           barberId,
           serviceId: barberServiceId,
@@ -57,15 +57,17 @@ export default function BookingForm({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Eroare la creare booking");
+        setError(
+          data.error ||
+            "Slot indisponibil. Te rugăm alege alt interval."
+        );
         setLoading(false);
         return;
       }
 
       router.push(`/booking/confirmed/${data.bookingId}`);
-    } catch (err) {
-      console.error("BOOKING ERROR", err);
-      setError("Eroare server");
+    } catch {
+      setError("Eroare server. Încearcă din nou.");
       setLoading(false);
     }
   }
@@ -101,14 +103,16 @@ export default function BookingForm({
         className="border p-2 w-full"
       />
 
-      {error && <p className="text-red-500">{error}</p>}
+      {error && (
+        <p className="text-red-500 text-sm">{error}</p>
+      )}
 
       <button
         type="submit"
         disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded w-full"
+        className="bg-black text-white px-4 py-2 rounded w-full disabled:opacity-50"
       >
-        {loading ? "Se salvează…" : "Confirmă programarea"}
+        {loading ? "Se procesează…" : "Confirmă programarea"}
       </button>
     </form>
   );

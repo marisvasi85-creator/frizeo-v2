@@ -28,7 +28,6 @@ export default async function AdminBookingsPage() {
   .eq("barber_id", barber.id)
   .order("date", { ascending: true })
   .order("start_time", { ascending: true });
-console.log("ADMIN BOOKINGS:", data);
   if (error) {
     return <p>Eroare: {error.message}</p>;
   }

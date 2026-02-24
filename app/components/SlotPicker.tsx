@@ -9,7 +9,7 @@ export type Slot = {
 
 type Props = {
   barberId: string;
-  barberServiceId: string; // 🔥 obligatoriu
+  barberServiceId: string;
   date: string;
   selectedSlot: Slot | null;
   onSelect: (slot: Slot) => void;
@@ -24,34 +24,11 @@ export default function SlotPicker({
   onSelect,
   excludeBookingId,
 }: Props) {
-
-  /* ===============================
-     🔎 RENDER DEBUG
-  =============================== */
-  console.log("🎯 SlotPicker RENDER");
-  console.log("Props:", {
-    barberId,
-    barberServiceId,
-    date,
-    excludeBookingId,
-  });
-
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-
-    console.log("🚀 useEffect TRIGGERED");
-    console.log("VALUES:", {
-      barberId,
-      barberServiceId,
-      date,
-    });
-
-    if (!barberId || !date || !barberServiceId) {
-      console.log("⛔ Missing required params → abort fetch");
-      return;
-    }
+    if (!barberId || !date || !barberServiceId) return;
 
     let cancelled = false;
 
@@ -69,24 +46,16 @@ export default function SlotPicker({
           params.append("excludeBookingId", excludeBookingId);
         }
 
-        console.log("🌍 FETCH URL:", `/api/slots?${params.toString()}`);
-
         const res = await fetch(`/api/slots?${params.toString()}`);
-
-        console.log("📡 Response status:", res.status);
-
         const data = await res.json();
-
-        console.log("📦 Response data:", data);
 
         if (!cancelled) {
           setSlots(data.slots || []);
-          setLoading(false);
         }
-
-      } catch (err) {
-        console.error("🔥 FETCH ERROR:", err);
-        setLoading(false);
+      } catch {
+        if (!cancelled) setSlots([]);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -95,14 +64,16 @@ export default function SlotPicker({
     return () => {
       cancelled = true;
     };
-
   }, [barberId, date, barberServiceId, excludeBookingId]);
 
   if (loading) return <p>Se încarcă sloturile…</p>;
 
-  if (slots.length === 0) {
-    console.log("⚠️ No slots returned");
-    return <p>Nu sunt sloturi disponibile</p>;
+  if (!loading && slots.length === 0) {
+    return (
+      <p className="text-sm text-gray-500">
+        Nu mai sunt sloturi disponibile pentru această zi.
+      </p>
+    );
   }
 
   return (
@@ -116,7 +87,7 @@ export default function SlotPicker({
           <button
             key={`${slot.start}-${slot.end}`}
             onClick={() => onSelect(slot)}
-            className={`border rounded p-2 text-sm ${
+            className={`border rounded p-2 text-sm transition ${
               active
                 ? "bg-black text-white"
                 : "bg-white hover:bg-gray-100"

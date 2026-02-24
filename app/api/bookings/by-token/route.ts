@@ -6,17 +6,21 @@ export async function GET(req: Request) {
   const token = searchParams.get("token");
 
   if (!token) {
-    return NextResponse.json({ error: "Missing token" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing token" },
+      { status: 400 }
+    );
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+
+  const { data } = await supabase
     .from("bookings")
     .select("*")
     .eq("cancel_token", token)
     .single();
 
-  if (error || !data) {
+  if (!data) {
     return NextResponse.json(
       { error: "Booking not found" },
       { status: 404 }
@@ -30,5 +34,11 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json(data);
+  return NextResponse.json({
+    id: data.id,
+    date: data.date,
+    start_time: data.start_time,
+    end_time: data.end_time,
+    client_name: data.client_name,
+  });
 }

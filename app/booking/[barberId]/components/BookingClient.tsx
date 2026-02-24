@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import SlotPicker, { Slot } from "@/app/components/SlotPicker";
 import BookingForm from "./BookingForm";
+import BookingCalendar from "./BookingCalendar";
 
 type Service = {
   id: string;
@@ -15,10 +16,17 @@ type Props = {
 };
 
 export default function BookingClient({ barberId }: Props) {
-  const [date, setDate] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [barberServiceId, setBarberServiceId] = useState<string>("");
+  const [barberServiceId, setBarberServiceId] = useState("");
+  const [availability, setAvailability] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const dateStr = selectedDate
+    ? selectedDate.toISOString().slice(0, 10)
+    : "";
 
   /* =========================
      LOAD SERVICES
@@ -29,23 +37,45 @@ export default function BookingClient({ barberId }: Props) {
       const data = await res.json();
       setServices(data.services || []);
     }
-
     loadServices();
+  }, [barberId]);
+
+  /* =========================
+     LOAD AVAILABILITY (60 zile)
+  ========================= */
+  useEffect(() => {
+    const today = new Date();
+    const from = today.toISOString().slice(0, 10);
+
+    const future = new Date();
+    future.setDate(today.getDate() + 60);
+    const to = future.toISOString().slice(0, 10);
+
+    async function loadAvailability() {
+      const res = await fetch(
+        `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
+      );
+      const data = await res.json();
+      setAvailability(data.availability || {});
+    }
+
+    loadAvailability();
   }, [barberId]);
 
   return (
     <div className="space-y-6">
 
-      {/* DATE */}
+      {/* CALENDAR PROFESIONAL */}
       <div>
-        <label>Alege data</label>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            setDate(e.target.value);
+        <h3 className="font-semibold">Alege data</h3>
+
+        <BookingCalendar
+          selected={selectedDate}
+          onSelect={(d) => {
+            setSelectedDate(d);
             setSlot(null);
           }}
+          availability={availability}
         />
       </div>
 
@@ -58,8 +88,12 @@ export default function BookingClient({ barberId }: Props) {
             setBarberServiceId(e.target.value);
             setSlot(null);
           }}
+          disabled={!services.length}
+          className="border p-2 w-full"
         >
-          <option value="">Selectează serviciu</option>
+          <option value="" disabled>
+            Selectează serviciu
+          </option>
           {services.map((service) => (
             <option key={service.id} value={service.id}>
               {service.display_name} ({service.duration} min)
@@ -69,11 +103,11 @@ export default function BookingClient({ barberId }: Props) {
       </div>
 
       {/* SLOT PICKER */}
-      {date && barberServiceId && (
+      {dateStr && barberServiceId && availability[dateStr] !== false && (
         <SlotPicker
           barberId={barberId}
           barberServiceId={barberServiceId}
-          date={date}
+          date={dateStr}
           selectedSlot={slot}
           onSelect={setSlot}
         />
@@ -84,7 +118,7 @@ export default function BookingClient({ barberId }: Props) {
         <BookingForm
           barberId={barberId}
           barberServiceId={barberServiceId}
-          date={date}
+          date={dateStr}
           slot={slot}
         />
       )}
