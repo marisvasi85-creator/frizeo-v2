@@ -6,13 +6,14 @@ import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenan
 import MyServicesClient from "./MyServicesClient";
 
 export default async function BarberServicesPage() {
-  const barber = await getCurrentBarberInTenant();
+  const supabase = await createSupabaseServerClient();
+  const barber = await getCurrentBarberInTenant(
+    
+  );
 
   if (!barber) {
     redirect("/login");
   }
-
-  const supabase = await createSupabaseServerClient();
 
   const { data: services } = await supabase
     .from("services")

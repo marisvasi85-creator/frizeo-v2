@@ -23,19 +23,19 @@ export async function GET(req: Request) {
     /* =========================
        GET SERVICE DURATION
     ========================= */
-    const { data: barberService } = await supabase
+    const { data: barberService, error } = await supabase
   .from("barber_services")
-  .select("duration, service_id")
+  .select("duration")
   .eq("id", barberServiceId)
-  .eq("barber_id", barberId)
-  .single();
+  .maybeSingle();
 
-    if (!barberService) {
-      return NextResponse.json(
-        { error: "Invalid service" },
-        { status: 400 }
-      );
-    }
+if (error || !barberService) {
+  console.error("SERVICE LOOKUP ERROR:", error);
+  return NextResponse.json(
+    { error: "Invalid service" },
+    { status: 400 }
+  );
+}
 
     const serviceDuration = barberService.duration;
 

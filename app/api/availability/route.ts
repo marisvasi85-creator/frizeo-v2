@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { addDays, format } from "date-fns";
+import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 
 export async function GET(req: Request) {
   try {
@@ -7,13 +9,19 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
 
     const barberId = searchParams.get("barberId");
-    const date = searchParams.get("date");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
 
-    if (!barberId || !date) {
-      return NextResponse.json(
-        { error: "Missing params" },
-        { status: 400 }
-      );
+    if (!barberId || !from || !to) {
+      return NextResponse.json({ availability: {} }, { status: 400 });
+    }
+
+    // 🔥 Get active tenant
+    const tenant = await getActiveTenant();
+    const tenantId = tenant?.tenant_id;
+
+    if (!tenantId) {
+      return NextResponse.json({ availability: {} }, { status: 403 });
     }
 
     /* =========================
@@ -22,57 +30,63 @@ export async function GET(req: Request) {
     const { data: weekly, error: weeklyError } = await supabase
       .from("barber_weekly_schedule")
       .select("day_of_week, is_working")
-      .eq("barber_id", barberId);
+      .eq("barber_id", barberId)
+      .eq("tenant_id", tenantId);
 
     if (weeklyError) {
-      return NextResponse.json(
-        { error: "Failed to load weekly schedule" },
-        { status: 500 }
-      );
+      console.error("WEEKLY ERROR:", weeklyError);
+      return NextResponse.json({ availability: {} }, { status: 500 });
     }
+
+    const weeklyMap = new Map<number, boolean>(
+      weekly?.map((w) => [w.day_of_week, w.is_working]) ?? []
+    );
 
     /* =========================
        DAY OVERRIDES
     ========================= */
-    const { data: override, error: overrideError } = await supabase
+    const { data: overrides, error: overrideError } = await supabase
       .from("barber_day_overrides")
-      .select("is_closed")
+      .select("date, is_closed")
       .eq("barber_id", barberId)
-      .eq("date", date)
-      .maybeSingle();
+      .eq("tenant_id", tenantId);
 
     if (overrideError) {
-      return NextResponse.json(
-        { error: "Failed to load overrides" },
-        { status: 500 }
-      );
+      console.error("OVERRIDE ERROR:", overrideError);
+      return NextResponse.json({ availability: {} }, { status: 500 });
     }
 
+    const overrideMap = new Map<string, boolean>(
+      overrides?.map((o) => [o.date, o.is_closed]) ?? []
+    );
+
     /* =========================
-       DAY CHECK
+       BUILD AVAILABILITY
     ========================= */
 
-    const jsDay = new Date(date + "T00:00:00").getDay(); // 0–6
-    const dayOfWeek = jsDay === 0 ? 7 : jsDay; // 1–7
+    const availability: Record<string, boolean> = {};
 
-    const weeklyMap = new Map<number, boolean>(
-      weekly?.map((w: { day_of_week: number; is_working: boolean }) => [
-        w.day_of_week,
-        w.is_working,
-      ])
-    );
+    let current = new Date(from + "T00:00:00");
+    const end = new Date(to + "T00:00:00");
 
-    const isWorking = weeklyMap.get(dayOfWeek) === true;
-    const isClosed = override?.is_closed === true;
+    while (current <= end) {
+      const dateStr = format(current, "yyyy-MM-dd");
 
-    return NextResponse.json({
-      available: isWorking && !isClosed,
-    });
+      const jsDay = current.getDay(); // 0–6
+      const dayOfWeek = jsDay === 0 ? 7 : jsDay; // 1–7
+
+      const isWorking = weeklyMap.get(dayOfWeek) === true;
+      const isClosed = overrideMap.get(dateStr) === true;
+
+      availability[dateStr] = isWorking && !isClosed;
+
+      current = addDays(current, 1);
+    }
+
+    return NextResponse.json({ availability });
+
   } catch (err) {
-    console.error("🔥 AVAILABILITY API ERROR", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error("AVAILABILITY ERROR:", err);
+    return NextResponse.json({ availability: {} }, { status: 500 });
   }
 }

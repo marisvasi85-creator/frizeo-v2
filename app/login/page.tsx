@@ -29,19 +29,23 @@ export default function LoginPage() {
       return;
     }
 
-    const userId = data.user.id;
-
-    // 🔎 verificăm dacă user-ul este frizer
-    const { data: barber } = await supabase
-      .from("barbers")
-      .select("id")
-      .eq("user_id", userId)
+    // 🔎 verificăm dacă are tenant activ
+    const { data: activeTenant } = await supabase
+      .from("user_active_tenant")
+      .select("tenant_id")
+      .eq("user_id", data.user.id)
       .maybeSingle();
 
+  if (!activeTenant) {
     router.push("/select-tenant");
+  } else {
+    router.push("/admin/dashboard");
   }
 
-  return (
+  router.refresh();
+}
+
+return (
     <div style={{ padding: 40 }}>
       <h1>Login</h1>
 

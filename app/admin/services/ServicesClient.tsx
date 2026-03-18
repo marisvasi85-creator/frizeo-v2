@@ -1,10 +1,10 @@
 "use client";
 
-import { updateServiceField } from "./actions";
+import { updateServiceField, deleteService } from "./actions";
 
 type Service = {
   id: string;
-  display_name: string;
+  name: string;
   duration: number;
   price: number | null;
   sort_order: number | null;
@@ -15,90 +15,146 @@ type Service = {
 
 type Props = {
   services: Service[];
-  tenantId: string;
 };
 
 export default function ServicesClient({ services }: Props) {
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Servicii</h1>
+    <div className="space-y-6">
 
-      <table border={1} cellPadding={8} style={{ width: "100%" }}>
-        <thead>
+      <table className="w-full border border-gray-300 text-sm">
+        <thead className="bg-gray-100">
           <tr>
-            <th>Nume</th>
-            <th>Durată</th>
-            <th>Preț</th>
-            <th>Ordine</th>
-            <th>Preț vizibil</th>
-            <th>⭐ Recomandat</th>
-            <th>Activ</th>
+            <th className="p-2">Name</th>
+            <th className="p-2">Durată</th>
+            <th className="p-2">Preț</th>
+            <th className="p-2">Ordine</th>
+            <th className="p-2">Preț vizibil</th>
+            <th className="p-2">⭐ Recomandat</th>
+            <th className="p-2">Activ</th>
+            <th className="p-2">Șterge</th>
           </tr>
         </thead>
 
         <tbody>
-          {services.map((s) => (
-            <tr key={s.id}>
-              <td>{s.display_name}</td>
-              <td>{s.duration} min</td>
-              <td>{s.price ?? "-"}</td>
+          {services.map((service) => (
+            <tr key={service.id} className="border-t">
 
-              <td>
-                <input
-                  type="number"
-                  defaultValue={s.sort_order ?? 0}
-                  onBlur={(e) =>
-                    updateServiceField(
-                      s.id,
-                      "sort_order",
-                      Number(e.target.value)
-                    )
-                  }
-                  style={{ width: 60 }}
-                />
+              {/* NAME */}
+              <td className="p-2">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="name" />
+                  <input
+                    name="value"
+                    defaultValue={service.name}
+                    className="border p-1 rounded w-full"
+                  />
+                </form>
               </td>
 
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.show_price}
-                  onChange={(e) =>
-                    updateServiceField(
-                      s.id,
-                      "show_price",
-                      e.target.checked
-                    )
-                  }
-                />
+              {/* DURATION */}
+              <td className="p-2">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="duration" />
+                  <input
+                    type="number"
+                    name="value"
+                    defaultValue={service.duration}
+                    className="border p-1 rounded w-full"
+                  />
+                </form>
               </td>
 
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.featured}
-                  onChange={(e) =>
-                    updateServiceField(
-                      s.id,
-                      "featured",
-                      e.target.checked
-                    )
-                  }
-                />
+              {/* PRICE */}
+              <td className="p-2">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="price" />
+                  <input
+                    type="number"
+                    name="value"
+                    defaultValue={service.price ?? ""}
+                    className="border p-1 rounded w-full"
+                  />
+                </form>
               </td>
 
-              <td>
-                <input
-                  type="checkbox"
-                  defaultChecked={s.active}
-                  onChange={(e) =>
-                    updateServiceField(
-                      s.id,
-                      "active",
-                      e.target.checked
-                    )
-                  }
-                />
+              {/* SORT ORDER */}
+              <td className="p-2">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="sort_order" />
+                  <input
+                    type="number"
+                    name="value"
+                    defaultValue={service.sort_order ?? ""}
+                    className="border p-1 rounded w-full"
+                  />
+                </form>
               </td>
+
+              {/* SHOW PRICE */}
+              <td className="p-2 text-center">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="show_price" />
+                  <input
+                    type="hidden"
+                    name="value"
+                    value={(!service.show_price).toString()}
+                  />
+                  <button type="submit">
+                    {service.show_price ? "✅" : "❌"}
+                  </button>
+                </form>
+              </td>
+
+              {/* FEATURED */}
+              <td className="p-2 text-center">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="featured" />
+                  <input
+                    type="hidden"
+                    name="value"
+                    value={(!service.featured).toString()}
+                  />
+                  <button type="submit">
+                    {service.featured ? "⭐" : "—"}
+                  </button>
+                </form>
+              </td>
+
+              {/* ACTIVE */}
+              <td className="p-2 text-center">
+                <form action={updateServiceField}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <input type="hidden" name="field" value="active" />
+                  <input
+                    type="hidden"
+                    name="value"
+                    value={(!service.active).toString()}
+                  />
+                  <button type="submit">
+                    {service.active ? "🟢" : "🔴"}
+                  </button>
+                </form>
+              </td>
+
+              {/* DELETE */}
+              <td className="p-2 text-center">
+                <form action={deleteService}>
+                  <input type="hidden" name="id" value={service.id} />
+                  <button
+                    type="submit"
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    🗑
+                  </button>
+                </form>
+              </td>
+
             </tr>
           ))}
         </tbody>

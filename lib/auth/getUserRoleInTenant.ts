@@ -1,7 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 
-export async function getCurrentBarberInTenant() {
+export type TenantRole = "owner" | "manager" | "barber";
+
+export async function getUserRoleInTenant(): Promise<TenantRole | null> {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -14,13 +16,13 @@ export async function getCurrentBarberInTenant() {
   if (!tenant) return null;
 
   const { data, error } = await supabase
-    .from("barbers")
-    .select("*")
-    .eq("user_id", user.id)
+    .from("tenant_users")
+    .select("role")
     .eq("tenant_id", tenant.tenant_id)
+    .eq("user_id", user.id)
     .single();
 
   if (error || !data) return null;
 
-  return data;
+  return data.role as TenantRole;
 }

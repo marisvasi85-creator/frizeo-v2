@@ -1,25 +1,19 @@
-// app/admin/settings/page.tsx
-
-import { redirect } from "next/navigation";
-import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { redirect } from "next/navigation";
 
 export default async function AdminSettingsPage() {
+  const supabase = await createSupabaseServerClient();
+
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
-    redirect("/login");
+    redirect("/select-tenant");
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 800 }}>
-      <h1>Setări</h1>
-
-      <section style={{ marginTop: 24 }}>
-        <h2>Program săptămânal</h2>
-
-        <WeeklyScheduleEditor barberId={barber.id} />
-      </section>
+    <div>
+      <h1>Settings – {barber.display_name}</h1>
     </div>
   );
 }

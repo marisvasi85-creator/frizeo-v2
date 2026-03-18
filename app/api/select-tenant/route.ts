@@ -1,29 +1,19 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
   const tenantId = searchParams.get("tenantId");
 
   if (!tenantId) {
-    return NextResponse.redirect(new URL("/select-tenant", req.url));
+    return NextResponse.json({ error: "Missing tenantId" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const response = NextResponse.json({ success: true });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  await supabase.from("user_active_tenant").upsert({
-    user_id: user.id,
-    tenant_id: tenantId,
-    updated_at: new Date().toISOString(),
+  response.cookies.set("tenant_id", tenantId, {
+    httpOnly: true,
+    path: "/",
   });
 
-  return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+  return response;
 }

@@ -7,16 +7,24 @@ import { revalidatePath } from "next/cache";
 export async function saveWeeklySchedule(days: any[]) {
   const supabase = await createSupabaseServerClient();
 
+  // 🔥 PASĂM CLIENTUL
   const barber = await getCurrentBarberInTenant();
-  if (!barber) return { success: false };
 
-  // ștergem program vechi
-  await supabase
+  if (!barber) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  // 🧹 Ștergem program vechi
+  const { error: deleteError } = await supabase
     .from("barber_weekly_schedule")
     .delete()
     .eq("barber_id", barber.id);
 
-  // inserăm noul program
+  if (deleteError) {
+    return { success: false, error: deleteError.message };
+  }
+
+  // 🆕 Inserăm noul program
   const rows = days.map((d) => ({
     barber_id: barber.id,
     day_of_week: d.day_of_week,
@@ -28,8 +36,15 @@ export async function saveWeeklySchedule(days: any[]) {
     break_end: d.break_end,
   }));
 
-  await supabase.from("barber_weekly_schedule").insert(rows);
+  const { error: insertError } = await supabase
+    .from("barber_weekly_schedule")
+    .insert(rows);
 
+  if (insertError) {
+    return { success: false, error: insertError.message };
+  }
+
+  // 🔁 Revalidăm pagina
   revalidatePath("/admin/settings");
 
   return { success: true };

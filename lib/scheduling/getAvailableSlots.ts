@@ -54,30 +54,34 @@ export function getAvailableSlots(params: {
   if (!slotDuration || slotDuration <= 0) return [];
 
   let intervals = buildWorkIntervals(date, work_start, work_end);
+console.log("INTERVALS AFTER BUILD:", intervals);
 
-  intervals = subtractBreak(
-    intervals,
-    date,
-    break_start,
-    break_end
-  );
+intervals = subtractBreak(
+  intervals,
+  date,
+  break_start,
+  break_end
+);
+console.log("INTERVALS AFTER BREAK:", intervals);
 
-  const generated = generateSlots(intervals, slotDuration);
+const generated = generateSlots(intervals, slotDuration);
+console.log("GENERATED:", generated);
 
-  const filtered = filterBookedSlots(
-    date,
-    generated,
-    bookings
-  );
+const filtered = filterBookedSlots(
+  date,
+  generated,
+  bookings
+);
+console.log("FILTERED:", filtered);
+  /* 🔥 Eliminăm sloturile din trecut (LOCAL TIME SAFE) */
+const now = new Date();
+const todayStr = now.toLocaleDateString("sv-SE"); 
+// format YYYY-MM-DD în local time
 
-  /* 🔥 Eliminăm sloturile din trecut */
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
+if (date !== todayStr) return filtered;
 
-  if (date !== todayStr) return filtered;
-
-  return filtered.filter((slot) => {
-    const slotDateTime = new Date(`${date}T${slot.start}:00`);
-    return slotDateTime > now;
-  });
+return filtered.filter((slot) => {
+  const slotDateTime = new Date(`${date}T${slot.start}`);
+  return slotDateTime > now;
+});
 }

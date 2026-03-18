@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getActiveTenant } from "@/lib/supabase/getActiveTenant";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
 export default async function DashboardLayout({
@@ -7,16 +7,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const tenant = await getActiveTenant();
+  const supabase = await createSupabaseServerClient();
 
-  if (!tenant) {
-    redirect("/select-tenant");
-  }
-
-  const barber = await getCurrentBarberInTenant();
+  const barber = await getCurrentBarberInTenant(
+    
+  );
 
   if (!barber) {
-    redirect("/login");
+    redirect("/select-tenant");
   }
 
   return <>{children}</>;

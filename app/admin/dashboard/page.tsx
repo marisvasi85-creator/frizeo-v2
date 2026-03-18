@@ -1,15 +1,17 @@
 import { redirect } from "next/navigation";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
 export default async function DashboardPage() {
-  const barber = await getCurrentBarberInTenant();
+  const supabase = await createSupabaseServerClient();
+
+  const barber = await getCurrentBarberInTenant(
+    
+  );
 
   if (!barber) {
-    redirect("/login");
+    redirect("/select-tenant");
   }
-
-  const supabase = await createSupabaseServerClient();
 
   const { data: bookings } = await supabase
     .from("bookings")
@@ -20,25 +22,25 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">
-        Dashboard – {barber.name}
+        Dashboard – {barber.display_name}
       </h1>
 
       <div>
         <h2 className="font-semibold mb-2">Programări</h2>
 
-        {bookings?.length === 0 && (
+        {(!bookings || bookings.length === 0) && (
           <p>Nu există programări.</p>
         )}
 
         {bookings?.map((booking) => (
           <div
             key={booking.id}
-            className="border p-3 rounded mb-2"
+            className="border p-3 rounded mb-2 bg-white"
           >
             <div>
               {booking.date} – {booking.start_time}
             </div>
-            <div>{booking.customer_name}</div>
+            <div>{booking.client_name}</div>
           </div>
         ))}
       </div>

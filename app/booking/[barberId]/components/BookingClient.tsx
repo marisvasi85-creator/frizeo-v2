@@ -14,7 +14,6 @@ type Service = {
 type Props = {
   barberId: string;
 };
-
 export default function BookingClient({ barberId }: Props) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [slot, setSlot] = useState<Slot | null>(null);
@@ -41,26 +40,47 @@ export default function BookingClient({ barberId }: Props) {
   }, [barberId]);
 
   /* =========================
-     LOAD AVAILABILITY (60 zile)
-  ========================= */
-  useEffect(() => {
-    const today = new Date();
-    const from = today.toISOString().slice(0, 10);
+   LOAD AVAILABILITY (60 zile)
+========================= */
+useEffect(() => {
+  async function loadAvailability() {
+    try {
+      const today = new Date();
+      const from = today.toISOString().slice(0, 10);
 
-    const future = new Date();
-    future.setDate(today.getDate() + 60);
-    const to = future.toISOString().slice(0, 10);
+      const future = new Date();
+      future.setDate(today.getDate() + 60);
+      const to = future.toISOString().slice(0, 10);
 
-    async function loadAvailability() {
+      console.log("REQUEST PARAMS:", { barberId, from, to });
+
       const res = await fetch(
         `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
       );
-      const data = await res.json();
-      setAvailability(data.availability || {});
-    }
 
-    loadAvailability();
-  }, [barberId]);
+      console.log("RESPONSE STATUS:", res.status);
+
+      const data = await res.json();
+
+      console.log("API RAW RESPONSE:", data);
+
+      const nextAvailability =
+        typeof data?.availability === "object"
+          ? data.availability
+          : {};
+
+      console.log("PARSED AVAILABILITY OBJECT:", nextAvailability);
+
+      setAvailability(nextAvailability);
+
+    } catch (err) {
+      console.error("LOAD AVAILABILITY ERROR:", err);
+      setAvailability({});
+    }
+  }
+
+  loadAvailability();
+}, [barberId]);
 
   return (
     <div className="space-y-6">

@@ -7,13 +7,10 @@ const rateLimitMap = new Map<string, number>();
 
 export async function POST(req: NextRequest) {
   try {
-    /* =========================
-       🔒 RATE LIMIT (5 sec / IP)
-    ========================= */
-    const ip =
-      req.headers.get("x-forwarded-for") || "unknown";
-
+    /* 🔒 RATE LIMIT */
+    const ip = req.headers.get("x-forwarded-for") || "unknown";
     const last = rateLimitMap.get(ip);
+
     if (last && Date.now() - last < 5000) {
       return NextResponse.json(
         { error: "Too many requests" },
@@ -28,7 +25,7 @@ export async function POST(req: NextRequest) {
 
     const {
       barberId,
-      serviceId,
+      serviceId, // acesta este de fapt barber_service_id
       date,
       start_time,
       end_time,
@@ -52,10 +49,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* 🔍 Validăm service */
+    /* 🔍 Validăm barber_service direct */
     const { data: barberService } = await supabase
       .from("barber_services")
-      .select("service_id")
+      .select("id, duration, price")
       .eq("id", serviceId)
       .eq("barber_id", barberId)
       .single();
@@ -67,12 +64,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    /* 🔐 Creare booking prin RPC */
+    /* 🔐 Creare booking prin RPC nou */
     const { data, error } = await supabase.rpc(
       "create_booking_safe",
       {
         p_barber_id: barberId,
-        p_service_id: barberService.service_id,
+        p_barber_service_id: barberService.id,
         p_date: date,
         p_start: start_time,
         p_end: end_time,
@@ -109,7 +106,8 @@ export async function POST(req: NextRequest) {
       success: true,
       bookingId: data.id,
     });
-  } catch {
+  } catch (err) {
+    console.error("Booking error:", err);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
