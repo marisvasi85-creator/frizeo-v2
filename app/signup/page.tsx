@@ -1,62 +1,51 @@
 "use client";
 
 import { useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";import { useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const handleSignup = async () => {
-    setLoading(true);
-    setError(null);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
 
-    const supabase = await createSupabaseBrowserClient();
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
+  async function handleSignup() {
+    const res = await fetch("/api/auth/signup", {
+      method: "POST",
+      body: JSON.stringify(form),
     });
 
-    setLoading(false);
+    const data = await res.json();
 
-    if (error) {
-      setError(error.message);
-    } else {
-      router.push("/admin/dashboard/barber");
+    if (data.error) {
+      alert(data.error);
+      return;
     }
-  };
+
+    router.push(data.redirect);
+  }
 
   return (
-    <div style={{ padding: 40, maxWidth: 400 }}>
-      <h1>Signup</h1>
+    <div>
+      <h2>Creare cont</h2>
 
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
+      <input placeholder="Nume complet"
+        onChange={(e) => setForm({ ...form, fullName: e.target.value })} />
 
-      <br /><br />
+      <input placeholder="Email"
+        onChange={(e) => setForm({ ...form, email: e.target.value })} />
 
-      <input
-        type="password"
-        placeholder="Parolă"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <input placeholder="Telefon"
+        onChange={(e) => setForm({ ...form, phone: e.target.value })} />
 
-      <br /><br />
+      <input type="password" placeholder="Parola"
+        onChange={(e) => setForm({ ...form, password: e.target.value })} />
 
-      <button onClick={handleSignup} disabled={loading}>
-        {loading ? "Se creează cont..." : "Creează cont"}
-      </button>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <button onClick={handleSignup}>Creează cont</button>
     </div>
   );
 }

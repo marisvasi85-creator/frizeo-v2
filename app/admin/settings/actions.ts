@@ -2,29 +2,24 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 export async function saveWeeklySchedule(days: any[]) {
   const supabase = await createSupabaseServerClient();
 
-  // 🔥 PASĂM CLIENTUL
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
-    return { success: false, error: "Unauthorized" };
+    redirect("/login");
   }
 
-  // 🧹 Ștergem program vechi
-  const { error: deleteError } = await supabase
+  // delete
+  await supabase
     .from("barber_weekly_schedule")
     .delete()
     .eq("barber_id", barber.id);
 
-  if (deleteError) {
-    return { success: false, error: deleteError.message };
-  }
-
-  // 🆕 Inserăm noul program
+  // insert
   const rows = days.map((d) => ({
     barber_id: barber.id,
     day_of_week: d.day_of_week,
@@ -36,16 +31,8 @@ export async function saveWeeklySchedule(days: any[]) {
     break_end: d.break_end,
   }));
 
-  const { error: insertError } = await supabase
-    .from("barber_weekly_schedule")
-    .insert(rows);
+  await supabase.from("barber_weekly_schedule").insert(rows);
 
-  if (insertError) {
-    return { success: false, error: insertError.message };
-  }
-
-  // 🔁 Revalidăm pagina
-  revalidatePath("/admin/settings");
-
-  return { success: true };
+  // 🔥 MAGIC
+  redirect("/admin/dashboard");
 }

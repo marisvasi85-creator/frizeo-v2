@@ -18,35 +18,42 @@ export default function CalendarGrid({
 }: Props) {
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startWeekday = (firstDay.getDay() + 6) % 7; // luni = 0
+  const startWeekday = (firstDay.getDay() + 6) % 7;
 
   const [availability, setAvailability] = useState<
     Record<string, boolean>
   >({});
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  async function loadAvailability() {
+    setLoading(true);
+
     const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
     const to = `${year}-${String(month + 1).padStart(2, "0")}-${String(
       daysInMonth
     ).padStart(2, "0")}`;
 
-    fetch(
+    const res = await fetch(
       `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
-    )
-      .then((res) => res.json())
-      .then((data) => {
-        setAvailability(data.availability || {});
-      });
+    );
+
+    const data = await res.json();
+
+    setAvailability(data.availability || {});
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadAvailability();
   }, [barberId, year, month, daysInMonth]);
 
   const cells: React.ReactNode[] = [];
 
-  // zile goale înainte de 1
   for (let i = 0; i < startWeekday; i++) {
     cells.push(<div key={`empty-${i}`} />);
   }
 
-  // zilele lunii
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(
       2,
@@ -55,31 +62,50 @@ export default function CalendarGrid({
 
     const isAvailable = availability[dateStr] === true;
 
+    const today = new Date();
+    const isToday =
+      dateStr ===
+      `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
+        2,
+        "0"
+      )}-${String(today.getDate()).padStart(2, "0")}`;
+
     cells.push(
       <DayCell
         key={dateStr}
         date={dateStr}
         dayNumber={day}
         isAvailable={isAvailable}
+        isSelected={selectedDate === dateStr}
+        isToday={isToday}
         onClick={() => {
-          if (isAvailable) {
-            onSelectDate(dateStr);
-          }
+          if (!isAvailable) return;
+
+          setSelectedDate(dateStr);
+          onSelectDate(dateStr);
         }}
       />
     );
   }
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(7, 1fr)",
-        gap: 8,
-        marginTop: 12,
-      }}
-    >
-      {cells}
+    <div>
+      {loading && (
+        <p style={{ marginTop: 10, color: "#666" }}>
+          Se încarcă calendarul...
+        </p>
+      )}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 8,
+          marginTop: 12,
+        }}
+      >
+        {cells}
+      </div>
     </div>
   );
 }

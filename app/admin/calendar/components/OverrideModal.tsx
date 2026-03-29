@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Props = {
   barberId: string;
-  date: string; // YYYY-MM-DD
+  date: string;
   onClose: () => void;
   onSaved?: () => void;
 };
@@ -27,9 +27,6 @@ export default function OverrideModal({
 
   const [slotDuration, setSlotDuration] = useState("");
 
-  /* =========================
-     LOAD EXISTING OVERRIDE
-  ========================= */
   useEffect(() => {
     setLoading(true);
 
@@ -55,9 +52,6 @@ export default function OverrideModal({
       .finally(() => setLoading(false));
   }, [barberId, date]);
 
-  /* =========================
-     SAVE OVERRIDE
-  ========================= */
   async function save() {
     if (!isClosed && (!workStart || !workEnd)) {
       alert("Programul zilei este incomplet");
@@ -66,43 +60,38 @@ export default function OverrideModal({
 
     setLoading(true);
 
-    const payload = {
-      barber_id: barberId,
-      date,
-      is_closed: isClosed,
-      work_start: isClosed ? null : workStart || null,
-      work_end: isClosed ? null : workEnd || null,
-      break_enabled: isClosed ? false : breakEnabled,
-      break_start:
-        isClosed || !breakEnabled ? null : breakStart || null,
-      break_end:
-        isClosed || !breakEnabled ? null : breakEnd || null,
-      slot_duration:
-        isClosed || !slotDuration ? null : Number(slotDuration),
-    };
-
     const res = await fetch("/api/barber-day-overrides", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        barber_id: barberId,
+        date,
+        is_closed: isClosed,
+        work_start: isClosed ? null : workStart || null,
+        work_end: isClosed ? null : workEnd || null,
+        break_enabled: isClosed ? false : breakEnabled,
+        break_start:
+          isClosed || !breakEnabled ? null : breakStart || null,
+        break_end:
+          isClosed || !breakEnabled ? null : breakEnd || null,
+        slot_duration:
+          isClosed || !slotDuration ? null : Number(slotDuration),
+      }),
     });
 
     setLoading(false);
 
     if (!res.ok) {
-      alert("Eroare la salvare override");
+      alert("Eroare la salvare");
       return;
     }
 
-    onSaved?.();
+    onSaved?.(); // 🔥 refresh calendar
     onClose();
   }
 
-  /* =========================
-     DELETE OVERRIDE
-  ========================= */
   async function remove() {
-    if (!confirm("Ștergi override-ul pentru această zi?")) return;
+    if (!confirm("Ștergi override-ul?")) return;
 
     setLoading(true);
 
@@ -122,32 +111,30 @@ export default function OverrideModal({
     onClose();
   }
 
-  /* =========================
-     RENDER
-  ========================= */
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.4)",
+        background: "rgba(0,0,0,0.5)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        zIndex: 1000,
       }}
     >
       <div
         style={{
           background: "#fff",
           padding: 20,
-          borderRadius: 8,
+          borderRadius: 10,
           width: 360,
         }}
       >
-        <h3>Override {date}</h3>
+        <h3 style={{ marginBottom: 10 }}>
+          Override {date}
+        </h3>
 
-        {loading && <p>Se încarcă…</p>}
+        {loading && <p>Se încarcă...</p>}
 
         {!loading && (
           <>
@@ -164,23 +151,16 @@ export default function OverrideModal({
               <>
                 <hr />
 
-                <label>
-                  Start:
-                  <input
-                    type="time"
-                    value={workStart}
-                    onChange={(e) => setWorkStart(e.target.value)}
-                  />
-                </label>
-
-                <label>
-                  End:
-                  <input
-                    type="time"
-                    value={workEnd}
-                    onChange={(e) => setWorkEnd(e.target.value)}
-                  />
-                </label>
+                <input
+                  type="time"
+                  value={workStart}
+                  onChange={(e) => setWorkStart(e.target.value)}
+                />
+                <input
+                  type="time"
+                  value={workEnd}
+                  onChange={(e) => setWorkEnd(e.target.value)}
+                />
 
                 <label>
                   <input
@@ -195,53 +175,37 @@ export default function OverrideModal({
 
                 {breakEnabled && (
                   <>
-                    <label>
-                      Pauză start:
-                      <input
-                        type="time"
-                        value={breakStart}
-                        onChange={(e) =>
-                          setBreakStart(e.target.value)
-                        }
-                      />
-                    </label>
-
-                    <label>
-                      Pauză end:
-                      <input
-                        type="time"
-                        value={breakEnd}
-                        onChange={(e) =>
-                          setBreakEnd(e.target.value)
-                        }
-                      />
-                    </label>
+                    <input
+                      type="time"
+                      value={breakStart}
+                      onChange={(e) =>
+                        setBreakStart(e.target.value)
+                      }
+                    />
+                    <input
+                      type="time"
+                      value={breakEnd}
+                      onChange={(e) =>
+                        setBreakEnd(e.target.value)
+                      }
+                    />
                   </>
                 )}
 
-                <label>
-                  Durată slot (min):
-                  <input
-                    type="number"
-                    value={slotDuration}
-                    onChange={(e) =>
-                      setSlotDuration(e.target.value)
-                    }
-                    placeholder="ex: 20"
-                  />
-                </label>
+                <input
+                  type="number"
+                  placeholder="Durată slot"
+                  value={slotDuration}
+                  onChange={(e) =>
+                    setSlotDuration(e.target.value)
+                  }
+                />
               </>
             )}
 
             <hr />
 
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                justifyContent: "space-between",
-              }}
-            >
+            <div style={{ display: "flex", gap: 8 }}>
               <button onClick={save}>Salvează</button>
               <button onClick={remove}>Șterge</button>
               <button onClick={onClose}>Închide</button>

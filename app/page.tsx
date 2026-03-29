@@ -1,124 +1,137 @@
-export default function HomePage() {
-  return (
-    <main className="bg-white text-gray-900">
-      
-      {/* HERO */}
-      <section className="px-6 py-20 text-center max-w-4xl mx-auto">
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-          Programări online simple pentru frizeri.
-        </h1>
+"use client";
 
-        <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
-          Redu apelurile, elimină haosul și oferă clienților tăi
-          posibilitatea de a se programa rapid, direct online.
+import { useRouter } from "next/navigation";
+
+export default function LandingPage() {
+  const router = useRouter();
+
+  return (
+    <main className="min-h-screen bg-[#0B0B0C] text-white flex flex-col">
+      {/* HEADER */}
+      <header className="flex justify-between items-center px-6 py-4 border-b border-white/10">
+        <h1 className="text-xl font-semibold tracking-wide">Frizeo</h1>
+
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push("/login")}
+            className="text-sm text-white/70 hover:text-white transition"
+          >
+            Login
+          </button>
+
+          <button
+            onClick={() => router.push("/signup")}
+            className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:opacity-90 transition"
+          >
+            Creează cont
+          </button>
+        </div>
+      </header>
+
+      {/* HERO */}
+      <section className="flex flex-col items-center text-center px-6 py-20">
+        <h2 className="text-4xl md:text-5xl font-semibold max-w-3xl leading-tight">
+          Gestionează programările frizeriei tale fără stres
+        </h2>
+
+        <p className="mt-6 text-white/60 max-w-xl text-lg">
+          Programări online, calendar inteligent și control total asupra
+          clienților tăi.
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <a
-            href="/signup"
-            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition"
+        <div className="mt-8 flex gap-4">
+          <button
+            onClick={() => router.push("/signup")}
+            className="bg-white text-black px-6 py-3 rounded-xl font-medium hover:opacity-90 transition"
           >
-            Începe gratuit
-          </a>
+            Încearcă gratuit
+          </button>
 
-          <a
-            href="/booking/demo"
-            className="border border-gray-300 px-6 py-3 rounded-xl hover:bg-gray-100 transition"
+          <button
+            onClick={() => router.push("/login")}
+            className="border border-white/20 px-6 py-3 rounded-xl font-medium text-white/80 hover:text-white hover:border-white/40 transition"
           >
-            Vezi demo
-          </a>
+            Login
+          </button>
+        </div>
+      </section>
+
+      {/* BENEFITS */}
+      <section className="px-6 py-16 border-t border-white/10">
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+            <h3 className="text-lg font-medium">📅 Calendar inteligent</h3>
+            <p className="text-white/60 mt-2 text-sm">
+              Vezi toate programările într-un singur loc, fără haos.
+            </p>
+          </div>
+
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+            <h3 className="text-lg font-medium">📲 Programări online</h3>
+            <p className="text-white/60 mt-2 text-sm">
+              Clienții rezervă singuri, fără telefoane.
+            </p>
+          </div>
+
+          <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+            <h3 className="text-lg font-medium">⚡ Rapid și simplu</h3>
+            <p className="text-white/60 mt-2 text-sm">
+              Setup în câteva minute. Fără complicații.
+            </p>
+          </div>
         </div>
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="bg-gray-50 py-20 px-6">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-semibold mb-12">
+      <section className="px-6 py-16 border-t border-white/10">
+        <div className="max-w-4xl mx-auto text-center">
+          <h3 className="text-2xl font-semibold mb-10">
             Cum funcționează
-          </h2>
+          </h3>
 
-          <div className="grid md:grid-cols-3 gap-10 text-left">
+          <div className="grid md:grid-cols-3 gap-8 text-left">
             <div>
-              <h3 className="font-medium text-lg mb-2">
-                1. Îți setezi programul
-              </h3>
-              <p className="text-gray-600">
-                Configurezi orele de lucru și serviciile oferite.
-              </p>
+              <p className="text-white/40 text-sm">Pasul 1</p>
+              <h4 className="text-lg font-medium mt-1">Creezi cont</h4>
             </div>
 
             <div>
-              <h3 className="font-medium text-lg mb-2">
-                2. Primești un link personal
-              </h3>
-              <p className="text-gray-600">
-                Trimiți linkul către clienții tăi.
-              </p>
+              <p className="text-white/40 text-sm">Pasul 2</p>
+              <h4 className="text-lg font-medium mt-1">Adaugi servicii</h4>
             </div>
 
             <div>
-              <h3 className="font-medium text-lg mb-2">
-                3. Clienții se programează
-              </h3>
-              <p className="text-gray-600">
-                Programările apar automat în panoul tău.
-              </p>
+              <p className="text-white/40 text-sm">Pasul 3</p>
+              <h4 className="text-lg font-medium mt-1">
+                Primești programări
+              </h4>
             </div>
           </div>
         </div>
       </section>
 
-      {/* BENEFICII */}
-      <section className="py-20 px-6 text-center">
-        <h2 className="text-3xl font-semibold mb-12">
-          De ce Frizeo?
-        </h2>
+      {/* CTA FINAL */}
+      <section className="px-6 py-20 border-t border-white/10 text-center">
+        <h3 className="text-3xl font-semibold">
+          Începe gratuit acum
+        </h3>
 
-        <div className="grid md:grid-cols-4 gap-8 max-w-5xl mx-auto text-left">
-          <div>
-            <p className="font-medium">Mai puține apeluri</p>
-            <p className="text-gray-600 text-sm">
-              Clienții se programează singuri, fără telefoane.
-            </p>
-          </div>
+        <p className="text-white/60 mt-4">
+          Fără costuri. Fără complicații.
+        </p>
 
-          <div>
-            <p className="font-medium">Organizare clară</p>
-            <p className="text-gray-600 text-sm">
-              Vezi toate programările într-un singur loc.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium">Link personal</p>
-            <p className="text-gray-600 text-sm">
-              Fiecare frizer are propria pagină de programări.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium">Rapid și simplu</p>
-            <p className="text-gray-600 text-sm">
-              Fără instalări, funcționează direct în browser.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* FINAL CTA */}
-      <section className="bg-black text-white py-20 px-6 text-center">
-        <h2 className="text-3xl font-semibold mb-6">
-          Simplifică-ți programările azi.
-        </h2>
-
-        <a
-          href="/signup"
-          className="bg-white text-black px-8 py-4 rounded-xl hover:bg-gray-200 transition"
+        <button
+          onClick={() => router.push("/signup")}
+          className="mt-8 bg-white text-black px-8 py-4 rounded-xl font-medium hover:opacity-90 transition"
         >
-          Creează cont gratuit
-        </a>
+          Creează cont
+        </button>
       </section>
 
+      {/* FOOTER */}
+      <footer className="text-center text-white/40 text-sm py-6 border-t border-white/10">
+        © {new Date().getFullYear()} Frizeo
+      </footer>
     </main>
   );
 }
