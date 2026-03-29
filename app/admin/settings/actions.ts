@@ -6,22 +6,22 @@ import { redirect } from "next/navigation";
 
 export async function saveWeeklySchedule(days: any[]) {
   const supabase = await createSupabaseServerClient();
-
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
     redirect("/login");
   }
 
-  // delete
+  // delete vechi
   await supabase
     .from("barber_weekly_schedule")
     .delete()
     .eq("barber_id", barber.id);
 
-  // insert
+  // insert nou
   const rows = days.map((d) => ({
     barber_id: barber.id,
+    tenant_id: barber.tenant_id,
     day_of_week: d.day_of_week,
     is_working: d.is_working,
     work_start: d.work_start,
@@ -33,6 +33,6 @@ export async function saveWeeklySchedule(days: any[]) {
 
   await supabase.from("barber_weekly_schedule").insert(rows);
 
-  // 🔥 MAGIC
+  // 🔥 redirect control flow
   redirect("/admin/dashboard");
 }

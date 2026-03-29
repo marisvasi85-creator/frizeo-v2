@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { saveWeeklySchedule } from "../actions";
-type DaySchedule = {
+
+type Day = {
   day_of_week: number;
   is_working: boolean;
   work_start: string | null;
@@ -10,6 +11,10 @@ type DaySchedule = {
   break_enabled: boolean;
   break_start: string | null;
   break_end: string | null;
+};
+
+type Props = {
+  initialData: Day[];
 };
 
 const DAYS = [
@@ -22,169 +27,173 @@ const DAYS = [
   { id: 7, label: "Duminică" },
 ];
 
-export default function WeeklyScheduleEditor({
-  barberId,
-}: {
-  barberId: string;
-}) {
-  const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState<DaySchedule[]>([]);
+export default function WeeklyScheduleEditor({ initialData }: Props) {
+  const [loading, setLoading] = useState(false);
 
-  /* =========================
-     LOAD WEEKLY SCHEDULE
-  ========================= */
-  useEffect(() => {
+  // 🔥 MAP DB → UI
+  const [days, setDays] = useState<Day[]>(
+    DAYS.map((d) => {
+      const existing = initialData.find(
+        (x) => x.day_of_week === d.id
+      );
+
+      return (
+        existing || {
+          day_of_week: d.id,
+          is_working: false,
+          work_start: "09:00",
+          work_end: "18:00",
+          break_enabled: false,
+          break_start: "13:00",
+          break_end: "14:00",
+        }
+      );
+    })
+  );
+
+  function updateDay(index: number, field: keyof Day, value: any) {
+    const updated = [...days];
+    updated[index] = {
+      ...updated[index],
+      [field]: value,
+    };
+    setDays(updated);
+  }
+
+  async function handleSave() {
     setLoading(true);
 
-fetch(`/api/barber-weekly-schedule`)      .then((res) => res.json())
-      .then((data) => {
-        setDays(data || []);
-      })
-      .finally(() => setLoading(false));
-  }, [barberId]);
+    await saveWeeklySchedule(days);
 
-  /* =========================
-     UPDATE DAY
-  ========================= */
-  function updateDay(
-    day: number,
-    patch: Partial<DaySchedule>
-  ) {
-    setDays((prev) =>
-      prev.map((d) =>
-        d.day_of_week === day ? { ...d, ...patch } : d
-      )
-    );
+    // NU mai punem setLoading(false)
+    // redirect oprește execuția
   }
-
-  /* =========================
-     SAVE ALL
-  ========================= */
-  async function save() {
-  setLoading(true);
-
-  const result = await saveWeeklySchedule(days);
-
-  setLoading(false);
-
-  if (!result?.success) {
-    alert("Eroare la salvare program");
-    return;
-  }
-
-  alert("Program salvat");
-}
-
-  if (loading) return <p>Se încarcă…</p>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {DAYS.map((day) => {
-        const data =
-          days.find((d) => d.day_of_week === day.id) ||
-          {
-            day_of_week: day.id,
-            is_working: false,
-            work_start: null,
-            work_end: null,
-            break_enabled: false,
-            break_start: null,
-            break_end: null,
-          };
+    <div className="space-y-6">
 
-        return (
+      {/* LIST */}
+      <div className="space-y-3">
+        {days.map((day, index) => (
           <div
-            key={day.id}
-            style={{
-              border: "1px solid #ddd",
-              padding: 10,
-              borderRadius: 6,
-            }}
+            key={day.day_of_week}
+            className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4"
           >
-            <strong>{day.label}</strong>
 
-            <label style={{ marginLeft: 12 }}>
-              <input
-                type="checkbox"
-                checked={data.is_working}
-                onChange={(e) =>
-                  updateDay(day.id, {
-                    is_working: e.target.checked,
-                  })
+            {/* HEADER */}
+            <div className="flex justify-between items-center">
+
+              <span className="font-medium">
+                {DAYS[index].label}
+              </span>
+
+              <button
+                onClick={() =>
+                  updateDay(index, "is_working", !day.is_working)
                 }
-              />{" "}
-              Lucrez
-            </label>
+                className={`px-3 py-1 rounded text-sm ${
+                  day.is_working
+                    ? "bg-green-500 text-black"
+                    : "bg-gray-700 text-white"
+                }`}
+              >
+                {day.is_working ? "Lucrează" : "Liber"}
+              </button>
+            </div>
 
-            {data.is_working && (
-              <div style={{ marginTop: 8 }}>
+            {/* WORK HOURS */}
+            {day.is_working && (
+              <div className="flex flex-wrap gap-2">
+
                 <input
                   type="time"
-                  value={data.work_start || ""}
+                  value={day.work_start || ""}
                   onChange={(e) =>
-                    updateDay(day.id, {
-                      work_start: e.target.value,
-                    })
+                    updateDay(index, "work_start", e.target.value)
                   }
+                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
                 />
-                {" - "}
+
                 <input
                   type="time"
-                  value={data.work_end || ""}
+                  value={day.work_end || ""}
                   onChange={(e) =>
-                    updateDay(day.id, {
-                      work_end: e.target.value,
-                    })
+                    updateDay(index, "work_end", e.target.value)
                   }
+                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
                 />
 
-                <div>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={data.break_enabled}
-                      onChange={(e) =>
-                        updateDay(day.id, {
-                          break_enabled: e.target.checked,
-                        })
-                      }
-                    />{" "}
-                    Pauză
-                  </label>
-                </div>
+              </div>
+            )}
 
-                {data.break_enabled && (
-                  <>
+            {/* BREAK */}
+            {day.is_working && (
+              <div className="space-y-2">
+
+                <button
+                  onClick={() =>
+                    updateDay(
+                      index,
+                      "break_enabled",
+                      !day.break_enabled
+                    )
+                  }
+                  className="text-sm text-white/70"
+                >
+                  {day.break_enabled
+                    ? "✔ Pauză activă"
+                    : "Adaugă pauză"}
+                </button>
+
+                {day.break_enabled && (
+                  <div className="flex gap-2">
+
                     <input
                       type="time"
-                      value={data.break_start || ""}
+                      value={day.break_start || ""}
                       onChange={(e) =>
-                        updateDay(day.id, {
-                          break_start: e.target.value,
-                        })
+                        updateDay(
+                          index,
+                          "break_start",
+                          e.target.value
+                        )
                       }
+                      className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
                     />
-                    {" - "}
+
                     <input
                       type="time"
-                      value={data.break_end || ""}
+                      value={day.break_end || ""}
                       onChange={(e) =>
-                        updateDay(day.id, {
-                          break_end: e.target.value,
-                        })
+                        updateDay(
+                          index,
+                          "break_end",
+                          e.target.value
+                        )
                       }
+                      className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
                     />
-                  </>
+
+                  </div>
                 )}
               </div>
             )}
-          </div>
-        );
-      })}
 
-      <button onClick={save} style={{ marginTop: 12 }}>
-        Salvează programul
-      </button>
+          </div>
+        ))}
+      </div>
+
+      {/* SAVE */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="bg-white text-black px-4 py-2 rounded text-sm disabled:opacity-50"
+        >
+          {loading ? "Se salvează..." : "Salvează"}
+        </button>
+      </div>
+
     </div>
   );
 }
