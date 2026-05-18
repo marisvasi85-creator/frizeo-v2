@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 
@@ -9,6 +11,8 @@ export default function BookingClient({
 }: {
   barberId: string;
 }) {
+  const router = useRouter();
+
   const [mounted, setMounted] = useState(false);
 
   const [date, setDate] = useState<string | null>(null);
@@ -25,19 +29,26 @@ export default function BookingClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
+  // ============================
   // 🔥 LOAD SERVICES
+  // ============================
   useEffect(() => {
     const load = async () => {
       const res = await fetch(`/api/services?barberId=${barberId}`);
       const data = await res.json();
       setServices(data || []);
     };
+
     load();
   }, [barberId]);
 
+  // ============================
   // 🔥 LOAD SLOTS
+  // ============================
   useEffect(() => {
     if (!date || !serviceId) return;
 
@@ -45,6 +56,7 @@ export default function BookingClient({
       const res = await fetch(
         `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
       );
+
       const data = await res.json();
 
       setSlots(data || []);
@@ -56,13 +68,21 @@ export default function BookingClient({
 
   if (!mounted) return null;
 
-  // 🔥 CREATE BOOKING FINAL
+  // ============================
+  // 🔥 CREATE BOOKING (PRO FLOW)
+  // ============================
   const createBooking = async () => {
     if (!selectedSlot || !date || !serviceId) return;
+
+    if (!name || !phone) {
+      setError("Completează numele și telefonul");
+      return;
+    }
 
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
+    // 🔥 calc end time
     const [h, m] = selectedSlot.split(":").map(Number);
     const d = new Date();
     d.setHours(h);
@@ -73,7 +93,9 @@ export default function BookingClient({
     setLoading(true);
     setError(null);
 
+    // ============================
     // 🔥 HOLD
+    // ============================
     const holdRes = await fetch("/api/bookings/hold", {
       method: "POST",
       headers: {
@@ -90,12 +112,14 @@ export default function BookingClient({
     const holdData = await holdRes.json();
 
     if (!holdRes.ok) {
-      setError(holdData.error);
+      setError(holdData.error || "Slot indisponibil");
       setLoading(false);
       return;
     }
 
-    // 🔥 CONFIRM
+    // ============================
+    // 🔥 CREATE (CONFIRM)
+    // ============================
     const createRes = await fetch("/api/bookings/create", {
       method: "POST",
       headers: {
@@ -112,25 +136,20 @@ export default function BookingClient({
     const createData = await createRes.json();
 
     if (!createRes.ok) {
-      setError(createData.error);
+      setError(createData.error || "Eroare la confirmare");
       setLoading(false);
       return;
     }
 
-    // 🔥 REFRESH SLOTURI
-    const res = await fetch(
-      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
-    );
-    const newSlots = await res.json();
-
-    setSlots(newSlots);
-    setSelectedSlot(null);
-
-    setLoading(false);
-
-    window.location.href = `/booking/confirmed/${createData.bookingId}`;
+    // ============================
+    // 🔥 REDIRECT CONFIRM PAGE
+    // ============================
+    router.push(`/booking/confirmed/${createData.bookingId}`);
   };
 
+  // ============================
+  // UI
+  // ============================
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl text-center font-semibold">
