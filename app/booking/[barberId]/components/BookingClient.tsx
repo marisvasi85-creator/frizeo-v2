@@ -33,9 +33,15 @@ export default function BookingClient({ barberId }: { barberId: string }) {
   }, [barberId]);
 
   // 🔥 FORMAT DATE
-  const formattedDate = date
-    ? date.toISOString().split("T")[0]
-    : null;
+  const formattedDate = (() => {
+  if (!date) return null;
+
+  const d = new Date(date);
+
+  if (isNaN(d.getTime())) return null;
+
+  return d.toISOString().split("T")[0];
+})();
 
   // 🔥 LOAD SLOTS
   useEffect(() => {
