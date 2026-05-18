@@ -5,6 +5,7 @@ export default function Page({
 }: {
   params: { token: string };
 }) {
+   console.log("TOKEN:", params);
   const token = params?.token;
 
   if (!token) {
