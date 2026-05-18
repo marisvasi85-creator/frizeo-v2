@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
 
 export async function POST(req: Request) {
   try {
-    const supabase = createSupabasePublicClient();
+    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const { token, new_date, new_start_time, new_end_time } = body;
