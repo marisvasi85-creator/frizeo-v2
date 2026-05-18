@@ -18,9 +18,6 @@ export default async function Page(props: any) {
   }
 
   return (
-    <BookingClient
-      barberId={barberId}
-      tenantId={barber.tenant_id}
-    />
+    <BookingClient barberId={barberId} />
   );
 }
