@@ -67,17 +67,20 @@ export async function POST(req: Request) {
 
     // 🔥 CREATE BOOKING NOU (RPC CORECT)
     const { data: newBooking, error: rpcError } =
-      await supabase.rpc("create_booking_safe", {
-        p_barber_id: oldBooking.barber_id,
-        p_barber_service_id: barberServiceId,
-        p_date: new_date,
-        p_start: new_start_time,
-        p_end: new_end_time,
-        p_client_name: oldBooking.client_name,
-        p_client_phone: oldBooking.client_phone,
-        p_client_email: oldBooking.client_email,
-        p_reschedule_count: (oldBooking.reschedule_count || 0) + 1,
-      });
+  await supabase.rpc("create_booking_safe_v2", {
+    p_barber_id: oldBooking.barber_id,
+    p_barber_service_id: barberServiceId,
+    p_date: new_date,
+    p_start: new_start_time,
+    p_end: new_end_time,
+    p_client_name: oldBooking.client_name,
+    p_client_phone: oldBooking.client_phone,
+    p_client_email: oldBooking.client_email,
+    p_reschedule_count: (oldBooking.reschedule_count || 0) + 1,
+
+    // 🔥 CHEIA PROBLEMEI
+    p_exclude_booking_id: oldBooking.id,
+  });
 
     if (rpcError || !newBooking) {
       console.error("RPC ERROR:", rpcError);
