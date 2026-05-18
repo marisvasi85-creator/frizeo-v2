@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const { data: service } = await supabase
       .from("barber_services")
       .select("display_name, name")
-      .eq("id", data.service_id)
+      .eq("id", data.barber_service_id)
       .single();
 
     const serviceName =

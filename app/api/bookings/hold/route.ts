@@ -6,9 +6,9 @@ export async function POST(req: Request) {
     const supabase = createSupabasePublicClient();
     const body = await req.json();
 
-    const { barber_id, date, start_time, end_time } = body;
+    const { barber_id, barber_service_id, date, start_time, end_time } = body;
 
-    if (!barber_id || !date || !start_time || !end_time) {
+    if (!barber_id || !barber_service_id || !date || !start_time || !end_time) {
       return NextResponse.json(
         { error: "Date invalide" },
         { status: 400 }
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
       .from("bookings")
       .insert({
         barber_id,
+        service_id: barber_service_id, // 🔥 CRITIC
         tenant_id: barber.tenant_id,
         date,
         start_time,

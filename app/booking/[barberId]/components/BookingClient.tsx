@@ -2,18 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 
-export default function BookingClient({
-  barberId,
-}: {
-  barberId: string;
-}) {
+export default function BookingClient({ barberId }: { barberId: string }) {
   const router = useRouter();
-
-  const [mounted, setMounted] = useState(false);
 
   const [date, setDate] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -29,26 +22,17 @@ export default function BookingClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ============================
   // 🔥 LOAD SERVICES
-  // ============================
   useEffect(() => {
     const load = async () => {
       const res = await fetch(`/api/services?barberId=${barberId}`);
       const data = await res.json();
       setServices(data || []);
     };
-
     load();
   }, [barberId]);
 
-  // ============================
   // 🔥 LOAD SLOTS
-  // ============================
   useEffect(() => {
     if (!date || !serviceId) return;
 
@@ -56,7 +40,6 @@ export default function BookingClient({
       const res = await fetch(
         `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
       );
-
       const data = await res.json();
 
       setSlots(data || []);
@@ -66,36 +49,23 @@ export default function BookingClient({
     load();
   }, [date, serviceId, barberId]);
 
-  if (!mounted) return null;
-
-  // ============================
-  // 🔥 CREATE BOOKING (PRO FLOW)
-  // ============================
+  // 🔥 CREATE BOOKING
   const createBooking = async () => {
     if (!selectedSlot || !date || !serviceId) return;
-
-    if (!name || !phone) {
-      setError("Completează numele și telefonul");
-      return;
-    }
 
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
-    // 🔥 calc end time
     const [h, m] = selectedSlot.split(":").map(Number);
     const d = new Date();
     d.setHours(h);
     d.setMinutes(m + duration);
-
     const endTime = d.toTimeString().slice(0, 5);
 
     setLoading(true);
     setError(null);
 
-    // ============================
     // 🔥 HOLD
-    // ============================
     const holdRes = await fetch("/api/bookings/hold", {
       method: "POST",
       headers: {
@@ -103,6 +73,7 @@ export default function BookingClient({
       },
       body: JSON.stringify({
         barber_id: barberId,
+        barber_service_id: serviceId, // 🔥 CRITIC
         date,
         start_time: selectedSlot,
         end_time: endTime,
@@ -112,14 +83,12 @@ export default function BookingClient({
     const holdData = await holdRes.json();
 
     if (!holdRes.ok) {
-      setError(holdData.error || "Slot indisponibil");
+      setError(holdData.error);
       setLoading(false);
       return;
     }
 
-    // ============================
-    // 🔥 CREATE (CONFIRM)
-    // ============================
+    // 🔥 CREATE
     const createRes = await fetch("/api/bookings/create", {
       method: "POST",
       headers: {
@@ -129,40 +98,30 @@ export default function BookingClient({
         bookingId: holdData.holdId,
         client_name: name,
         client_phone: phone,
-        client_email: email || null,
+        client_email: email,
       }),
     });
 
     const createData = await createRes.json();
 
     if (!createRes.ok) {
-      setError(createData.error || "Eroare la confirmare");
+      setError(createData.error);
       setLoading(false);
       return;
     }
 
-    // ============================
-    // 🔥 REDIRECT CONFIRM PAGE
-    // ============================
     router.push(`/booking/confirmed/${createData.bookingId}`);
   };
 
-  // ============================
-  // UI
-  // ============================
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
-      <h1 className="text-3xl text-center font-semibold">
-        Programează-te
-      </h1>
+      <h1 className="text-3xl text-center">Programează-te</h1>
 
-      {/* DATA */}
       <Calendar value={date} onChange={setDate} />
 
-      {/* SERVICIU */}
       {date && (
         <select
-          className="w-full border p-3 rounded"
+          className="w-full border p-3"
           value={serviceId || ""}
           onChange={(e) => setServiceId(e.target.value)}
         >
@@ -175,8 +134,7 @@ export default function BookingClient({
         </select>
       )}
 
-      {/* SLOTURI */}
-      {serviceId && slots.length > 0 && (
+      {serviceId && (
         <SlotPicker
           slots={slots}
           selected={selectedSlot}
@@ -184,36 +142,29 @@ export default function BookingClient({
         />
       )}
 
-      {/* DATE CLIENT */}
       {selectedSlot && (
         <div className="space-y-3">
           <input
             placeholder="Nume"
-            className="w-full border p-3 rounded"
-            value={name}
+            className="w-full border p-3"
             onChange={(e) => setName(e.target.value)}
           />
-
           <input
             placeholder="Telefon"
-            className="w-full border p-3 rounded"
-            value={phone}
+            className="w-full border p-3"
             onChange={(e) => setPhone(e.target.value)}
           />
-
           <input
-            placeholder="Email (opțional)"
-            className="w-full border p-3 rounded"
-            value={email}
+            placeholder="Email"
+            className="w-full border p-3"
             onChange={(e) => setEmail(e.target.value)}
           />
 
           <button
             onClick={createBooking}
-            className="w-full bg-black text-white p-3 rounded"
-            disabled={loading}
+            className="w-full bg-black text-white p-3"
           >
-            {loading ? "Se procesează..." : "Programează-te"}
+            Programează-te
           </button>
         </div>
       )}
