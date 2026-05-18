@@ -50,12 +50,12 @@ export async function POST(req: Request) {
     // ============================
     const { data: service } = await supabase
       .from("barber_services")
-      .select("display_name")
+      .select("display_name, name")
       .eq("id", data.service_id)
       .single();
 
-    const serviceName = service?.display_name || "Serviciu";
-
+const serviceName =
+  service?.display_name || service?.name || "Serviciu";
     // ============================
     // 🔥 GET BARBER
     // ============================

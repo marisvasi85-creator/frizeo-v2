@@ -38,16 +38,30 @@ export function clientConfirmationTemplate({
       </p>
 
       <div style="margin:20px 0;">
-        <a href="${rescheduleUrl}" 
+        <a href="${rescheduleUrl}" target="_blank" rel="noopener noreferrer" 
            style="display:inline-block; padding:10px 15px; background:#111; color:#fff; text-decoration:none; border-radius:6px; margin-right:10px;">
           Modifică programarea
         </a>
 
-        <a href="${cancelUrl}" 
+        <a href="${cancelUrl}" target="_blank" rel="noopener noreferrer" 
            style="display:inline-block; padding:10px 15px; background:#e53935; color:#fff; text-decoration:none; border-radius:6px;">
           Anulează programarea
         </a>
       </div>
+
+      <p>
+  Dacă nu funcționează butoanele:
+</p>
+
+<p>
+  Reprogramare: <br/>
+  <a href="${rescheduleUrl}">${rescheduleUrl}</a>
+</p>
+
+<p>
+  Anulare: <br/>
+  <a href="${cancelUrl}">${cancelUrl}</a>
+</p>
 
       <p style="font-size:12px; color:#777;">
         Dacă nu ai făcut tu această programare, ignoră acest mesaj.
