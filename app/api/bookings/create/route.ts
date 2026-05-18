@@ -27,13 +27,11 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from("bookings")
       .update({
-  status: "confirmed",
-  client_name,
-  client_phone,
-  client_email: client_email || null,
-  cancel_token: crypto.randomUUID(),
-  reschedule_token: crypto.randomUUID(),
-})
+        status: "confirmed",
+        client_name,
+        client_phone,
+        client_email: client_email || null,
+      })
       .eq("id", bookingId)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
@@ -48,7 +46,7 @@ export async function POST(req: Request) {
     }
 
     // ============================
-    // 🔥 GET SERVICE NAME
+    // 🔥 SERVICE
     // ============================
     const { data: service } = await supabase
       .from("barber_services")
@@ -56,13 +54,14 @@ export async function POST(req: Request) {
       .eq("id", data.service_id)
       .single();
 
-const serviceName =
-  service?.display_name || service?.name || "Serviciu";
+    const serviceName =
+      service?.display_name || service?.name || "Serviciu";
+
     // ============================
-    // 🔥 GET BARBER
+    // 🔥 BARBER
     // ============================
     let barberEmail: string | null = null;
-    let barberName: string = "Barber";
+    let barberName = "Barber";
 
     try {
       const { data: barber } = await supabase
@@ -89,12 +88,14 @@ const serviceName =
     const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
     const formattedTime = data.start_time?.slice(0, 5);
 
-    // 🔥 URL-uri (placeholder)
+    // ============================
+    // 🔥 URL-uri REALE
+    // ============================
     const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
-const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
+    const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
+    const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
 
     // ============================
     // 📩 EMAIL CLIENT
