@@ -27,11 +27,13 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from("bookings")
       .update({
-        status: "confirmed",
-        client_name,
-        client_phone,
-        client_email: client_email || null,
-      })
+  status: "confirmed",
+  client_name,
+  client_phone,
+  client_email: client_email || null,
+  cancel_token: crypto.randomUUID(),
+  reschedule_token: crypto.randomUUID(),
+})
       .eq("id", bookingId)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
@@ -88,8 +90,11 @@ const serviceName =
     const formattedTime = data.start_time?.slice(0, 5);
 
     // 🔥 URL-uri (placeholder)
-    const cancelUrl = "#";
-    const rescheduleUrl = "#";
+    const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
+const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
 
     // ============================
     // 📩 EMAIL CLIENT
