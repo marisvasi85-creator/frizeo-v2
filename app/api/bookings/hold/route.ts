@@ -53,21 +53,21 @@ export async function POST(req: Request) {
     const rescheduleToken = crypto.randomUUID();
 
     const { data, error } = await supabase
-      .from("bookings")
-      .insert({
-        barber_id,
-        service_id: barber_service_id, // 🔥 CRITIC
-        tenant_id: barber.tenant_id,
-        date,
-        start_time,
-        end_time,
-        status: "pending",
-        expires_at: expiresAt.toISOString(),
-        cancel_token: cancelToken,
-        reschedule_token: rescheduleToken,
-      })
-      .select()
-      .single();
+  .from("bookings")
+  .insert({
+    barber_id,
+    barber_service_id, // ✅ AICI ESTE FIXUL
+    tenant_id: barber.tenant_id,
+    date,
+    start_time,
+    end_time,
+    status: "pending",
+    expires_at: expiresAt.toISOString(),
+    cancel_token: cancelToken,
+    reschedule_token: rescheduleToken,
+  })
+  .select()
+  .single();
 
     if (error || !data) {
       return NextResponse.json(
