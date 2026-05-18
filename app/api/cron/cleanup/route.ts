@@ -1,14 +1,37 @@
 import { NextResponse } from "next/server";
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
-  const supabase = createSupabasePublicClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  await supabase
-    .from("bookings")
-    .delete()
-    .eq("status", "pending")
-    .lt("expires_at", new Date().toISOString());
+    const now = new Date().toISOString();
 
-  return NextResponse.json({ success: true });
+    // 🔥 ȘTERGE DOAR HOLD-URI EXPIRATE
+    const { error } = await supabase
+      .from("bookings")
+      .delete()
+      .eq("status", "pending")
+      .lt("expires_at", now);
+
+    if (error) {
+      console.error("CLEANUP ERROR:", error);
+      return NextResponse.json(
+        { error: "Cleanup failed" },
+        { status: 500 }
+      );
+    }
+
+    console.log("CLEANUP OK");
+
+    return NextResponse.json({ success: true });
+
+  } catch (err) {
+    console.error("CLEANUP CRASH:", err);
+
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
 }

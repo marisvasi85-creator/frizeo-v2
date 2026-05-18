@@ -9,27 +9,34 @@ export async function GET() {
     const now = new Date();
     const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    // 🔥 1. CLEANUP PENDING EXPIRATE (CRUCIAL)
+    const today = now.toISOString().split("T")[0];
+
+    // 🔥 1. CLEANUP (IMPORTANT)
     await supabase
       .from("bookings")
       .delete()
       .eq("status", "pending")
       .lt("expires_at", now.toISOString());
 
-    // 🔥 2. IA DOAR CE TREBUIE (optimizat)
+    // 🔥 2. IA DOAR CE E NECESAR (OPTIM)
     const { data: bookings, error } = await supabase
       .from("bookings")
-      .select("id, client_email, date, start_time")
+      .select("id, client_email, date, start_time, reminder_2h_sent")
       .eq("status", "confirmed")
       .eq("reminder_2h_sent", false)
-      .gte("date", now.toISOString().split("T")[0]); // doar azi+
+      .eq("date", today); // 🔥 DOAR AZI (IMPORTANT)
 
     if (error) {
       console.error("FETCH ERROR:", error);
-      return NextResponse.json({ error: "Fetch failed" }, { status: 500 });
+      return NextResponse.json(
+        { error: "Fetch failed" },
+        { status: 500 }
+      );
     }
 
-    // 🔥 3. TRIMITE DOAR CE E ÎN FEREASTRĂ
+    let sentCount = 0;
+
+    // 🔥 3. FILTRARE ȘI TRIMITERE
     for (const b of bookings || []) {
       const bookingTime = new Date(`${b.date}T${b.start_time}`);
 
@@ -40,17 +47,21 @@ export async function GET() {
               to: b.client_email,
               subject: "Reminder programare",
               html: `
-                <h3>Reminder programare</h3>
-                <p>Ai programare la <b>${b.start_time}</b></p>
+                <div style="font-family: Arial">
+                  <h3>Reminder programare</h3>
+                  <p>Ai programare azi la <b>${b.start_time}</b></p>
+                </div>
               `,
             });
           }
 
-          // 🔥 marchează ca trimis (ANTI DUPLICATE)
+          // 🔥 ANTI DUPLICATE
           await supabase
             .from("bookings")
             .update({ reminder_2h_sent: true })
             .eq("id", b.id);
+
+          sentCount++;
 
         } catch (err) {
           console.error("EMAIL ERROR:", err);
@@ -58,9 +69,12 @@ export async function GET() {
       }
     }
 
-    console.log("CRON OK");
+    console.log("REMINDER OK:", sentCount);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      sent: sentCount,
+    });
 
   } catch (err) {
     console.error("CRON ERROR:", err);

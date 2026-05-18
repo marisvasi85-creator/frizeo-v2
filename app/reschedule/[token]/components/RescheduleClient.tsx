@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import SlotPicker from "@/app/components/SlotPicker";
 import Calendar from "@/app/components/Calendar";
 import RescheduleInfo from "./RescheduleInfo";
 
 export default function RescheduleClient({ booking, token }: any) {
+  const router = useRouter();
+
   const [date, setDate] = useState(booking.date);
   const [slots, setSlots] = useState<string[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
@@ -14,22 +17,24 @@ export default function RescheduleClient({ booking, token }: any) {
 
   const slotsRef = useRef<HTMLDivElement>(null);
 
-  // 🔥 ia durata serviciu
+  // 🔥 LOAD SERVICE CORECT
   useEffect(() => {
     fetch(`/api/services?barberId=${booking.barber_id}`)
       .then((r) => r.json())
       .then((services) => {
-        const s = services.find((x: any) => x.id === booking.service_id);
+        const s = services.find(
+          (x: any) => x.id === booking.barber_service_id
+        );
         if (s) setDuration(s.duration || 30);
       });
   }, [booking]);
 
-  // 🔥 load sloturi reale
+  // 🔥 LOAD SLOTS
   useEffect(() => {
     if (!date) return;
 
     fetch(
-      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.service_id}&excludeBookingId=${booking.id}`
+      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&excludeBookingId=${booking.id}`
     )
       .then((r) => r.json())
       .then((data) => {
@@ -41,7 +46,6 @@ export default function RescheduleClient({ booking, token }: any) {
       });
   }, [date, booking]);
 
-  // 🔥 SUBMIT DIRECT (FĂRĂ CONFIRM COMPONENT)
   const handleSubmit = async () => {
     if (!selectedSlot) return;
 
@@ -51,6 +55,9 @@ export default function RescheduleClient({ booking, token }: any) {
 
     const res = await fetch("/api/bookings/reschedule", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         token,
         new_date: date,
@@ -67,14 +74,13 @@ export default function RescheduleClient({ booking, token }: any) {
       return;
     }
 
-    // 🔥 redirect final
-    window.location.href = "/reschedule/confirmed";
+    // 🔥 REDIRECT CORECT
+    router.push(`/booking/confirmed/${data.bookingId}?rescheduled=1`);
   };
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
 
-      {/* HEADER */}
       <div>
         <h2 className="text-2xl font-semibold">
           Reprogramează programarea
@@ -84,16 +90,11 @@ export default function RescheduleClient({ booking, token }: any) {
         </p>
       </div>
 
-      {/* GRID */}
       <div className="grid md:grid-cols-2 gap-10">
 
-        {/* STÂNGA */}
         <div className="space-y-6">
-
-          {/* INFO */}
           <RescheduleInfo booking={booking} />
 
-          {/* CALENDAR */}
           <div className="border rounded-2xl p-4 shadow-sm">
             <Calendar
               value={date}
@@ -103,15 +104,12 @@ export default function RescheduleClient({ booking, token }: any) {
               }}
             />
           </div>
-
         </div>
 
-        {/* DREAPTA */}
         <div
           ref={slotsRef}
           className="border rounded-2xl p-4 shadow-sm flex flex-col justify-between"
         >
-
           <div>
             <p className="font-medium mb-4">Alege ora</p>
 
@@ -128,7 +126,6 @@ export default function RescheduleClient({ booking, token }: any) {
             )}
           </div>
 
-          {/* 🔥 BUTTON FINAL */}
           <button
             onClick={handleSubmit}
             disabled={!selectedSlot || loading}

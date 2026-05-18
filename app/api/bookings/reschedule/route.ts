@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
+import { sendEmail } from "@/lib/email/email";
+import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -8,7 +9,14 @@ export async function POST(req: Request) {
 
     const { token, new_date, new_start_time, new_end_time } = body;
 
-    // 🔥 GET BOOKING
+    if (!token || !new_date || !new_start_time || !new_end_time) {
+      return NextResponse.json(
+        { error: "Date invalide" },
+        { status: 400 }
+      );
+    }
+
+    // 🔥 GET BOOKING EXISTENT
     const { data: oldBooking, error } = await supabase
       .from("bookings")
       .select("*")
@@ -35,10 +43,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 GET SERVICE CORECT
+    // 🔥 SERVICE CORECT
     let barberServiceId = oldBooking.barber_service_id;
 
-    // fallback dacă e null (date vechi)
+    // fallback pentru date vechi
     if (!barberServiceId && oldBooking.service_id) {
       const { data: bs } = await supabase
         .from("barber_services")
@@ -57,7 +65,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 CREATE NEW BOOKING (FIX REAL)
+    // 🔥 CREATE BOOKING NOU (RPC CORECT)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe", {
         p_barber_id: oldBooking.barber_id,
@@ -68,10 +76,7 @@ export async function POST(req: Request) {
         p_client_name: oldBooking.client_name,
         p_client_phone: oldBooking.client_phone,
         p_client_email: oldBooking.client_email,
-
-        // 🔥 CRITICE (FARA ASTEA NU MERGE)
         p_reschedule_count: (oldBooking.reschedule_count || 0) + 1,
-        p_rescheduled_from: oldBooking.id,
       });
 
     if (rpcError || !newBooking) {
@@ -81,7 +86,33 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+let barberEmail: string | null = null;
 
+try {
+  const { data: barber } = await supabase
+    .from("barbers")
+    .select("user_id")
+    .eq("id", oldBooking.barber_id)
+    .single();
+
+  if (barber?.user_id) {
+    const { data: userData } =
+      await supabase.auth.admin.getUserById(barber.user_id);
+
+    barberEmail = userData?.user?.email || null;
+  }
+} catch (e) {
+  console.error("BARBER ERROR:", e);
+}
+
+if (barberEmail) {
+  await sendEmail({
+    to: barberEmail,
+    subject: "Programare reprogramată",
+    html: `Programare modificată:
+    ${new_date} ${new_start_time}`,
+  });
+}
     // 🔥 ANULEAZĂ VECHIUL BOOKING
     await supabase
       .from("bookings")
@@ -90,6 +121,34 @@ export async function POST(req: Request) {
         reschedule_token: null,
       })
       .eq("id", oldBooking.id);
+
+    // 🔥 EMAIL CLIENT
+if (oldBooking.client_email) {
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+    const cancelLink = `${baseUrl}/cancel/${newBooking.cancel_token}`;
+    const rescheduleLink = `${baseUrl}/reschedule/${newBooking.reschedule_token}`;
+
+    const html = rescheduleConfirmationTemplate({
+      barberName: "Barber", // poți pune din DB dacă vrei
+      date: new_date,
+      time: new_start_time,
+      cancelLink,
+      rescheduleLink,
+    });
+
+    await sendEmail({
+      to: oldBooking.client_email,
+      subject: "Programare reprogramată",
+      html,
+    });
+
+  } catch (e) {
+    console.error("EMAIL ERROR:", e);
+  }
+}
 
     return NextResponse.json({
       success: true,
