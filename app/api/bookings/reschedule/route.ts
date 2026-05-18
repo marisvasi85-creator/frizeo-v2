@@ -35,10 +35,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 🔥 🔥 FIX CRITIC
+    // 🔥 GET SERVICE CORECT
     let barberServiceId = oldBooking.barber_service_id;
 
-    // fallback dacă e null
+    // fallback dacă e null (date vechi)
     if (!barberServiceId && oldBooking.service_id) {
       const { data: bs } = await supabase
         .from("barber_services")
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 CREATE NEW BOOKING
+    // 🔥 CREATE NEW BOOKING (FIX REAL)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe", {
         p_barber_id: oldBooking.barber_id,
@@ -68,6 +68,10 @@ export async function POST(req: Request) {
         p_client_name: oldBooking.client_name,
         p_client_phone: oldBooking.client_phone,
         p_client_email: oldBooking.client_email,
+
+        // 🔥 CRITICE (FARA ASTEA NU MERGE)
+        p_reschedule_count: (oldBooking.reschedule_count || 0) + 1,
+        p_rescheduled_from: oldBooking.id,
       });
 
     if (rpcError || !newBooking) {
@@ -78,11 +82,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 UPDATE OLD BOOKING
+    // 🔥 ANULEAZĂ VECHIUL BOOKING
     await supabase
       .from("bookings")
       .update({
-        status: "rescheduled",
+        status: "cancelled",
         reschedule_token: null,
       })
       .eq("id", oldBooking.id);
