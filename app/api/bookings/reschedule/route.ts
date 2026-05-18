@@ -8,33 +8,65 @@ export async function POST(req: Request) {
 
     const { token, new_date, new_start_time, new_end_time } = body;
 
-    const { data: oldBooking } = await supabase
+    if (!token || !new_date || !new_start_time || !new_end_time) {
+      return NextResponse.json(
+        { error: "Date incomplete" },
+        { status: 400 }
+      );
+    }
+
+    // ============================
+    // 🔥 GET BOOKING VECHI
+    // ============================
+    const { data: oldBooking, error: fetchError } = await supabase
       .from("bookings")
       .select("*")
       .eq("reschedule_token", token)
       .eq("status", "confirmed")
       .single();
 
-    if (!oldBooking) {
+    if (fetchError || !oldBooking) {
       return NextResponse.json(
         { error: "Link invalid sau expirat" },
         { status: 404 }
       );
     }
 
-    // blocare 2h
+    // ============================
+    // 🔥 VALIDARE 2H
+    // ============================
     const bookingTime = new Date(
       `${oldBooking.date}T${oldBooking.start_time}`
     );
 
-    if (bookingTime <= new Date(Date.now() + 2 * 60 * 60 * 1000)) {
+    const now = new Date();
+
+    if (bookingTime <= new Date(now.getTime() + 2 * 60 * 60 * 1000)) {
       return NextResponse.json(
-        { error: "Nu mai poate fi reprogramată" },
+        { error: "Nu mai poate fi reprogramată (sub 2h)" },
         { status: 403 }
       );
     }
 
-    const { data: newBooking, error } = await supabase.rpc(
+    // ============================
+    // 🔥 SCOATEM TEMPORAR DIN CONFLICT
+    // ============================
+    const { error: tempError } = await supabase
+      .from("bookings")
+      .update({ status: "rescheduling" })
+      .eq("id", oldBooking.id);
+
+    if (tempError) {
+      return NextResponse.json(
+        { error: "Eroare internă (rescheduling)" },
+        { status: 500 }
+      );
+    }
+
+    // ============================
+    // 🔥 CREARE BOOKING NOU (SAFE)
+    // ============================
+    const { data: newBooking, error: rpcError } = await supabase.rpc(
       "create_booking_safe",
       {
         p_barber_id: oldBooking.barber_id,
@@ -48,13 +80,24 @@ export async function POST(req: Request) {
       }
     );
 
-    if (error || !newBooking) {
+    // ============================
+    // 🔴 FAIL → ROLLBACK
+    // ============================
+    if (rpcError || !newBooking) {
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", oldBooking.id);
+
       return NextResponse.json(
         { error: "Slot ocupat" },
         { status: 400 }
       );
     }
 
+    // ============================
+    // ✅ SUCCESS → FINALIZARE
+    // ============================
     await supabase
       .from("bookings")
       .update({
@@ -67,7 +110,13 @@ export async function POST(req: Request) {
       success: true,
       bookingId: newBooking.id,
     });
-  } catch {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+  } catch (err) {
+    console.error("RESCHEDULE ERROR:", err);
+
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
   }
 }
