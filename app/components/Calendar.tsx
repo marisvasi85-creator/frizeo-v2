@@ -15,9 +15,10 @@ export default function Calendar({ value, onChange }: any) {
           const fixed = new Date(date);
           fixed.setHours(12, 0, 0, 0);
 
-          const dateStr = fixed.toISOString().split("T")[0];
+          // 🔥 FIX FINAL
+          const iso = fixed.toISOString().split("T")[0];
 
-          onChange(dateStr); // 🔥 STRING FIX
+          onChange(iso);
         }}
       />
     </div>
