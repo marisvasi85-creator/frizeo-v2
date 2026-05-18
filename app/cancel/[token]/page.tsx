@@ -5,5 +5,11 @@ export default function Page({
 }: {
   params: { token: string };
 }) {
-  return <CancelClient token={params.token} />;
+  const token = params?.token;
+
+  if (!token) {
+    return <div className="p-6 text-center">Missing token</div>;
+  }
+
+  return <CancelClient token={token} />;
 }
