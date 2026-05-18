@@ -1,15 +1,14 @@
+"use client";
+
+import { useParams } from "next/navigation";
 import CancelClient from "./CancelClient";
 
-export default function Page({
-  params,
-}: {
-  params: { token: string };
-}) {
-   console.log("TOKEN:", params);
-  const token = params?.token;
+export default function Page() {
+  const params = useParams();
+  const token = params?.token as string;
 
   if (!token) {
-    return <div className="p-6 text-center">Missing token</div>;
+    return <div>Missing token</div>;
   }
 
   return <CancelClient token={token} />;
