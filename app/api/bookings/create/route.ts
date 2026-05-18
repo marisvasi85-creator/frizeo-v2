@@ -1,115 +1,150 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
+import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 
-const rateLimitMap = new Map<string, number>();
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    /* 🔒 RATE LIMIT */
-    const ip = req.headers.get("x-forwarded-for") || "unknown";
-    const last = rateLimitMap.get(ip);
-
-    if (last && Date.now() - last < 5000) {
-      return NextResponse.json(
-        { error: "Too many requests" },
-        { status: 429 }
-      );
-    }
-
-    rateLimitMap.set(ip, Date.now());
-
     const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const {
-      barberId,
-      serviceId, // acesta este de fapt barber_service_id
-      date,
-      start_time,
-      end_time,
+      bookingId,
       client_name,
       client_phone,
       client_email,
-    } = body ?? {};
+    } = body;
 
-    if (
-      !barberId ||
-      !serviceId ||
-      !date ||
-      !start_time ||
-      !end_time ||
-      !client_name ||
-      !client_phone
-    ) {
+    if (!bookingId || !client_name || !client_phone) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Date incomplete" },
         { status: 400 }
       );
     }
 
-    /* 🔍 Validăm barber_service direct */
-    const { data: barberService } = await supabase
-      .from("barber_services")
-      .select("id, duration, price")
-      .eq("id", serviceId)
-      .eq("barber_id", barberId)
+    // 🔥 CONFIRM BOOKING
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({
+        status: "confirmed",
+        client_name,
+        client_phone,
+        client_email: client_email || null,
+      })
+      .eq("id", bookingId)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .select()
       .single();
-
-    if (!barberService) {
-      return NextResponse.json(
-        { error: "Invalid service" },
-        { status: 400 }
-      );
-    }
-
-    /* 🔐 Creare booking prin RPC nou */
-    const { data, error } = await supabase.rpc(
-      "create_booking_safe",
-      {
-        p_barber_id: barberId,
-        p_barber_service_id: barberService.id,
-        p_date: date,
-        p_start: start_time,
-        p_end: end_time,
-        p_client_name: client_name,
-        p_client_phone: client_phone,
-        p_client_email: client_email || null,
-      }
-    );
 
     if (error || !data) {
       return NextResponse.json(
-        { error: "Slot indisponibil. Alege alt interval." },
+        { error: "Slot indisponibil sau expirat" },
         { status: 400 }
       );
     }
 
-    /* 📧 Email confirmare */
+    // ============================
+    // 🔥 GET SERVICE NAME
+    // ============================
+    const { data: service } = await supabase
+      .from("barber_services")
+      .select("display_name")
+      .eq("id", data.service_id)
+      .single();
+
+    const serviceName = service?.display_name || "Serviciu";
+
+    // ============================
+    // 🔥 GET BARBER
+    // ============================
+    let barberEmail: string | null = null;
+    let barberName: string = "Barber";
+
+    try {
+      const { data: barber } = await supabase
+        .from("barbers")
+        .select("user_id, display_name")
+        .eq("id", data.barber_id)
+        .single();
+
+      barberName = barber?.display_name || "Barber";
+
+      if (barber?.user_id) {
+        const { data: userData } =
+          await supabase.auth.admin.getUserById(barber.user_id);
+
+        barberEmail = userData?.user?.email || null;
+      }
+    } catch (e) {
+      console.error("BARBER ERROR:", e);
+    }
+
+    // ============================
+    // 🔥 FORMAT
+    // ============================
+    const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
+    const formattedTime = data.start_time?.slice(0, 5);
+
+    // 🔥 URL-uri (placeholder)
+    const cancelUrl = "#";
+    const rescheduleUrl = "#";
+
+    // ============================
+    // 📩 EMAIL CLIENT
+    // ============================
     if (client_email) {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL!;
-      await sendEmail({
-        to: client_email,
-        subject: "Confirmare programare",
-        html: clientConfirmationTemplate({
-          barberName: "Frizerul tău",
-          date,
-          time: `${start_time} – ${end_time}`,
-          cancelLink: `${baseUrl}/cancel/${data.cancel_token}`,
-          rescheduleLink: `${baseUrl}/reschedule/${data.reschedule_token}`,
-        }),
-      });
+      try {
+        await sendEmail({
+          to: client_email,
+          subject: "Programare confirmată",
+          html: clientConfirmationTemplate({
+            clientName: client_name,
+            barberName,
+            serviceName,
+            date: formattedDate,
+            time: formattedTime,
+            cancelUrl,
+            rescheduleUrl,
+          }),
+        });
+      } catch (e) {
+        console.error("CLIENT EMAIL ERROR:", e);
+      }
+    }
+
+    // ============================
+    // 📩 EMAIL BARBER
+    // ============================
+    if (barberEmail) {
+      try {
+        await sendEmail({
+          to: barberEmail,
+          subject: "Programare nouă",
+          html: barberNewBookingTemplate({
+            clientName: client_name,
+            phone: client_phone,
+            serviceName,
+            date: formattedDate,
+            time: formattedTime,
+          }),
+        });
+      } catch (e) {
+        console.error("BARBER EMAIL ERROR:", e);
+      }
     }
 
     return NextResponse.json({
       success: true,
       bookingId: data.id,
     });
+
   } catch (err) {
-    console.error("Booking error:", err);
+    console.error("CREATE ERROR:", err);
+
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Eroare server" },
       { status: 500 }
     );
   }

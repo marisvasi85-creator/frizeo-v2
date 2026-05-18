@@ -1,44 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import CalendarGrid from "./components/CalendarGrid";
-import OverrideModal from "./components/OverrideModal";
 
-type Props = {
-  barberId: string;
-};
+export default function AdminCalendarClient({ barberId }: { barberId: string }) {
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default function AdminCalendarClient({ barberId }: Props) {
-  const today = new Date();
+  async function loadData() {
+    setLoading(true);
 
-  const [selectedDate, setSelectedDate] =
-    useState<string | null>(null);
+    const [bRes, oRes] = await Promise.all([
+      fetch("/api/bookings/list"),
+      fetch("/api/barber-overrides"),
+    ]);
 
-  const [refreshKey, setRefreshKey] = useState(0);
+    const bData = await bRes.json();
+    const oData = await oRes.json();
+
+    setBookings(bData.bookings || []);
+    setOverrides(oData.overrides || []);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Calendar</h1>
-
-      <CalendarGrid
-        key={refreshKey}
-        barberId={barberId}
-        year={today.getFullYear()}
-        month={today.getMonth()}
-        onSelectDate={setSelectedDate}
-      />
-
-      {selectedDate && (
-        <OverrideModal
-          barberId={barberId}
-          date={selectedDate}
-          onClose={() => setSelectedDate(null)}
-          onSaved={() => {
-            setSelectedDate(null);
-            setRefreshKey((k) => k + 1);
-          }}
-        />
-      )}
-    </div>
+    <CalendarGrid
+      bookings={bookings}
+      overrides={overrides}
+      barberId={barberId}
+      onRefresh={loadData}
+    />
   );
 }

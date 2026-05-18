@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
-type Slot = {
+type Props = {
+  token: string;
+  date: string;
   start: string;
   end: string;
 };
@@ -10,57 +12,86 @@ type Slot = {
 export default function RescheduleConfirm({
   token,
   date,
-  slot,
-}: {
-  token: string;
-  date: string;
-  slot: Slot;
-}) {
+  start,
+  end,
+}: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
-  async function submit() {
+  const handleConfirm = async () => {
+    if (loading) return; // 🔒 anti double click
+
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/bookings/reschedule", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        token,
-        new_date: date,
-        new_start_time: slot.start,
-        new_end_time: slot.end,
-      }),
-    });
+    try {
+      const res = await fetch("/api/bookings/reschedule", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token,
+          new_date: date,
+          new_start_time: start,
+          new_end_time: end,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "Eroare la reprogramare");
+      if (!res.ok) {
+        setError(data.error || "Eroare");
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 REDIRECT DIRECT (FĂRĂ setTimeout)
+      window.location.href = "/reschedule/confirmed";
+
+    } catch (err) {
+      console.error(err);
+      setError("Eroare server");
       setLoading(false);
-      return;
     }
-
-    setSuccess(true);
-    setLoading(false);
-  }
-
-  if (success) {
-    return <p className="text-green-600">Programare reprogramată ✔</p>;
-  }
+  };
 
   return (
-    <div className="space-y-2">
-      {error && <p className="text-red-500">{error}</p>}
+    <div className="space-y-4">
+
+      {/* ERROR */}
+      {error && (
+        <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {/* PREVIEW */}
+      <div className="border rounded-xl p-4 text-sm bg-white shadow-sm">
+        <p className="font-medium mb-2">
+          Confirmare nouă programare
+        </p>
+
+        <p>📅 {date}</p>
+        <p>⏰ {start} - {end}</p>
+      </div>
+
+      {/* BUTTON */}
       <button
-        onClick={submit}
+        onClick={handleConfirm}
         disabled={loading}
-        className="w-full bg-black text-white py-2 rounded"
+        className={`
+          w-full p-4 rounded-xl font-medium transition
+          ${
+            loading
+              ? "bg-gray-300 text-gray-500"
+              : "bg-black text-white hover:opacity-90"
+          }
+        `}
       >
-        {loading ? "Se salvează..." : "Confirmă reprogramarea"}
+        {loading ? "Se procesează..." : "Confirmă reprogramarea"}
       </button>
+
     </div>
   );
 }

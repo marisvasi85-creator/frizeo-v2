@@ -1,12 +1,12 @@
 import BookingConfirmedClient from "./BookingConfirmedClient";
 
-type PageProps = {
+type Props = {
   params: Promise<{
     bookingId: string;
   }>;
 };
 
-export default async function BookingConfirmedPage({ params }: PageProps) {
+export default async function Page({ params }: Props) {
   const { bookingId } = await params;
 
   return <BookingConfirmedClient bookingId={bookingId} />;

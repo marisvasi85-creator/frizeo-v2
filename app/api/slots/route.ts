@@ -1,133 +1,72 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAvailableSlots } from "@/lib/scheduling/getAvailableSlots";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
+
+function addMinutes(time: string, minutes: number) {
+  const [h, m] = time.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h);
+  d.setMinutes(m + minutes);
+  return d.toTimeString().slice(0, 5);
+}
 
 export async function GET(req: Request) {
-  try {
-    const supabase = await createSupabaseServerClient();
+  const { searchParams } = new URL(req.url);
 
-    const { searchParams } = new URL(req.url);
+  const barberId = searchParams.get("barberId");
+  const date = searchParams.get("date");
+  const serviceId = searchParams.get("serviceId");
 
-    const barberId = searchParams.get("barberId");
-    const date = searchParams.get("date");
-    const barberServiceId = searchParams.get("barberServiceId");
-    const excludeBookingId = searchParams.get("excludeBookingId");
+  if (!barberId || !date || !serviceId) {
+    return NextResponse.json([]);
+  }
 
-    if (!barberId || !date || !barberServiceId) {
-      return NextResponse.json(
-        { error: "Missing params" },
-        { status: 400 }
-      );
+  const supabase = createSupabasePublicClient();
+
+  const normalizedDate = new Date(date).toISOString().split("T")[0];
+
+  const { data: service } = await supabase
+    .from("barber_services")
+    .select("duration")
+    .eq("id", serviceId)
+    .single();
+
+  const duration = service?.duration || 30;
+
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("start_time, end_time, status, expires_at")
+    .eq("barber_id", barberId)
+    .eq("date", normalizedDate);
+
+  const now = new Date();
+
+  const activeBookings = (bookings || []).filter((b: any) => {
+    if (b.status === "confirmed") return true;
+    if (b.status === "pending" && b.expires_at) {
+      return new Date(b.expires_at) > now;
     }
+    return false;
+  });
 
-    /* =========================
-       GET SERVICE DURATION
-    ========================= */
-    const { data: barberService, error } = await supabase
-  .from("barber_services")
-  .select("duration")
-  .eq("id", barberServiceId)
-  .maybeSingle();
+  const start = "09:00";
+  const end = "18:00";
 
-if (error || !barberService) {
-  console.error("SERVICE LOOKUP ERROR:", error);
-  return NextResponse.json(
-    { error: "Invalid service" },
-    { status: 400 }
-  );
-}
+  let slots: string[] = [];
+  let current = start;
 
-    const serviceDuration = barberService.duration;
+  while (current < end) {
+    const slotEnd = addMinutes(current, duration);
 
-    /* =========================
-   DATE → day_of_week
-========================= */
-
-const dateObj = new Date(date + "T00:00:00");
-
-if (isNaN(dateObj.getTime())) {
-  return NextResponse.json(
-    { error: "Invalid date format" },
-    { status: 400 }
-  );
-}
-
-// JS: 0 = Sunday, 1 = Monday...
-const jsDay = dateObj.getDay();
-
-// DB: 1 = Monday ... 7 = Sunday
-const dayOfWeek = jsDay === 0 ? 7 : jsDay;
-
-    /* =========================
-       WEEKLY
-    ========================= */
-    const { data: weekly } = await supabase
-      .from("barber_weekly_schedule")
-      .select("*")
-      .eq("barber_id", barberId)
-      .eq("day_of_week", dayOfWeek)
-      .maybeSingle();
-
-    if (!weekly) {
-  return NextResponse.json({ slots: [] });
-}
-
-    /* =========================
-       OVERRIDE
-    ========================= */
-    const { data: override } = await supabase
-      .from("barber_day_overrides")
-      .select("*")
-      .eq("barber_id", barberId)
-      .eq("date", date)
-      .maybeSingle();
-
-    if (override?.is_closed === true) {
-      return NextResponse.json({ slots: [] });
-    }
-
-    /* =========================
-       SETTINGS (still needed)
-    ========================= */
-    const { data: settings } = await supabase
-      .from("barber_settings")
-      .select("*")
-      .eq("barber_id", barberId)
-      .single();
-
-    /* =========================
-       BOOKINGS
-    ========================= */
-    const { data: bookingsRaw } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("barber_id", barberId)
-      .eq("date", date)
-      .eq("status", "confirmed");
-
-    const bookings =
-      excludeBookingId
-        ? bookingsRaw?.filter((b) => b.id !== excludeBookingId)
-        : bookingsRaw;
-
-    /* =========================
-       GENERATE SLOTS
-    ========================= */
-    const slots = getAvailableSlots({
-      date,
-      weekly,
-      override,
-      settings,
-      bookings: bookings || [],
-      serviceDuration, // 🔥 NOU
+    const overlaps = activeBookings.some((b: any) => {
+      return current < b.end_time && slotEnd > b.start_time;
     });
 
-    return NextResponse.json({ slots });
-  } catch (err) {
-    console.error("🔥 SLOT API ERROR", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    if (!overlaps) {
+      slots.push(current);
+    }
+
+    current = addMinutes(current, 15);
   }
+
+  return NextResponse.json(slots);
 }

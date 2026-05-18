@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Override } from "@/app/types/override";
+import type { Override } from "@/types/override";
 
 type Props = {
   barberId: string;

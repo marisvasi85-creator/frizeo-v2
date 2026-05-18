@@ -1,21 +1,21 @@
-import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(req: Request) {
-  const supabase = await createSupabaseServerClient();
   const { searchParams } = new URL(req.url);
-
   const barberId = searchParams.get("barberId");
 
   if (!barberId) {
-    return NextResponse.json({ services: [] });
+    return Response.json([]);
   }
+
+  const supabase = await createSupabaseServerClient();
 
   const { data } = await supabase
     .from("barber_services")
-    .select("id, display_name, duration")
+    .select("id, name, duration")
     .eq("barber_id", barberId)
-    .order("display_name");
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
 
-  return NextResponse.json({ services: data || [] });
+  return Response.json(data || []);
 }

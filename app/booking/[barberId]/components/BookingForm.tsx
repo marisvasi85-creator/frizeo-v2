@@ -1,119 +1,169 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Slot } from "@/app/components/SlotPicker";
+import { useState, useEffect } from "react";
+import SlotPicker, { Slot } from "@/app/components/SlotPicker";
 
-type Props = {
-  barberId: string;
-  barberServiceId: string;
-  date: string;
-  slot: Slot;
-};
+export default function BookingForm({ barberId }: { barberId: string }) {
+  const [date, setDate] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
-export default function BookingForm({
-  barberId,
-  barberServiceId,
-  date,
-  slot,
-}: Props) {
-  const router = useRouter();
+  const [services, setServices] = useState<any[]>([]);
+  const [serviceId, setServiceId] = useState("");
 
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // 🔥 LOAD SERVICES
+  useEffect(() => {
+    const loadServices = async () => {
+      const res = await fetch(`/api/services?barberId=${barberId}`);
+      const data = await res.json();
+      setServices(Array.isArray(data) ? data : []);
+    };
 
-    if (loading) return;
+    loadServices();
+  }, [barberId]);
 
-    if (!name || !phone) {
-      setError("Completează nume și telefon");
+  // 🔥 CONFIRM DIRECT (fără HOLD)
+  const handleSubmit = async () => {
+    if (!date || !selectedSlot) {
+      alert("Selectează data și ora");
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (!clientName || !clientPhone) {
+      alert("Completează nume și telefon");
+      return;
+    }
+
+    if (!serviceId) {
+      alert("Selectează serviciul");
+      return;
+    }
 
     try {
-      const res = await fetch("/api/bookings/create", {
+      setLoading(true);
+
+      const res = await fetch("/api/bookings/create-direct", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           barberId,
-          serviceId: barberServiceId,
+          serviceId,
           date,
-          start_time: slot.start,
-          end_time: slot.end,
-          client_name: name,
-          client_phone: phone,
-          client_email: email || null,
+          startTime: selectedSlot.start,
+          endTime: selectedSlot.end,
+          client_name: clientName,
+          client_phone: clientPhone,
+          client_email: clientEmail,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(
-          data.error ||
-            "Slot indisponibil. Te rugăm alege alt interval."
-        );
-        setLoading(false);
+        alert(data.error || "Eroare booking");
         return;
       }
 
-      router.push(`/booking/confirmed/${data.bookingId}`);
+      window.location.href = `/booking/confirmed/${data.bookingId}`;
     } catch {
-      setError("Eroare server. Încearcă din nou.");
+      alert("Eroare server");
+    } finally {
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded">
+    <div className="space-y-4">
+      {/* 1. DATA */}
+      <input
+        type="date"
+        value={date}
+        onChange={(e) => {
+          setDate(e.target.value);
+          setSelectedSlot(null);
+        }}
+        className="border p-2 rounded w-full"
+      />
 
-      <h3 className="font-semibold">Completează datele</h3>
+      {/* 2. SLOT */}
+      {date && (
+        <SlotPicker
+          barberId={barberId}
+          barberServiceId={"dummy"} // nu mai contează
+          date={date}
+          selectedSlot={selectedSlot}
+          onSelect={setSelectedSlot}
+        />
+      )}
 
+      {/* 3. CLIENT */}
       <input
         type="text"
         placeholder="Nume"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        className="border p-2 w-full"
+        value={clientName}
+        onChange={(e) => setClientName(e.target.value)}
+        className="border p-2 rounded w-full"
       />
 
       <input
         type="text"
         placeholder="Telefon"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        required
-        className="border p-2 w-full"
+        value={clientPhone}
+        onChange={(e) => setClientPhone(e.target.value)}
+        className="border p-2 rounded w-full"
       />
 
       <input
         type="email"
-        placeholder="Email (opțional)"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 w-full"
+        placeholder="Email (optional)"
+        value={clientEmail}
+        onChange={(e) => setClientEmail(e.target.value)}
+        className="border p-2 rounded w-full"
       />
 
-      {error && (
-        <p className="text-red-500 text-sm">{error}</p>
-      )}
+      {/* 4. SERVICIU */}
+      <div className="grid grid-cols-2 gap-2">
+  {services.map((s) => {
+    const active = serviceId === s.id;
 
+    return (
       <button
-        type="submit"
-        disabled={loading}
-        className="bg-black text-white px-4 py-2 rounded w-full disabled:opacity-50"
+        key={s.id}
+        onClick={() => setServiceId(s.id)}
+        className={`
+          border rounded-lg p-3 text-left transition
+          ${active
+            ? "bg-black text-white border-black"
+            : "bg-white hover:bg-gray-100"}
+        `}
       >
-        {loading ? "Se procesează…" : "Confirmă programarea"}
+        <div className="font-medium">
+          {s.name}
+        </div>
+
+        <div className="text-sm opacity-70">
+          {s.duration} min
+        </div>
       </button>
-    </form>
+    );
+  })}
+</div>
+
+      {/* 5. CONFIRM */}
+      <button
+        onClick={handleSubmit}
+        disabled={loading}
+        className="bg-black text-white px-4 py-2 rounded w-full"
+      >
+        {loading ? "Se procesează..." : "Programează-te"}
+      </button>
+    </div>
   );
 }

@@ -1,18 +1,26 @@
 import BookingClient from "./components/BookingClient";
+import { createSupabaseServerReadonlyClient } from "@/lib/supabase/server-readonly";
 
-type Props = {
-  params: Promise<{
-    barberId: string;
-  }>;
-};
+export default async function Page(props: any) {
+  const params = await props.params; // 🔥 FIX IMPORTANT
+  const barberId = params.barberId;
 
-export default async function BookingPage({ params }: Props) {
-  const { barberId } = await params;
+  const supabase = createSupabaseServerReadonlyClient();
+
+  const { data: barber } = await supabase
+    .from("barbers")
+    .select("tenant_id")
+    .eq("id", barberId)
+    .single();
+
+  if (!barber) {
+    return <div>Barber inexistent</div>;
+  }
 
   return (
-    <div style={{ maxWidth: 500, margin: "0 auto", padding: 16 }}>
-      <h1>Programează-te</h1>
-      <BookingClient barberId={barberId} />
-    </div>
+    <BookingClient
+      barberId={barberId}
+      tenantId={barber.tenant_id}
+    />
   );
 }

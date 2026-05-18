@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import OverrideModal from "../barber/components/OverrideModal";
-import type { Override } from "@/app/types/override";
+import type { Override } from "@/types/override";
 
 
 type Props = {

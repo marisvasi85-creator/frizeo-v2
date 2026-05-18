@@ -1,60 +1,30 @@
-import { DateInterval } from "./buildWorkIntervals";
-import { Slot } from "./types";
+export function generateSlots({
+  start,
+  end,
+  step,
+}: {
+  start: string; // "09:00"
+  end: string;   // "18:00"
+  step: number;  // 15
+}) {
+  const slots: string[] = [];
 
-/**
- * Generează sloturi consecutive din intervale de lucru.
- * - slotDuration în minute
- * - NU depășește capătul intervalului
- * - NU produce sloturi goale
- */
-export function generateSlots(
-  intervals: DateInterval[],
-  slotDuration: number
-): Slot[] {
-  console.log("🧩 generateSlots()", {
-    intervals,
-    slotDuration,
-  });
+  let [h, m] = start.split(":").map(Number);
+  const [endH, endM] = end.split(":").map(Number);
 
-  if (!slotDuration || slotDuration <= 0) {
-    console.log("⛔ invalid slotDuration");
-    return [];
-  }
+  while (h < endH || (h === endH && m < endM)) {
+    const hh = String(h).padStart(2, "0");
+    const mm = String(m).padStart(2, "0");
 
-  const slots: Slot[] = [];
+    slots.push(`${hh}:${mm}`);
 
-  for (const interval of intervals) {
-    let cursor = new Date(interval.start);
+    m += step;
 
-    // protecție: interval invalid
-    if (interval.end <= interval.start) continue;
-
-    while (true) {
-      const slotEnd = new Date(
-        cursor.getTime() + slotDuration * 60 * 1000
-      );
-
-      // nu depășim intervalul
-      if (slotEnd > interval.end) break;
-
-      slots.push({
-        start: formatTime(cursor),
-        end: formatTime(slotEnd),
-      });
-
-      cursor = slotEnd;
+    if (m >= 60) {
+      h += Math.floor(m / 60);
+      m = m % 60;
     }
   }
 
-  console.log("🧩 slots generated:", slots);
   return slots;
-}
-
-/* =========================
-   Utils locale (fără dependențe)
-========================= */
-function formatTime(d: Date): string {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
 }

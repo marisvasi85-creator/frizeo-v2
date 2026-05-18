@@ -1,147 +1,205 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import SlotPicker, { Slot } from "@/app/components/SlotPicker";
-import BookingForm from "./BookingForm";
-import BookingCalendar from "./BookingCalendar";
+import Calendar from "@/app/components/Calendar";
+import SlotPicker from "@/app/components/SlotPicker";
 
-type Service = {
-  id: string;
-  display_name: string;
-  duration: number;
-};
-
-type Props = {
+export default function BookingClient({
+  barberId,
+}: {
   barberId: string;
-};
-export default function BookingClient({ barberId }: Props) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [slot, setSlot] = useState<Slot | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
-  const [barberServiceId, setBarberServiceId] = useState("");
-  const [availability, setAvailability] = useState<Record<string, boolean>>(
-    {}
-  );
+}) {
+  const [mounted, setMounted] = useState(false);
 
-  const dateStr = selectedDate
-    ? selectedDate.toISOString().slice(0, 10)
-    : "";
+  const [date, setDate] = useState<string | null>(null);
+  const [serviceId, setServiceId] = useState<string | null>(null);
+  const [services, setServices] = useState<any[]>([]);
 
-  /* =========================
-     LOAD SERVICES
-  ========================= */
+  const [slots, setSlots] = useState<string[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  // 🔥 LOAD SERVICES
   useEffect(() => {
-    async function loadServices() {
+    const load = async () => {
       const res = await fetch(`/api/services?barberId=${barberId}`);
       const data = await res.json();
-      setServices(data.services || []);
-    }
-    loadServices();
+      setServices(data || []);
+    };
+    load();
   }, [barberId]);
 
-  /* =========================
-   LOAD AVAILABILITY (60 zile)
-========================= */
-useEffect(() => {
-  async function loadAvailability() {
-    try {
-      const today = new Date();
-      const from = today.toISOString().slice(0, 10);
+  // 🔥 LOAD SLOTS
+  useEffect(() => {
+    if (!date || !serviceId) return;
 
-      const future = new Date();
-      future.setDate(today.getDate() + 60);
-      const to = future.toISOString().slice(0, 10);
-
-      console.log("REQUEST PARAMS:", { barberId, from, to });
-
+    const load = async () => {
       const res = await fetch(
-        `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
+        `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
       );
-
-      console.log("RESPONSE STATUS:", res.status);
-
       const data = await res.json();
 
-      console.log("API RAW RESPONSE:", data);
+      setSlots(data || []);
+      setSelectedSlot(null);
+    };
 
-      const nextAvailability =
-        typeof data?.availability === "object"
-          ? data.availability
-          : {};
+    load();
+  }, [date, serviceId, barberId]);
 
-      console.log("PARSED AVAILABILITY OBJECT:", nextAvailability);
+  if (!mounted) return null;
 
-      setAvailability(nextAvailability);
+  // 🔥 CREATE BOOKING FINAL
+  const createBooking = async () => {
+    if (!selectedSlot || !date || !serviceId) return;
 
-    } catch (err) {
-      console.error("LOAD AVAILABILITY ERROR:", err);
-      setAvailability({});
+    const service = services.find((s) => s.id === serviceId);
+    const duration = service?.duration || 30;
+
+    const [h, m] = selectedSlot.split(":").map(Number);
+    const d = new Date();
+    d.setHours(h);
+    d.setMinutes(m + duration);
+
+    const endTime = d.toTimeString().slice(0, 5);
+
+    setLoading(true);
+    setError(null);
+
+    // 🔥 HOLD
+    const holdRes = await fetch("/api/bookings/hold", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        barber_id: barberId,
+        date,
+        start_time: selectedSlot,
+        end_time: endTime,
+      }),
+    });
+
+    const holdData = await holdRes.json();
+
+    if (!holdRes.ok) {
+      setError(holdData.error);
+      setLoading(false);
+      return;
     }
-  }
 
-  loadAvailability();
-}, [barberId]);
+    // 🔥 CONFIRM
+    const createRes = await fetch("/api/bookings/create", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bookingId: holdData.holdId,
+        client_name: name,
+        client_phone: phone,
+        client_email: email || null,
+      }),
+    });
+
+    const createData = await createRes.json();
+
+    if (!createRes.ok) {
+      setError(createData.error);
+      setLoading(false);
+      return;
+    }
+
+    // 🔥 REFRESH SLOTURI
+    const res = await fetch(
+      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
+    );
+    const newSlots = await res.json();
+
+    setSlots(newSlots);
+    setSelectedSlot(null);
+
+    setLoading(false);
+
+    window.location.href = `/booking/confirmed/${createData.bookingId}`;
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-xl mx-auto p-6 space-y-6">
+      <h1 className="text-3xl text-center font-semibold">
+        Programează-te
+      </h1>
 
-      {/* CALENDAR PROFESIONAL */}
-      <div>
-        <h3 className="font-semibold">Alege data</h3>
+      {/* DATA */}
+      <Calendar value={date} onChange={setDate} />
 
-        <BookingCalendar
-          selected={selectedDate}
-          onSelect={(d) => {
-            setSelectedDate(d);
-            setSlot(null);
-          }}
-          availability={availability}
-        />
-      </div>
-
-      {/* SERVICE SELECT */}
-      <div>
-        <label>Alege serviciul</label>
+      {/* SERVICIU */}
+      {date && (
         <select
-          value={barberServiceId}
-          onChange={(e) => {
-            setBarberServiceId(e.target.value);
-            setSlot(null);
-          }}
-          disabled={!services.length}
-          className="border p-2 w-full"
+          className="w-full border p-3 rounded"
+          value={serviceId || ""}
+          onChange={(e) => setServiceId(e.target.value)}
         >
-          <option value="" disabled>
-            Selectează serviciu
-          </option>
-          {services.map((service) => (
-            <option key={service.id} value={service.id}>
-              {service.display_name} ({service.duration} min)
+          <option value="">Alege serviciu</option>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.display_name || s.name}
             </option>
           ))}
         </select>
-      </div>
+      )}
 
-      {/* SLOT PICKER */}
-      {dateStr && barberServiceId && availability[dateStr] !== false && (
+      {/* SLOTURI */}
+      {serviceId && slots.length > 0 && (
         <SlotPicker
-          barberId={barberId}
-          barberServiceId={barberServiceId}
-          date={dateStr}
-          selectedSlot={slot}
-          onSelect={setSlot}
+          slots={slots}
+          selected={selectedSlot}
+          onSelect={setSelectedSlot}
         />
       )}
 
-      {/* BOOKING FORM */}
-      {slot && barberServiceId && (
-        <BookingForm
-          barberId={barberId}
-          barberServiceId={barberServiceId}
-          date={dateStr}
-          slot={slot}
-        />
+      {/* DATE CLIENT */}
+      {selectedSlot && (
+        <div className="space-y-3">
+          <input
+            placeholder="Nume"
+            className="w-full border p-3 rounded"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+
+          <input
+            placeholder="Telefon"
+            className="w-full border p-3 rounded"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+
+          <input
+            placeholder="Email (opțional)"
+            className="w-full border p-3 rounded"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+
+          <button
+            onClick={createBooking}
+            className="w-full bg-black text-white p-3 rounded"
+            disabled={loading}
+          >
+            {loading ? "Se procesează..." : "Programează-te"}
+          </button>
+        </div>
       )}
+
+      {error && <div className="text-red-500">{error}</div>}
     </div>
   );
 }

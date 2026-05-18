@@ -1,11 +1,21 @@
+"use client";
+
 export default function BookingConfirmed({ bookingId }: { bookingId: string }) {
   return (
-    <div className="max-w-md mx-auto text-center space-y-4 py-12">
-      <h1 className="text-2xl font-semibold">Programare confirmată ✅</h1>
-      <p>Am trimis un email de confirmare.</p>
-      <p className="text-sm text-gray-500">
+    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
+
+      <h1 className="text-2xl font-semibold text-green-600">
+        ✔ Programare confirmată
+      </h1>
+
+      <p className="mt-2 text-gray-600">
+        Am trimis un email de confirmare.
+      </p>
+
+      <p className="text-sm text-gray-400">
         Verifică inbox / spam.
       </p>
+
     </div>
   );
 }

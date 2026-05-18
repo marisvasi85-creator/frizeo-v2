@@ -1,56 +1,23 @@
 "use client";
 
-type Props = {
-  date: string;
-  dayNumber: number;
-  isAvailable: boolean;
-  isSelected?: boolean;
-  isToday?: boolean;
-  onClick: () => void;
-};
-
 export default function DayCell({
-  dayNumber,
-  isAvailable,
-  isSelected,
-  isToday,
+  date,
+  bookings = [],
+  overrides = [],
   onClick,
-}: Props) {
-  let bg = "#f5f5f5";
-  let color = "#999";
-  let border = "1px solid #ddd";
+}: any) {
+  const dayBookings = bookings.filter((b: any) => b.date === date);
+  const override = overrides.find((o: any) => o.date === date);
 
-  if (isAvailable) {
-    bg = "#e8f5e9";
-    color = "#000";
-  }
+  let bg = "bg-zinc-900";
 
-  if (isToday) {
-    border = "2px solid #2196f3";
-  }
-
-  if (isSelected) {
-    bg = "#2196f3";
-    color = "#fff";
-  }
+  if (override?.is_closed) bg = "bg-red-500/20";
+  else if (dayBookings.length > 0) bg = "bg-green-500/20";
 
   return (
-    <div
-      onClick={isAvailable ? onClick : undefined}
-      style={{
-        padding: 12,
-        borderRadius: 8,
-        textAlign: "center",
-        cursor: isAvailable ? "pointer" : "not-allowed",
-        backgroundColor: bg,
-        color,
-        border,
-        userSelect: "none",
-        transition: "all 0.2s",
-        fontWeight: isSelected ? "bold" : "normal",
-      }}
-    >
-      {dayNumber}
+    <div onClick={onClick} className={`p-3 rounded cursor-pointer ${bg}`}>
+      <div>{date.split("-")[2]}</div>
+      <div className="text-xs">{dayBookings.length}</div>
     </div>
   );
 }

@@ -1,35 +1,63 @@
-// lib/email/templates/client-confirmation.ts
-
-type ClientConfirmationArgs = {
-  barberName: string;
-  date: string;
-  time: string;
-  cancelLink: string;
-  rescheduleLink: string;
-};
-
 export function clientConfirmationTemplate({
+  clientName,
   barberName,
+  serviceName,
   date,
   time,
-  cancelLink,
-  rescheduleLink,
-}: ClientConfirmationArgs) {
+  cancelUrl,
+  rescheduleUrl,
+}: {
+  clientName: string;
+  barberName: string;
+  serviceName: string;
+  date: string;
+  time: string;
+  cancelUrl: string;
+  rescheduleUrl: string;
+}) {
   return `
-    <h2>Salut 👋</h2>
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
+      
+      <h2 style="color: #111;">Programare confirmată</h2>
 
-    <p>Programarea ta la <strong>${barberName}</strong> a fost confirmată.</p>
+      <p>Salut <strong>${clientName}</strong>,</p>
 
-    <p>
-      📅 <strong>${date}</strong><br/>
-      ⏰ <strong>${time}</strong>
-    </p>
+      <p>
+        Programarea ta a fost confirmată cu succes.
+      </p>
 
-    <p>
-      <a href="${rescheduleLink}">🔁 Reprogramează</a><br/>
-      <a href="${cancelLink}">❌ Anulează</a>
-    </p>
+      <div style="background:#f5f5f5; padding:15px; border-radius:8px; margin:20px 0;">
+        <p><strong>Frizer:</strong> ${barberName}</p>
+        <p><strong>Serviciu:</strong> ${serviceName}</p>
+        <p><strong>Data:</strong> ${date}</p>
+        <p><strong>Ora:</strong> ${time}</p>
+      </div>
 
-    <p>— Frizeo ✂️</p>
+      <p>
+        Dacă ai nevoie să modifici sau să anulezi programarea:
+      </p>
+
+      <div style="margin:20px 0;">
+        <a href="${rescheduleUrl}" 
+           style="display:inline-block; padding:10px 15px; background:#111; color:#fff; text-decoration:none; border-radius:6px; margin-right:10px;">
+          Modifică programarea
+        </a>
+
+        <a href="${cancelUrl}" 
+           style="display:inline-block; padding:10px 15px; background:#e53935; color:#fff; text-decoration:none; border-radius:6px;">
+          Anulează programarea
+        </a>
+      </div>
+
+      <p style="font-size:12px; color:#777;">
+        Dacă nu ai făcut tu această programare, ignoră acest mesaj.
+      </p>
+
+      <hr style="margin:30px 0;" />
+
+      <p style="font-size:12px; color:#aaa;">
+        Frizeo • Sistem programări
+      </p>
+    </div>
   `;
 }
