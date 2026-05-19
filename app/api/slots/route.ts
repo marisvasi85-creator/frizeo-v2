@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 
-function addMinutes(time: string, minutes: number) {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date(0, 0, 0, h, m + minutes);
-  return d.toTimeString().slice(0, 5);
-}
-
 function timeToMinutes(t: string) {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + m;
+}
+
+function minutesToTime(m: number) {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
 export async function GET(req: Request) {
@@ -24,10 +24,9 @@ export async function GET(req: Request) {
   }
 
   const supabase = createSupabasePublicClient();
-
   const normalizedDate = new Date(date).toISOString().split("T")[0];
 
-  // 🔥 duration
+  // 🔥 SERVICE
   const { data: service } = await supabase
     .from("barber_services")
     .select("duration")
@@ -36,7 +35,7 @@ export async function GET(req: Request) {
 
   const duration = service?.duration || 30;
 
-  // 🔥 bookings
+  // 🔥 BOOKINGS
   const { data: bookings } = await supabase
     .from("bookings")
     .select("start_time, end_time, status, expires_at")
@@ -53,53 +52,43 @@ export async function GET(req: Request) {
       }
       return false;
     })
-    .sort((a: any, b: any) =>
-      timeToMinutes(a.start_time) - timeToMinutes(b.start_time)
-    );
+    .map((b: any) => ({
+      start: timeToMinutes(b.start_time),
+      end: timeToMinutes(b.end_time),
+    }))
+    .sort((a: any, b: any) => a.start - b.start);
 
-  const start = "09:00";
-  const end = "18:00";
+  const WORK_START = timeToMinutes("09:00");
+  const WORK_END = timeToMinutes("18:00");
 
-  let slots: string[] = [];
+  // 🔥 1. INTERVALE LIBERE
+  let freeIntervals: { start: number; end: number }[] = [];
+  let cursor = WORK_START;
 
-  let current = start;
-
-  while (current < end) {
-    const slotEnd = addMinutes(current, duration);
-
-    if (slotEnd > end) break;
-
-    const overlaps = activeBookings.some((b: any) => {
-      return current < b.end_time && slotEnd > b.start_time;
-    });
-
-    if (!overlaps) {
-      slots.push(current);
+  for (const b of activeBookings) {
+    if (b.start > cursor) {
+      freeIntervals.push({ start: cursor, end: b.start });
     }
-
-    current = addMinutes(current, 15);
+    cursor = Math.max(cursor, b.end);
   }
 
-  // 🔥 🔥 🔥 EASYWEEK LOGIC (ANTI GAPS)
+  if (cursor < WORK_END) {
+    freeIntervals.push({ start: cursor, end: WORK_END });
+  }
 
-  const smartSlots = slots.filter((slot) => {
-    const slotStart = timeToMinutes(slot);
-    const slotEnd = slotStart + duration;
+  // 🔥 2. GENERARE SLOTURI SMART
+  let slots: string[] = [];
 
-    // caută dacă slotul lasă un gap mic inutil
-    for (const b of activeBookings) {
-      const bStart = timeToMinutes(b.start_time);
+  for (const interval of freeIntervals) {
+    let start = interval.start;
 
-      const gap = bStart - slotEnd;
+    while (start + duration <= interval.end) {
+      slots.push(minutesToTime(start));
 
-      // 🔥 dacă lasă gap < 15 min → nu e ok
-      if (gap > 0 && gap < 15) {
-        return false;
-      }
+      // 🔥 step FIX 15 min (ca tine)
+      start += 15;
     }
+  }
 
-    return true;
-  });
-
-  return NextResponse.json(smartSlots);
+  return NextResponse.json(slots);
 }
