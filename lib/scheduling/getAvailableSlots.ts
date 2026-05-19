@@ -39,6 +39,7 @@ export function getAvailableSlots({
   let start: string | null = null;
   let end: string | null = null;
 
+  // 🔥 override are prioritate
   if (override && override.work_start && override.work_end) {
     start = override.work_start;
     end = override.work_end;
@@ -46,18 +47,20 @@ export function getAvailableSlots({
     const day = getDayOfWeek(date);
 
     const daySchedule = schedule.find(
-      (s) => s.day_of_week === day
+      (s) => Number(s.day_of_week) === Number(day)
     );
 
-    if (!daySchedule || !daySchedule.is_working) {
-      return [];
+    if (daySchedule && daySchedule.is_working) {
+      start = daySchedule.work_start;
+      end = daySchedule.work_end;
     }
-
-    start = daySchedule.work_start;
-    end = daySchedule.work_end;
   }
 
-  if (!start || !end) return [];
+  // 🔥 FALLBACK (CRITIC)
+  if (!start || !end) {
+    start = "09:00";
+    end = "18:00";
+  }
 
   const slots = generateSlots({
     start,
@@ -65,7 +68,6 @@ export function getAvailableSlots({
     step: 15,
   });
 
-  // 🔥 NU LĂSA SLOTURI CARE DEPĂȘESC PROGRAMUL
   const validSlots = slots.filter((time) => {
     const startDate = new Date(`${date}T${time}`);
     const endDate = new Date(startDate.getTime() + duration * 60000);
