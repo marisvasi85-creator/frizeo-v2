@@ -1,47 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export default function ServicesClient() {
-  const [services, setServices] = useState<any[]>([]);
-
-  useEffect(() => {
-    fetch("/api/services")
-      .then((r) => r.json())
-      .then(setServices);
-  }, []);
-
-  async function updateService(id: string, field: string, value: any) {
-    await fetch("/api/services", {
-      method: "PUT",
-      body: JSON.stringify({ id, [field]: value }),
-    });
-  }
+export default function ServicesClient({
+  services,
+}: {
+  services: any[];
+}) {
+  const [items, setItems] = useState(services);
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Servicii</h2>
+    <div>
+      <h1 className="text-xl font-semibold mb-4">Servicii</h1>
 
-      {services.map((s) => (
-        <div key={s.id} className="border p-4 rounded-xl space-y-2">
-          <input
-            defaultValue={s.display_name}
-            onBlur={(e) => updateService(s.id, "display_name", e.target.value)}
-          />
+      {items.length === 0 && (
+        <p className="text-white/60">Nu există servicii.</p>
+      )}
 
-          <input
-            type="number"
-            defaultValue={s.duration}
-            onBlur={(e) => updateService(s.id, "duration", e.target.value)}
-          />
-
-          <input
-            type="number"
-            defaultValue={s.price}
-            onBlur={(e) => updateService(s.id, "price", e.target.value)}
-          />
-        </div>
-      ))}
+      <div className="space-y-2">
+        {items.map((s) => (
+          <div
+            key={s.id}
+            className="p-3 rounded-lg bg-[#0F0F10] flex justify-between"
+          >
+            <span>{s.name || s.display_name}</span>
+            <span className="text-white/60">
+              {s.price ? `${s.price} lei` : ""}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
