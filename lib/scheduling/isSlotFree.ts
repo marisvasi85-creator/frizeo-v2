@@ -5,7 +5,7 @@ export function isSlotFree({
   duration,
   bookings,
 }: {
-  slot: string; // ISO string
+  slot: string;
   duration: number;
   bookings: Booking[];
 }) {
@@ -16,8 +16,10 @@ export function isSlotFree({
     const bStart = new Date(b.start_time);
     const bEnd = new Date(b.end_time);
 
-    const overlap =
-      start < bEnd && end > bStart;
+    // 🔥 protecție date invalide
+    if (isNaN(bStart.getTime()) || isNaN(bEnd.getTime())) continue;
+
+    const overlap = start < bEnd && end > bStart;
 
     if (overlap) return false;
   }

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const token = searchParams.get("token");
+export async function POST(req: Request) {
+  const supabase = createSupabasePublicClient();
+  const { token } = await req.json();
 
   if (!token) {
     return NextResponse.json(
@@ -12,33 +12,18 @@ export async function GET(req: Request) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("bookings")
-    .select("*")
+    .select("id, client_name, date, start_time, status")
     .eq("cancel_token", token)
     .single();
 
-  if (!data) {
+  if (error || !data) {
     return NextResponse.json(
-      { error: "Booking not found" },
+      { error: "Link invalid" },
       { status: 404 }
     );
   }
 
-  if (data.status === "cancelled") {
-    return NextResponse.json(
-      { error: "Booking already cancelled" },
-      { status: 409 }
-    );
-  }
-
-  return NextResponse.json({
-    id: data.id,
-    date: data.date,
-    start_time: data.start_time,
-    end_time: data.end_time,
-    client_name: data.client_name,
-  });
+  return NextResponse.json(data);
 }

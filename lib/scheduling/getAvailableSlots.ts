@@ -1,6 +1,6 @@
 import { generateSlots } from "./generateSlots";
 import { isSlotFree } from "./isSlotFree";
-import { toISO, getDayOfWeek } from "./time-utils";
+import { getDayOfWeek } from "./time-utils";
 import type { Booking } from "./types";
 
 type Schedule = {
@@ -57,7 +57,6 @@ export function getAvailableSlots({
     end = daySchedule.work_end;
   }
 
-  // 🔴 PROTECȚIE
   if (!start || !end) return [];
 
   const slots = generateSlots({
@@ -66,8 +65,18 @@ export function getAvailableSlots({
     step: 15,
   });
 
-  return slots.filter((time) => {
-    const full = toISO(date, time);
+  // 🔥 NU LĂSA SLOTURI CARE DEPĂȘESC PROGRAMUL
+  const validSlots = slots.filter((time) => {
+    const startDate = new Date(`${date}T${time}`);
+    const endDate = new Date(startDate.getTime() + duration * 60000);
+
+    const workEnd = new Date(`${date}T${end}`);
+
+    return endDate <= workEnd;
+  });
+
+  return validSlots.filter((time) => {
+    const full = new Date(`${date}T${time}`).toISOString();
 
     return isSlotFree({
       slot: full,

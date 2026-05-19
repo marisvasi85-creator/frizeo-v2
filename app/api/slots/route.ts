@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
-
-function addMinutes(time: string, minutes: number) {
-  const [h, m] = time.split(":").map(Number);
-  const d = new Date();
-  d.setHours(h);
-  d.setMinutes(m + minutes);
-  return d.toTimeString().slice(0, 5);
-}
+import { getAvailableSlots } from "@/lib/scheduling/getAvailableSlots";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -24,6 +17,7 @@ export async function GET(req: Request) {
 
   const normalizedDate = new Date(date).toISOString().split("T")[0];
 
+  // 🔥 SERVICE (duration)
   const { data: service } = await supabase
     .from("barber_services")
     .select("duration")
@@ -32,7 +26,8 @@ export async function GET(req: Request) {
 
   const duration = service?.duration || 30;
 
-  const { data: bookings } = await supabase
+  // 🔥 BOOKINGS
+  const { data: bookingsRaw } = await supabase
     .from("bookings")
     .select("start_time, end_time, status, expires_at")
     .eq("barber_id", barberId)
@@ -40,33 +35,46 @@ export async function GET(req: Request) {
 
   const now = new Date();
 
-  const activeBookings = (bookings || []).filter((b: any) => {
-    if (b.status === "confirmed") return true;
-    if (b.status === "pending" && b.expires_at) {
-      return new Date(b.expires_at) > now;
-    }
-    return false;
+  const bookings =
+    (bookingsRaw || [])
+      .filter((b: any) => {
+        if (b.status === "confirmed") return true;
+        if (b.status === "pending" && b.expires_at) {
+          return new Date(b.expires_at) > now;
+        }
+        return false;
+      })
+      .map((b: any) => ({
+        // 🔥 IMPORTANT: transformare în ISO
+        start_time: new Date(
+          `${normalizedDate}T${b.start_time}`
+        ).toISOString(),
+        end_time: new Date(
+          `${normalizedDate}T${b.end_time}`
+        ).toISOString(),
+      }));
+
+  // 🔥 WEEKLY SCHEDULE
+  const { data: schedule } = await supabase
+    .from("barber_weekly_schedule")
+    .select("*")
+    .eq("barber_id", barberId);
+
+  // 🔥 OVERRIDES
+  const { data: overrides } = await supabase
+    .from("barber_day_overrides")
+    .select("*")
+    .eq("barber_id", barberId)
+    .eq("date", normalizedDate);
+
+  // 🔥 ENGINE REAL
+  const slots = getAvailableSlots({
+    date: normalizedDate,
+    duration,
+    bookings,
+    schedule: schedule || [],
+    overrides: overrides || [],
   });
-
-  const start = "09:00";
-  const end = "18:00";
-
-  let slots: string[] = [];
-  let current = start;
-
-  while (current < end) {
-    const slotEnd = addMinutes(current, duration);
-
-    const overlaps = activeBookings.some((b: any) => {
-      return current < b.end_time && slotEnd > b.start_time;
-    });
-
-    if (!overlaps) {
-      slots.push(current);
-    }
-
-    current = addMinutes(current, 15);
-  }
 
   return NextResponse.json(slots);
 }
