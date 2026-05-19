@@ -76,19 +76,36 @@ export async function GET(req: Request) {
     freeIntervals.push({ start: cursor, end: WORK_END });
   }
 
-  // 🔥 2. GENERARE SLOTURI SMART
-  let slots: string[] = [];
+  // 🔥 2. GENERARE SLOTURI HYBRID (BEST)
 
-  for (const interval of freeIntervals) {
-    let start = interval.start;
+let slotsSet = new Set<string>();
 
-    while (start + duration <= interval.end) {
-      slots.push(minutesToTime(start));
+for (const interval of freeIntervals) {
+  let start = interval.start;
 
-      // 🔥 step FIX 15 min (ca tine)
-      start += 15;
-    }
+  // 🔹 1. SLOTURI FLEXIBILE (din 15 în 15)
+  let cursorFlex = start;
+
+  while (cursorFlex + duration <= interval.end) {
+    slotsSet.add(minutesToTime(cursorFlex));
+    cursorFlex += 15;
   }
+
+  // 🔹 2. SLOTURI PERFECT ALIGN (durata serviciului)
+  let cursorPerfect = start;
+
+  while (cursorPerfect + duration <= interval.end) {
+    slotsSet.add(minutesToTime(cursorPerfect));
+    cursorPerfect += duration;
+  }
+}
+
+// 🔥 3. SORTARE FINALĂ
+const slots = Array.from(slotsSet).sort(
+  (a, b) => timeToMinutes(a) - timeToMinutes(b)
+);
+
+return NextResponse.json(slots);
 
   return NextResponse.json(slots);
 }
