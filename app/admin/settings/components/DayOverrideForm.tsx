@@ -1,74 +1,85 @@
 "use client";
 
-import { useState } from "react";
-
-const BARBER_ID = "d0bc5fec-f37a-4e8a-94ab-b3ef9880374c"; // TEMP, la fel ca în DefaultSchedule
+import { useEffect, useState } from "react";
 
 export default function DayOverrideForm() {
+  const [barberId, setBarberId] = useState<string | null>(null);
+
   const [date, setDate] = useState("");
   const [isClosed, setIsClosed] = useState(false);
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function saveOverride() {
-    setMessage("");
+  useEffect(() => {
+    fetch("/api/barber/profile")
+      .then((r) => r.json())
+      .then((data) => setBarberId(data.id));
+  }, []);
 
-    if (!date) {
-      setMessage("Selectează o dată");
+  async function saveOverride() {
+    if (!date || !barberId) {
+      setMessage("Date invalide");
       return;
     }
 
     setLoading(true);
+    setMessage("");
 
     const res = await fetch("/api/barber-overrides", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        barberId: BARBER_ID,
+        barberId,
         date,
         is_closed: isClosed,
+        work_start: isClosed ? null : start || null,
+        work_end: isClosed ? null : end || null,
       }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      setMessage(data.error || "Eroare la salvare");
+      setMessage(data.error || "Eroare");
     } else {
-      setMessage("Override salvat cu succes");
+      setMessage("Salvat ✔");
     }
 
     setLoading(false);
   }
 
   return (
-    <div style={{ marginTop: 16 }}>
-      <label>Data</label>
-      <br />
-      <input
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
+    <div className="space-y-3 border p-4 rounded-xl">
+      <h3 className="font-semibold">Override zi</h3>
 
-      <br /><br />
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
-      <label>
+      <label className="flex gap-2">
         <input
           type="checkbox"
           checked={isClosed}
           onChange={(e) => setIsClosed(e.target.checked)}
         />
-        {" "}Zi închisă
+        Zi liberă (concediu)
       </label>
 
-      <br /><br />
+      {!isClosed && (
+        <>
+          <input type="time" onChange={(e) => setStart(e.target.value)} />
+          <input type="time" onChange={(e) => setEnd(e.target.value)} />
+        </>
+      )}
 
-      <button onClick={saveOverride} disabled={loading}>
-        {loading ? "Se salvează..." : "Salvează override"}
+      <button onClick={saveOverride} className="bg-black text-white p-2 rounded">
+        {loading ? "Se salvează..." : "Salvează"}
       </button>
 
-      {message && <p style={{ marginTop: 8 }}>{message}</p>}
+      {message && <p>{message}</p>}
     </div>
   );
 }

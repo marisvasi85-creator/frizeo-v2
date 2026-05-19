@@ -24,17 +24,22 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // 🔥 DOAR CONFIRMED (IMPORTANT)
   const { data: todayBookings } = await supabase
     .from("bookings")
     .select("*")
     .eq("barber_id", barber.id)
-    .eq("date", today);
+    .eq("date", today)
+    .eq("status", "confirmed");
 
-  const { data: bookings } = await supabase
+  const { data: upcoming } = await supabase
     .from("bookings")
     .select("*")
     .eq("barber_id", barber.id)
+    .eq("status", "confirmed")
+    .gte("date", today)
     .order("date", { ascending: true })
+    .order("start_time", { ascending: true })
     .limit(5);
 
   return (
@@ -46,7 +51,7 @@ export default async function DashboardPage() {
           Salut, {barber.display_name} 👋
         </h1>
         <p className="text-white/60 mt-1">
-          Iată ce se întâmplă azi în salonul tău
+          Panoul tău de control
         </p>
       </div>
 
@@ -70,9 +75,11 @@ export default async function DashboardPage() {
         </div>
 
         <div className="bg-[#161618] p-5 rounded-xl border border-white/10">
-          <p className="text-sm text-white/60">Total programări</p>
-          <p className="text-3xl font-bold mt-2">
-            {bookings?.length || 0}
+          <p className="text-sm text-white/60">Următoarea programare</p>
+          <p className="text-lg mt-2">
+            {upcoming && upcoming.length > 0
+              ? `${upcoming[0].date} ${upcoming[0].start_time}`
+              : "—"}
           </p>
         </div>
 
@@ -107,38 +114,68 @@ export default async function DashboardPage() {
             Servicii
           </a>
 
+          <a
+            href="/admin/settings"
+            className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20"
+          >
+            Program
+          </a>
+
         </div>
       </div>
 
-      {/* RECENT BOOKINGS */}
+      {/* AZI (IMPORTANT) */}
       <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
         <h2 className="text-lg font-semibold mb-4">
-          Ultimele programări
+          Programările de azi
         </h2>
 
-        {!bookings || bookings.length === 0 ? (
-          <p className="text-white/60">
-            Nu există programări.
-          </p>
+        {!todayBookings || todayBookings.length === 0 ? (
+          <p className="text-white/60">Nu ai programări azi.</p>
         ) : (
           <div className="space-y-3">
-            {bookings.map((booking) => (
+            {todayBookings.map((b) => (
               <div
-                key={booking.id}
+                key={b.id}
                 className="flex justify-between items-center p-3 rounded-lg bg-[#0F0F10]"
               >
                 <div>
-                  <p className="font-medium">
-                    {booking.client_name}
-                  </p>
+                  <p className="font-medium">{b.client_name}</p>
                   <p className="text-sm text-white/60">
-                    {booking.date} – {booking.start_time}
+                    {b.start_time} - {b.end_time}
                   </p>
                 </div>
 
-                <span className="text-xs px-2 py-1 rounded bg-white/10">
-                  {booking.status}
+                <span className="text-xs px-2 py-1 rounded bg-green-500/20 text-green-400">
+                  Confirmată
                 </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* URMĂTOARELE */}
+      <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+        <h2 className="text-lg font-semibold mb-4">
+          Următoarele programări
+        </h2>
+
+        {!upcoming || upcoming.length === 0 ? (
+          <p className="text-white/60">Nu există programări.</p>
+        ) : (
+          <div className="space-y-3">
+            {upcoming.map((b) => (
+              <div
+                key={b.id}
+                className="flex justify-between items-center p-3 rounded-lg bg-[#0F0F10]"
+              >
+                <div>
+                  <p className="font-medium">{b.client_name}</p>
+                  <p className="text-sm text-white/60">
+                    {b.date} - {b.start_time}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

@@ -31,6 +31,15 @@ export async function POST(req: Request) {
       );
     }
 
+    if (
+  oldBooking.date === new_date &&
+  oldBooking.start_time === new_start_time
+) {
+  return NextResponse.json(
+    { error: "Ai selectat aceeași oră" },
+    { status: 400 }
+  );
+}
     // 🔥 BLOCK 2H
     const bookingTime = new Date(
       `${oldBooking.date}T${oldBooking.start_time}`

@@ -30,7 +30,6 @@ const DAYS = [
 export default function WeeklyScheduleEditor({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
 
-  // 🔥 MAP DB → UI
   const [days, setDays] = useState<Day[]>(
     DAYS.map((d) => {
       const existing = initialData.find(
@@ -61,18 +60,51 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
   }
 
   async function handleSave() {
+
+    // 🔥 VALIDARE PROGRAM
+    for (const day of days) {
+      if (!day.is_working) continue;
+
+      if (!day.work_start || !day.work_end) {
+        alert("Completează orele de lucru");
+        return;
+      }
+
+      if (day.work_start >= day.work_end) {
+        alert("Ora de început trebuie să fie mai mică decât ora de final");
+        return;
+      }
+
+      // 🔥 VALIDARE PAUZĂ
+      if (day.break_enabled) {
+        if (!day.break_start || !day.break_end) {
+          alert("Completează pauza");
+          return;
+        }
+
+        if (day.break_start >= day.break_end) {
+          alert("Pauza este invalidă");
+          return;
+        }
+
+        if (
+          day.break_start < day.work_start ||
+          day.break_end > day.work_end
+        ) {
+          alert("Pauza trebuie să fie în intervalul programului");
+          return;
+        }
+      }
+    }
+
     setLoading(true);
 
     await saveWeeklySchedule(days);
-
-    // NU mai punem setLoading(false)
-    // redirect oprește execuția
   }
 
   return (
     <div className="space-y-6">
 
-      {/* LIST */}
       <div className="space-y-3">
         {days.map((day, index) => (
           <div
@@ -80,7 +112,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
             className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4"
           >
 
-            {/* HEADER */}
             <div className="flex justify-between items-center">
 
               <span className="font-medium">
@@ -101,7 +132,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
               </button>
             </div>
 
-            {/* WORK HOURS */}
             {day.is_working && (
               <div className="flex flex-wrap gap-2">
 
@@ -126,7 +156,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
               </div>
             )}
 
-            {/* BREAK */}
             {day.is_working && (
               <div className="space-y-2">
 
@@ -183,7 +212,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
         ))}
       </div>
 
-      {/* SAVE */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}

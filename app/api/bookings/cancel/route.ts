@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .select("*")
       .eq("cancel_token", token)
-      .single();
+      .maybeSingle();
 
     if (error || !booking) {
       return NextResponse.json(

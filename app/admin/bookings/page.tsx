@@ -1,71 +1,49 @@
-// app/admin/bookings/page.tsx
-
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
 export default async function AdminBookingsPage() {
   const barber = await getCurrentBarberInTenant();
-
-  if (!barber) {
-    redirect("/login");
-  }
+  if (!barber) redirect("/login");
 
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-  .from("bookings")
-  .select(`
-    id,
-    date,
-    start_time,
-    end_time,
-    client_name,
-    client_phone,
-    service_id,
-    services!service_id ( name )
-  `)
-  .eq("barber_id", barber.id)
-  .order("date", { ascending: true })
-  .order("start_time", { ascending: true });
-  if (error) {
-    return <p>Eroare: {error.message}</p>;
-  }
-
-  const grouped: Record<string, any[]> = {};
-
-  (data || []).forEach((b) => {
-    if (!grouped[b.date]) {
-      grouped[b.date] = [];
-    }
-    grouped[b.date].push(b);
-  });
+  const { data } = await supabase
+    .from("bookings")
+    .select(`
+      id,
+      date,
+      start_time,
+      end_time,
+      client_name,
+      cancel_token,
+      barber_service_id,
+      barber_services!barber_service_id ( display_name )
+    `)
+    .eq("barber_id", barber.id)
+    .eq("status", "confirmed")
+    .order("date", { ascending: true });
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>📅 Programări</h1>
+    <div className="p-6 space-y-4">
+      <h1 className="text-2xl font-semibold">Programări</h1>
 
-      {Object.entries(grouped).length === 0 && (
-        <p>Nu există programări.</p>
-      )}
+      {data?.map((b: any) => (
+        <div key={b.id} className="border p-4 rounded-xl">
+          <b>
+            {b.start_time} - {b.end_time}
+          </b>
 
-      {Object.entries(grouped).map(([day, bookings]) => (
-        <div key={day} style={{ marginTop: 24 }}>
-          <h3>{day}</h3>
+          <p>{b.client_name}</p>
 
-          {bookings.map((b: any) => (
-            <div key={b.id} style={{ paddingLeft: 12, marginTop: 6 }}>
-              <b>
-                {b.start_time} – {b.end_time}
-              </b>{" "}
-              — {b.client_name}
-              {b.services?.length > 0 && (
-                <span style={{ marginLeft: 8, opacity: 0.7 }}>
-                  ({b.services[0].name})
-                </span>
-              )}
-            </div>
-          ))}
+          <p className="text-sm opacity-70">
+            {b.barber_services?.display_name}
+          </p>
+
+          <form action="/api/bookings/cancel" method="POST">
+            <input type="hidden" name="token" value={b.cancel_token} />
+            <button className="text-red-500">Anulează</button>
+          </form>
         </div>
       ))}
     </div>

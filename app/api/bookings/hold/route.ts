@@ -31,19 +31,22 @@ export async function POST(req: Request) {
 
     // 🔥 CHECK SLOT OCCUPAT (IMPORTANT)
     const { data: existing } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("barber_id", barber_id)
-      .eq("date", date)
-      .eq("start_time", start_time)
-      .in("status", ["pending", "confirmed"]);
+  .from("bookings")
+  .select("id, start_time, end_time")
+  .eq("barber_id", barber_id)
+  .eq("date", date)
+  .in("status", ["pending", "confirmed"]);
 
-    if (existing && existing.length > 0) {
-      return NextResponse.json(
-        { error: "Slot ocupat" },
-        { status: 400 }
-      );
-    }
+const overlap = existing?.some((b: any) => {
+  return start_time < b.end_time && end_time > b.start_time;
+});
+
+if (overlap) {
+  return NextResponse.json(
+    { error: "Slot ocupat" },
+    { status: 400 }
+  );
+}
 
     // 🔥 HOLD 10 minute
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
