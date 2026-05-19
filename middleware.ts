@@ -9,9 +9,11 @@ export async function middleware(req: any) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => req.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) => {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }: any) => {
             res.cookies.set(name, value, options);
           });
         },
@@ -22,6 +24,9 @@ export async function middleware(req: any) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // 🔥 DEBUG TEMPORAR
+  console.log("USER IN MIDDLEWARE:", user);
 
   if (!user && req.nextUrl.pathname.startsWith("/admin")) {
     return NextResponse.redirect(new URL("/login", req.url));
