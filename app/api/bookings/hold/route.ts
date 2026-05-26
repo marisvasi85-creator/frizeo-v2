@@ -1,21 +1,55 @@
 import { NextResponse } from "next/server";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
 
+function timeToMinutes(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(m: number) {
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = createSupabasePublicClient();
     const body = await req.json();
 
-    const { barber_id, barber_service_id, date, start_time, end_time } = body;
+    const {
+      barber_id,
+      barber_service_id,
+      date,
+      start_time,
+    } = body;
 
-    if (!barber_id || !barber_service_id || !date || !start_time || !end_time) {
+    if (!barber_id || !barber_service_id || !date || !start_time) {
       return NextResponse.json(
         { error: "Date invalide" },
         { status: 400 }
       );
     }
 
-    // 🔥 GET TENANT
+    // 🔥 SERVICE (durata REALĂ)
+    const { data: service } = await supabase
+      .from("barber_services")
+      .select("duration")
+      .eq("id", barber_service_id)
+      .single();
+
+    if (!service) {
+      return NextResponse.json(
+        { error: "Serviciu invalid" },
+        { status: 400 }
+      );
+    }
+
+    const startMin = timeToMinutes(start_time);
+    const endMin = startMin + service.duration;
+    const end_time = minutesToTime(endMin);
+
+    // 🔥 TENANT
     const { data: barber } = await supabase
       .from("barbers")
       .select("tenant_id")
@@ -29,48 +63,56 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 CHECK SLOT OCCUPAT (IMPORTANT)
+    // 🔥 OVERLAP CHECK (CORECT)
     const { data: existing } = await supabase
-  .from("bookings")
-  .select("id, start_time, end_time")
-  .eq("barber_id", barber_id)
-  .eq("date", date)
-  .in("status", ["pending", "confirmed"]);
+      .from("bookings")
+      .select("start_time, end_time, status, expires_at")
+      .eq("barber_id", barber_id)
+      .eq("date", date);
 
-const overlap = existing?.some((b: any) => {
-  return start_time < b.end_time && end_time > b.start_time;
-});
+    const now = new Date();
 
-if (overlap) {
-  return NextResponse.json(
-    { error: "Slot ocupat" },
-    { status: 400 }
-  );
-}
+    const active = (existing || []).filter((b: any) => {
+      if (b.status === "confirmed") return true;
+      if (b.status === "pending" && b.expires_at) {
+        return new Date(b.expires_at) > now;
+      }
+      return false;
+    });
 
-    // 🔥 HOLD 10 minute
+    const overlap = active.some((b: any) => {
+      return (
+        startMin < timeToMinutes(b.end_time) &&
+        endMin > timeToMinutes(b.start_time)
+      );
+    });
+
+    if (overlap) {
+      return NextResponse.json(
+        { error: "Slot ocupat" },
+        { status: 400 }
+      );
+    }
+
+    // 🔥 HOLD
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-    // 🔥 TOKENURI GENERATE AICI (CRITIC)
-    const cancelToken = crypto.randomUUID();
-    const rescheduleToken = crypto.randomUUID();
-
     const { data, error } = await supabase
-  .from("bookings")
-  .insert({
-    barber_id,
-    barber_service_id, // ✅ AICI ESTE FIXUL
-    tenant_id: barber.tenant_id,
-    date,
-    start_time,
-    end_time,
-    status: "pending",
-    expires_at: expiresAt.toISOString(),
-    cancel_token: cancelToken,
-    reschedule_token: rescheduleToken,
-  })
-  .select()
-  .single();
+      .from("bookings")
+      .insert({
+        barber_id,
+        barber_service_id,
+        tenant_id: barber.tenant_id,
+        date,
+        start_time,
+        end_time,
+        status: "pending",
+        expires_at: expiresAt.toISOString(),
+        cancel_token: crypto.randomUUID(),
+        reschedule_token: crypto.randomUUID(),
+      })
+      .select()
+      .single();
 
     if (error || !data) {
       return NextResponse.json(
@@ -81,6 +123,7 @@ if (overlap) {
 
     return NextResponse.json({
       holdId: data.id,
+      end_time,
       expiresAt: data.expires_at,
     });
 

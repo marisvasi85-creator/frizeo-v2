@@ -22,121 +22,163 @@ export default function BookingClient({ barberId }: { barberId: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔥 LOAD SERVICES (barber_services)
+  // =========================
+  // 🔥 LOAD SERVICES
+  // =========================
   useEffect(() => {
-    const load = async () => {
-      const res = await fetch(`/api/services?barberId=${barberId}`);
-      const data = await res.json();
-      setServices(data || []);
+    const loadServices = async () => {
+      try {
+        const res = await fetch(`/api/services?barberId=${barberId}`);
+        const data = await res.json();
+
+        // 🔥 FIX CRITIC
+        setServices(Array.isArray(data) ? data : []);
+      } catch {
+        setServices([]);
+      }
     };
-    load();
+
+    loadServices();
   }, [barberId]);
 
-  // 🔥 FORMAT DATE
+  // =========================
+  // 🔥 FORMAT DATE SAFE
+  // =========================
   const formattedDate = (() => {
-  if (!date) return null;
+    if (!date) return null;
 
-  const d = new Date(date);
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
 
-  if (isNaN(d.getTime())) return null;
+    return d.toISOString().split("T")[0];
+  })();
 
-  return d.toISOString().split("T")[0];
-})();
-
+  // =========================
   // 🔥 LOAD SLOTS
+  // =========================
   useEffect(() => {
     if (!formattedDate || !serviceId) return;
 
-    const load = async () => {
-      const res = await fetch(
-        `/api/slots?barberId=${barberId}&date=${formattedDate}&serviceId=${serviceId}`
-      );
-      const data = await res.json();
+    const loadSlots = async () => {
+      try {
+        const res = await fetch(
+          `/api/slots?barberId=${barberId}&date=${formattedDate}&serviceId=${serviceId}`
+        );
 
-      setSlots(data || []);
-      setSelectedSlot(null);
+        const data = await res.json();
+console.log("SERVICES API:", data); // 🔥 vezi în browser
+        setSlots(Array.isArray(data) ? data : []);
+        setSelectedSlot(null);
+      } catch {
+        setSlots([]);
+      }
     };
 
-    load();
+    loadSlots();
   }, [formattedDate, serviceId, barberId]);
 
-  // 🔥 CREATE BOOKING
+  // =========================
+  // 🔥 RESET când schimbi data
+  // =========================
+  useEffect(() => {
+    setServiceId(null);
+    setSlots([]);
+    setSelectedSlot(null);
+  }, [formattedDate]);
+
+  // =========================
+  // 🔥 CREATE BOOKING FLOW
+  // =========================
   const createBooking = async () => {
-    if (!selectedSlot || !formattedDate || !serviceId) return;
+    if (!selectedSlot || !formattedDate || !serviceId) {
+      setError("Selectează toate datele");
+      return;
+    }
+
+    if (!name || !phone) {
+      setError("Completează nume și telefon");
+      return;
+    }
 
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
-    // 🔥 CALCUL END TIME
+    // 🔥 calcul end time
     const [h, m] = selectedSlot.split(":").map(Number);
     const d = new Date();
     d.setHours(h);
     d.setMinutes(m + duration);
+
     const endTime = d.toTimeString().slice(0, 5);
 
     setLoading(true);
     setError(null);
 
-    // =========================
-    // 🔥 HOLD
-    // =========================
-    const holdRes = await fetch("/api/bookings/hold", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        barber_id: barberId,
-        barber_service_id: serviceId, // 🔥 CRITIC
-        date: formattedDate,
-        start_time: selectedSlot,
-        end_time: endTime,
-      }),
-    });
+    try {
+      // =========================
+      // 🔥 HOLD
+      // =========================
+      const holdRes = await fetch("/api/bookings/hold", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          barber_id: barberId,
+          barber_service_id: serviceId,
+          date: formattedDate,
+          start_time: selectedSlot,
+          end_time: endTime,
+        }),
+      });
 
-    const holdData = await holdRes.json();
+      const holdData = await holdRes.json();
 
-    if (!holdRes.ok) {
-      setError(holdData.error || "Slot ocupat");
+      if (!holdRes.ok) {
+        throw new Error(holdData.error || "Slot ocupat");
+      }
+
+      // =========================
+      // 🔥 CONFIRM
+      // =========================
+      const createRes = await fetch("/api/bookings/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bookingId: holdData.holdId,
+          client_name: name,
+          client_phone: phone,
+          client_email: email || null,
+        }),
+      });
+
+      const createData = await createRes.json();
+
+      if (!createRes.ok) {
+        throw new Error(createData.error || "Eroare creare");
+      }
+
+      // 🔥 redirect final
+      router.push(`/booking/confirmed/${createData.bookingId}`);
+
+    } catch (err: any) {
+      setError(err.message || "Eroare necunoscută");
       setLoading(false);
-      return;
     }
-
-    // =========================
-    // 🔥 CREATE (CONFIRM)
-    // =========================
-    const createRes = await fetch("/api/bookings/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookingId: holdData.holdId,
-        client_name: name,
-        client_phone: phone,
-        client_email: email,
-      }),
-    });
-
-    const createData = await createRes.json();
-
-    if (!createRes.ok) {
-      setError(createData.error || "Eroare creare");
-      setLoading(false);
-      return;
-    }
-
-    // 🔥 REDIRECT
-    router.push(`/booking/confirmed/${createData.bookingId}`);
   };
 
+  // =========================
+  // UI
+  // =========================
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl text-center font-semibold">
         Programează-te
       </h1>
 
-      {/* DATA */}
+      {/* CALENDAR */}
       <Calendar value={date} onChange={setDate} />
 
       {/* SERVICIU */}
@@ -147,11 +189,13 @@ export default function BookingClient({ barberId }: { barberId: string }) {
           onChange={(e) => setServiceId(e.target.value)}
         >
           <option value="">Alege serviciu</option>
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.display_name || s.name}
-            </option>
-          ))}
+
+          {Array.isArray(services) &&
+            services.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.display_name || s.name}
+              </option>
+            ))}
         </select>
       )}
 
@@ -164,7 +208,7 @@ export default function BookingClient({ barberId }: { barberId: string }) {
         />
       )}
 
-      {/* DATE CLIENT */}
+      {/* FORM CLIENT */}
       {selectedSlot && (
         <div className="space-y-3">
           <input
@@ -182,7 +226,7 @@ export default function BookingClient({ barberId }: { barberId: string }) {
           />
 
           <input
-            placeholder="Email"
+            placeholder="Email (opțional)"
             className="w-full border p-3 rounded"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -190,15 +234,19 @@ export default function BookingClient({ barberId }: { barberId: string }) {
 
           <button
             onClick={createBooking}
-            className="w-full bg-black text-white p-3 rounded"
             disabled={loading}
+            className="w-full bg-black text-white p-3 rounded"
           >
             {loading ? "Se procesează..." : "Programează-te"}
           </button>
         </div>
       )}
 
-      {error && <div className="text-red-500">{error}</div>}
+      {error && (
+        <div className="text-red-500 text-sm">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

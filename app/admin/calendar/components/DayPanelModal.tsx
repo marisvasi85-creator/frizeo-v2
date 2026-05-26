@@ -168,9 +168,15 @@ export default function DayPanelModal({
   barberId={barberId}
   serviceId={serviceId} // 🔥 ADAUGI ASTA
   onCreated={() => {
-    setSelectedSlot(null);
-    onRefresh();
-  }}
+  setSelectedSlot(null);
+
+  // 🔥 scoatem slotul din UI instant (UX PRO)
+  setSlots((prev) =>
+    prev.filter((s) => s !== selectedSlot)
+  );
+
+  onRefresh();
+}}
 />
 )}
       </div>

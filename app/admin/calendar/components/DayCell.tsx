@@ -6,6 +6,11 @@ export default function DayCell({
   overrides = [],
   onClick,
 }: any) {
+  const today = new Date().toISOString().split("T")[0];
+
+  const isToday = date === today;
+  const isPast = date < today;
+
   const dayBookings = bookings.filter((b: any) => b.date === date);
   const override = overrides.find((o: any) => o.date === date);
 
@@ -15,9 +20,28 @@ export default function DayCell({
   else if (dayBookings.length > 0) bg = "bg-green-500/20";
 
   return (
-    <div onClick={onClick} className={`p-3 rounded cursor-pointer ${bg}`}>
-      <div>{date.split("-")[2]}</div>
-      <div className="text-xs">{dayBookings.length}</div>
+    <div
+      onClick={() => {
+        if (!isPast) onClick();
+      }}
+      className={`
+        relative p-3 rounded transition
+        ${bg}
+        ${isToday ? "border border-blue-500" : ""}
+        ${isPast ? "opacity-30 cursor-not-allowed" : "cursor-pointer hover:bg-white/10"}
+      `}
+    >
+      {/* zi */}
+      <div className="text-sm font-medium">
+        {date.split("-")[2]}
+      </div>
+
+      {/* nr programări */}
+      {dayBookings.length > 0 && (
+        <div className="absolute bottom-1 right-1 text-xs bg-white text-black px-1 rounded">
+          {dayBookings.length}
+        </div>
+      )}
     </div>
   );
 }

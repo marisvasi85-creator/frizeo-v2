@@ -51,8 +51,13 @@ function generateMonthDays() {
   const days: string[] = [];
   const now = new Date();
 
-  for (let i = 1; i <= 31; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth(), i);
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 1; i <= daysInMonth; i++) {
+    const d = new Date(year, month, i);
     days.push(d.toISOString().split("T")[0]);
   }
 

@@ -23,7 +23,7 @@ export default function CreateBookingModal({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
-
+  const [success, setSuccess] = useState(false);
   async function createBooking() {
     if (!serviceId || !name || !phone) {
       alert("Completează toate câmpurile");
@@ -33,26 +33,11 @@ export default function CreateBookingModal({
     setLoading(true);
 
     try {
-      // =========================
-      // 🔥 PARSE DATE
-      // =========================
-      const startDate = new Date(slot);
+      const [date, time] = slot.split("T");
 
-      // ⚠️ aici ar trebui durata reală (viitor)
-      const durationMinutes = 30;
+      const start_time = time.slice(0, 5);
 
-      const endDate = new Date(
-        startDate.getTime() + durationMinutes * 60000
-      );
-
-      const date = slot.split("T")[0];
-
-      const start_time = startDate.toTimeString().slice(0, 5);
-      const end_time = endDate.toTimeString().slice(0, 5);
-
-      // =========================
       // 🔥 HOLD
-      // =========================
       const holdRes = await fetch("/api/bookings/hold", {
         method: "POST",
         body: JSON.stringify({
@@ -60,7 +45,6 @@ export default function CreateBookingModal({
           barber_service_id: serviceId,
           date,
           start_time,
-          end_time,
         }),
       });
 
@@ -70,15 +54,11 @@ export default function CreateBookingModal({
         throw new Error(holdData.error || "Slot ocupat");
       }
 
-      const bookingId = holdData.holdId;
-
-      // =========================
-      // 🔥 CONFIRM
-      // =========================
+      // 🔥 CREATE
       const res = await fetch("/api/bookings/create", {
         method: "POST",
         body: JSON.stringify({
-          bookingId,
+          bookingId: holdData.holdId,
           client_name: name,
           client_phone: phone,
           client_email: email,
@@ -91,11 +71,12 @@ export default function CreateBookingModal({
         throw new Error(data.error || "Eroare creare");
       }
 
-      // =========================
-      // ✅ SUCCESS
-      // =========================
-      onCreated();
-      onClose();
+      setSuccess(true);
+
+setTimeout(() => {
+  onCreated();
+  onClose();
+}, 800);
 
     } catch (err: any) {
       alert(err.message || "Eroare la creare programare");
@@ -148,21 +129,35 @@ export default function CreateBookingModal({
 
         {/* ACTIONS */}
         <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-zinc-700 py-2 rounded text-white"
-          >
-            Anulează
-          </button>
 
-          <button
-            onClick={createBooking}
-            disabled={loading}
-            className="flex-1 bg-white text-black py-2 rounded"
-          >
-            {loading ? "Se salvează..." : "Salvează"}
-          </button>
-        </div>
+  <button
+    onClick={onClose}
+    className="flex-1 bg-zinc-700 py-2 rounded text-white"
+  >
+    Anulează
+  </button>
+
+  {success ? (
+    <button
+      onClick={() => {
+        onCreated();
+        onClose();
+      }}
+      className="flex-1 bg-green-600 text-white py-2 rounded"
+    >
+      ✔ Programare creată
+    </button>
+  ) : (
+    <button
+      onClick={createBooking}
+      disabled={loading}
+      className="flex-1 bg-white text-black py-2 rounded"
+    >
+      {loading ? "Se salvează..." : "Salvează"}
+    </button>
+  )}
+
+</div>
       </div>
     </div>
   );
