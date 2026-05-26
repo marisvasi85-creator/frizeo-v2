@@ -1,19 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type Service = {
-  id: string;
-  display_name: string;
-  price: number | null;
-  duration: number;
-};
+import { useState } from "react";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   slot: string;
   barberId: string;
+  serviceId: string;
   onCreated: () => void;
 };
 
@@ -22,29 +16,14 @@ export default function CreateBookingModal({
   onClose,
   slot,
   barberId,
+  serviceId,
   onCreated,
 }: Props) {
-  const [services, setServices] = useState<Service[]>([]);
-  const [serviceId, setServiceId] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 fetch servicii
-  useEffect(() => {
-    if (!open) return;
-
-    fetch("/api/services")
-      .then((res) => res.json())
-      .then((data) => {
-        setServices(data.services || []);
-      });
-  }, [open]);
-
-  // 🔥 serviciu selectat (pentru UI)
-  const selectedService = services.find((s) => s.id === serviceId);
-
-  // 🔥 creare booking
   async function createBooking() {
     if (!serviceId || !name || !phone) {
       alert("Completează toate câmpurile");
@@ -54,28 +33,72 @@ export default function CreateBookingModal({
     setLoading(true);
 
     try {
-      // 🔥 convert slot -> ISO
-      const startISO = new Date(slot).toISOString();
+      // =========================
+      // 🔥 PARSE DATE
+      // =========================
+      const startDate = new Date(slot);
 
-      const res = await fetch("/api/bookings/create", {
+      // ⚠️ aici ar trebui durata reală (viitor)
+      const durationMinutes = 30;
+
+      const endDate = new Date(
+        startDate.getTime() + durationMinutes * 60000
+      );
+
+      const date = slot.split("T")[0];
+
+      const start_time = startDate.toTimeString().slice(0, 5);
+      const end_time = endDate.toTimeString().slice(0, 5);
+
+      // =========================
+      // 🔥 HOLD
+      // =========================
+      const holdRes = await fetch("/api/bookings/hold", {
         method: "POST",
         body: JSON.stringify({
-          barberId,
-          serviceId,
-          start_time: startISO,
-          client_name: name,
-          client_phone: phone,
+          barber_id: barberId,
+          barber_service_id: serviceId,
+          date,
+          start_time,
+          end_time,
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("Booking failed");
+      const holdData = await holdRes.json();
+
+      if (!holdRes.ok) {
+        throw new Error(holdData.error || "Slot ocupat");
       }
 
+      const bookingId = holdData.holdId;
+
+      // =========================
+      // 🔥 CONFIRM
+      // =========================
+      const res = await fetch("/api/bookings/create", {
+        method: "POST",
+        body: JSON.stringify({
+          bookingId,
+          client_name: name,
+          client_phone: phone,
+          client_email: email,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Eroare creare");
+      }
+
+      // =========================
+      // ✅ SUCCESS
+      // =========================
       onCreated();
       onClose();
-    } catch (err) {
-      alert("Eroare la creare programare");
+
+    } catch (err: any) {
+      alert(err.message || "Eroare la creare programare");
     } finally {
       setLoading(false);
     }
@@ -85,7 +108,6 @@ export default function CreateBookingModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
       <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-sm space-y-4">
 
         <h2 className="text-white text-lg font-semibold">
@@ -99,30 +121,6 @@ export default function CreateBookingModal({
             timeStyle: "short",
           })}
         </div>
-
-        {/* SERVICE */}
-        <select
-          value={serviceId}
-          onChange={(e) => setServiceId(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded text-white"
-        >
-          <option value="">Alege serviciu</option>
-
-          {services.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.display_name}
-              {s.price ? ` - ${s.price} RON` : ""}
-            </option>
-          ))}
-        </select>
-
-        {/* INFO SERVICIU */}
-        {selectedService && (
-          <div className="text-xs text-gray-400">
-            Durată: {selectedService.duration} min
-            {selectedService.price && ` • ${selectedService.price} RON`}
-          </div>
-        )}
 
         {/* NUME */}
         <input
@@ -140,9 +138,16 @@ export default function CreateBookingModal({
           className="w-full bg-zinc-800 p-3 rounded text-white"
         />
 
+        {/* EMAIL */}
+        <input
+          placeholder="Email (opțional)"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full bg-zinc-800 p-3 rounded text-white"
+        />
+
         {/* ACTIONS */}
         <div className="flex gap-2">
-
           <button
             onClick={onClose}
             className="flex-1 bg-zinc-700 py-2 rounded text-white"
@@ -157,9 +162,7 @@ export default function CreateBookingModal({
           >
             {loading ? "Se salvează..." : "Salvează"}
           </button>
-
         </div>
-
       </div>
     </div>
   );

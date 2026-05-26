@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getDashboardStatus } from "@/lib/onboarding/getDashboardStatus";
+import BookingLinkCard from "./BookingLinkCard"; // 🔥 IMPORTANT
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();
@@ -24,7 +25,6 @@ export default async function DashboardPage() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // 🔥 DOAR CONFIRMED (IMPORTANT)
   const { data: todayBookings } = await supabase
     .from("bookings")
     .select("*")
@@ -54,6 +54,9 @@ export default async function DashboardPage() {
           Panoul tău de control
         </p>
       </div>
+
+      {/* 🔥 BOOKING LINK (CLIENT COMPONENT) */}
+      <BookingLinkCard barberId={barber.id} />
 
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -95,28 +98,28 @@ export default async function DashboardPage() {
 
           <a
             href="/admin/calendar"
-            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:opacity-90"
+            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
           >
             Calendar
           </a>
 
           <a
             href="/admin/bookings"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20"
+            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
           >
             Programări
           </a>
 
           <a
             href="/admin/services"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20"
+            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
           >
             Servicii
           </a>
 
           <a
             href="/admin/settings"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm hover:bg-white/20"
+            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
           >
             Program
           </a>
@@ -124,7 +127,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* AZI (IMPORTANT) */}
+      {/* AZI */}
       <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
         <h2 className="text-lg font-semibold mb-4">
           Programările de azi

@@ -5,7 +5,8 @@ import CreateBookingModal from "./CreateBookingModal";
 
 type Service = {
   id: string;
-  display_name: string;
+  name?: string;
+  display_name?: string;
   duration: number;
   price: number | null;
 };
@@ -29,33 +30,53 @@ export default function DayPanelModal({
   const [serviceId, setServiceId] = useState<string>("");
   const [slots, setSlots] = useState<string[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
-
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const selectedService = services.find((s) => s.id === serviceId);
 
-  // 🔥 fetch services
+  // 🔥 FETCH SERVICES (SAFE)
   useEffect(() => {
-    fetch("/api/services")
-      .then((res) => res.json())
-      .then((data) => setServices(data.services || []));
-  }, []);
+    if (!barberId) return;
 
-  // 🔥 fetch slots când alegi serviciul
+    fetch(`/api/services?barberId=${barberId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("SERVICES RAW:", data);
+
+        if (Array.isArray(data)) {
+          setServices(data);
+        } else if (Array.isArray(data.services)) {
+          setServices(data.services);
+        } else {
+          setServices([]);
+        }
+      })
+      .catch(() => setServices([]));
+  }, [barberId]);
+
+  // 🔥 FETCH SLOTS (SAFE + CORECT)
   useEffect(() => {
-    if (!serviceId || !selectedService) return;
+    if (!serviceId) return;
 
     setLoadingSlots(true);
 
     fetch(
-      `/api/slots?barberId=${barberId}&date=${date}&duration=${selectedService.duration}`
+      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
     )
       .then((res) => res.json())
       .then((data) => {
-        setSlots(data.slots || []);
+        console.log("SLOTS RAW:", data);
+
+        if (Array.isArray(data)) {
+          setSlots(data);
+        } else if (Array.isArray(data.slots)) {
+          setSlots(data.slots);
+        } else {
+          setSlots([]);
+        }
       })
       .finally(() => setLoadingSlots(false));
-  }, [serviceId, selectedService, barberId, date]);
+  }, [serviceId, barberId, date]);
 
   return (
     <div className="fixed inset-0 bg-black/60 flex justify-end z-50">
@@ -85,7 +106,7 @@ export default function DayPanelModal({
 
           {services.map((s) => (
             <option key={s.id} value={s.id}>
-              {s.display_name}
+              {(s.display_name || s.name) ?? "Serviciu"}
               {s.price ? ` - ${s.price} RON` : ""}
             </option>
           ))}
@@ -124,30 +145,34 @@ export default function DayPanelModal({
           ))}
         </div>
 
-        {/* EXISTING BOOKINGS (optional) */}
+        {/* BOOKINGS EXISTENTE */}
         <div className="space-y-2">
           {bookings
             .filter((b: any) => b.date === date)
             .map((b: any) => (
-              <div key={b.id} className="bg-zinc-800 p-2 rounded text-sm">
+              <div
+                key={b.id}
+                className="bg-zinc-800 p-2 rounded text-sm text-white"
+              >
                 {b.start_time} - {b.client_name}
               </div>
             ))}
         </div>
 
-        {/* MODAL CREATE */}
-        {selectedSlot && (
-          <CreateBookingModal
-            open={true}
-            onClose={() => setSelectedSlot(null)}
-            slot={`${date}T${selectedSlot}:00`}
-            barberId={barberId}
-            onCreated={() => {
-              setSelectedSlot(null);
-              onRefresh(); // 🔥 refresh real
-            }}
-          />
-        )}
+        {/* CREATE BOOKING */}
+        {selectedSlot && selectedService && (
+  <CreateBookingModal
+  open={true}
+  onClose={() => setSelectedSlot(null)}
+  slot={`${date}T${selectedSlot}:00`}
+  barberId={barberId}
+  serviceId={serviceId} // 🔥 ADAUGI ASTA
+  onCreated={() => {
+    setSelectedSlot(null);
+    onRefresh();
+  }}
+/>
+)}
       </div>
     </div>
   );

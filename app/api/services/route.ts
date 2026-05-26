@@ -5,17 +5,23 @@ export async function GET(req: Request) {
   const barberId = searchParams.get("barberId");
 
   if (!barberId) {
-    return Response.json([]);
+    return Response.json({ services: [] });
   }
 
   const supabase = await createSupabaseServerClient();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("barber_services")
-    .select("id, name, duration")
+    .select("id, name, display_name, duration, price")
     .eq("barber_id", barberId)
     .eq("active", true)
     .order("sort_order", { ascending: true });
 
-  return Response.json(data || []);
+  if (error) {
+    return Response.json({ services: [] });
+  }
+
+  return Response.json({
+    services: data || [],
+  });
 }
