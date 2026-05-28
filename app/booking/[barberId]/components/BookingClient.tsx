@@ -26,20 +26,23 @@ export default function BookingClient({ barberId }: { barberId: string }) {
   // 🔥 LOAD SERVICES
   // =========================
   useEffect(() => {
-    const loadServices = async () => {
-      try {
-        const res = await fetch(`/api/services?barberId=${barberId}`);
-        const data = await res.json();
+  const loadServices = async () => {
+    try {
+      const res = await fetch(`/api/services?barberId=${barberId}`);
+      const data = await res.json();
 
-        // 🔥 FIX CRITIC
-        setServices(Array.isArray(data) ? data : []);
-      } catch {
-        setServices([]);
-      }
-    };
+      console.log("SERVICES RAW:", data);
 
-    loadServices();
-  }, [barberId]);
+      // 🔥 EXACT ca la modal
+      setServices(Array.isArray(data?.services) ? data.services : []);
+    } catch (err) {
+      console.error("SERVICES ERROR:", err);
+      setServices([]);
+    }
+  };
+
+  loadServices();
+}, [barberId]);
 
   // =========================
   // 🔥 FORMAT DATE SAFE
@@ -55,27 +58,28 @@ export default function BookingClient({ barberId }: { barberId: string }) {
 
   // =========================
   // 🔥 LOAD SLOTS
-  // =========================
-  useEffect(() => {
-    if (!formattedDate || !serviceId) return;
+useEffect(() => {
+  if (!formattedDate || !serviceId) return;
 
-    const loadSlots = async () => {
-      try {
-        const res = await fetch(
-          `/api/slots?barberId=${barberId}&date=${formattedDate}&serviceId=${serviceId}`
-        );
+  const loadSlots = async () => {
+    try {
+      const res = await fetch(
+        `/api/slots?barberId=${barberId}&date=${formattedDate}&serviceId=${serviceId}`
+      );
 
-        const data = await res.json();
-console.log("SERVICES API:", data); // 🔥 vezi în browser
-        setSlots(Array.isArray(data) ? data : []);
-        setSelectedSlot(null);
-      } catch {
-        setSlots([]);
-      }
-    };
+      const data = await res.json();
 
-    loadSlots();
-  }, [formattedDate, serviceId, barberId]);
+      console.log("SLOTS RAW:", data);
+
+      setSlots(Array.isArray(data?.slots) ? data.slots : []);
+      setSelectedSlot(null);
+    } catch {
+      setSlots([]);
+    }
+  };
+
+  loadSlots();
+}, [formattedDate, serviceId, barberId]);
 
   // =========================
   // 🔥 RESET când schimbi data

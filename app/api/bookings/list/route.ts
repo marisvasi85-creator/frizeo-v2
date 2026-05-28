@@ -3,14 +3,17 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET() {
   const supabase = await createSupabaseServerClient();
 
-  const today = new Date().toISOString().split("T")[0];
-
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("bookings")
-    .select("id, client_name, start_time, date")
-    .eq("date", today)
-    .eq("status", "confirmed")
-    .order("start_time");
+    .select("*")
+    .neq("status", "cancelled");
+
+  if (error) {
+    console.error("BOOKINGS ERROR:", error);
+    return Response.json({ bookings: [] });
+  }
+
+  console.log("BOOKINGS DB:", data);
 
   return Response.json({
     bookings: data || [],

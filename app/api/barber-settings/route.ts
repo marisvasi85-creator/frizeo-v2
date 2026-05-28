@@ -15,20 +15,10 @@ export async function GET(req: Request) {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("barber_services")
-    .select(`
-      id,
-      service_id,
-      price,
-      duration,
-      active,
-      services (
-        name
-      )
-    `)
+    .from("barber_settings")
+    .select("*")
     .eq("barber_id", barberId)
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
+    .single();
 
   if (error) {
     return NextResponse.json(

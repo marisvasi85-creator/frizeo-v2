@@ -31,7 +31,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 SERVICE (durata REALĂ)
+    // =========================
+    // 🔥 SERVICE
+    // =========================
     const { data: service } = await supabase
       .from("barber_services")
       .select("duration")
@@ -45,11 +47,29 @@ export async function POST(req: Request) {
       );
     }
 
+    // =========================
+    // 🔥 SETTINGS
+    // =========================
+    const { data: settings } = await supabase
+      .from("barber_settings")
+      .select("break_between_enabled, break_between_minutes")
+      .eq("barber_id", barber_id)
+      .single();
+
+    const breakEnabled = settings?.break_between_enabled ?? false;
+    const breakMinutes = settings?.break_between_minutes ?? 0;
+
+    const effectiveDuration = breakEnabled
+      ? service.duration + breakMinutes
+      : service.duration;
+
     const startMin = timeToMinutes(start_time);
-    const endMin = startMin + service.duration;
+    const endMin = startMin + effectiveDuration;
     const end_time = minutesToTime(endMin);
 
+    // =========================
     // 🔥 TENANT
+    // =========================
     const { data: barber } = await supabase
       .from("barbers")
       .select("tenant_id")
@@ -63,7 +83,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 OVERLAP CHECK (CORECT)
+    // =========================
+    // 🔥 OVERLAP CHECK (IDENTIC cu slots)
+    // =========================
     const { data: existing } = await supabase
       .from("bookings")
       .select("start_time, end_time, status, expires_at")
@@ -94,7 +116,9 @@ export async function POST(req: Request) {
       );
     }
 
+    // =========================
     // 🔥 HOLD
+    // =========================
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const { data, error } = await supabase

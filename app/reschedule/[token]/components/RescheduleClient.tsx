@@ -31,20 +31,22 @@ export default function RescheduleClient({ booking, token }: any) {
 
   // 🔥 LOAD SLOTS
   useEffect(() => {
-    if (!date) return;
+  if (!date) return;
 
-    fetch(
-      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&excludeBookingId=${booking.id}`
-    )
-      .then((r) => r.json())
-      .then((data) => {
-        setSlots(data);
+  fetch(
+    `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&excludeBookingId=${booking.id}`
+  )
+    .then((r) => r.json())
+    .then((data) => {
+      console.log("RESCHEDULE SLOTS:", data);
 
-        setTimeout(() => {
-          slotsRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      });
-  }, [date, booking]);
+      setSlots(Array.isArray(data?.slots) ? data.slots : []);
+
+      setTimeout(() => {
+        slotsRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    });
+}, [date, booking]);
 
   const handleSubmit = async () => {
     if (!selectedSlot) return;

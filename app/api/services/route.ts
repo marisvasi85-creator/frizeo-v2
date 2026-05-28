@@ -18,6 +18,7 @@ export async function GET(req: Request) {
     .order("sort_order", { ascending: true });
 
   if (error) {
+    console.error("SERVICES ERROR:", error);
     return Response.json({ services: [] });
   }
 
