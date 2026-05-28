@@ -11,11 +11,11 @@ export async function GET(req: Request) {
   const supabase = await createSupabaseServerClient();
 
   const { data, error } = await supabase
-    .from("barber_services")
-    .select("id, name, display_name, duration, price")
-    .eq("barber_id", barberId)
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
+  .from("barber_services")
+  .select("id, display_name, duration, price")
+  .eq("barber_id", barberId)
+  .eq("active", true) // 🔥 AICI
+  .order("sort_order", { ascending: true });
 
   if (error) {
     console.error("SERVICES ERROR:", error);

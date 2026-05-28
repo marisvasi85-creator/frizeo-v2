@@ -1,99 +1,110 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createService } from "../actions";
+import { useState } from "react";
 
-export default function AddServiceModal() {
-  const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+export default function AddServiceModal({
+  barberId,
+  service,
+  onClose,
+  onCreated,
+}: any) {
+  const [name, setName] = useState(service?.display_name || "");
+  const [price, setPrice] = useState(service?.price ?? "");
+  const [duration, setDuration] = useState<string>(
+  service?.duration?.toString() || ""
+);
+  const [loading, setLoading] = useState(false);
 
-  const [name, setName] = useState("");
-  const [duration, setDuration] = useState("");
-  const [price, setPrice] = useState("");
+  async function handleSubmit() {
+    if (!name || !duration) {
+      alert("Completează nume și durată");
+      return;
+    }
 
-  function handleSubmit() {
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("name", name);
-      formData.append("duration", duration);
-      formData.append("price", price);
+    setLoading(true);
 
-      await createService(formData);
+    const url = service
+      ? "/api/services/update"
+      : "/api/services/create";
 
-      // reset
-      setName("");
-      setDuration("");
-      setPrice("");
-      setOpen(false);
+    const res = await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        id: service?.id,
+        barber_id: barberId,
+        display_name: name,
+        price: price ? Number(price) : null,
+        duration: Number(duration),
+      }),
     });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Eroare");
+      setLoading(false);
+      return;
+    }
+
+    onCreated(data);
   }
 
   return (
-    <>
-      {/* BUTTON */}
-      <button
-        onClick={() => setOpen(true)}
-        className="bg-white text-black px-4 py-2 rounded-lg text-sm hover:opacity-90"
-      >
-        + Adaugă serviciu
-      </button>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-sm space-y-4">
 
-      {/* MODAL */}
-      {open && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <h2 className="text-lg font-semibold text-white">
+          {service ? "Editează serviciu" : "Adaugă serviciu"}
+        </h2>
 
-          <div className="bg-[#161618] p-6 rounded-xl w-full max-w-md space-y-4 border border-white/10">
+        <input
+          placeholder="Nume serviciu"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full bg-zinc-800 p-3 rounded text-white"
+        />
 
-            <h2 className="text-lg font-semibold">
-              Adaugă serviciu
-            </h2>
+        <select
+  value={duration}
+  onChange={(e) => setDuration(e.target.value)}
+  className="w-full bg-zinc-800 p-3 rounded text-white"
+>
+  <option value="">Alege durata</option>
 
-            <input
-              placeholder="Nume serviciu"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
-            />
+  <option value="15">15 min</option>
+  <option value="30">30 min</option>
+  <option value="45">45 min</option>
+  <option value="60">60 min</option>
+  <option value="75">75 min</option>
+  <option value="90">90 min</option>
+  <option value="120">120 min</option>
+</select>
 
-            <input
-              type="number"
-              placeholder="Durată (minute)"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
-            />
+        <input
+          placeholder="Preț (opțional)"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          className="w-full bg-zinc-800 p-3 rounded text-white"
+        />
 
-            <input
-              type="number"
-              placeholder="Preț"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
-            />
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 bg-zinc-700 py-2 rounded text-white"
+          >
+            Anulează
+          </button>
 
-            {/* ACTIONS */}
-            <div className="flex justify-end gap-2 pt-2">
-
-              <button
-                onClick={() => setOpen(false)}
-                className="px-3 py-2 text-sm text-white/60 hover:text-white"
-              >
-                Anulează
-              </button>
-
-              <button
-                onClick={handleSubmit}
-                disabled={pending || !name || !duration}
-                className="bg-white text-black px-4 py-2 rounded text-sm disabled:opacity-50"
-              >
-                Salvează
-              </button>
-
-            </div>
-
-          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 bg-white text-black py-2 rounded"
+          >
+            {loading ? "Se salvează..." : "Salvează"}
+          </button>
         </div>
-      )}
-    </>
+
+      </div>
+    </div>
   );
 }

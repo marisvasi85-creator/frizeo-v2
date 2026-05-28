@@ -10,15 +10,30 @@ export default async function ServicesPage() {
 
   if (!barber) redirect("/login");
 
-  const { data: services } = await supabase
+  const { data: services, error } = await supabase
     .from("barber_services")
-    .select("*")
+    .select(`
+      id,
+      display_name,
+      name,
+      price,
+      duration,
+      active,
+      sort_order
+    `)
     .eq("barber_id", barber.id)
     .order("sort_order", { ascending: true });
 
+  if (error) {
+    console.error("SERVICES LOAD ERROR:", error);
+  }
+
   return (
-    <div>
-      <ServicesClient services={services ?? []} />
+    <div className="p-6">
+      <ServicesClient
+        services={services ?? []}
+        barberId={barber.id}
+      />
     </div>
   );
 }
