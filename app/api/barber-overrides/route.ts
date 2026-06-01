@@ -2,37 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /* =========================
-   GET override (barber + date)
+   GET override(s)
 ========================= */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const barberId = searchParams.get("barberId");
-  const date = searchParams.get("date"); // YYYY-MM-DD
+  const date = searchParams.get("date");
 
   const supabase = await createSupabaseServerClient();
 
-  if (!barberId || !date) {
+  if (!barberId) {
     return NextResponse.json(
-      { error: "Missing barberId or date" },
+      { error: "Missing barberId" },
       { status: 400 }
     );
   }
 
+  // 🔥 CASE 1 → SINGLE DAY
+  if (date) {
+    const { data, error } = await supabase
+      .from("barber_day_overrides")
+      .select("*")
+      .eq("barber_id", barberId)
+      .eq("date", date)
+      .maybeSingle();
+
+    if (error) {
+      return NextResponse.json(
+        { error: "Failed to fetch override" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data ?? null);
+  }
+
+  // 🔥 CASE 2 → ALL OVERRIDES (IMPORTANT)
   const { data, error } = await supabase
     .from("barber_day_overrides")
     .select("*")
-    .eq("barber_id", barberId)
-    .eq("date", date)
-    .maybeSingle();
+    .eq("barber_id", barberId);
 
   if (error) {
     return NextResponse.json(
-      { error: "Failed to fetch override" },
+      { error: "Failed to fetch overrides" },
       { status: 500 }
     );
   }
 
-  return NextResponse.json(data ?? null);
+  return NextResponse.json({
+    overrides: data || [],
+  });
 }
 
 /* =========================
@@ -75,8 +95,8 @@ export async function POST(req: NextRequest) {
       slot_duration: is_closed ? null : slot_duration ?? null,
     };
 
-    // UPSERT pe (barber_id, date)
     const supabase = await createSupabaseServerClient();
+
     const { error } = await supabase
       .from("barber_day_overrides")
       .upsert(payload, {
@@ -92,10 +112,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: "Override saved",
     });
   } catch (err) {
     console.error("OVERRIDE SAVE ERROR:", err);
+
     return NextResponse.json(
       { error: "Invalid request body" },
       { status: 400 }
@@ -135,6 +155,5 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    message: "Override deleted",
   });
 }

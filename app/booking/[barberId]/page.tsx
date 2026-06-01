@@ -1,23 +1,28 @@
 import BookingClient from "./components/BookingClient";
-import { createSupabaseServerReadonlyClient } from "@/lib/supabase/server-readonly";
 
-export default async function Page(props: any) {
-  const params = await props.params; // 🔥 FIX IMPORTANT
-  const barberId = params.barberId;
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ barberId: string }>;
+}) {
+  // 🔥 IMPORTANT
+  const { barberId } = await params;
 
-  const supabase = createSupabaseServerReadonlyClient();
-
-  const { data: barber } = await supabase
-    .from("barbers")
-    .select("tenant_id")
-    .eq("id", barberId)
-    .single();
-
-  if (!barber) {
-    return <div>Barber inexistent</div>;
+  if (!barberId) {
+    return <div>Barber invalid</div>;
   }
 
+  const res = await fetch(
+    `http://localhost:3000/api/barber/profile?barberId=${barberId}`,
+    { cache: "no-store" }
+  );
+
+  const data = await res.json();
+
   return (
-    <BookingClient barberId={barberId} />
+    <BookingClient
+      barberId={barberId}
+      barberName={data?.profile?.display_name || "Frizer"}
+    />
   );
 }

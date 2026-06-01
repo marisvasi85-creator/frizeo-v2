@@ -18,143 +18,79 @@ export async function GET(req: Request) {
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
-  const excludeBookingId = searchParams.get("excludeBookingId");
 
-  if (!barberId || !date || !serviceId) {
+  if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
   }
 
   const supabase = createSupabasePublicClient();
-  const normalizedDate = new Date(date).toISOString().split("T")[0];
 
-  // =========================
-  // 🔥 SERVICE
-  // =========================
-  const { data: service } = await supabase
-    .from("barber_services")
-    .select("duration")
-    .eq("id", serviceId)
-    .single();
+  const [year, month, dayStr] = date.split("-").map(Number);
+  const localDate = new Date(year, month - 1, dayStr);
 
-  if (!service) {
-    return NextResponse.json({ slots: [] });
+  let duration = 30;
+
+  if (serviceId && serviceId !== "preview") {
+    const { data: service } = await supabase
+      .from("barber_services")
+      .select("duration")
+      .eq("id", serviceId)
+      .single();
+
+    if (!service) return NextResponse.json({ slots: [] });
+
+    duration = service.duration;
   }
 
-  const duration = service.duration;
-
-  // =========================
-  // 🔥 SETTINGS (pauză între programări)
-  // =========================
   const { data: settings } = await supabase
     .from("barber_settings")
     .select("break_between_enabled, break_between_minutes")
     .eq("barber_id", barberId)
     .single();
 
-  const breakEnabled = settings?.break_between_enabled ?? false;
-  const breakMinutes = settings?.break_between_minutes ?? 0;
-
-  const effectiveDuration = breakEnabled
-    ? duration + breakMinutes
+  const effectiveDuration = settings?.break_between_enabled
+    ? duration + (settings?.break_between_minutes || 0)
     : duration;
 
-  // =========================
-  // 🔥 BOOKINGS
-  // =========================
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("id, start_time, end_time, status, expires_at")
-    .eq("barber_id", barberId)
-    .eq("date", normalizedDate);
-
-  const now = new Date();
-
-  const activeBookings = (bookings || [])
-    .filter((b: any) => {
-      if (excludeBookingId && b.id === excludeBookingId) return false;
-
-      if (b.status === "confirmed") return true;
-      if (b.status === "pending" && b.expires_at) {
-        return new Date(b.expires_at) > now;
-      }
-      return false;
-    })
-    .map((b: any) => ({
-      start: timeToMinutes(b.start_time),
-      end: timeToMinutes(b.end_time),
-    }))
-    .sort((a: any, b: any) => a.start - b.start);
-
-  // =========================
-  // 🔥 PROGRAM (fix momentan)
-  // =========================
-  const WORK_START = timeToMinutes("09:00");
-  const WORK_END = timeToMinutes("18:00");
-
-  let freeIntervals: { start: number; end: number }[] = [];
-  let cursor = WORK_START;
-
-  for (const b of activeBookings) {
-    if (b.start > cursor) {
-      freeIntervals.push({ start: cursor, end: b.start });
-    }
-    cursor = Math.max(cursor, b.end);
-  }
-
-  if (cursor < WORK_END) {
-    freeIntervals.push({ start: cursor, end: WORK_END });
-  }
-
-  // =========================
-  // 🔥 PAUZĂ MASĂ
-  // =========================
-  const day = new Date(date).getDay() || 7;
+  const jsDay = localDate.getDay();
+  const day = jsDay === 0 ? 7 : jsDay;
 
   const { data: schedule } = await supabase
     .from("barber_weekly_schedule")
-    .select("break_enabled, break_start, break_end")
+    .select("is_working, work_start, work_end")
     .eq("barber_id", barberId)
     .eq("day_of_week", day)
-    .single();
+    .maybeSingle();
 
-  if (schedule?.break_enabled && schedule.break_start && schedule.break_end) {
-    const breakStart = timeToMinutes(schedule.break_start);
-    const breakEnd = timeToMinutes(schedule.break_end);
-
-    freeIntervals = freeIntervals.flatMap((interval) => {
-      if (interval.end <= breakStart || interval.start >= breakEnd) {
-        return [interval];
-      }
-
-      let parts = [];
-
-      if (interval.start < breakStart) {
-        parts.push({ start: interval.start, end: breakStart });
-      }
-
-      if (interval.end > breakEnd) {
-        parts.push({ start: breakEnd, end: interval.end });
-      }
-
-      return parts;
-    });
+  if (schedule && !schedule.is_working) {
+    return NextResponse.json({ slots: [] });
   }
 
-  // =========================
-  // 🔥 GENERARE SLOTURI
-  // =========================
-  let slots: string[] = [];
+  let start = timeToMinutes(schedule?.work_start || "09:00");
+  let end = timeToMinutes(schedule?.work_end || "18:00");
 
-  for (const interval of freeIntervals) {
-    let cursor = interval.start;
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select("start_time, end_time")
+    .eq("barber_id", barberId)
+    .eq("date", date);
 
-    while (cursor + effectiveDuration <= interval.end) {
-      slots.push(minutesToTime(cursor));
-      cursor += 15;
+  const occupied = (bookings || []).map((b) => ({
+    start: timeToMinutes(b.start_time),
+    end: timeToMinutes(b.end_time),
+  }));
+
+  const slots: string[] = [];
+
+  for (let t = start; t + effectiveDuration <= end; t += 15) {
+    const overlap = occupied.some(
+      (b) => t < b.end && t + effectiveDuration > b.start
+    );
+
+    if (!overlap) {
+      slots.push(minutesToTime(t));
     }
   }
-
-  slots.sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
 
   return NextResponse.json({ slots });
 }

@@ -8,6 +8,7 @@ export default function CalendarGrid({
   bookings,
   overrides,
   barberId,
+  weeklySchedule, // 🔥 NOU
   onRefresh,
 }: any) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -59,6 +60,7 @@ export default function CalendarGrid({
               date={date}
               bookings={bookings}
               overrides={overrides}
+              weeklySchedule={weeklySchedule} // 🔥 CRITIC
               onClick={() => setSelectedDate(date)}
             />
           ) : (
@@ -110,7 +112,7 @@ function generateCalendarDays(date: Date) {
 
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const d = new Date(year, month, i);
-    days.push(formatLocalDate(d)); // 🔥 FARA ISO
+    days.push(formatLocalDate(d));
   }
 
   return days;

@@ -4,11 +4,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient();
-    const { id, active } = await req.json();
+    const body = await req.json();
 
-    if (!id) {
+    const { id, active } = body;
+
+    if (!id || active === undefined) {
       return NextResponse.json(
-        { error: "Missing id" },
+        { error: "Missing data" },
         { status: 400 }
       );
     }
@@ -27,9 +29,9 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json({ service: data });
 
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

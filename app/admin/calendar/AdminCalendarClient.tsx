@@ -12,24 +12,30 @@ const supabase = createClient(
 export default function AdminCalendarClient({ barberId }: { barberId: string }) {
   const [bookings, setBookings] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]); // 🔥 NOU
   const [loading, setLoading] = useState(true);
 
   async function loadData() {
     setLoading(true);
 
-    const [bRes, oRes] = await Promise.all([
+    const [bRes, oRes, sRes] = await Promise.all([
       fetch("/api/bookings/list"),
       fetch("/api/barber-overrides"),
+      fetch("/api/barber-weekly-schedule"), // 🔥 NOU
     ]);
 
     const bData = await bRes.json();
     const oData = await oRes.json();
+    const sData = await sRes.json(); // 🔥 NOU
 
     console.log("📦 BOOKINGS API:", bData);
     console.log("📦 OVERRIDES API:", oData);
+    console.log("📦 SCHEDULE API:", sData); // 🔥 DEBUG
 
     setBookings(bData.bookings || []);
     setOverrides(oData.overrides || []);
+    setWeeklySchedule(sData || []); // 🔥 CRITIC
+
     setLoading(false);
   }
 
@@ -37,30 +43,48 @@ export default function AdminCalendarClient({ barberId }: { barberId: string }) 
     loadData();
   }, []);
 
-  // 🔥 REALTIME GLOBAL (CORECT)
+  // 🔥 REALTIME GLOBAL
   useEffect(() => {
-    const channel = supabase
-      .channel("admin-bookings-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "bookings",
-        },
-        (payload) => {
-          console.log("🔄 REALTIME EVENT:", payload);
+  const channel = supabase
+    .channel("admin-bookings-realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "bookings",
+      },
+      (payload) => {
+        console.log("🔄 REALTIME EVENT:", payload);
 
-          // 🔥 NU mai facem manual update → reload sigur
-          loadData();
-        }
-      )
-      .subscribe();
+        setBookings((prev) => {
+          // 🔥 INSERT
+          if (payload.eventType === "INSERT") {
+            return [...prev, payload.new];
+          }
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+          // 🔥 UPDATE
+          if (payload.eventType === "UPDATE") {
+            return prev.map((b) =>
+              b.id === payload.new.id ? payload.new : b
+            );
+          }
+
+          // 🔥 DELETE
+          if (payload.eventType === "DELETE") {
+            return prev.filter((b) => b.id !== payload.old.id);
+          }
+
+          return prev;
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   if (loading) {
     return (
@@ -74,6 +98,7 @@ export default function AdminCalendarClient({ barberId }: { barberId: string }) 
     <CalendarGrid
       bookings={bookings}
       overrides={overrides}
+      weeklySchedule={weeklySchedule} // 🔥 ASTA LIPSEA
       barberId={barberId}
       onRefresh={loadData}
     />

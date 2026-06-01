@@ -1,28 +1,39 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const barberId = searchParams.get("barberId");
 
   if (!barberId) {
-    return Response.json({ services: [] });
+    return NextResponse.json({ services: [] });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
 
   const { data, error } = await supabase
-  .from("barber_services")
-  .select("id, display_name, duration, price")
-  .eq("barber_id", barberId)
-  .eq("active", true) // 🔥 AICI
-  .order("sort_order", { ascending: true });
+    .from("barber_services")
+    .select(`
+      id,
+      name,
+      display_name,
+      duration,
+      price,
+      show_price,
+      featured,
+      active,
+      sort_order
+    `)
+    .eq("barber_id", barberId)
+    .eq("active", true)
+    .order("sort_order", { ascending: true });
 
   if (error) {
-    console.error("SERVICES ERROR:", error);
-    return Response.json({ services: [] });
+    console.error("SERVICES GET ERROR:", error);
+    return NextResponse.json({ services: [] });
   }
 
-  return Response.json({
+  return NextResponse.json({
     services: data || [],
   });
 }

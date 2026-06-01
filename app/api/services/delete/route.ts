@@ -3,7 +3,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function POST(req: Request) {
   try {
-    const { id } = await req.json();
+    const supabase = await createSupabaseServerClient();
+    const body = await req.json();
+
+    const { id } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -11,8 +14,6 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-
-    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase
       .from("barber_services")
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
 
-  } catch (err) {
+  } catch {
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }
