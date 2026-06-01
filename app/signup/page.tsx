@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
-  const router = useRouter();
-
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -13,7 +10,11 @@ export default function SignupPage() {
     password: "",
   });
 
+  const [loading, setLoading] = useState(false);
+
   async function handleSignup() {
+    setLoading(true);
+
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: {
@@ -24,14 +25,15 @@ export default function SignupPage() {
 
     const data = await res.json();
 
+    setLoading(false);
+
     if (data.error) {
       alert(data.error);
       return;
     }
 
-    alert("Cont creat! Verifică email-ul pentru confirmare.");
-
-    router.push("/login");
+    // 🔥 IMPORTANT: redirect direct
+    window.location.href = data.redirect;
   }
 
   return (
@@ -73,9 +75,10 @@ export default function SignupPage() {
 
       <button
         onClick={handleSignup}
+        disabled={loading}
         className="w-full bg-black text-white py-2 rounded"
       >
-        Creează cont
+        {loading ? "Se creează..." : "Creează cont"}
       </button>
     </div>
   );

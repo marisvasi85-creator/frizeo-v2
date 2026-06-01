@@ -10,7 +10,7 @@ export default function ServicesClient({
   services: any[];
   barberId: string;
 }) {
-  const [items, setItems] = useState(services);
+  const [items, setItems] = useState(services || []);
   const [openAdd, setOpenAdd] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
 
@@ -20,6 +20,9 @@ export default function ServicesClient({
 
     const res = await fetch("/api/services/delete", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({ id }),
     });
 
@@ -31,10 +34,13 @@ export default function ServicesClient({
     setItems((prev) => prev.filter((s) => s.id !== id));
   }
 
-  // 🔥 TOGGLE ACTIVE
+  // 🔥 TOGGLE
   async function toggleActive(id: string, current: boolean) {
     const res = await fetch("/api/services/toggle", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         id,
         active: !current,
@@ -46,10 +52,12 @@ export default function ServicesClient({
       return;
     }
 
-    const updated = await res.json();
+    const data = await res.json();
 
     setItems((prev) =>
-      prev.map((s) => (s.id === id ? updated : s))
+      prev.map((s) =>
+        s.id === id ? { ...s, active: data.active } : s
+      )
     );
   }
 
@@ -70,11 +78,14 @@ export default function ServicesClient({
 
       {/* LIST */}
       <div className="space-y-3">
+
         {items.map((s) => (
           <div
-            key={s.id}
+            key={s.id} // 🔥 ASTA E SINGURUL KEY CORECT
             className="p-4 rounded-xl bg-[#0F0F10] flex justify-between items-center"
           >
+
+            {/* LEFT */}
             <div>
               <div className="font-medium">
                 {s.display_name || s.name}
@@ -85,15 +96,15 @@ export default function ServicesClient({
               </div>
             </div>
 
-            {/* ACTIONS */}
+            {/* RIGHT */}
             <div className="flex items-center gap-4">
 
-              {/* PREȚ */}
+              {/* PRICE */}
               <span className="text-white/60">
                 {s.price ? `${s.price} lei` : "—"}
               </span>
 
-              {/* 🔥 TOGGLE SWITCH */}
+              {/* TOGGLE */}
               <button
                 onClick={() => toggleActive(s.id, s.active)}
                 className={`relative w-10 h-5 rounded-full transition ${
@@ -128,8 +139,11 @@ export default function ServicesClient({
         ))}
 
         {items.length === 0 && (
-          <p className="text-white/60">Nu există servicii.</p>
+          <p className="text-white/60 text-center py-6">
+            Nu există servicii.
+          </p>
         )}
+
       </div>
 
       {/* ADD */}
@@ -139,7 +153,10 @@ export default function ServicesClient({
           onClose={() => setOpenAdd(false)}
           onCreated={(newService: any) => {
             setOpenAdd(false);
-            setItems((prev) => [...prev, newService]);
+
+            const service = newService.service || newService;
+
+            setItems((prev) => [...prev, service]);
           }}
         />
       )}
@@ -152,12 +169,18 @@ export default function ServicesClient({
           onClose={() => setEditingService(null)}
           onCreated={(updated: any) => {
             setEditingService(null);
+
+            const service = updated.service || updated;
+
             setItems((prev) =>
-              prev.map((s) => (s.id === updated.id ? updated : s))
+              prev.map((s) =>
+                s.id === service.id ? service : s
+              )
             );
           }}
         />
       )}
+
     </div>
   );
 }

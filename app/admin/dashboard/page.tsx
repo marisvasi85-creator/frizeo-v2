@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import { getDashboardStatus } from "@/lib/onboarding/getDashboardStatus";
-import BookingLinkCard from "./BookingLinkCard"; // 🔥 IMPORTANT
+import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";import BookingLinkCard from "./BookingLinkCard"; // 🔥 IMPORTANT
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient();

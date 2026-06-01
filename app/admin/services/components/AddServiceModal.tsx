@@ -11,8 +11,8 @@ export default function AddServiceModal({
   const [name, setName] = useState(service?.display_name || "");
   const [price, setPrice] = useState(service?.price ?? "");
   const [duration, setDuration] = useState<string>(
-  service?.duration?.toString() || ""
-);
+    service?.duration?.toString() || ""
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
@@ -29,10 +29,18 @@ export default function AddServiceModal({
 
     const res = await fetch(url, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         id: service?.id,
         barber_id: barberId,
+
+        // 🔥 FIX IMPORTANT
+        name: name.toLowerCase().replace(/\s+/g, "_"), // slug intern
+
         display_name: name,
+
         price: price ? Number(price) : null,
         duration: Number(duration),
       }),
@@ -65,20 +73,20 @@ export default function AddServiceModal({
         />
 
         <select
-  value={duration}
-  onChange={(e) => setDuration(e.target.value)}
-  className="w-full bg-zinc-800 p-3 rounded text-white"
->
-  <option value="">Alege durata</option>
+          value={duration}
+          onChange={(e) => setDuration(e.target.value)}
+          className="w-full bg-zinc-800 p-3 rounded text-white"
+        >
+          <option value="">Alege durata</option>
 
-  <option value="15">15 min</option>
-  <option value="30">30 min</option>
-  <option value="45">45 min</option>
-  <option value="60">60 min</option>
-  <option value="75">75 min</option>
-  <option value="90">90 min</option>
-  <option value="120">120 min</option>
-</select>
+          <option value="15">15 min</option>
+          <option value="30">30 min</option>
+          <option value="45">45 min</option>
+          <option value="60">60 min</option>
+          <option value="75">75 min</option>
+          <option value="90">90 min</option>
+          <option value="120">120 min</option>
+        </select>
 
         <input
           placeholder="Preț (opțional)"

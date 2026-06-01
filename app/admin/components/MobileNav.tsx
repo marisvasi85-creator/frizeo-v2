@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/admin/dashboard", icon: "🏠" },
-  { href: "/admin/calendar", icon: "📅" },
-  { href: "/admin/bookings", icon: "📋" },
+  { href: "/admin/bookings", icon: "📅" },
   { href: "/admin/services", icon: "✂️" },
   { href: "/admin/settings", icon: "⚙️" },
+  { href: "/admin/billing", icon: "💎" },
 ];
 
 export default function MobileNav() {
@@ -23,7 +23,7 @@ export default function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`text-xl ${
+            className={`text-xl transition ${
               active ? "text-white" : "text-white/40"
             }`}
           >

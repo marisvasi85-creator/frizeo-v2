@@ -1,6 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export async function getDashboardStatus(userId: string) {
+export default async function getDashboardStatus(userId: string) {
   const { data: barber } = await supabaseAdmin
     .from("barbers")
     .select("id")
@@ -31,5 +31,6 @@ export async function getDashboardStatus(userId: string) {
     return { step: "schedule", completed: false };
   }
 
-  return { completed: true };
-}   
+  // 🔥 IMPORTANT: step final
+  return { step: "done", completed: true };
+}

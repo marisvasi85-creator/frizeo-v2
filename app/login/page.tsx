@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,19 +39,31 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    setLoading(false);
+      const data = await res.json();
 
-    if (error) {
-      triggerError("Date incorecte");
-      return;
+      if (!res.ok || data.error) {
+        triggerError(data.error || "Date incorecte");
+        setLoading(false);
+        return;
+      }
+
+      // 🔥 REDIRECT CORECT
+      window.location.href = "/admin/dashboard";
+
+    } catch (err) {
+      triggerError("Eroare server");
     }
 
-    window.location.href = "/admin/dashboard";
+    setLoading(false);
   }
 
   async function forgotPassword() {
@@ -62,11 +72,17 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const res = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
     });
 
-    if (error) {
+    const data = await res.json();
+
+    if (data.error) {
       triggerError("Eroare la resetare");
       return;
     }

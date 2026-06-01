@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ALLOWED_DURATIONS = [15, 30, 45, 60, 75, 90, 120];
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
     const body = await req.json();
 
     const {
@@ -33,17 +32,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data, error } = await supabase
+    // 🔥 FOLOSEȘTI ADMIN → fără RLS
+    const { data, error } = await supabaseAdmin
       .from("barber_services")
       .insert({
         barber_id,
+        tenant_id,
         name,
         display_name: display_name || name,
         duration,
         price: price || null,
         show_price: show_price ?? true,
         featured: featured ?? false,
-        tenant_id,
+        active: true,
       })
       .select()
       .single();

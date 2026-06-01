@@ -6,18 +6,19 @@ export async function POST(req: Request) {
   try {
     const { email, password, fullName, phone } = await req.json();
 
-    // =========================
-    // 🔥 CREATE USER (FĂRĂ CONFIRM EMAIL)
-    // =========================
-    const { data, error } =
-      await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        email_confirm: true, // 🔥 bypass confirm
-      });
+    const supabase = await createSupabaseServerClient();
+
+    // 🔥 SIGNUP + LOGIN AUTOMAT (IMPORTANT)
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
     if (error || !data.user) {
-      return NextResponse.json({ error: error?.message }, { status: 400 });
+      return NextResponse.json(
+        { error: error?.message || "Signup failed" },
+        { status: 400 }
+      );
     }
 
     const userId = data.user.id;
@@ -69,29 +70,16 @@ export async function POST(req: Request) {
       tenant_id: tenant.id,
     });
 
-    // =========================
-    // 🔥 AUTO LOGIN (IMPORTANT)
-    // =========================
-    const supabase = await createSupabaseServerClient();
-
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (loginError) {
-      return NextResponse.json(
-        { error: "User creat dar login a eșuat" },
-        { status: 500 }
-      );
-    }
-
+    // 🔥 REDIRECT FINAL
     return NextResponse.json({
       success: true,
-      redirect: "/admin",
+      redirect: "/admin/dashboard",
     });
 
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json(
+      { error: e.message },
+      { status: 500 }
+    );
   }
 }

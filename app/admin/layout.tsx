@@ -2,20 +2,30 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
-
-export default async function AdminLayout({
+import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const supabase = await createSupabaseServerClient();
 
+  // 🔥 USER
   const {
     data: { user },
+    error,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  // 🔴 NU e logat
+  if (!user || error) {
     redirect("/login");
+  }
+
+  // 🔥 STATUS DASHBOARD (IMPORTANT: cu user.id)
+  const status = await getDashboardStatus(user.id);
+
+  // 🔴 NU a terminat onboarding
+  if (!status.completed) {
+    redirect("/admin/onboarding");
   }
 
   return (

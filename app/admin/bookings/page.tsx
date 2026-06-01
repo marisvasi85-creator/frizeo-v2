@@ -1,179 +1,156 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import AdminCalendar from "./components/AdminCalendar";
 import EditBookingModal from "./components/EditBookingModal";
 
-type Booking = {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  client_name: string;
-  client_phone: string;
-  cancel_token: string;
-  reschedule_token: string;
-  barber_id: string;
-  barber_service_id: string;
-  barber_services?: {
-    display_name: string;
-    duration?: number;
-  };
-};
+function toISO(date: Date) {
+  return date.toISOString().split("T")[0];
+}
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [editing, setEditing] = useState<Booking | null>(null);
+  const today = toISO(new Date());
 
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+
+  // 🔥 LOAD BOOKINGS
   async function loadBookings() {
     const res = await fetch("/api/bookings/list");
     const data = await res.json();
     setBookings(data.bookings || []);
   }
 
+  // 🔥 LOAD AVAILABILITY
+  async function loadAvailability() {
+    const from = today;
+    const to = new Date();
+    to.setMonth(to.getMonth() + 1);
+
+    const res = await fetch(
+      `/api/availability?barberId=me&from=${from}&to=${to
+        .toISOString()
+        .split("T")[0]}`
+    );
+
+    const data = await res.json();
+    setAvailableDays(data.availableDays || []);
+  }
+
   useEffect(() => {
     loadBookings();
+    loadAvailability();
   }, []);
 
-  // 🔥 GROUP BY DATE
-  const grouped: Record<string, Booking[]> = {};
-
-  bookings.forEach((b) => {
-    if (!grouped[b.date]) grouped[b.date] = [];
-    grouped[b.date].push(b);
-  });
-
-  const today = new Date().toISOString().split("T")[0];
+  // 🔥 FILTRARE
+  const dayBookings = bookings
+    .filter((b) => b.date === selectedDate)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
   return (
-    <div className="p-6 space-y-6 text-white">
+    <div className="p-6 text-white">
 
-      <h1 className="text-2xl font-semibold">Programări</h1>
+      <h1 className="text-2xl font-semibold mb-6">
+        Programări
+      </h1>
 
-      <div className="space-y-6">
+      <div className="grid md:grid-cols-[320px_1fr] gap-6">
 
-        {Object.entries(grouped)
-          .sort(([a], [b]) => {
-            if (a === today) return -1;
-            if (b === today) return 1;
+        {/* CALENDAR */}
+        <div className="bg-[#0F0F10] p-4 rounded-xl">
+          <AdminCalendar
+            value={selectedDate}
+            onChange={setSelectedDate}
+            availableDays={availableDays}
+          />
+        </div>
 
-            if (a > today && b > today) return a.localeCompare(b);
-            if (a < today && b < today) return b.localeCompare(a);
+        {/* LISTA */}
+        <div className="space-y-4">
 
-            if (a > today && b < today) return -1;
-            if (a < today && b > today) return 1;
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">
+              {new Date(selectedDate).toLocaleDateString("ro-RO", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </h2>
 
-            return 0;
-          })
-          .map(([date, bookings]) => {
-            const isToday = date === today;
-            const isPast = date < today;
+            <a
+              href="/admin/bookings/new"
+              className="bg-white text-black px-4 py-2 rounded"
+            >
+              + Adaugă
+            </a>
+          </div>
 
-            return (
-              <div key={date} className="space-y-3">
+          {dayBookings.length === 0 && (
+            <div className="text-white/60">
+              Nu există programări.
+            </div>
+          )}
 
-                {/* HEADER ZI */}
-                <div
-                  className={`flex justify-between items-center p-3 rounded ${
-                    isToday
-                      ? "bg-blue-600 text-white border border-blue-400 shadow-lg"
-                      : isPast
-                      ? "bg-zinc-800 opacity-50"
-                      : "bg-zinc-800"
-                  }`}
-                >
-                  <div className="font-semibold">
-                    {new Date(date).toLocaleDateString("ro-RO", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                    })}
-                  </div>
-
-                  <div
-                    className={`text-sm px-2 py-1 rounded ${
-                      isToday
-                        ? "bg-blue-500 text-white"
-                        : isPast
-                        ? "bg-gray-600 text-gray-300"
-                        : "bg-white text-black"
-                    }`}
-                  >
-                    {bookings.length}
-                  </div>
+          {dayBookings.map((b) => (
+            <div
+              key={b.id}
+              className="bg-zinc-900 p-4 rounded-xl flex justify-between items-center"
+            >
+              <div>
+                <div className="font-semibold">
+                  {b.start_time.slice(0, 5)} -{" "}
+                  {b.end_time.slice(0, 5)}
                 </div>
 
-                {/* BOOKINGS */}
-                {bookings
-                  .sort((a, b) =>
-                    a.start_time.localeCompare(b.start_time)
-                  )
-                  .map((b) => (
-                    <div
-                      key={b.id}
-                      className="bg-zinc-900 p-4 rounded-xl flex justify-between items-center"
-                    >
-                      {/* INFO */}
-                      <div>
-                        <div className="font-semibold">
-                          {b.start_time.slice(0, 5)} -{" "}
-                          {b.end_time.slice(0, 5)}
-                        </div>
+                <div className="text-sm text-gray-300">
+                  {b.client_name}
+                </div>
 
-                        <div className="text-sm text-gray-300">
-                          {b.client_name}
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          {b.client_phone}
-                        </div>
-
-                        <div className="text-xs text-gray-400">
-                          {b.barber_services?.display_name}
-                        </div>
-                      </div>
-
-                      {/* ACTIONS */}
-                      <div className="flex gap-2">
-
-                        {/* EDIT */}
-                        <button
-                          onClick={() => setEditing(b)}
-                          className="px-3 py-1 bg-white text-black rounded text-sm"
-                        >
-                          Editează
-                        </button>
-
-                        {/* ANULARE */}
-                        <button
-                          onClick={async () => {
-                            if (confirm("Sigur vrei să anulezi programarea?")) {
-                              await fetch("/api/bookings/cancel", {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({
-                                  token: b.cancel_token,
-                                }),
-                              });
-
-                              loadBookings();
-                            }
-                          }}
-                          className="px-3 py-1 bg-red-500 text-white rounded text-sm"
-                        >
-                          Anulează
-                        </button>
-
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-xs text-gray-500">
+                  {b.client_phone}
+                </div>
               </div>
-            );
-          })}
+
+              <div className="flex gap-2">
+
+                <button
+                  onClick={() => setEditing(b)}
+                  className="px-3 py-1 bg-white text-black rounded text-sm"
+                >
+                  Edit
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (confirm("Sigur?")) {
+                      await fetch("/api/bookings/cancel", {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({
+                          token: b.cancel_token,
+                        }),
+                      });
+
+                      loadBookings();
+                    }
+                  }}
+                  className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+                >
+                  Anulează
+                </button>
+
+              </div>
+            </div>
+          ))}
+
+        </div>
       </div>
 
-      {/* 🔥 EDIT MODAL */}
+      {/* EDIT */}
       {editing && (
         <EditBookingModal
           booking={editing}
