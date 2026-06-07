@@ -7,7 +7,7 @@ const navItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
 
   { href: "/admin/bookings", label: "Programări", icon: "📅" },
-  { href: "/admin/bookings/new", label: "Adaugă programare", icon: "➕" },
+  
 
   { href: "/admin/services", label: "Servicii", icon: "✂️" },
 

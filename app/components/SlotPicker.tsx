@@ -1,23 +1,29 @@
+"use client";
+
+type Slot = {
+  time: string;
+  occupied: boolean;
+  booking?: any;
+};
+
 export default function SlotPicker({
   slots,
   selected,
   onSelect,
+  onBookingClick,
   loading = false,
 }: {
-  slots: string[];
+  slots: Slot[];
   selected: string | null;
   onSelect: (slot: string) => void;
+  onBookingClick?: (booking: any) => void;
   loading?: boolean;
 }) {
-  // 🔥 SKELETON
   if (loading) {
     return (
       <div className="grid grid-cols-3 gap-3 mt-4">
         {Array.from({ length: 9 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-10 rounded-xl bg-gray-200 animate-pulse"
-          />
+          <div key={i} className="h-10 bg-zinc-700 rounded animate-pulse" />
         ))}
       </div>
     );
@@ -25,24 +31,36 @@ export default function SlotPicker({
 
   return (
     <div className="grid grid-cols-3 gap-3 mt-4">
-      {slots.map((slot, index) => {
-        const isSelected = selected === slot;
+      {slots.map((s) => {
+        const isSelected = selected === s.time;
+
+        if (s.occupied) {
+          return (
+            <button
+              key={`occupied-${s.time}-${s.booking?.id}`}
+              onClick={() => onBookingClick?.(s.booking)}
+              className="p-3 rounded-xl bg-red-500 text-white text-left"
+            >
+              <div className="font-semibold">{s.time}</div>
+              <div className="text-xs">{s.booking?.client_name}</div>
+            </button>
+          );
+        }
 
         return (
           <button
-            key={`${slot}-${index}`}
-            onClick={() => onSelect(slot)}
+            key={`free-${s.time}`}
+            onClick={() => onSelect(s.time)}
             className={`
-              p-3 rounded-xl border text-sm font-medium transition
-              
+              p-3 rounded-xl border
               ${
                 isSelected
-                  ? "bg-black text-white border-black"
-                  : "bg-white text-black border-gray-300 hover:bg-gray-100 dark:bg-zinc-800 dark:text-white dark:border-zinc-700 dark:hover:bg-zinc-700"
+                  ? "bg-white text-black"
+                  : "bg-zinc-800 text-white border-zinc-700"
               }
             `}
           >
-            {slot}
+            {s.time}
           </button>
         );
       })}

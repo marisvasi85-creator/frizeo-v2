@@ -10,9 +10,13 @@ export async function GET(req: Request) {
     const barberId = searchParams.get("barberId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-
+console.log("🔥 AVAIL PARAMS:", { barberId, from, to });
     if (!barberId || !from || !to) {
-      return NextResponse.json({ availableDays: [] }, { status: 400 });
+      return NextResponse.json({
+        availableDays: [],
+        weeklySchedule: [],
+        overrides: [],
+      });
     }
 
     // 🔥 WEEKLY
@@ -20,20 +24,12 @@ export async function GET(req: Request) {
       .from("barber_weekly_schedule")
       .select("day_of_week, is_working")
       .eq("barber_id", barberId);
-
-    const weeklyMap = new Map<number, boolean>(
-      weekly?.map((w) => [w.day_of_week, w.is_working]) ?? []
-    );
-
+console.log("🔥 WEEKLY:", weekly);
     // 🔥 OVERRIDES
     const { data: overrides } = await supabase
       .from("barber_day_overrides")
       .select("date, is_closed")
       .eq("barber_id", barberId);
-
-    const overrideMap = new Map<string, boolean>(
-      overrides?.map((o) => [o.date, o.is_closed]) ?? []
-    );
 
     // 🔥 BOOKINGS
     const { data: bookings } = await supabase
@@ -41,7 +37,7 @@ export async function GET(req: Request) {
       .select("date, status")
       .eq("barber_id", barberId)
       .in("status", ["confirmed", "pending"]);
-
+console.log("🔥 BOOKINGS:", bookings);
     const bookingsMap = new Map<string, number>();
 
     bookings?.forEach((b) => {
@@ -49,7 +45,6 @@ export async function GET(req: Request) {
       bookingsMap.set(b.date, count + 1);
     });
 
-    // 🔥 BUILD
     const availableDays: string[] = [];
 
     let current = new Date(from + "T00:00:00");
@@ -61,12 +56,14 @@ export async function GET(req: Request) {
       const jsDay = current.getDay();
       const day = jsDay === 0 ? 7 : jsDay;
 
-      const isWorking = weeklyMap.get(day) === true;
-      const isClosed = overrideMap.get(dateStr) === true;
+      const isWorking =
+        weekly?.find((w) => w.day_of_week === day)?.is_working === true;
+
+      const isClosed =
+        overrides?.find((o) => o.date === dateStr)?.is_closed === true;
 
       const bookingsCount = bookingsMap.get(dateStr) || 0;
 
-      // 🔥 LOGICĂ SIMPLĂ ȘI RAPIDĂ
       const hasSlots =
         isWorking && !isClosed && bookingsCount < 20;
 
@@ -77,10 +74,18 @@ export async function GET(req: Request) {
       current = addDays(current, 1);
     }
 
-    return NextResponse.json({ availableDays });
+    return NextResponse.json({
+      availableDays,
+      weeklySchedule: weekly ?? [],
+      overrides: overrides ?? [],
+    });
 
   } catch (err) {
     console.error("AVAILABILITY ERROR:", err);
-    return NextResponse.json({ availableDays: [] }, { status: 500 });
+    return NextResponse.json({
+      availableDays: [],
+      weeklySchedule: [],
+      overrides: [],
+    });
   }
 }

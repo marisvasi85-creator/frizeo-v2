@@ -1,6 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Calendar from "@/app/components/Calendar";
+import SlotPicker from "@/app/components/SlotPicker";
+
+type Slot = {
+  time: string;
+  occupied: boolean;
+};
 
 export default function AddBookingClient({
   barberId,
@@ -10,136 +17,94 @@ export default function AddBookingClient({
   services: any[];
 }) {
   const [serviceId, setServiceId] = useState("");
-  const [date, setDate] = useState("");
-  const [slot, setSlot] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [date, setDate] = useState<string | null>(null);
+  const [slot, setSlot] = useState<string | null>(null);
 
-  const [slots, setSlots] = useState<string[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
-  // 🔥 LOAD SLOTS
-  async function loadSlots(dateValue: string, serviceValue: string) {
-    if (!dateValue || !serviceValue) return;
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
+  const [overrides, setOverrides] = useState<any[]>([]);
 
-    setLoadingSlots(true);
+  useEffect(() => {
+    async function loadAvailability() {
+      const today = new Date();
+      const from = today.toISOString().slice(0, 10);
 
-    const res = await fetch(
-      `/api/slots?barberId=${barberId}&date=${dateValue}&serviceId=${serviceValue}`
-    );
+      const next = new Date();
+      next.setDate(next.getDate() + 30);
+      const to = next.toISOString().slice(0, 10);
 
-    const data = await res.json();
-    setSlots(data.slots || []);
-    setLoadingSlots(false);
-  }
+      const res = await fetch(
+        `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
+      );
 
-  // 🔥 CREATE BOOKING
-  async function createBooking() {
-    if (!serviceId || !date || !slot || !name || !phone) {
-      alert("Completează toate câmpurile");
-      return;
+      const data = await res.json();
+
+      setAvailableDays(data.availableDays || []);
+      setWeeklySchedule(data.weeklySchedule || []);
+      setOverrides(data.overrides || []);
     }
 
-    const res = await fetch("/api/bookings/create", {
-      method: "POST",
-      body: JSON.stringify({
-        barberId,
-        serviceId,
-        booking_date: date,
-        start_time: slot,
-        client_name: name,
-        client_phone: phone,
-      }),
-    });
+    loadAvailability();
+  }, [barberId]);
 
-    const data = await res.json();
+  useEffect(() => {
+    if (!date || !serviceId) return;
 
-    if (!res.ok) {
-      alert(data.error || "Eroare");
-      return;
+    async function loadSlots() {
+      setLoadingSlots(true);
+
+      const res = await fetch(
+        `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
+      );
+
+      const data = await res.json();
+
+      const freeSlots = (data.slots || []).filter((s: any) => !s.occupied);
+
+      setSlots(freeSlots);
+      setSlot(null);
+
+      setLoadingSlots(false);
     }
 
-    alert("Programare creată!");
-    window.location.href = "/admin/bookings";
-  }
+    loadSlots();
+  }, [date, serviceId, barberId]);
 
   return (
-    <div className="max-w-md space-y-4">
+    <div className="max-w-xl mx-auto p-6 space-y-6">
 
-      <h1 className="text-xl font-semibold">
-        Adaugă programare
-      </h1>
-
-      {/* SERVICE */}
       <select
         value={serviceId}
-        onChange={(e) => {
-          setServiceId(e.target.value);
-          loadSlots(date, e.target.value);
-        }}
+        onChange={(e) => setServiceId(e.target.value)}
         className="w-full bg-zinc-800 p-3 rounded text-white"
       >
         <option value="">Alege serviciu</option>
         {services.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.display_name} ({s.duration} min)
+            {s.display_name}
           </option>
         ))}
       </select>
 
-      {/* DATE */}
-      <input
-        type="date"
+      <Calendar
         value={date}
-        onChange={(e) => {
-          setDate(e.target.value);
-          loadSlots(e.target.value, serviceId);
-        }}
-        className="w-full bg-zinc-800 p-3 rounded text-white"
+        onChange={setDate}
+        weeklySchedule={weeklySchedule}
+        overrides={overrides}
+        availableDays={availableDays}
       />
 
-      {/* SLOTS */}
-      <div className="grid grid-cols-3 gap-2">
-        {loadingSlots && <p>Se încarcă...</p>}
-
-        {slots.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSlot(s)}
-            className={`p-2 rounded ${
-              slot === s
-                ? "bg-white text-black"
-                : "bg-zinc-800 text-white"
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
-
-      {/* CLIENT */}
-      <input
-        placeholder="Nume client"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full bg-zinc-800 p-3 rounded text-white"
-      />
-
-      <input
-        placeholder="Telefon"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="w-full bg-zinc-800 p-3 rounded text-white"
-      />
-
-      {/* SUBMIT */}
-      <button
-        onClick={createBooking}
-        className="w-full bg-white text-black py-3 rounded"
-      >
-        Creează programare
-      </button>
-
+      {date && serviceId && (
+        <SlotPicker
+          slots={slots}
+          selected={slot}
+          onSelect={setSlot}
+          loading={loadingSlots}
+        />
+      )}
     </div>
   );
 }

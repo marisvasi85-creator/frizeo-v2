@@ -2,17 +2,44 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type Slot = {
+  time: string;
+  occupied: boolean;
+  booking?: any;
+};
+
+type Booking = {
+  id: string;
+  barber_id: string;
+  barber_service_id: string;
+  client_name: string;
+  client_phone: string;
+  client_email?: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  reschedule_token: string;
+  barber_services?: {
+    duration: number;
+  };
+};
+
 export default function EditBookingModal({
   booking,
   onClose,
   onSaved,
-}: any) {
+}: {
+  booking: Booking;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [name, setName] = useState(booking.client_name);
   const [phone, setPhone] = useState(booking.client_phone || "");
   const [email, setEmail] = useState(booking.client_email || "");
 
   const [date, setDate] = useState(booking.date);
-  const [slots, setSlots] = useState<string[]>([]);
+
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -20,7 +47,9 @@ export default function EditBookingModal({
 
   const slotsRef = useRef<HTMLDivElement>(null);
 
-  // 🔥 LOAD SLOTS
+  // =========================
+  // 🔥 LOAD SLOTS (EXCLUDE CURENT)
+  // =========================
   useEffect(() => {
     if (!date) return;
 
@@ -37,7 +66,9 @@ export default function EditBookingModal({
       });
   }, [date, booking]);
 
+  // =========================
   // 🔥 SAVE (REPROGRAMARE + UPDATE CLIENT)
+  // =========================
   async function handleSave() {
     if (!selectedSlot) {
       setError("Alege un interval");
@@ -61,7 +92,7 @@ export default function EditBookingModal({
         new_start_time: selectedSlot,
         new_end_time: endTime,
 
-        // 🔥 NU MAI PIERDEM DATELE CLIENTULUI
+        // 🔥 UPDATE CLIENT
         client_name: name,
         client_phone: phone,
         client_email: email,
@@ -115,7 +146,7 @@ export default function EditBookingModal({
           className="w-full bg-zinc-800 p-3 rounded text-white"
         />
 
-        {/* EMAIL 🔥 */}
+        {/* EMAIL */}
         <input
           placeholder="Email"
           value={email}
@@ -136,19 +167,39 @@ export default function EditBookingModal({
 
         {/* SLOTURI */}
         <div ref={slotsRef} className="grid grid-cols-3 gap-2">
-          {slots.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSelectedSlot(s)}
-              className={`py-2 rounded text-sm ${
-                selectedSlot === s
-                  ? "bg-blue-500 text-white"
-                  : "bg-zinc-800 text-white hover:bg-white hover:text-black"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+
+          {slots.map((s) => {
+            const isSelected = selectedSlot === s.time;
+
+            return (
+              <button
+                key={s.time}
+                disabled={s.occupied}
+                onClick={() => !s.occupied && setSelectedSlot(s.time)}
+                className={`py-2 rounded text-sm transition
+                  
+                  ${
+                    s.occupied
+                      ? "bg-red-500 text-white cursor-not-allowed"
+                      : isSelected
+                      ? "bg-blue-500 text-white"
+                      : "bg-zinc-800 text-white hover:bg-white hover:text-black"
+                  }
+                `}
+              >
+                <div className="font-semibold">
+                  {s.time}
+                </div>
+
+                {s.occupied && s.booking && (
+                  <div className="text-xs opacity-80">
+                    {s.booking.client_name}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+
         </div>
 
         {/* ACTIONS */}
@@ -174,6 +225,9 @@ export default function EditBookingModal({
   );
 }
 
+// =========================
+// 🔧 UTILS
+// =========================
 function addMinutes(time: string, minutes: number) {
   const [h, m] = time.split(":").map(Number);
   const d = new Date();

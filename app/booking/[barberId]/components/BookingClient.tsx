@@ -5,6 +5,12 @@ import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 
+type Slot = {
+  time: string;
+  occupied: boolean;
+  booking?: any;
+};
+
 export default function BookingClient({
   barberId,
   barberName,
@@ -18,12 +24,11 @@ export default function BookingClient({
   const [serviceId, setServiceId] = useState<string | null>(null);
 
   const [services, setServices] = useState<any[]>([]);
-  const [slots, setSlots] = useState<string[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
   const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
-
   const [availableDays, setAvailableDays] = useState<string[]>([]);
 
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -32,13 +37,10 @@ export default function BookingClient({
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  const [error, setError] = useState<string | null>(null);
-
-  // 🔥 CACHE SLOTURI (NU AM MODIFICAT LOGICA TA)
-  const slotsCache = useRef<Record<string, string[]>>({});
+  const slotsCache = useRef<Record<string, Slot[]>>({});
 
   // =========================
-  // 🔥 LOAD SERVICES
+  // SERVICES
   // =========================
   useEffect(() => {
     fetch(`/api/services?barberId=${barberId}`)
@@ -47,31 +49,10 @@ export default function BookingClient({
   }, [barberId]);
 
   // =========================
-  // 🔥 LOAD SCHEDULE + OVERRIDES (FIX AICI)
+  // AVAILABILITY
   // =========================
   useEffect(() => {
     const load = async () => {
-      const [sRes, oRes] = await Promise.all([
-        fetch(`/api/barber-weekly-schedule?barberId=${barberId}`),
-        fetch(`/api/barber-overrides?barberId=${barberId}`),
-      ]);
-
-      const sData = await sRes.json();
-      const oData = await oRes.json();
-
-      // 🔥 FIX CRITIC
-      setWeeklySchedule(sData.schedule || sData || []);
-      setOverrides(oData.overrides || oData || []);
-    };
-
-    load();
-  }, [barberId]);
-
-  // =========================
-  // 🔥 LOAD AVAILABILITY
-  // =========================
-  useEffect(() => {
-    const loadAvailability = async () => {
       const today = new Date();
       const from = today.toISOString().slice(0, 10);
 
@@ -86,13 +67,15 @@ export default function BookingClient({
       const data = await res.json();
 
       setAvailableDays(data.availableDays || []);
+      setWeeklySchedule(data.weeklySchedule || []);
+      setOverrides(data.overrides || []);
     };
 
-    loadAvailability();
+    load();
   }, [barberId]);
 
   // =========================
-  // 🔥 LOAD SLOTS (CU CACHE)
+  // SLOTS (SMART)
   // =========================
   useEffect(() => {
     if (!date || !serviceId) return;
@@ -107,36 +90,38 @@ export default function BookingClient({
     setLoadingSlots(true);
 
     fetch(
-      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
+      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}&mode=public`
     )
       .then((r) => r.json())
       .then((d) => {
-        const result = d.slots || [];
+        const result: Slot[] = d.slots || [];
 
-        slotsCache.current[cacheKey] = result;
+        // 🔥 PUBLIC → DOAR LIBERE
+        const free = result.filter((s) => !s.occupied);
 
-        setSlots(result);
+        slotsCache.current[cacheKey] = free;
+
+        setSlots(free);
         setSelectedSlot(null);
       })
       .finally(() => setLoadingSlots(false));
   }, [date, serviceId, barberId]);
 
   // =========================
-  // 🔥 CREATE BOOKING
+  // CREATE BOOKING
   // =========================
   const createBooking = async () => {
-    if (!selectedSlot || !date || !serviceId) {
-      setError("Completează toate datele");
-      return;
-    }
+    if (!selectedSlot || !date || !serviceId) return;
 
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
-    const [h, m] = selectedSlot.split(":").map(Number);
-    const d = new Date();
+    const [y, m, dDay] = date.split("-").map(Number);
+    const [h, min] = selectedSlot.split(":").map(Number);
+
+    const d = new Date(y, m - 1, dDay);
     d.setHours(h);
-    d.setMinutes(m + duration);
+    d.setMinutes(min + duration);
 
     const endTime = d.toTimeString().slice(0, 5);
 
@@ -168,9 +153,6 @@ export default function BookingClient({
     router.push(`/booking/confirmed/${createData.bookingId}`);
   };
 
-  // =========================
-  // UI
-  // =========================
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
 
@@ -178,6 +160,7 @@ export default function BookingClient({
         <h1 className="text-3xl font-semibold">
           Programează-te
         </h1>
+
         <p className="text-gray-500 mt-1">
           la <span className="font-medium text-black">{barberName}</span>
         </p>
@@ -198,30 +181,15 @@ export default function BookingClient({
               key={s.id}
               onClick={() => setServiceId(s.id)}
               className={`
-                w-full p-4 rounded-xl border transition text-left
-                ${serviceId === s.id
-                  ? "bg-black text-white"
-                  : "bg-white hover:bg-gray-50"}
+                w-full p-4 rounded-xl border
+                ${
+                  serviceId === s.id
+                    ? "bg-black text-white"
+                    : "bg-white hover:bg-gray-50"
+                }
               `}
             >
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">
-                    {s.display_name || s.name}
-                  </div>
-                  {s.duration && (
-                    <div className="text-xs text-gray-400">
-                      {s.duration} min
-                    </div>
-                  )}
-                </div>
-
-                {s.price && (
-                  <div className="text-sm font-medium">
-                    {s.price} lei
-                  </div>
-                )}
-              </div>
+              {s.display_name} ({s.duration} min)
             </button>
           ))}
         </div>
@@ -238,7 +206,6 @@ export default function BookingClient({
 
       {selectedSlot && (
         <div className="space-y-3">
-
           <input
             placeholder="Nume"
             value={name}
@@ -266,12 +233,6 @@ export default function BookingClient({
           >
             Programează-te
           </button>
-        </div>
-      )}
-
-      {error && (
-        <div className="text-red-500 text-sm">
-          {error}
         </div>
       )}
     </div>
