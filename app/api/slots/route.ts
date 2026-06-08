@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
-  const mode = searchParams.get("mode"); // admin / null
+  const mode = searchParams.get("mode");
 
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
@@ -26,17 +26,13 @@ export async function GET(req: Request) {
 
   const supabase = await createSupabaseServerClient();
 
-  // =========================
   // DATE
-  // =========================
   const [y, m, d] = date.split("-").map(Number);
   const local = new Date(y, m - 1, d);
   const jsDay = local.getDay();
   const day = jsDay === 0 ? 7 : jsDay;
 
-  // =========================
   // SCHEDULE
-  // =========================
   const { data: schedules } = await supabase
     .from("barber_weekly_schedule")
     .select("*");
@@ -62,26 +58,20 @@ export async function GET(req: Request) {
       ? timeToMinutes(schedule.break_end)
       : null;
 
-  // =========================
-  // SERVICE DURATION
-  // =========================
-  let duration = 30;
+  // 🔥 DURATA
+  let duration = 15;
 
-  if (serviceId && serviceId !== "preview") {
+  if (mode !== "admin" && serviceId) {
     const { data: service } = await supabase
       .from("barber_services")
       .select("duration")
       .eq("id", serviceId)
       .single();
 
-    if (!service) return NextResponse.json({ slots: [] });
-
-    duration = service.duration;
+    if (service) duration = service.duration;
   }
 
-  // =========================
   // BOOKINGS
-  // =========================
   const { data: bookings } = await supabase
     .from("bookings")
     .select("*")
@@ -89,78 +79,73 @@ export async function GET(req: Request) {
     .eq("date", date)
     .in("status", ["confirmed", "pending"]);
 
-  // =========================
-  // SLOT GENERATOR (CORE FIX)
-  // =========================
   function generateSlots(startMin: number, endMin: number) {
-    const arr: any[] = [];
+  const arr: any[] = [];
 
-    // 🔥 diferență admin vs public
-    const step = mode === "admin" ? 15 : duration;
+  // 🔥 ADMIN vs PUBLIC
+  const step = mode === "admin" ? 15 : duration;
 
-    for (let t = startMin; t + duration <= endMin; t += step) {
-      const slotStart = t;
-      const slotEnd = t + duration;
+  for (let t = startMin; t + duration <= endMin; t += step) {
+    const slotStart = t;
+    const slotEnd = t + duration;
 
-      const booking = bookings?.find((b) => {
-        const bStart = timeToMinutes(b.start_time);
-        const bEnd = timeToMinutes(b.end_time);
-        return slotStart < bEnd && slotEnd > bStart;
-      });
+    // 🔴 verific booking
+    const booking = bookings?.find((b) => {
+      const bStart = timeToMinutes(b.start_time);
+      const bEnd = timeToMinutes(b.end_time);
+      return slotStart < bEnd && slotEnd > bStart;
+    });
 
-      if (booking) {
-        const isStart =
-          timeToMinutes(booking.start_time) === slotStart;
+    if (booking) {
+      const isStart =
+        timeToMinutes(booking.start_time) === slotStart;
 
-        if (isStart) {
-          arr.push({
-            type: "booking",
-            time: booking.start_time.slice(0, 5),
-            booking,
-          });
-        } else if (mode === "admin") {
-          // 🔥 IMPORTANT: păstrăm sloturile în admin
-          arr.push({
-            type: "free",
-            time: minutesToTime(t),
-          });
-        }
-
-        continue;
+      // 🔵 ADMIN → arată doar începutul
+      if (mode === "admin" && isStart) {
+        arr.push({
+          type: "booking",
+          time: booking.start_time.slice(0, 5),
+          booking,
+        });
       }
 
-      arr.push({
-        type: "free",
-        time: minutesToTime(t),
-      });
+      // 🟢 PUBLIC → dispare complet
+      continue;
     }
 
-    return arr;
+    // 🟡 PUBLIC → blocăm dacă NU încape (pauză)
+    if (mode !== "admin" && breakStart && breakEnd) {
+      const overlapsBreak =
+        slotStart < breakEnd && slotEnd > breakStart;
+
+      if (overlapsBreak) continue;
+    }
+
+    arr.push({
+      type: "free",
+      time: minutesToTime(t),
+    });
   }
 
-  // =========================
-  // FINAL STRUCTURE
-  // =========================
+  return arr;
+}
+
   let finalSlots: any[] = [];
 
   if (!breakStart || !breakEnd) {
     finalSlots = generateSlots(start, end);
   } else {
     if (mode === "admin") {
-      // ADMIN → vede pauza
       finalSlots = [
         ...generateSlots(start, breakStart),
-
         {
           type: "break",
           start: minutesToTime(breakStart),
           end: minutesToTime(breakEnd),
         },
-
         ...generateSlots(breakEnd, end),
       ];
     } else {
-      // PUBLIC → elimină pauza complet
       finalSlots = [
         ...generateSlots(start, breakStart),
         ...generateSlots(breakEnd, end),

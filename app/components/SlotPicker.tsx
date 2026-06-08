@@ -30,11 +30,10 @@ export default function SlotPicker({
 
   slots.forEach((slot) => {
     if (slot.type === "break") {
-      if (currentRow.length > 0) {
+      if (currentRow.length) {
         rows.push([...currentRow]);
         currentRow = [];
       }
-
       rows.push(slot);
       return;
     }
@@ -47,14 +46,11 @@ export default function SlotPicker({
     }
   });
 
-  if (currentRow.length > 0) {
-    rows.push([...currentRow]);
-  }
+  if (currentRow.length) rows.push([...currentRow]);
 
   return (
     <div className="space-y-3 mt-4">
       {rows.map((row, i) => {
-
         if (!Array.isArray(row) && row.type === "break") {
           return (
             <div
@@ -72,32 +68,39 @@ export default function SlotPicker({
         return (
           <div key={i} className="grid grid-cols-3 gap-3">
             {row.map((s: any) => {
-
               if (s.type === "booking") {
+  return (
+    <button
+      key={`booking-${s.time}`}
+      onClick={() => onBookingClick?.(s.booking)}
+      className="p-3 rounded-xl bg-red-500 text-white text-left"
+    >
+      <div className="font-semibold">{s.time}</div>
+      <div className="text-xs">{s.booking?.client_name}</div>
+    </button>
+  );
+}
+
+              if (s.type === "blocked") {
                 return (
-                  <button
-                    key={`booking-${s.time}-${s.booking?.id}`}
-                    onClick={() => onBookingClick?.(s.booking)}
-                    className="p-3 rounded-xl bg-red-500 text-white text-left"
+                  <div
+                    key={s.time}
+                    className="p-3 rounded-xl bg-zinc-700 opacity-40"
                   >
-                    <div className="font-semibold">{s.time}</div>
-                    <div className="text-xs">{s.booking?.client_name}</div>
-                  </button>
+                    {s.time}
+                  </div>
                 );
               }
 
               return (
                 <button
-                  key={`free-${s.time}`}
+                  key={s.time}
                   onClick={() => onSelect(s.time)}
-                  className={`
-                    p-3 rounded-xl border
-                    ${
-                      selected === s.time
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 text-white border-zinc-700"
-                    }
-                  `}
+                  className={`p-3 rounded-xl border ${
+                    selected === s.time
+                      ? "bg-white text-black"
+                      : "bg-zinc-800 text-white border-zinc-700"
+                  }`}
                 >
                   {s.time}
                 </button>
