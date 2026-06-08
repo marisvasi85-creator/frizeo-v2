@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { redirect } from "next/navigation";
-import AdminCalendarClient from "./AdminCalendarClient";
+import DayCalendar from "../dashboard/barber/components/DayCalendar";
 
 export default async function CalendarPage() {
   const supabase = await createSupabaseServerClient();
@@ -17,6 +17,12 @@ export default async function CalendarPage() {
   if (!barber) redirect("/login");
 
   return (
-    <AdminCalendarClient barberId={barber.id} />
+    <div className="p-6">
+      <h1 className="text-xl font-semibold text-white mb-4">
+        Calendar
+      </h1>
+
+      <DayCalendar barberId={barber.id} />
+    </div>
   );
 }
