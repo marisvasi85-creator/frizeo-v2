@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import SlotPicker from "@/app/components/SlotPicker";
 import Calendar from "@/app/components/Calendar";
 import RescheduleInfo from "./RescheduleInfo";
+import { Slot } from "@/types/slots"; // 🔥 IMPORTANT
 
 export default function RescheduleClient({ booking, token }: any) {
   const router = useRouter();
 
   const [date, setDate] = useState(booking.date);
-  const [slots, setSlots] = useState<string[]>([]);
+  const [slots, setSlots] = useState<Slot[]>([]); // 🔥 FIX
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
 
   const slotsRef = useRef<HTMLDivElement>(null);
 
-  // 🔥 LOAD SERVICE CORECT
+  // =========================
+  // 🔥 LOAD SERVICE
+  // =========================
   useEffect(() => {
     fetch(`/api/services?barberId=${booking.barber_id}`)
       .then((r) => r.json())
@@ -29,25 +32,60 @@ export default function RescheduleClient({ booking, token }: any) {
       });
   }, [booking]);
 
-  // 🔥 LOAD SLOTS
+  // =========================
+  // 🔥 LOAD SLOTS (CORE FIX)
+  // =========================
   useEffect(() => {
-  if (!date) return;
+    if (!date) return;
 
-  fetch(
-    `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&excludeBookingId=${booking.id}`
-  )
-    .then((r) => r.json())
-    .then((data) => {
-      console.log("RESCHEDULE SLOTS:", data);
+    fetch(
+      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&mode=public`
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        console.log("RESCHEDULE SLOTS:", data);
 
-      setSlots(Array.isArray(data?.slots) ? data.slots : []);
+        const fixed: Slot[] = (data.slots || [])
+          .map((s: any) => {
+            if (s.type === "booking") {
+              return {
+                type: "booking",
+                time: s.time,
+                end:
+                  s.end ||
+                  s.booking?.end_time?.slice(0, 5) ||
+                  s.time,
+                booking: s.booking,
+              };
+            }
 
-      setTimeout(() => {
-        slotsRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-    });
-}, [date, booking]);
+            if (s.type === "break") {
+              return {
+                type: "break",
+                start: s.start,
+                end: s.end,
+              };
+            }
 
+            return {
+              type: "free",
+              time: s.time,
+            };
+          })
+          // 🔥 PUBLIC → DOAR SLOTURI LIBERE
+          .filter((s: Slot) => s.type === "free");
+
+        setSlots(fixed);
+
+        setTimeout(() => {
+          slotsRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+      });
+  }, [date, booking]);
+
+  // =========================
+  // 🔥 SUBMIT
+  // =========================
   const handleSubmit = async () => {
     if (!selectedSlot) return;
 
@@ -76,7 +114,6 @@ export default function RescheduleClient({ booking, token }: any) {
       return;
     }
 
-    // 🔥 REDIRECT CORECT
     router.push(`/booking/confirmed/${data.bookingId}?rescheduled=1`);
   };
 
