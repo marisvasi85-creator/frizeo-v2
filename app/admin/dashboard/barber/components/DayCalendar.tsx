@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SlotPicker from "@/app/components/SlotPicker";
-
-type Slot =
-  | { type: "free"; time: string }
-  | { type: "booking"; time: string; booking: any }
-  | { type: "break"; start: string; end: string };
+import { Slot } from "@/types/slots"; // 🔥 FOLOSEȘTI TIPUL GLOBAL
 
 export default function DayCalendar({ barberId }: any) {
   const [date, setDate] = useState(
@@ -26,7 +22,35 @@ export default function DayCalendar({ barberId }: any) {
     fetch(`/api/slots?barberId=${barberId}&date=${date}&mode=admin`)
       .then((r) => r.json())
       .then((data) => {
-        setSlots(data.slots || []);
+        // 🔥 FIX CRITIC – NORMALIZARE TIP
+        const fixedSlots: Slot[] = (data.slots || []).map((s: any) => {
+          if (s.type === "booking") {
+            return {
+              type: "booking",
+              time: s.time,
+              end:
+                s.end ||
+                s.booking?.end_time?.slice(0, 5) ||
+                s.time,
+              booking: s.booking,
+            };
+          }
+
+          if (s.type === "break") {
+            return {
+              type: "break",
+              start: s.start,
+              end: s.end,
+            };
+          }
+
+          return {
+            type: "free",
+            time: s.time,
+          };
+        });
+
+        setSlots(fixedSlots);
       })
       .finally(() => setLoading(false));
   }, [barberId, date]);
