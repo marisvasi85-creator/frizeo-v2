@@ -59,9 +59,29 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     setDays(updated);
   }
 
-  async function handleSave() {
+  // 🔥 TOGGLE PAUZĂ (CORECT)
+  function toggleBreak(index: number) {
+    const updated = [...days];
 
-    // 🔥 VALIDARE PROGRAM
+    const enabled = !updated[index].break_enabled;
+    updated[index].break_enabled = enabled;
+
+    if (enabled) {
+      // default values
+      updated[index].break_start =
+        updated[index].break_start || "13:00";
+      updated[index].break_end =
+        updated[index].break_end || "14:00";
+    } else {
+      // 🔥 IMPORTANT: ștergem pauza
+      updated[index].break_start = null;
+      updated[index].break_end = null;
+    }
+
+    setDays(updated);
+  }
+
+  async function handleSave() {
     for (const day of days) {
       if (!day.is_working) continue;
 
@@ -75,7 +95,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
         return;
       }
 
-      // 🔥 VALIDARE PAUZĂ
       if (day.break_enabled) {
         if (!day.break_start || !day.break_end) {
           alert("Completează pauza");
@@ -98,7 +117,6 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     }
 
     setLoading(true);
-
     await saveWeeklySchedule(days);
   }
 
@@ -112,6 +130,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
             className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4"
           >
 
+            {/* HEADER */}
             <div className="flex justify-between items-center">
 
               <span className="font-medium">
@@ -132,8 +151,9 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
               </button>
             </div>
 
+            {/* WORK HOURS */}
             {day.is_working && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex gap-2">
 
                 <input
                   type="time"
@@ -156,22 +176,22 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
               </div>
             )}
 
+            {/* BREAK */}
             {day.is_working && (
               <div className="space-y-2">
 
                 <button
-                  onClick={() =>
-                    updateDay(
-                      index,
-                      "break_enabled",
-                      !day.break_enabled
-                    )
-                  }
-                  className="text-sm text-white/70"
+                  type="button"
+                  onClick={() => toggleBreak(index)}
+                  className={`text-sm ${
+                    day.break_enabled
+                      ? "text-green-400"
+                      : "text-white/60"
+                  }`}
                 >
                   {day.break_enabled
-                    ? "✔ Pauză activă"
-                    : "Adaugă pauză"}
+                    ? "✔ Pauză activă (click pentru eliminare)"
+                    : "+ Adaugă pauză"}
                 </button>
 
                 {day.break_enabled && (
@@ -212,6 +232,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
         ))}
       </div>
 
+      {/* SAVE */}
       <div className="flex justify-end">
         <button
           onClick={handleSave}

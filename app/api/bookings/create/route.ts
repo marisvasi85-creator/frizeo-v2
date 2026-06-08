@@ -4,6 +4,11 @@ import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 
+function timeToMinutes(t: string) {
+  const [h, m] = t.slice(0, 5).split(":").map(Number);
+  return h * 60 + m;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -23,7 +28,66 @@ export async function POST(req: Request) {
       );
     }
 
-    // 🔥 CONFIRM BOOKING
+    // =========================
+    // 🔥 LUĂM BOOKING ÎNAINTE
+    // =========================
+    const { data: booking, error: fetchError } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("id", bookingId)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .single();
+
+    if (fetchError || !booking) {
+      return NextResponse.json(
+        { error: "Slot indisponibil sau expirat" },
+        { status: 400 }
+      );
+    }
+
+    // =========================
+    // 🔥 VALIDARE PAUZĂ (CORECT)
+    // =========================
+    const [y, m, d] = booking.date.split("-").map(Number);
+    const local = new Date(y, m - 1, d);
+
+    const jsDay = local.getDay();
+    const day = jsDay === 0 ? 7 : jsDay;
+
+    const { data: schedules } = await supabase
+      .from("barber_weekly_schedule")
+      .select("*")
+      .eq("barber_id", booking.barber_id);
+
+    const schedule = schedules?.find(
+      (s) => s.day_of_week === day
+    );
+
+    if (
+      schedule?.break_enabled &&
+      schedule.break_start &&
+      schedule.break_end
+    ) {
+      const start = timeToMinutes(booking.start_time);
+      const end = timeToMinutes(booking.end_time);
+
+      const bStart = timeToMinutes(schedule.break_start);
+      const bEnd = timeToMinutes(schedule.break_end);
+
+      const overlap = start < bEnd && end > bStart;
+
+      if (overlap) {
+        return NextResponse.json(
+          { error: "Nu poți programa peste pauză" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // =========================
+    // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE
+    // =========================
     const { data, error } = await supabase
       .from("bookings")
       .update({
@@ -33,21 +97,19 @@ export async function POST(req: Request) {
         client_email: client_email || null,
       })
       .eq("id", bookingId)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
       .select()
       .single();
 
     if (error || !data) {
       return NextResponse.json(
-        { error: "Slot indisponibil sau expirat" },
+        { error: "Eroare confirmare booking" },
         { status: 400 }
       );
     }
 
-    // ============================
+    // =========================
     // 🔥 SERVICE
-    // ============================
+    // =========================
     const { data: service } = await supabase
       .from("barber_services")
       .select("display_name, name")
@@ -57,9 +119,9 @@ export async function POST(req: Request) {
     const serviceName =
       service?.display_name || service?.name || "Serviciu";
 
-    // ============================
+    // =========================
     // 🔥 BARBER
-    // ============================
+    // =========================
     let barberEmail: string | null = null;
     let barberName = "Barber";
 
@@ -82,24 +144,21 @@ export async function POST(req: Request) {
       console.error("BARBER ERROR:", e);
     }
 
-    // ============================
+    // =========================
     // 🔥 FORMAT
-    // ============================
+    // =========================
     const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
     const formattedTime = data.start_time?.slice(0, 5);
 
-    // ============================
-    // 🔥 URL-uri REALE
-    // ============================
     const baseUrl =
       process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
     const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
 
-    // ============================
+    // =========================
     // 📩 EMAIL CLIENT
-    // ============================
+    // =========================
     if (client_email) {
       try {
         await sendEmail({
@@ -120,9 +179,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // ============================
+    // =========================
     // 📩 EMAIL BARBER
-    // ============================
+    // =========================
     if (barberEmail) {
       try {
         await sendEmail({

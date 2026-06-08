@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
   return h * 60 + m;
@@ -17,8 +18,7 @@ export async function GET(req: Request) {
   const barberId = searchParams.get("barberId");
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
-
-  console.log("🔥 PARAMS:", { barberId, date, serviceId });
+  const mode = searchParams.get("mode"); // admin / null
 
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
@@ -26,41 +26,45 @@ export async function GET(req: Request) {
 
   const supabase = await createSupabaseServerClient();
 
-  // 🔥 ZI FĂRĂ BUG
+  // =========================
+  // DATE
+  // =========================
   const [y, m, d] = date.split("-").map(Number);
   const local = new Date(y, m - 1, d);
-
   const jsDay = local.getDay();
   const day = jsDay === 0 ? 7 : jsDay;
 
-  console.log("🔥 DAY:", day);
-
-  // 🔥 LUĂM TOATE SCHEDULE-URILE (IMPORTANT)
+  // =========================
+  // SCHEDULE
+  // =========================
   const { data: schedules } = await supabase
     .from("barber_weekly_schedule")
-    .select("*")
-    .eq("day_of_week", day);
+    .select("*");
 
-  console.log("🔥 ALL SCHEDULES:", schedules);
-
-  // 🔥 FILTRARE MANUALĂ
   const schedule = schedules?.find(
-    (s) => s.barber_id === barberId
+    (s) => s.barber_id === barberId && s.day_of_week === day
   );
 
-  console.log("🔥 PICKED SCHEDULE:", schedule);
-
   if (!schedule || !schedule.is_working) {
-    console.log("❌ NOT WORKING DAY");
     return NextResponse.json({ slots: [] });
   }
 
-  let start = timeToMinutes(schedule.work_start);
-  let end = timeToMinutes(schedule.work_end);
+  const start = timeToMinutes(schedule.work_start);
+  const end = timeToMinutes(schedule.work_end);
 
-  console.log("🔥 WORK HOURS:", start, end);
+  const breakStart =
+    schedule.break_enabled && schedule.break_start
+      ? timeToMinutes(schedule.break_start)
+      : null;
 
-  // 🔥 DURATA
+  const breakEnd =
+    schedule.break_enabled && schedule.break_end
+      ? timeToMinutes(schedule.break_end)
+      : null;
+
+  // =========================
+  // SERVICE DURATION
+  // =========================
   let duration = 30;
 
   if (serviceId && serviceId !== "preview") {
@@ -70,14 +74,14 @@ export async function GET(req: Request) {
       .eq("id", serviceId)
       .single();
 
-    console.log("🔥 SERVICE:", service);
-
     if (!service) return NextResponse.json({ slots: [] });
 
     duration = service.duration;
   }
 
-  // 🔥 BOOKINGS
+  // =========================
+  // BOOKINGS
+  // =========================
   const { data: bookings } = await supabase
     .from("bookings")
     .select("*")
@@ -85,44 +89,84 @@ export async function GET(req: Request) {
     .eq("date", date)
     .in("status", ["confirmed", "pending"]);
 
-  console.log("🔥 BOOKINGS:", bookings);
+  // =========================
+  // SLOT GENERATOR (CORE FIX)
+  // =========================
+  function generateSlots(startMin: number, endMin: number) {
+    const arr: any[] = [];
 
-  const slots: any[] = [];
+    // 🔥 diferență admin vs public
+    const step = mode === "admin" ? 15 : duration;
 
-  for (let t = start; t + duration <= end; t += 15) {
-    const slotStart = t;
-    const slotEnd = t + duration;
+    for (let t = startMin; t + duration <= endMin; t += step) {
+      const slotStart = t;
+      const slotEnd = t + duration;
 
-    const booking = bookings?.find((b) => {
-      const bStart = timeToMinutes(b.start_time);
-      const bEnd = timeToMinutes(b.end_time);
+      const booking = bookings?.find((b) => {
+        const bStart = timeToMinutes(b.start_time);
+        const bEnd = timeToMinutes(b.end_time);
+        return slotStart < bEnd && slotEnd > bStart;
+      });
 
-      return slotStart < bEnd && slotEnd > bStart;
-    });
+      if (booking) {
+        const isStart =
+          timeToMinutes(booking.start_time) === slotStart;
 
-    if (booking) {
-      const isStart =
-        timeToMinutes(booking.start_time) === slotStart;
+        if (isStart) {
+          arr.push({
+            type: "booking",
+            time: booking.start_time.slice(0, 5),
+            booking,
+          });
+        } else if (mode === "admin") {
+          // 🔥 IMPORTANT: păstrăm sloturile în admin
+          arr.push({
+            type: "free",
+            time: minutesToTime(t),
+          });
+        }
 
-      if (isStart) {
-        slots.push({
-          time: booking.start_time.slice(0, 5),
-          occupied: true,
-          booking,
-        });
+        continue;
       }
 
-      continue;
+      arr.push({
+        type: "free",
+        time: minutesToTime(t),
+      });
     }
 
-    slots.push({
-      time: minutesToTime(t),
-      occupied: false,
-      booking: null,
-    });
+    return arr;
   }
 
-  console.log("🔥 FINAL SLOTS:", slots);
+  // =========================
+  // FINAL STRUCTURE
+  // =========================
+  let finalSlots: any[] = [];
 
-  return NextResponse.json({ slots });
+  if (!breakStart || !breakEnd) {
+    finalSlots = generateSlots(start, end);
+  } else {
+    if (mode === "admin") {
+      // ADMIN → vede pauza
+      finalSlots = [
+        ...generateSlots(start, breakStart),
+
+        {
+          type: "break",
+          start: minutesToTime(breakStart),
+          end: minutesToTime(breakEnd),
+        },
+
+        ...generateSlots(breakEnd, end),
+      ];
+    } else {
+      // PUBLIC → elimină pauza complet
+      finalSlots = [
+        ...generateSlots(start, breakStart),
+        ...generateSlots(breakEnd, end),
+      ];
+    }
+  }
+
+  return NextResponse.json({ slots: finalSlots });
 }

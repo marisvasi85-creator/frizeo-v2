@@ -4,12 +4,7 @@ import { useEffect, useState } from "react";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 import EditBookingModal from "./components/EditBookingModal";
-
-type Slot = {
-  time: string;
-  occupied: boolean;
-  booking?: any;
-};
+import { Slot } from "@/types/slots";
 
 function toISO(date: Date) {
   return date.toISOString().split("T")[0];
@@ -106,18 +101,18 @@ export default function AdminBookingsPage() {
   // 🔥 SLOTS
   // =========================
   async function loadSlots(id: string, date: string) {
-    console.log("🔥 LOAD SLOTS CALL:", { id, date });
+  console.log("🔥 LOAD SLOTS CALL:", { id, date });
 
-    const res = await fetch(
-      `/api/slots?barberId=${id}&date=${date}`
-    );
+  const res = await fetch(
+    `/api/slots?barberId=${id}&date=${date}&mode=admin`
+  );
 
-    const data = await res.json();
+  const data = await res.json();
 
-    console.log("🔥 SLOTS:", data);
+  console.log("🔥 SLOTS:", data);
 
-    setSlots(data.slots || []);
-  }
+  setSlots(data.slots || []);
+}
 
   // =========================
   // 🔥 INIT

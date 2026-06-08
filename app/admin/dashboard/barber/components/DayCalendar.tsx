@@ -1,105 +1,62 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import SlotPicker from "@/app/components/SlotPicker";
 
-type Props = {
-  barberId: string;
-};
+type Slot =
+  | { type: "free"; time: string }
+  | { type: "booking"; time: string; booking: any }
+  | { type: "break"; start: string; end: string };
 
-export default function DayCalendar({ barberId }: Props) {
+export default function DayCalendar({ barberId }: any) {
   const [date, setDate] = useState(
     new Date().toISOString().slice(0, 10)
   );
-  const [slots, setSlots] = useState<string[]>([]);
+
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
 
-  // 🔹 FETCH AVAILABLE SLOTS
   useEffect(() => {
-  fetch(
-    `/api/bookings/available?barberId=${barberId}&date=${date}`
-  )
-    .then(res => res.json())
-    .then(data => setSlots(data.slots));
-}, [barberId, date]);
+    if (!barberId || !date) return;
 
+    setLoading(true);
 
-
-  // 🔹 CREATE BOOKING
-  const createBooking = async () => {
-    if (!selectedSlot) return;
-
-    setSaving(true);
-
-    const res = await fetch("/api/bookings/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        barber_id: barberId,
-        date,
-        time: selectedSlot,
-      }),
-    });
-
-    const data = await res.json();
-
-    setSaving(false);
-
-    if (!res.ok) {
-      alert(data.error || "Eroare la creare booking");
-      return;
-    }
-
-    alert("Programare creată ✅");
-
-    // refresh slots
-    setSelectedSlot(null);
-    setSlots((prev) => prev.filter((s) => s !== selectedSlot));
-  };
+    fetch(`/api/slots?barberId=${barberId}&date=${date}&mode=admin`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSlots(data.slots || []);
+      })
+      .finally(() => setLoading(false));
+  }, [barberId, date]);
 
   return (
-    <div className="day-calendar">
-      {/* SELECTOR ZI */}
+    <div className="space-y-4">
+
+      {/* DATE */}
       <input
         type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
+        className="border p-2 rounded"
       />
 
-      {loading && <p>Se încarcă sloturile...</p>}
+      {/* SLOTS */}
+      <SlotPicker
+        slots={slots}
+        selected={selectedSlot}
+        onSelect={setSelectedSlot}
+        loading={loading}
+      />
 
-      {!loading && slots.length === 0 && (
-        <p>Nu există sloturi disponibile</p>
-      )}
-
-      <div className="day-calendar-grid">
-  {slots.map((slot) => (
-    <div
-      key={slot}
-      className={`day-slot slot-free ${
-        selectedSlot === slot ? "slot-selected" : ""
-      }`}
-      onClick={() => setSelectedSlot(slot)}
-    >
-      <span className="slot-time">{slot}</span>
-      <span>Liber</span>
-    </div>
-  ))}
-</div>
-
-
-      {/* CONFIRMARE */}
+      {/* SELECTED */}
       {selectedSlot && (
-        <div style={{ marginTop: 16 }}>
-          <p>
-            Slot selectat: <b>{selectedSlot}</b>
-          </p>
-          <button onClick={createBooking} disabled={saving}>
-            {saving ? "Se salvează..." : "Programează"}
-          </button>
+        <div className="pt-4">
+          Slot selectat: <b>{selectedSlot}</b>
         </div>
       )}
+
     </div>
   );
 }

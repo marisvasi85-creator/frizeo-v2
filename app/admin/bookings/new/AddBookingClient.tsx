@@ -3,11 +3,7 @@
 import { useEffect, useState } from "react";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
-
-type Slot = {
-  time: string;
-  occupied: boolean;
-};
+import { Slot } from "@/types/slots";
 
 export default function AddBookingClient({
   barberId,
@@ -62,11 +58,12 @@ export default function AddBookingClient({
 
       const data = await res.json();
 
-      const freeSlots = (data.slots || []).filter((s: any) => !s.occupied);
+      const freeSlots = (data.slots || []).filter(
+        (s: Slot) => s.type === "free"
+      );
 
       setSlots(freeSlots);
       setSlot(null);
-
       setLoadingSlots(false);
     }
 
