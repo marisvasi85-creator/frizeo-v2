@@ -103,10 +103,11 @@ export async function GET(req: Request) {
       // 🔵 ADMIN → arată doar începutul
       if (mode === "admin" && isStart) {
         arr.push({
-          type: "booking",
-          time: booking.start_time.slice(0, 5),
-          booking,
-        });
+  type: "booking",
+  time: booking.start_time.slice(0, 5),
+  end: booking.end_time.slice(0, 5), // 🔥 FIX
+  booking,
+});
       }
 
       // 🟢 PUBLIC → dispare complet
