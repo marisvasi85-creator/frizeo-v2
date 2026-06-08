@@ -4,12 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
-
-type Slot = {
-  time: string;
-  occupied: boolean;
-  booking?: any;
-};
+import { Slot } from "@/types/slots"; // 🔥 FOLOSEȘTI TIP GLOBAL
 
 export default function BookingClient({
   barberId,
@@ -75,7 +70,7 @@ export default function BookingClient({
   }, [barberId]);
 
   // =========================
-  // SLOTS (SMART)
+  // SLOTS (CORE FIX)
   // =========================
   useEffect(() => {
     if (!date || !serviceId) return;
@@ -94,14 +89,39 @@ export default function BookingClient({
     )
       .then((r) => r.json())
       .then((d) => {
-        const result: Slot[] = d.slots || [];
+        const fixed: Slot[] = (d.slots || [])
+          .map((s: any) => {
+            if (s.type === "booking") {
+              return {
+                type: "booking",
+                time: s.time,
+                end:
+                  s.end ||
+                  s.booking?.end_time?.slice(0, 5) ||
+                  s.time,
+                booking: s.booking,
+              };
+            }
 
-        // 🔥 PUBLIC → DOAR LIBERE
-        const free = result.filter((s) => !s.occupied);
+            if (s.type === "break") {
+              return {
+                type: "break",
+                start: s.start,
+                end: s.end,
+              };
+            }
 
-        slotsCache.current[cacheKey] = free;
+            return {
+              type: "free",
+              time: s.time,
+            };
+          })
+          // 🔥 PUBLIC → DOAR SLOTURI LIBERE
+          .filter((s: Slot) => s.type === "free");
 
-        setSlots(free);
+        slotsCache.current[cacheKey] = fixed;
+
+        setSlots(fixed);
         setSelectedSlot(null);
       })
       .finally(() => setLoadingSlots(false));
