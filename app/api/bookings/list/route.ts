@@ -29,9 +29,10 @@ export async function GET() {
     .select(`
       *,
       barber_services:barber_services!bookings_barber_service_id_fkey (
-        display_name,
-        name
-      )
+  display_name,
+  name,
+  duration
+)
     `)
     .eq("barber_id", barber.id)
     .neq("status", "cancelled")
