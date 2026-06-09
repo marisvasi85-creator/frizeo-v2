@@ -5,46 +5,44 @@ import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 
 export async function POST(req: NextRequest) {
   try {
-    const { token } = await req.json();
+    const body = await req.json();
 
-    if (!token) {
-      return NextResponse.json(
-        { error: "Missing token" },
-        { status: 400 }
-      );
-    }
+    const { token, bookingId } = body;
 
     const supabase = await createSupabaseServerClient();
 
-    // 🔥 GET BOOKING
-    const { data: booking, error } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("cancel_token", token)
-      .maybeSingle();
+    let booking = null;
 
-    if (error || !booking) {
+    // 🔥 ADMIN
+    if (bookingId) {
+      const { data } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("id", bookingId)
+        .single();
+
+      booking = data;
+    }
+
+    // 🔥 PUBLIC
+    if (token) {
+      const { data } = await supabase
+        .from("bookings")
+        .select("*")
+        .eq("cancel_token", token)
+        .single();
+
+      booking = data;
+    }
+
+    if (!booking) {
       return NextResponse.json(
         { error: "Booking not found" },
         { status: 404 }
       );
     }
 
-    // 🔥 VALIDARE 2H
-    const bookingTime = new Date(
-      `${booking.date}T${booking.start_time}`
-    );
-
-    if (bookingTime <= new Date(Date.now() + 2 * 60 * 60 * 1000)) {
-      return NextResponse.json(
-        {
-          error: "Nu mai poate fi anulată cu mai puțin de 2 ore înainte.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // 🔥 UPDATE
+    // 🔥 UPDATE STATUS
     await supabase
       .from("bookings")
       .update({ status: "cancelled" })
@@ -61,36 +59,6 @@ export async function POST(req: NextRequest) {
           time: `${booking.start_time} - ${booking.end_time}`,
         }),
       });
-    }
-
-    // 🔥 EMAIL BARBER
-    try {
-      const { data: barber } = await supabase
-        .from("barbers")
-        .select("user_id")
-        .eq("id", booking.barber_id)
-        .single();
-
-      if (barber?.user_id) {
-        const { data: userData } =
-          await supabase.auth.admin.getUserById(barber.user_id);
-
-        const barberEmail = userData?.user?.email;
-
-        if (barberEmail) {
-          await sendEmail({
-            to: barberEmail,
-            subject: "Programare anulată",
-            html: cancelBookingTemplate({
-              clientName: booking.client_name,
-              date: booking.date,
-              time: `${booking.start_time} - ${booking.end_time}`,
-            }),
-          });
-        }
-      }
-    } catch (e) {
-      console.error("BARBER EMAIL ERROR:", e);
     }
 
     return NextResponse.json({ success: true });

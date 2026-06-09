@@ -82,40 +82,50 @@ export async function GET(req: Request) {
   function generateSlots(startMin: number, endMin: number) {
   const arr: any[] = [];
 
-  // 🔥 ADMIN vs PUBLIC
   const step = mode === "admin" ? 15 : duration;
 
   for (let t = startMin; t + duration <= endMin; t += step) {
     const slotStart = t;
     const slotEnd = t + duration;
 
-    // 🔴 verific booking
     const booking = bookings?.find((b) => {
       const bStart = timeToMinutes(b.start_time);
       const bEnd = timeToMinutes(b.end_time);
       return slotStart < bEnd && slotEnd > bStart;
     });
 
-    if (booking) {
+    // 🔥 ADMIN
+    if (mode === "admin") {
       const isStart =
+        booking &&
         timeToMinutes(booking.start_time) === slotStart;
 
-      // 🔵 ADMIN → arată doar începutul
-      if (mode === "admin" && isStart) {
+      // 🔴 dacă e început booking → afișează booking
+      if (isStart) {
         arr.push({
-  type: "booking",
-  time: booking.start_time.slice(0, 5),
-  end: booking.end_time.slice(0, 5), // 🔥 FIX
-  booking,
-});
+          type: "booking",
+          time: booking.start_time.slice(0, 5),
+          end: booking.end_time.slice(0, 5),
+          booking,
+        });
+        continue;
       }
 
-      // 🟢 PUBLIC → dispare complet
+      // 🔵 restul sloturilor EXISTĂ și sunt clickabile
+      arr.push({
+        type: "free",
+        time: minutesToTime(t),
+      });
+
       continue;
     }
 
-    // 🟡 PUBLIC → blocăm dacă NU încape (pauză)
-    if (mode !== "admin" && breakStart && breakEnd) {
+    // ========================
+    // 🔥 PUBLIC
+    // ========================
+    if (booking) continue;
+
+    if (breakStart && breakEnd) {
       const overlapsBreak =
         slotStart < breakEnd && slotEnd > breakStart;
 

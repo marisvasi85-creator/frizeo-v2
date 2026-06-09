@@ -15,25 +15,38 @@ export default function SlotPicker({
   onBookingClick?: (booking: any) => void;
   loading?: boolean;
 }) {
+
+  // =========================
+  // 🔥 LOADING
+  // =========================
   if (loading) {
     return (
       <div className="grid grid-cols-3 gap-3 mt-4">
         {Array.from({ length: 9 }).map((_, i) => (
-          <div key={i} className="h-10 bg-zinc-700 rounded animate-pulse" />
+          <div
+            key={i}
+            className="h-12 bg-zinc-700 rounded-xl animate-pulse"
+          />
         ))}
       </div>
     );
   }
 
+  // =========================
+  // 🔥 GROUP ROWS (IMPORTANT)
+  // =========================
   const rows: any[] = [];
   let currentRow: any[] = [];
 
   slots.forEach((slot) => {
+
+    // 🟡 BREAK → rând separat
     if (slot.type === "break") {
       if (currentRow.length) {
         rows.push([...currentRow]);
         currentRow = [];
       }
+
       rows.push(slot);
       return;
     }
@@ -46,18 +59,31 @@ export default function SlotPicker({
     }
   });
 
-  if (currentRow.length) rows.push([...currentRow]);
+  if (currentRow.length) {
+    rows.push([...currentRow]);
+  }
 
+  // =========================
+  // 🔥 RENDER
+  // =========================
   return (
     <div className="space-y-3 mt-4">
+
       {rows.map((row, i) => {
+
+        // =========================
+        // 🟡 BREAK BLOCK (MERO STYLE)
+        // =========================
         if (!Array.isArray(row) && row.type === "break") {
           return (
             <div
               key={`break-${i}`}
               className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 rounded-xl p-4 text-center"
             >
-              <div className="text-sm opacity-70">Pauză</div>
+              <div className="text-sm opacity-70">
+                Pauză
+              </div>
+
               <div className="font-semibold">
                 {row.start} – {row.end}
               </div>
@@ -65,50 +91,62 @@ export default function SlotPicker({
           );
         }
 
+        // =========================
+        // 🟢 ROW
+        // =========================
         return (
           <div key={i} className="grid grid-cols-3 gap-3">
-            {row.map((s: any) => {
-              if (s.type === "booking") {
-  return (
-    <button
-      key={`booking-${s.time}`}
-      onClick={() => onBookingClick?.(s.booking)}
-      className="p-3 rounded-xl bg-red-500 text-white text-left"
-    >
-      <div className="font-semibold">{s.time}</div>
-      <div className="text-xs">{s.booking?.client_name}</div>
-    </button>
-  );
-}
 
-              if (s.type === "blocked") {
+            {row.map((s: any) => {
+
+              // =========================
+              // 🔴 BOOKING (DOAR VIZUAL)
+              // =========================
+              if (s.type === "booking") {
                 return (
-                  <div
-                    key={s.time}
-                    className="p-3 rounded-xl bg-zinc-700 opacity-40"
+                  <button
+                    key={`booking-${s.time}`}
+                    onClick={() => onBookingClick?.(s.booking)}
+                    className="p-3 rounded-xl bg-red-500 text-white text-left hover:opacity-90"
                   >
-                    {s.time}
-                  </div>
+                    <div className="font-semibold">
+                      {s.time}
+                    </div>
+
+                    <div className="text-xs opacity-90">
+                      {s.booking?.client_name}
+                    </div>
+                  </button>
                 );
               }
 
+              // =========================
+              // 🟢 FREE (CLICKABIL)
+              // =========================
               return (
                 <button
-                  key={s.time}
+                  key={`free-${s.time}`}
                   onClick={() => onSelect(s.time)}
-                  className={`p-3 rounded-xl border ${
-                    selected === s.time
-                      ? "bg-white text-black"
-                      : "bg-zinc-800 text-white border-zinc-700"
-                  }`}
+                  className={`
+                    p-3 rounded-xl border transition
+                    ${
+                      selected === s.time
+                        ? "bg-white text-black"
+                        : "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+                    }
+                  `}
                 >
-                  {s.time}
+                  <div className="font-semibold">
+                    {s.time}
+                  </div>
                 </button>
               );
             })}
+
           </div>
         );
       })}
+
     </div>
   );
 }
