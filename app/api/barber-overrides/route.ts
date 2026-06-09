@@ -5,54 +5,64 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
    GET override(s)
 ========================= */
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const barberId = searchParams.get("barberId");
-  const date = searchParams.get("date");
+  try {
+    const { searchParams } = new URL(req.url);
 
-  const supabase = await createSupabaseServerClient();
+    const barberId = searchParams.get("barberId");
+    const date = searchParams.get("date");
 
-  if (!barberId) {
-    return NextResponse.json(
-      { error: "Missing barberId" },
-      { status: 400 }
-    );
-  }
+    const supabase = await createSupabaseServerClient();
 
-  // 🔥 CASE 1 → SINGLE DAY
-  if (date) {
+    if (!barberId) {
+      return NextResponse.json(
+        { error: "Missing barberId" },
+        { status: 400 }
+      );
+    }
+
+    if (date) {
+      const { data, error } = await supabase
+        .from("barber_day_overrides")
+        .select("*")
+        .eq("barber_id", barberId)
+        .eq("date", date)
+        .maybeSingle();
+
+      if (error) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(data ?? null);
+    }
+
     const { data, error } = await supabase
       .from("barber_day_overrides")
       .select("*")
       .eq("barber_id", barberId)
-      .eq("date", date)
-      .maybeSingle();
+      .order("date");
 
     if (error) {
       return NextResponse.json(
-        { error: "Failed to fetch override" },
+        { error: error.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(data ?? null);
-  }
+    return NextResponse.json({
+      overrides: data || [],
+    });
 
-  // 🔥 CASE 2 → ALL OVERRIDES (IMPORTANT)
-  const { data, error } = await supabase
-    .from("barber_day_overrides")
-    .select("*")
-    .eq("barber_id", barberId);
+  } catch (err) {
+    console.error("OVERRIDE GET ERROR:", err);
 
-  if (error) {
     return NextResponse.json(
-      { error: "Failed to fetch overrides" },
+      { error: "GET ERROR" },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    overrides: data || [],
-  });
 }
 
 /* =========================
@@ -66,8 +76,6 @@ export async function POST(req: NextRequest) {
       barber_id,
       date,
       is_closed,
-      work_start,
-      work_end,
       break_enabled,
       break_start,
       break_end,
@@ -81,44 +89,78 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const payload = {
-      barber_id,
-      date,
-      is_closed: is_closed ?? false,
-      work_start: is_closed ? null : work_start ?? null,
-      work_end: is_closed ? null : work_end ?? null,
-      break_enabled: is_closed ? false : break_enabled ?? false,
-      break_start:
-        is_closed || !break_enabled ? null : break_start ?? null,
-      break_end:
-        is_closed || !break_enabled ? null : break_end ?? null,
-      slot_duration: is_closed ? null : slot_duration ?? null,
-    };
-
     const supabase = await createSupabaseServerClient();
 
-    const { error } = await supabase
+    // 🔥 IMPORTANT PENTRU RLS
+    const { data: barber, error: barberError } = await supabase
+      .from("barbers")
+      .select("tenant_id")
+      .eq("id", barber_id)
+      .single();
+
+    if (barberError || !barber) {
+      return NextResponse.json(
+        { error: "Barber not found" },
+        { status: 404 }
+      );
+    }
+
+    const payload = {
+      barber_id,
+      tenant_id: barber.tenant_id,
+
+      date,
+      is_closed: is_closed ?? false,
+
+      break_enabled: is_closed
+        ? false
+        : break_enabled ?? false,
+
+      break_start:
+        is_closed || !break_enabled
+          ? null
+          : break_start ?? null,
+
+      break_end:
+        is_closed || !break_enabled
+          ? null
+          : break_end ?? null,
+
+      slot_duration:
+        is_closed
+          ? null
+          : slot_duration ?? null,
+    };
+
+    const { data, error } = await supabase
       .from("barber_day_overrides")
       .upsert(payload, {
         onConflict: "barber_id,date",
-      });
+      })
+      .select();
 
     if (error) {
+      console.error("OVERRIDE UPSERT ERROR:", error);
+
       return NextResponse.json(
-        { error: "Failed to save override" },
+        {
+          error: error.message,
+        },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
+      data,
     });
+
   } catch (err) {
-    console.error("OVERRIDE SAVE ERROR:", err);
+    console.error("OVERRIDE POST ERROR:", err);
 
     return NextResponse.json(
-      { error: "Invalid request body" },
-      { status: 400 }
+      { error: "POST ERROR" },
+      { status: 500 }
     );
   }
 }
@@ -127,33 +169,44 @@ export async function POST(req: NextRequest) {
    DELETE override
 ========================= */
 export async function DELETE(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const barberId = searchParams.get("barberId");
-  const date = searchParams.get("date");
+  try {
+    const { searchParams } = new URL(req.url);
 
-  const supabase = await createSupabaseServerClient();
+    const barberId = searchParams.get("barberId");
+    const date = searchParams.get("date");
 
-  if (!barberId || !date) {
+    const supabase = await createSupabaseServerClient();
+
+    if (!barberId || !date) {
+      return NextResponse.json(
+        { error: "Missing barberId or date" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("barber_day_overrides")
+      .delete()
+      .eq("barber_id", barberId)
+      .eq("date", date);
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+    });
+
+  } catch (err) {
+    console.error("OVERRIDE DELETE ERROR:", err);
+
     return NextResponse.json(
-      { error: "Missing barberId or date" },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await supabase
-    .from("barber_day_overrides")
-    .delete()
-    .eq("barber_id", barberId)
-    .eq("date", date);
-
-  if (error) {
-    return NextResponse.json(
-      { error: "Failed to delete override" },
+      { error: "DELETE ERROR" },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    success: true,
-  });
 }

@@ -25,7 +25,16 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
+  const { data: override } = await supabase
+  .from("barber_day_overrides")
+  .select("is_closed")
+  .eq("barber_id", barberId)
+  .eq("date", date)
+  .maybeSingle();
 
+if (override?.is_closed) {
+  return NextResponse.json({ slots: [] });
+}
   // DATE
   const [y, m, d] = date.split("-").map(Number);
   const local = new Date(y, m - 1, d);
@@ -33,13 +42,12 @@ export async function GET(req: Request) {
   const day = jsDay === 0 ? 7 : jsDay;
 
   // SCHEDULE
-  const { data: schedules } = await supabase
-    .from("barber_weekly_schedule")
-    .select("*");
-
-  const schedule = schedules?.find(
-    (s) => s.barber_id === barberId && s.day_of_week === day
-  );
+  const { data: schedule } = await supabase
+  .from("barber_weekly_schedule")
+  .select("*")
+  .eq("barber_id", barberId)
+  .eq("day_of_week", day)
+  .single();
 
   if (!schedule || !schedule.is_working) {
     return NextResponse.json({ slots: [] });

@@ -54,8 +54,9 @@ export async function saveWeeklySchedule(days: any[]) {
     .insert(rows);
 
   if (error) {
-    console.error("❌ INSERT ERROR:", error);
-  }
+  console.error("❌ INSERT ERROR:", error);
+  return;
+}
 
-  redirect("/admin/dashboard");
+return;
 }

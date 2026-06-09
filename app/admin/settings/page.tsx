@@ -1,7 +1,9 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { redirect } from "next/navigation";
+
 import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
+import OverrideManager from "./components/OverrideManager";
 
 export default async function SettingsPage() {
   const supabase = await createSupabaseServerClient();
@@ -13,14 +15,22 @@ export default async function SettingsPage() {
     .from("barber_weekly_schedule")
     .select("*")
     .eq("barber_id", barber.id);
-
+console.log("🔥 SCHEDULE FROM DB", schedule);
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">
-        Program de lucru
-      </h1>
+    <div className="space-y-8">
 
-      <WeeklyScheduleEditor initialData={schedule ?? []} />
+      <div>
+        <h1 className="text-xl font-semibold mb-4">
+          Program de lucru
+        </h1>
+
+        <WeeklyScheduleEditor
+          initialData={schedule ?? []}
+        />
+      </div>
+
+      <OverrideManager barberId={barber.id} />
+
     </div>
   );
 }

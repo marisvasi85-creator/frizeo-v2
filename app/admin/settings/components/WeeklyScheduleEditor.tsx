@@ -29,7 +29,7 @@ const DAYS = [
 
 export default function WeeklyScheduleEditor({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
-
+  const [saved, setSaved] = useState(false);
   const [days, setDays] = useState<Day[]>(
     DAYS.map((d) => {
       const existing = initialData.find(
@@ -117,7 +117,12 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     }
 
     setLoading(true);
-    await saveWeeklySchedule(days);
+setSaved(false);
+
+await saveWeeklySchedule(days);
+
+setSaved(true);
+setLoading(false);
   }
 
   return (
@@ -233,15 +238,23 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
       </div>
 
       {/* SAVE */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="bg-white text-black px-4 py-2 rounded text-sm disabled:opacity-50"
-        >
-          {loading ? "Se salvează..." : "Salvează"}
-        </button>
-      </div>
+      <div className="flex justify-end items-center gap-3">
+
+  {saved && (
+    <div className="text-green-400 text-sm">
+      Program salvat ✔
+    </div>
+  )}
+
+  <button
+    onClick={handleSave}
+    disabled={loading}
+    className="bg-white text-black px-4 py-2 rounded text-sm disabled:opacity-50"
+  >
+    {loading ? "Se salvează..." : "Salvează"}
+  </button>
+
+</div>
 
     </div>
   );
