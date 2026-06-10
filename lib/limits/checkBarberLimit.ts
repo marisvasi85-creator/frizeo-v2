@@ -26,7 +26,8 @@ export async function canCreateBarber(tenantId: string) {
   const { count } = await supabase
     .from("barbers")
     .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId);
+    .eq("tenant_id", tenantId)
+.eq("active", true);
 
   return (count || 0) < limit;
 }

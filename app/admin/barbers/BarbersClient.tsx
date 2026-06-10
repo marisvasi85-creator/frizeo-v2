@@ -20,7 +20,6 @@ export default function BarbersClient() {
 
   async function loadBarbers() {
     const res = await fetch("/api/barbers");
-
     const data = await res.json();
 
     setBarbers(data.barbers || []);
@@ -37,19 +36,20 @@ export default function BarbersClient() {
     setMessage("");
 
     try {
-      const meRes = await fetch("/api/barber/profile");
+      const meRes = await fetch("/api/barber/me");
       const me = await meRes.json();
-
+console.log("PROFILE:", me);
+console.log("TENANT:", me.profile?.tenant_id);
       const res = await fetch("/api/barbers/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          tenantId: me.tenant_id,
-          name,
-          phone,
-        }),
+  tenantId: me.profile?.tenant_id,
+  name,
+  phone,
+})
       });
 
       const data = await res.json();
@@ -66,12 +66,34 @@ export default function BarbersClient() {
 
         loadBarbers();
       }
-
     } catch {
       setMessage("Eroare server");
     }
 
     setLoading(false);
+  }
+
+  async function toggleBarber(
+    barberId: string,
+    active: boolean
+  ) {
+    const res = await fetch(
+      "/api/barbers/toggle",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          barberId,
+          active: !active,
+        }),
+      }
+    );
+
+    if (res.ok) {
+      loadBarbers();
+    }
   }
 
   return (
@@ -150,14 +172,32 @@ export default function BarbersClient() {
 
             </div>
 
-            <div
-              className={
-                barber.active
-                  ? "text-green-400 text-sm"
-                  : "text-red-400 text-sm"
-              }
-            >
-              {barber.active ? "Activ" : "Inactiv"}
+            <div className="flex items-center gap-4">
+
+              <div
+                className={
+                  barber.active
+                    ? "text-green-400 text-sm"
+                    : "text-red-400 text-sm"
+                }
+              >
+                {barber.active ? "Activ" : "Inactiv"}
+              </div>
+
+              <button
+                onClick={() =>
+                  toggleBarber(
+                    barber.id,
+                    barber.active
+                  )
+                }
+                className="text-sm text-white/70 hover:text-white"
+              >
+                {barber.active
+                  ? "Dezactivează"
+                  : "Activează"}
+              </button>
+
             </div>
 
           </div>

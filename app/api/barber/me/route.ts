@@ -16,10 +16,14 @@ export async function GET() {
 
     // 🔥 găsim barber după user_id
     const { data: barber } = await supabase
-      .from("barbers")
-      .select("id, display_name")
-      .eq("user_id", user.id)
-      .single();
+  .from("barbers")
+  .select(`
+    id,
+    display_name,
+    tenant_id
+  `)
+  .eq("user_id", user.id)
+  .single();
 
     if (!barber) {
       return NextResponse.json({ profile: null });
