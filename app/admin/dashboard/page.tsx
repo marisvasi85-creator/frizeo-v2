@@ -96,7 +96,7 @@ export default async function DashboardPage() {
         <div className="flex gap-3 flex-wrap">
 
           <a
-            href="/admin/calendar"
+            href="/admin/bookings"
             className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
           >
             Calendar
