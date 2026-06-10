@@ -7,8 +7,7 @@ export async function POST(req: Request) {
     const supabase = createSupabasePublicClient();
     const body = await req.json();
 
-    const { tenantId, name } = body;
-
+    const { tenantId, name, phone } = body;
     if (!tenantId || !name) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
@@ -26,9 +25,11 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from("barbers")
       .insert({
-        tenant_id: tenantId,
-        display_name: name,
-      })
+  tenant_id: tenantId,
+  display_name: name,
+  phone: phone || null,
+  active: true,
+})
       .select()
       .single();
 

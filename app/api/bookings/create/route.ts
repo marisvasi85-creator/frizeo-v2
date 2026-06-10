@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
+import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
@@ -45,7 +46,24 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+    
+    // =========================
+// 🔥 PLAN LIMIT
+// =========================
 
+const limit = await checkBookingLimit(
+  booking.tenant_id
+);
+
+if (!limit.allowed) {
+  return NextResponse.json(
+    {
+      error:
+        "Ai atins limita planului Free. Upgrade necesar.",
+    },
+    { status: 403 }
+  );
+}
     // =========================
     // 🔥 VALIDARE PAUZĂ (CORECT)
     // =========================

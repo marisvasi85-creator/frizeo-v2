@@ -1,45 +1,80 @@
 import { NextResponse } from "next/server";
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const tenantId = searchParams.get("tenantId");
+export async function GET() {
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  if (!tenantId) {
-    return NextResponse.json({ error: "Missing tenantId" }, { status: 400 });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { data: barber } = await supabase
+      .from("barbers")
+      .select("tenant_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!barber) {
+      return NextResponse.json(
+        { error: "Barber not found" },
+        { status: 404 }
+      );
+    }
+
+    const plan = await getCurrentPlan(
+      barber.tenant_id
+    );
+
+    if (!plan) {
+      return NextResponse.json(
+        { error: "Plan not found" },
+        { status: 404 }
+      );
+    }
+
+    const now = new Date();
+
+    const firstDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    )
+      .toISOString()
+      .slice(0, 10);
+
+    const { count } = await supabase
+      .from("bookings")
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
+      .eq("tenant_id", barber.tenant_id)
+      .gte("date", firstDay)
+      .neq("status", "cancelled");
+
+    return NextResponse.json({
+      plan: plan.name,
+      currentBookings: count || 0,
+      limit: plan.max_bookings_per_month,
+      unlimited:
+        plan.max_bookings_per_month === null,
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return NextResponse.json(
+      { error: "Internal error" },
+      { status: 500 }
+    );
   }
-
-  const supabase = createSupabasePublicClient();
-
-  // 🔥 plan
-  const { data: sub } = await supabase
-    .from("subscriptions")
-    .select("plan_id")
-    .eq("tenant_id", tenantId)
-    .single();
-
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("max_bookings_per_month")
-    .eq("id", sub?.plan_id)
-    .single();
-
-  const limit = plan?.max_bookings_per_month ?? null;
-
-  // 🔥 count
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-
-  const { count } = await supabase
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId)
-    .eq("status", "confirmed")
-    .gte("created_at", startOfMonth.toISOString());
-
-  return NextResponse.json({
-    used: count || 0,
-    limit,
-  });
 }

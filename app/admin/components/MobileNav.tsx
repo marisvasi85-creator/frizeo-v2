@@ -11,6 +11,11 @@ const navItems = [
   { href: "/admin/services", icon: "✂️" },
 
   { href: "/admin/settings", icon: "⚙️" },
+
+  {
+  href: "/admin/billing",
+  icon: "💎",
+},
 ];
 
 export default function MobileNav() {

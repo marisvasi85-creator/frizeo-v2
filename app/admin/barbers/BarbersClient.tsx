@@ -1,0 +1,170 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type Barber = {
+  id: string;
+  display_name: string;
+  phone: string | null;
+  active: boolean;
+};
+
+export default function BarbersClient() {
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function loadBarbers() {
+    const res = await fetch("/api/barbers");
+
+    const data = await res.json();
+
+    setBarbers(data.barbers || []);
+  }
+
+  useEffect(() => {
+    loadBarbers();
+  }, []);
+
+  async function addBarber() {
+    if (!name.trim()) return;
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const meRes = await fetch("/api/barber/profile");
+      const me = await meRes.json();
+
+      const res = await fetch("/api/barbers/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          tenantId: me.tenant_id,
+          name,
+          phone,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(
+          data.error || "Nu s-a putut crea frizerul"
+        );
+      } else {
+        setName("");
+        setPhone("");
+
+        setMessage("Frizer adăugat ✔");
+
+        loadBarbers();
+      }
+
+    } catch {
+      setMessage("Eroare server");
+    }
+
+    setLoading(false);
+  }
+
+  return (
+    <div className="space-y-8">
+
+      <div>
+        <h1 className="text-2xl font-semibold">
+          Frizeri
+        </h1>
+
+        <p className="text-white/60 mt-1">
+          Gestionează frizerii salonului.
+        </p>
+      </div>
+
+      <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
+
+        <h2 className="font-medium">
+          Adaugă frizer
+        </h2>
+
+        <input
+          placeholder="Nume"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+        />
+
+        <input
+          placeholder="Telefon"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+        />
+
+        <button
+          onClick={addBarber}
+          disabled={loading}
+          className="bg-white text-black px-4 py-2 rounded"
+        >
+          {loading
+            ? "Se salvează..."
+            : "Adaugă frizer"}
+        </button>
+
+        {message && (
+          <div className="text-sm text-white/70">
+            {message}
+          </div>
+        )}
+
+      </div>
+
+      <div className="space-y-3">
+
+        {barbers.length === 0 && (
+          <div className="text-white/50">
+            Nu există frizeri.
+          </div>
+        )}
+
+        {barbers.map((barber) => (
+          <div
+            key={barber.id}
+            className="bg-[#161618] border border-white/10 rounded-xl p-4 flex justify-between items-center"
+          >
+            <div>
+
+              <div className="font-medium">
+                {barber.display_name}
+              </div>
+
+              <div className="text-sm text-white/60">
+                {barber.phone || "Fără telefon"}
+              </div>
+
+            </div>
+
+            <div
+              className={
+                barber.active
+                  ? "text-green-400 text-sm"
+                  : "text-red-400 text-sm"
+              }
+            >
+              {barber.active ? "Activ" : "Inactiv"}
+            </div>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
