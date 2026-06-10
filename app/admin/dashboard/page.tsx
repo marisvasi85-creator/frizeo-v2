@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     .select("*")
     .eq("barber_id", barber.id)
     .eq("status", "confirmed")
-    .gte("date", today)
+    .gt("date", today)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(5);
@@ -96,11 +96,11 @@ export default async function DashboardPage() {
         <div className="flex gap-3 flex-wrap">
 
           <a
-            href="/admin/bookings"
-            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
-          >
-            Calendar
-          </a>
+  href="/admin/bookings/new"
+  className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
+>
+  Adaugă programare
+</a>
 
           <a
             href="/admin/bookings"

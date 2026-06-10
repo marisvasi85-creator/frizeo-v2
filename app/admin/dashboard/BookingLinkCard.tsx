@@ -15,7 +15,9 @@ export default function BookingLinkCard({
       <p className="text-sm text-gray-500 mb-2">
         Linkul tău de programări
       </p>
-
+      <p className="text-xs text-gray-400 mt-2">
+  Trimite acest link clienților pentru programări online.
+</p>
       <div className="flex gap-2">
         <input
           value={url}
