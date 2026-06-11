@@ -54,8 +54,8 @@ export async function POST(req: Request) {
 const limit = await checkBookingLimit(
   booking.tenant_id
 );
-
-if (!limit.allowed) {
+console.log("BOOKING TENANT:", booking.tenant_id);
+console.log("BOOKING LIMIT:", limit);if (!limit.allowed) {
   return NextResponse.json(
     {
       error:

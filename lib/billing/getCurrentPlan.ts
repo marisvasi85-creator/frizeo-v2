@@ -1,18 +1,25 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabasePublicClient } from "@/lib/supabase/public";
 
 export async function getCurrentPlan(
   tenantId: string
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = createSupabasePublicClient();
 
   const { data: subscription } = await supabase
     .from("subscriptions")
-    .select(`
-      *,
-      plans (*)
-    `)
+    .select("plan_id")
     .eq("tenant_id", tenantId)
     .single();
 
-  return subscription?.plans ?? null;
+  if (!subscription?.plan_id) {
+    return null;
+  }
+
+  const { data: plan } = await supabase
+    .from("plans")
+    .select("*")
+    .eq("id", subscription.plan_id)
+    .single();
+
+  return plan ?? null;
 }

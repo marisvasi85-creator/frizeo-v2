@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import UpgradeButton from "./UpgradeButton";
 
 export default async function BillingPage() {
   const supabase = await createSupabaseServerClient();
@@ -136,11 +137,9 @@ export default async function BillingPage() {
                       Plan activ
                     </button>
                   ) : (
-                    <button
-                      className="w-full bg-white text-black py-2 rounded"
-                    >
-                      Upgrade
-                    </button>
+                    <UpgradeButton
+  planId={plan.id}
+/>
                   )}
 
                 </div>

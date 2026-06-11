@@ -9,8 +9,15 @@ type Barber = {
   active: boolean;
 };
 
-export default function BarbersClient() {
-  const [barbers, setBarbers] = useState<Barber[]>([]);
+export default function BarbersClient({
+  currentPlan,
+  activeBarbers,
+  maxBarbers,
+}: {
+  currentPlan: string;
+  activeBarbers: number;
+  maxBarbers: number;
+}) {  const [barbers, setBarbers] = useState<Barber[]>([]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -103,7 +110,30 @@ console.log("TENANT:", me.profile?.tenant_id);
         <h1 className="text-2xl font-semibold">
           Frizeri
         </h1>
+      <div className="mt-4 bg-[#161618] border border-white/10 rounded-xl p-4">
+  <div className="text-sm text-white/60">
+    Plan curent
+  </div>
 
+  <div className="font-medium mt-1">
+    {currentPlan}
+  </div>
+
+  <div className="text-sm text-white/60 mt-3">
+    Frizeri activi
+  </div>
+
+  <div className="font-medium mt-1">
+    {activeBarbers} / {maxBarbers}
+  </div>
+
+  <a
+    href="/admin/billing"
+    className="inline-block mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm"
+  >
+    Upgrade abonament pentru mai mulți frizeri
+  </a>
+</div>
         <p className="text-white/60 mt-1">
           Gestionează frizerii salonului.
         </p>
