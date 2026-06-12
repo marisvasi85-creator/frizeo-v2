@@ -11,9 +11,9 @@ const navItems = [
 
   { href: "/admin/services", label: "Servicii", icon: "✂️" },
 
-  { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
+  
 
-  { href: "/admin/settings/profile", label: "Setări", icon: "⚙️" },
+  { href: "/admin/settings", label: "Setări", icon: "⚙️" },
 
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];

@@ -160,19 +160,119 @@ export async function POST(req: Request) {
         role: "barber",
       });
 
+    const { data: barber } = await supabaseAdmin
+  .from("barbers")
+  .insert({
+    user_id: userId,
+    tenant_id: invitation.tenant_id,
+    display_name: invitation.full_name,
+    phone: invitation.phone || null,
+    active: true,
+  })
+  .select()
+  .single();
     await supabaseAdmin
-      .from("barbers")
-      .insert({
-        user_id: userId,
-        tenant_id:
-          invitation.tenant_id,
-        display_name:
-          invitation.full_name,
-        phone:
-          invitation.phone || null,
-        active: true,
-      });
+  .from("barber_services")
+  .insert([
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
 
+      name: "tuns",
+      display_name: "Tuns",
+
+      duration: 45,
+      price: 60,
+
+      active: true,
+      sort_order: 1,
+      show_price: true,
+      featured: true,
+    },
+
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+
+      name: "tuns-barba",
+      display_name: "Tuns + Barbă",
+
+      duration: 60,
+      price: 90,
+
+      active: true,
+      sort_order: 2,
+      show_price: true,
+      featured: true,
+    },
+
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+
+      name: "barba",
+      display_name: "Barbă",
+
+      duration: 30,
+      price: 40,
+
+      active: true,
+      sort_order: 3,
+      show_price: true,
+      featured: false,
+    },
+  ]);
+
+  await supabaseAdmin
+  .from("barber_weekly_schedule")
+  .insert([
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+      day_of_week: 1,
+      is_working: true,
+      work_start: "09:00",
+      work_end: "17:00",
+      break_enabled: false,
+    },
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+      day_of_week: 2,
+      is_working: true,
+      work_start: "09:00",
+      work_end: "17:00",
+      break_enabled: false,
+    },
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+      day_of_week: 3,
+      is_working: true,
+      work_start: "09:00",
+      work_end: "17:00",
+      break_enabled: false,
+    },
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+      day_of_week: 4,
+      is_working: true,
+      work_start: "09:00",
+      work_end: "17:00",
+      break_enabled: false,
+    },
+    {
+      barber_id: barber.id,
+      tenant_id: invitation.tenant_id,
+      day_of_week: 5,
+      is_working: true,
+      work_start: "09:00",
+      work_end: "17:00",
+      break_enabled: false,
+    },
+  ]);
+  
     await supabaseAdmin
       .from("user_active_tenant")
       .insert({
