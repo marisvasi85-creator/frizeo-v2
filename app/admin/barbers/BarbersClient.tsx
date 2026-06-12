@@ -21,7 +21,7 @@ export default function BarbersClient({
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -37,48 +37,48 @@ export default function BarbersClient({
   }, []);
 
   async function addBarber() {
-    if (!name.trim()) return;
+  if (!name.trim() || !email.trim()) return;
 
-    setLoading(true);
-    setMessage("");
+  setLoading(true);
+  setMessage("");
 
-    try {
-      const meRes = await fetch("/api/barber/me");
-      const me = await meRes.json();
-console.log("PROFILE:", me);
-console.log("TENANT:", me.profile?.tenant_id);
-      const res = await fetch("/api/barbers/create", {
+  try {
+    const res = await fetch(
+      "/api/barbers/invite",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-  tenantId: me.profile?.tenant_id,
-  name,
-  phone,
-})
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(
-          data.error || "Nu s-a putut crea frizerul"
-        );
-      } else {
-        setName("");
-        setPhone("");
-
-        setMessage("Frizer adăugat ✔");
-
-        loadBarbers();
+          full_name: name,
+          email,
+          phone,
+        }),
       }
-    } catch {
-      setMessage("Eroare server");
-    }
+    );
 
-    setLoading(false);
+    const data = await res.json();
+
+    if (!res.ok) {
+      setMessage(
+        data.error || "Nu s-a putut trimite invitația"
+      );
+    } else {
+      setName("");
+      setEmail("");
+      setPhone("");
+
+      setMessage(
+        "Invitația a fost trimisă ✔"
+      );
+    }
+  } catch {
+    setMessage("Eroare server");
   }
+
+  setLoading(false);
+}
 
   async function toggleBarber(
     barberId: string,
@@ -142,7 +142,7 @@ console.log("TENANT:", me.profile?.tenant_id);
       <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
 
         <h2 className="font-medium">
-          Adaugă frizer
+          Invită frizer
         </h2>
 
         <input
@@ -151,7 +151,12 @@ console.log("TENANT:", me.profile?.tenant_id);
           onChange={(e) => setName(e.target.value)}
           className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
         />
-
+        <input
+  placeholder="Email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+/>
         <input
           placeholder="Telefon"
           value={phone}
@@ -166,7 +171,7 @@ console.log("TENANT:", me.profile?.tenant_id);
         >
           {loading
             ? "Se salvează..."
-            : "Adaugă frizer"}
+            :  "Trimite invitația"}
         </button>
 
         {message && (
