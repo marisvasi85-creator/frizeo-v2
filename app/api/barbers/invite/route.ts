@@ -97,7 +97,7 @@ if (existingInvite) {
       "http://localhost:3000";
 
     const inviteUrl =
-      `${baseUrl}/invite/${token}`;
+  `${baseUrl}/accept-invite/${token}`;
 
     await sendEmail({
       to: email,

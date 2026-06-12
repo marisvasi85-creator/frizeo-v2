@@ -3,6 +3,59 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
 
+// ===================================
+// GET INVITATION
+// ===================================
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+
+    const token = searchParams.get("token");
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Token lipsă" },
+        { status: 400 }
+      );
+    }
+
+    const { data: invitation } =
+      await supabaseAdmin
+        .from("barber_invitations")
+        .select(`
+          id,
+          full_name,
+          email,
+          phone,
+          accepted
+        `)
+        .eq("token", token)
+        .single();
+
+    if (!invitation) {
+      return NextResponse.json(
+        { error: "Invitație inexistentă" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      invitation,
+    });
+
+  } catch (err) {
+    console.error(err);
+
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// ===================================
+// ACCEPT INVITATION
+// ===================================
 export async function POST(req: Request) {
   try {
     const {
@@ -47,7 +100,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // verifică dacă emailul există deja
     const { data: existingUsers } =
       await supabaseAdmin.auth.admin.listUsers();
 
@@ -67,7 +119,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // create auth user
     const {
       data: createdUser,
       error: createError,
@@ -90,7 +141,6 @@ export async function POST(req: Request) {
     const userId =
       createdUser.user.id;
 
-    // profile
     await supabaseAdmin
       .from("profiles")
       .insert({
@@ -101,7 +151,6 @@ export async function POST(req: Request) {
           invitation.phone || null,
       });
 
-    // tenant user
     await supabaseAdmin
       .from("tenant_users")
       .insert({
@@ -111,7 +160,6 @@ export async function POST(req: Request) {
         role: "barber",
       });
 
-    // barber
     await supabaseAdmin
       .from("barbers")
       .insert({
@@ -125,7 +173,6 @@ export async function POST(req: Request) {
         active: true,
       });
 
-    // active tenant
     await supabaseAdmin
       .from("user_active_tenant")
       .insert({
@@ -134,7 +181,6 @@ export async function POST(req: Request) {
           invitation.tenant_id,
       });
 
-    // accepted
     await supabaseAdmin
       .from("barber_invitations")
       .update({
