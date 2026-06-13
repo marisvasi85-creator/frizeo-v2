@@ -2,12 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateProfile } from "./actions";
 
-export default async function ProfilePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ saved?: string }>;
-}) {
-  const params = await searchParams;
+export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
 
   const {
@@ -30,20 +25,14 @@ export default async function ProfilePage({
 
   return (
     <div className="space-y-6">
-
       <h1 className="text-2xl font-semibold">
         Profil
       </h1>
-      {params.saved === "1" && (
-  <div className="bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl p-3">
-    ✓ Date salvate cu succes
-  </div>
-)}
+
       <form
         action={updateProfile}
         className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
       >
-
         <div>
           <label className="block text-sm text-white/60 mb-2">
             Nume afișat
@@ -93,9 +82,7 @@ export default async function ProfilePage({
         >
           Salvează modificările
         </button>
-
       </form>
-
     </div>
   );
 }

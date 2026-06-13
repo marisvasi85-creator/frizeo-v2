@@ -3,7 +3,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 export async function updateProfile(formData: FormData) {
   const supabase = await createSupabaseServerClient();
 
@@ -36,7 +35,7 @@ if (existingSlug) {
   );
 }
 
-  await supabase
+    await supabase
     .from("barbers")
     .update({
       display_name,
@@ -46,4 +45,4 @@ if (existingSlug) {
     .eq("id", barber.id);
 
   revalidatePath("/admin/profile");
-} redirect("/admin/profile?saved=1");
+}
