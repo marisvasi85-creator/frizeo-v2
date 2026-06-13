@@ -55,8 +55,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* 🔥 BOOKING LINK (CLIENT COMPONENT) */}
-      <BookingLinkCard barberId={barber.id} />
-
+<BookingLinkCard />
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 

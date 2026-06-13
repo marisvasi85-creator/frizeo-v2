@@ -26,6 +26,15 @@ export default async function BillingPage() {
     .select("*")
     .order("price", { ascending: true });
 
+  const { count: activeBarbers } = await supabase
+    .from("barbers")
+    .select("*", {
+      count: "exact",
+      head: true,
+    })
+    .eq("tenant_id", barber.tenant_id)
+    .eq("active", true);
+
   const currentPlan = subscription?.plans;
 
   return (
@@ -38,18 +47,28 @@ export default async function BillingPage() {
           Abonament
         </h1>
 
-        <div className="space-y-2">
+        <div className="space-y-3">
 
           <p className="text-white/60 text-sm">
             Plan curent
           </p>
 
           <h2 className="text-3xl font-bold">
-            {currentPlan?.name || "Free"}
+            💎 {currentPlan?.name || "Free"}
           </h2>
 
           <p className="text-white/60">
-            Status: {subscription?.status || "active"}
+            Status:{" "}
+            {subscription?.status === "active"
+              ? "Activ"
+              : subscription?.status || "Activ"}
+          </p>
+
+          <p className="text-white/60">
+            Frizeri activi:{" "}
+            {activeBarbers ?? 0}
+            {" / "}
+            {currentPlan?.max_barbers ?? 1}
           </p>
 
         </div>
@@ -112,11 +131,10 @@ export default async function BillingPage() {
                   </div>
 
                   <div>
-                    📅 {
-                      plan.max_bookings_per_month
-                        ? `${plan.max_bookings_per_month} programări / lună`
-                        : "Programări nelimitate"
-                    }
+                    📅{" "}
+                    {plan.max_bookings_per_month
+                      ? `${plan.max_bookings_per_month} programări / lună`
+                      : "Programări nelimitate"}
                   </div>
 
                 </div>
@@ -124,11 +142,12 @@ export default async function BillingPage() {
                 <div className="mt-6">
 
                   {plan.slug === "custom" ? (
-                    <button
-                      className="w-full bg-white text-black py-2 rounded"
+                    <a
+                      href="mailto:office@frizeo.ro"
+                      className="block w-full text-center bg-white text-black py-2 rounded"
                     >
                       Contactează-ne
-                    </button>
+                    </a>
                   ) : isCurrent ? (
                     <button
                       disabled
@@ -138,8 +157,8 @@ export default async function BillingPage() {
                     </button>
                   ) : (
                     <UpgradeButton
-  planId={plan.id}
-/>
+                      planId={plan.id}
+                    />
                   )}
 
                 </div>

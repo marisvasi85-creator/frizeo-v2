@@ -70,8 +70,8 @@ export default function BarbersClient({
       setPhone("");
 
       setMessage(
-        "Invitația a fost trimisă ✔"
-      );
+  "✓ Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului."
+);
     }
   } catch {
     setMessage("Eroare server");
@@ -127,12 +127,14 @@ export default function BarbersClient({
     {activeBarbers} / {maxBarbers}
   </div>
 
+  {activeBarbers >= maxBarbers && (
   <a
     href="/admin/billing"
     className="inline-block mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm"
   >
     Upgrade abonament pentru mai mulți frizeri
   </a>
+)}
 </div>
         <p className="text-white/60 mt-1">
           Gestionează frizerii salonului.
@@ -216,7 +218,7 @@ export default function BarbersClient({
                     : "text-red-400 text-sm"
                 }
               >
-                {barber.active ? "Activ" : "Inactiv"}
+                {barber.active ? "🟢 Activ" : "🔴 Inactiv"}
               </div>
 
               <button

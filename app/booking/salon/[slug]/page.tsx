@@ -23,12 +23,13 @@ export default async function SalonPage({
   }
 
   const { data: barbers } = await supabaseAdmin
-    .from("barbers")
-    .select(`
-      id,
-      display_name,
-      active
-    `)
+  .from("barbers")
+  .select(`
+    id,
+    display_name,
+    slug,
+    active
+  `)
     .eq("tenant_id", salon.id)
     .eq("active", true)
     .order("display_name");
@@ -49,7 +50,7 @@ export default async function SalonPage({
         {barbers?.map((barber) => (
           <Link
             key={barber.id}
-            href={`/booking/${barber.id}`}
+            href={`/booking/salon/${slug}/${barber.slug}`}
             className="
               block
               border

@@ -1,24 +1,30 @@
 "use client";
 
-export default function BookingLinkCard({
-  barberId,
-}: {
-  barberId: string;
-}) {
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { useEffect, useState } from "react";
 
-  const url = `${appUrl}/booking/${barberId}`;
+export default function BookingLinkCard() {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    fetch("/api/barber/public-link")
+      .then((r) => r.json())
+      .then((d) => {
+        setUrl(d.url || "");
+      });
+  }, []);
 
   return (
     <div className="bg-white border rounded-xl p-4 mb-6">
       <p className="text-sm text-gray-500 mb-2">
         Linkul tău de programări
       </p>
+
       <p className="text-xs text-gray-400 mt-2">
-  Trimite acest link clienților pentru programări online.
-</p>
+        Trimite acest link clienților pentru programări online.
+      </p>
+
       <div className="flex gap-2">
+
         <input
           value={url}
           readOnly
@@ -33,12 +39,13 @@ export default function BookingLinkCard({
         </button>
 
         <a
-          href={`/booking/${barberId}`}
+          href={url}
           target="_blank"
           className="px-3 py-2 bg-gray-200 rounded text-sm"
         >
           Deschide
         </a>
+
       </div>
     </div>
   );
