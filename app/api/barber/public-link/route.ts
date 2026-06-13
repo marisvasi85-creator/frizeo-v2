@@ -43,6 +43,6 @@ export async function GET() {
     barber.slug;
 
   return NextResponse.json({
-    url: `${appUrl}/${tenantSlug}/${barberSlug}`,
-  });
+  url: `${appUrl}/booking/salon/${tenantSlug}/${barberSlug}`,
+});
 }
