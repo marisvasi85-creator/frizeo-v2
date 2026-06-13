@@ -3,24 +3,41 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
+const ownerItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
 
-{ href: "/admin/bookings", label: "Programări", icon: "📋" },
-  
+  { href: "/admin/bookings", label: "Programări", icon: "📋" },
 
-  { href: "/admin/services", label: "Servicii", icon: "✂️" },
-
-  
+  { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
 
   { href: "/admin/settings", label: "Setări", icon: "⚙️" },
 
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];
 
-export default function Sidebar() {
-  const pathname = usePathname();
+const barberItems = [
+  { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
 
+  { href: "/admin/bookings", label: "Programări", icon: "📋" },
+
+  { href: "/admin/services", label: "Servicii", icon: "✂️" },
+
+  { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
+
+  { href: "/admin/profile", label: "Profil", icon: "👤" },
+];
+
+
+export default function Sidebar({
+  role,
+}: {
+  role: string | null;
+}) {
+  const pathname = usePathname();
+  const navItems =
+  role === "owner"
+    ? ownerItems
+    : barberItems;
   return (
     <aside className="hidden md:flex w-64 border-r border-white/10 p-6 flex-col justify-between">
 
@@ -57,12 +74,14 @@ export default function Sidebar() {
       <div className="space-y-3">
 
         {/* UPGRADE CTA */}
-        <Link
-          href="/admin/billing/upgrade"
-          className="block text-center bg-white text-black py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
-        >
-          Upgrade plan
-        </Link>
+        {role === "owner" && (
+  <Link
+    href="/admin/billing/upgrade"
+    className="block text-center bg-white text-black py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
+  >
+    Upgrade plan
+  </Link>
+)}
 
         {/* LOGOUT */}
         <form action="/api/auth/logout" method="post">
