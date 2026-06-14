@@ -5,11 +5,6 @@ import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import BookingLinkCard from "./BookingLinkCard";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 
-const barber = await getCurrentBarberInTenant();
-
-if (!barber) {
-  redirect("/login");
-}
 
 export default async function DashboardPage() {  const supabase = await createSupabaseServerClient();
 const role = await getCurrentRole();

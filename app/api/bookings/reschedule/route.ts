@@ -107,12 +107,17 @@ export async function POST(req: Request) {
       });
 
     if (rpcError || !newBooking) {
-      console.error("RPC ERROR:", rpcError);
-      return NextResponse.json(
-        { error: "Slot ocupat" },
-        { status: 400 }
-      );
-    }
+  console.error("RPC ERROR:", rpcError);
+
+  return NextResponse.json(
+    {
+      error:
+        rpcError?.message ||
+        "Slot ocupat",
+    },
+    { status: 400 }
+  );
+}
 
     // 🔥 EMAIL BARBER
     let barberEmail: string | null = null;
