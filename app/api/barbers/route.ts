@@ -18,11 +18,13 @@ export async function GET() {
     const { data, error } = await supabase
       .from("barbers")
       .select(`
-        id,
-        display_name,
-        phone,
-        active
-      `)
+  id,
+  display_name,
+  phone,
+  active,
+  slug,
+  tenant_id
+`)
       .eq("tenant_id", barber.tenant_id)
       .order("display_name");
 

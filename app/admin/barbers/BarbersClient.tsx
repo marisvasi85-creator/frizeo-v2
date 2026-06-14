@@ -7,34 +7,59 @@ type Barber = {
   display_name: string;
   phone: string | null;
   active: boolean;
+  slug?: string | null;
+  tenant_id: string;
 };
 
 export default function BarbersClient({
   currentPlan,
   activeBarbers,
   maxBarbers,
+  tenantSlug,
 }: {
   currentPlan: string;
   activeBarbers: number;
   maxBarbers: number;
-}) {  const [barbers, setBarbers] = useState<Barber[]>([]);
+  tenantSlug: string;
+}) {  
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [invitations, setInvitations] =
+  useState<any[]>([]);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-
+  const appUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:3000";
   async function loadBarbers() {
-    const res = await fetch("/api/barbers");
-    const data = await res.json();
+  const [barbersRes, invitesRes] =
+    await Promise.all([
+      fetch("/api/barbers"),
+      fetch("/api/barbers/invitations"),
+    ]);
 
-    setBarbers(data.barbers || []);
-  }
+  const barbersData =
+    await barbersRes.json();
 
-  useEffect(() => {
-    loadBarbers();
-  }, []);
+  const invitesData =
+    await invitesRes.json();
+  
+
+  setBarbers(
+    barbersData.barbers || []
+  );
+console.log("BARBERS:", barbersData);
+  setInvitations(
+    invitesData.invitations || []
+  );
+  console.log("INVITATIONS:", invitesData);
+}
+useEffect(() => {
+  loadBarbers();
+}, []);
 
   async function addBarber() {
   if (!name.trim() || !email.trim()) return;
@@ -202,7 +227,43 @@ export default function BarbersClient({
               <div className="font-medium">
                 {barber.display_name}
               </div>
+              {barber.slug && (
+  <div className="text-xs text-white/40 mt-1">
+    /{barber.slug}
+  </div>
+)}
+{barber.slug && tenantSlug && (
+  <div className="mt-2 space-y-2">
 
+    <div className="text-xs text-white/40 break-all">
+  {`${appUrl}/${tenantSlug}/${barber.slug}`}
+</div>
+
+    <div className="flex gap-2">
+
+      <button
+        onClick={() =>
+          navigator.clipboard.writeText(
+  `${appUrl}/${tenantSlug}/${barber.slug}`
+)
+        }
+        className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
+      >
+        Copiază link
+      </button>
+
+      <a
+        href={`/${tenantSlug}/${barber.slug}`}
+        target="_blank"
+        className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
+      >
+        Deschide
+      </a>
+
+    </div>
+
+  </div>
+)}
               <div className="text-sm text-white/60">
                 {barber.phone || "Fără telefon"}
               </div>
@@ -241,7 +302,45 @@ export default function BarbersClient({
         ))}
 
       </div>
+<div className="space-y-3 mt-10">
 
+  <h2 className="text-xl font-semibold">
+    Invitații trimise
+  </h2>
+
+  {invitations.length === 0 && (
+    <div className="text-white/50">
+      Nu există invitații.
+    </div>
+  )}
+
+  {invitations.map((invite) => (
+    <div
+      key={invite.id}
+      className="bg-[#161618] border border-white/10 rounded-xl p-4"
+    >
+      <div className="font-medium">
+        {invite.full_name}
+      </div>
+
+      <div className="text-sm text-white/60">
+        {invite.email}
+      </div>
+
+      <div className="mt-2">
+        {invite.accepted ? (
+          <span className="text-green-400 text-sm">
+            ✅ Acceptată
+          </span>
+        ) : (
+          <span className="text-yellow-400 text-sm">
+            ⏳ În așteptare
+          </span>
+        )}
+      </div>
+    </div>
+  ))}
+</div>
     </div>
   );
 }

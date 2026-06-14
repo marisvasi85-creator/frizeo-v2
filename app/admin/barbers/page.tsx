@@ -38,13 +38,20 @@ if (role !== "owner") {
     .eq("tenant_id", barber.tenant_id)
     .single();
 
+const { data: tenant } = await supabase
+  .from("tenants")
+  .select("slug")
+  .eq("id", barber.tenant_id)
+  .single();
+
   const plan = subscription?.plan as any;
 
   return (
     <BarbersClient
-      currentPlan={plan?.name ?? "Free"}
-      activeBarbers={activeBarbers ?? 0}
-      maxBarbers={plan?.max_barbers ?? 1}
-    />
+  currentPlan={plan?.name ?? "Free"}
+  activeBarbers={activeBarbers ?? 0}
+  maxBarbers={plan?.max_barbers ?? 1}
+  tenantSlug={tenant?.slug ?? ""}
+/>
   );
 }

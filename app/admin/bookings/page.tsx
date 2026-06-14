@@ -78,7 +78,11 @@ export default function AdminBookingsPage() {
                     {booking.client_phone}
                   </div>
                 </div>
-
+                {booking.barber?.display_name && (
+  <div className="text-xs text-blue-400 mt-1">
+    👤 {booking.barber.display_name}
+  </div>
+)}
                 <div className="text-right">
 
                   <div className="font-medium">

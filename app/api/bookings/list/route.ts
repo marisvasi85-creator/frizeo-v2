@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -8,43 +9,67 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.log("❌ NO USER");
     return Response.json({ bookings: [] });
   }
 
+  const role = await getCurrentRole();
+
   const { data: barber } = await supabase
     .from("barbers")
-    .select("id")
+    .select("id, tenant_id")
     .eq("user_id", user.id)
     .single();
 
   if (!barber) {
-    console.log("❌ NO BARBER");
     return Response.json({ bookings: [] });
   }
 
-  // 🔥 FIX IMPORTANT AICI
-  const { data, error } = await supabase
+  let query = supabase
     .from("bookings")
     .select(`
-      *,
-      barber_services:barber_services!bookings_barber_service_id_fkey (
-  display_name,
-  name,
-  duration
-)
-    `)
-    .eq("barber_id", barber.id)
-    .neq("status", "cancelled")
-    .order("date", { ascending: false })
-    .order("start_time", { ascending: false });
+  *,
+  barber_services:barber_services!bookings_barber_service_id_fkey (
+    display_name,
+    name,
+    duration
+  ),
+  barber:barbers (
+    display_name
+  )
+`)
+    .neq("status", "cancelled");
 
-  if (error) {
-    console.error("❌ BOOKINGS ERROR:", error);
-    return Response.json({ bookings: [] });
+  // OWNER -> toate programările salonului
+  if (role === "owner") {
+    query = query.eq(
+      "tenant_id",
+      barber.tenant_id
+    );
   }
 
-  console.log("🔥 BOOKINGS FIXED:", data);
+  // BARBER -> doar programările lui
+  else {
+    query = query.eq(
+      "barber_id",
+      barber.id
+    );
+  }
+
+  const { data, error } = await query
+    .order("date", {
+      ascending: false,
+    })
+    .order("start_time", {
+      ascending: false,
+    });
+
+  if (error) {
+    console.error(error);
+
+    return Response.json({
+      bookings: [],
+    });
+  }
 
   return Response.json({
     bookings: data || [],
