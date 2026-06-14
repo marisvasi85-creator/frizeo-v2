@@ -10,6 +10,12 @@ const ownerItems = [
 
   { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
 
+  {
+  href: "/admin/salon",
+  label: "Salon",
+  icon: "🏪",
+},
+
   { href: "/admin/settings", label: "Setări", icon: "⚙️" },
 
   { href: "/admin/billing", label: "Abonament", icon: "💎" },

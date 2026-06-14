@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { redirect } from "next/navigation";
-
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import BarbersClient from "./BarbersClient";
 
 export default async function BarbersPage() {
@@ -12,6 +12,11 @@ export default async function BarbersPage() {
   if (!barber) {
     redirect("/login");
   }
+const role = await getCurrentRole();
+
+if (role !== "owner") {
+  redirect("/admin/dashboard");
+}
 
   const { count: activeBarbers } = await supabase
     .from("barbers")

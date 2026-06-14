@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import UpgradeButton from "./UpgradeButton";
-
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 export default async function BillingPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -11,7 +11,11 @@ export default async function BillingPage() {
   if (!barber) {
     redirect("/login");
   }
+  const role = await getCurrentRole();
 
+if (role !== "owner") {
+  redirect("/admin/dashboard");
+}
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select(`
