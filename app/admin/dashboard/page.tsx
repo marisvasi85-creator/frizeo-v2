@@ -1,46 +1,69 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";import BookingLinkCard from "./BookingLinkCard"; // 🔥 IMPORTANT
+import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
+import BookingLinkCard from "./BookingLinkCard";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 
-export default async function DashboardPage() {
-  const supabase = await createSupabaseServerClient();
+const barber = await getCurrentBarberInTenant();
 
+if (!barber) {
+  redirect("/login");
+}
+
+export default async function DashboardPage() {  const supabase = await createSupabaseServerClient();
+const role = await getCurrentRole();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) {
+    redirect("/login");
+  }
 
   const barber = await getCurrentBarberInTenant();
-  if (!barber) redirect("/login");
+
+  if (!barber) {
+    redirect("/login");
+  }
 
   const status = await getDashboardStatus(user.id);
 
   if (!status.completed) {
-    if (status.step === "services") redirect("/admin/services");
-    if (status.step === "schedule") redirect("/admin/settings");
+    if (status.step === "services") {
+      redirect("/admin/services");
+    }
+
+    if (status.step === "schedule") {
+      redirect("/admin/settings");
+    }
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today =
+    new Date().toISOString().split("T")[0];
 
-  const { data: todayBookings } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("barber_id", barber.id)
-    .eq("date", today)
-    .eq("status", "confirmed");
+  const { data: todayBookings } =
+    await supabase
+      .from("bookings")
+      .select("*")
+      .eq("barber_id", barber.id)
+      .eq("date", today)
+      .eq("status", "confirmed");
 
-  const { data: upcoming } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("barber_id", barber.id)
-    .eq("status", "confirmed")
-    .gt("date", today)
-    .order("date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(5);
+  const { data: upcoming } =
+    await supabase
+      .from("bookings")
+      .select("*")
+      .eq("barber_id", barber.id)
+      .eq("status", "confirmed")
+      .gt("date", today)
+      .order("date", { ascending: true })
+      .order("start_time", {
+        ascending: true,
+      })
+      .limit(5);
 
+  
   return (
     <div className="space-y-8">
 
@@ -56,6 +79,38 @@ export default async function DashboardPage() {
 
       {/* 🔥 BOOKING LINK (CLIENT COMPONENT) */}
 <BookingLinkCard />
+{role === "owner" && (
+  <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+    <h2 className="text-lg font-semibold mb-4">
+      Administrare salon
+    </h2>
+
+    <div className="flex gap-3 flex-wrap">
+
+      <a
+        href="/admin/barbers"
+        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+      >
+        Frizeri
+      </a>
+
+      <a
+        href="/admin/salon"
+        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+      >
+        Salon
+      </a>
+
+      <a
+        href="/admin/billing"
+        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+      >
+        Abonament
+      </a>
+
+    </div>
+  </div>
+)}
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 

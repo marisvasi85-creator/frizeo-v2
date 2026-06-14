@@ -8,16 +8,23 @@ import { Slot } from "@/types/slots";
 
 export default function AddBookingClient({
   barberId,
-  services,
+  initialServices,
+  role,
+  barbers,
 }: {
   barberId: string;
-  services: any[];
+  initialServices: any[];
+  role: string | null;
+  barbers: any[];
 }) {
   const router = useRouter();
 
   const [date, setDate] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<string>("");
-
+  const [services, setServices] =
+  useState(initialServices);
+  const [selectedBarberId, setSelectedBarberId] =
+  useState(barberId);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
@@ -45,9 +52,8 @@ export default function AddBookingClient({
       const to = future.toISOString().slice(0, 10);
 
       const res = await fetch(
-        `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
-      );
-
+  `/api/availability?barberId=${selectedBarberId}&from=${from}&to=${to}`
+);
       const data = await res.json();
 
       setAvailableDays(data.availableDays || []);
@@ -56,7 +62,28 @@ export default function AddBookingClient({
     }
 
     loadAvailability();
-  }, [barberId]);
+}, [selectedBarberId]);
+
+useEffect(() => {
+  async function loadServices() {
+    const res = await fetch(
+      `/api/services?barberId=${selectedBarberId}`
+    );
+
+    const data = await res.json();
+
+    setServices(data.services || []);
+
+    setServiceId("");
+    setDate(null);
+    setSlots([]);
+    setSelectedSlot(null);
+  }
+
+  if (role === "owner") {
+    loadServices();
+  }
+}, [selectedBarberId, role]);
 
   useEffect(() => {
     if (!date || !serviceId) return;
@@ -72,26 +99,28 @@ export default function AddBookingClient({
       setLoadingSlots(true);
 
       const res = await fetch(
-        `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}`
-      );
+  `/api/slots?barberId=${selectedBarberId}&date=${date}&serviceId=${serviceId}`
+);
 
-      const data = await res.json();
+const data = await res.json();
 
-      const freeSlots: Slot[] = (data.slots || []).filter(
-        (s: Slot) => s.type === "free"
-      );
+const freeSlots: Slot[] = (
+  data.slots || []
+).filter(
+  (s: Slot) => s.type === "free"
+);
 
-      slotsCache.current[cacheKey] = freeSlots;
+slotsCache.current[cacheKey] =
+  freeSlots;
 
-      setSlots(freeSlots);
-      setSelectedSlot(null);
+setSlots(freeSlots);
+setSelectedSlot(null);
 
-      setLoadingSlots(false);
+setLoadingSlots(false);
     }
 
     loadSlots();
-  }, [date, serviceId, barberId]);
-
+ }, [date, serviceId, selectedBarberId]);
   async function createBooking() {
     if (!selectedSlot || !date || !serviceId) return;
 
@@ -130,8 +159,8 @@ export default function AddBookingClient({
         {
           method: "POST",
           body: JSON.stringify({
-            barber_id: barberId,
-            barber_service_id: serviceId,
+  barber_id: selectedBarberId,
+  barber_service_id: serviceId,
             date,
             start_time: selectedSlot,
             end_time: endTime,
@@ -179,7 +208,26 @@ export default function AddBookingClient({
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
-
+{role === "owner" && (
+  <select
+    value={selectedBarberId}
+    onChange={(e) =>
+      setSelectedBarberId(
+        e.target.value
+      )
+    }
+    className="w-full bg-zinc-800 p-3 rounded text-white"
+  >
+    {barbers.map((barber) => (
+      <option
+        key={barber.id}
+        value={barber.id}
+      >
+        {barber.display_name}
+      </option>
+    ))}
+  </select>
+)}
       <select
         value={serviceId}
         onChange={(e) => setServiceId(e.target.value)}

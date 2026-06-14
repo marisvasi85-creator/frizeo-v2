@@ -10,7 +10,7 @@ const ownerItems = [
 
   { href: "/admin/barbers", icon: "👥" },
 
-  { href: "/admin/settings", icon: "⚙️" },
+  { href: "/admin/profile", icon: "👤" },
 
   { href: "/admin/billing", icon: "💎" },
 ];

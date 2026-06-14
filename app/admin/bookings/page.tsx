@@ -8,7 +8,8 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<any | null>(null);
-
+  const [selectedBarber, setSelectedBarber] =
+  useState("all");
   async function loadBookings() {
     setLoading(true);
 
@@ -22,7 +23,25 @@ export default function AdminBookingsPage() {
   useEffect(() => {
     loadBookings();
   }, []);
+  const barberNames = [
+  "all",
+  ...new Set(
+    bookings
+      .map(
+        (b) => b.barber?.display_name
+      )
+      .filter(Boolean)
+  ),
+];
 
+const filteredBookings =
+  selectedBarber === "all"
+    ? bookings
+    : bookings.filter(
+        (b) =>
+          b.barber?.display_name ===
+          selectedBarber
+      );
   return (
     <div className="p-6 text-white space-y-6">
 
@@ -31,7 +50,33 @@ export default function AdminBookingsPage() {
         <h1 className="text-2xl font-semibold">
           Programări
         </h1>
-
+  <select
+  value={selectedBarber}
+  onChange={(e) =>
+    setSelectedBarber(e.target.value)
+  }
+  className="
+    mt-3
+    bg-zinc-900
+    border
+    border-zinc-700
+    rounded-lg
+    px-3
+    py-2
+    text-sm
+  "
+>
+  {barberNames.map((name) => (
+    <option
+      key={name}
+      value={name}
+    >
+      {name === "all"
+        ? "Toți frizerii"
+        : name}
+    </option>
+  ))}
+</select>
         <Link
           href="/admin/bookings/new"
           className="bg-white text-black px-4 py-2 rounded-xl font-medium"
@@ -45,28 +90,28 @@ export default function AdminBookingsPage() {
         <div className="text-zinc-400">
           Se încarcă...
         </div>
-      ) : bookings.length === 0 ? (
+      ) : filteredBookings.length === 0 ? (
         <div className="text-zinc-400">
           Nu există programări.
         </div>
       ) : (
         <div className="space-y-3">
 
-          {bookings.map((booking) => (
-            <button
-              key={booking.id}
-              onClick={() => setEditing(booking)}
-              className="
-                w-full
-                bg-zinc-900
-                border border-zinc-800
-                rounded-xl
-                p-4
-                text-left
-                hover:border-zinc-600
-                transition
-              "
-            >
+          {filteredBookings.map((booking) => (
+    <button
+      key={booking.id}
+      onClick={() => setEditing(booking)}
+      className="
+        w-full
+        bg-zinc-900
+        border border-zinc-800
+        rounded-xl
+        p-4
+        text-left
+        hover:border-zinc-600
+        transition
+      "
+    >
               <div className="flex justify-between items-center">
 
                 <div>
