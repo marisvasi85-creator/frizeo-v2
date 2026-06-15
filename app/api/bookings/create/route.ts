@@ -178,14 +178,34 @@ console.log("BOOKING LIMIT:", limit);if (!limit.allowed) {
 // 📅 GOOGLE CALENDAR
 // =========================
 
+// =========================
+// 📅 GOOGLE CALENDAR
+// =========================
+
 try {
+
   const { data: googleAccount } = await supabase
     .from("barber_google_accounts")
     .select("*")
     .eq("barber_id", data.barber_id)
     .single();
 
+  console.log(
+    "GOOGLE ACCOUNT:",
+    googleAccount
+  );
+
+  if (!googleAccount) {
+    console.log(
+      "NO GOOGLE ACCOUNT FOUND"
+    );
+  }
+
   if (googleAccount?.access_token) {
+
+    console.log(
+      "CREATING GOOGLE EVENT"
+    );
 
     const startDateTime =
       `${data.date}T${data.start_time}`;
@@ -203,7 +223,13 @@ try {
       end: endDateTime,
     });
 
+    console.log(
+      "GOOGLE EVENT RESPONSE:",
+      event
+    );
+
     if (event?.id) {
+
       await supabase
         .from("bookings")
         .update({
@@ -219,11 +245,14 @@ try {
   }
 
 } catch (e) {
+
   console.error(
     "GOOGLE CALENDAR ERROR:",
     e
   );
+
 }
+
     // =========================
     // 📩 EMAIL CLIENT
     // =========================
