@@ -5,10 +5,19 @@ import { usePathname } from "next/navigation";
 
 const ownerItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
+
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
-  { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
-  { href: "/admin/salon", label: "Salon", icon: "🏪" },
+
+  { href: "/admin/services", label: "Servicii", icon: "✂️" },
+
+  { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
+
   { href: "/admin/profile", label: "Profil", icon: "👤" },
+
+  { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
+
+  { href: "/admin/salon", label: "Salon", icon: "🏪" },
+
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];
 

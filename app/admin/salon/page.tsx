@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { updateSalon } from "./actions";
+import CopySalonLink from "./CopySalonLink";
 
 export default async function SalonPage() {
   const supabase = await createSupabaseServerClient();
@@ -44,6 +45,24 @@ export default async function SalonPage() {
     })
     .eq("tenant_id", barber.tenant_id)
     .eq("active", true);
+  
+  const firstDayOfMonth = new Date();
+firstDayOfMonth.setDate(1);
+
+const { count: monthBookings } = await supabase
+  .from("bookings")
+  .select("*", {
+    count: "exact",
+    head: true,
+  })
+  .eq("tenant_id", barber.tenant_id)
+  .eq("status", "confirmed")
+  .gte(
+    "date",
+    firstDayOfMonth
+      .toISOString()
+      .split("T")[0]
+  );
 
   const salonUrl = `${
     process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -52,100 +71,117 @@ export default async function SalonPage() {
   const plan = subscription?.plans as any;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">
-        Salon
-      </h1>
+  <div className="space-y-6">
+    <h1 className="text-2xl font-semibold">
+      Salon
+    </h1>
 
-      {/* INFO */}
-      <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
-        <div>
-          <p className="text-sm text-white/60">
-            Link public salon
-          </p>
+    {/* INFO */}
+    <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
 
-          <div className="mt-2 flex gap-2">
-            <input
-              value={salonUrl}
-              readOnly
-              className="flex-1 bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-            />
+      <div>
+        <p className="text-sm text-white/60">
+          Link public salon
+        </p>
 
-            <a
-  href={salonUrl}
-  target="_blank"
-  className="px-4 py-3 bg-white text-black rounded-lg"
->
-  Deschide
-</a>
-          </div>
-        </div>
+        <div className="mt-2 flex gap-2">
+          <input
+            value={salonUrl}
+            readOnly
+            className="flex-1 bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-white/60">
-              Plan curent
-            </p>
+          <a
+            href={salonUrl}
+            target="_blank"
+            className="px-4 py-3 bg-white text-black rounded-lg"
+          >
+            Deschide
+          </a>
+                      <CopySalonLink url={salonUrl} />
 
-            <p className="text-lg font-medium mt-1">
-              💎 {plan?.name || "Free"}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-sm text-white/60">
-              Frizeri activi
-            </p>
-
-            <p className="text-lg font-medium mt-1">
-              {activeBarbers ?? 0} / {plan?.max_barbers ?? 1}
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* FORM */}
-      <form
-        action={updateSalon}
-        className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
-      >
-        <div>
-          <label className="block text-sm text-white/60 mb-2">
-            Nume salon
-          </label>
-
-          <input
-            type="text"
-            name="name"
-            defaultValue={tenant?.name || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-          />
-        </div>
+      <div className="grid md:grid-cols-3 gap-4">
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">
-            Slug salon
-          </label>
+          <p className="text-sm text-white/60">
+            Plan curent
+          </p>
 
-          <input
-            type="text"
-            name="slug"
-            defaultValue={tenant?.slug || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-          />
-
-          <p className="text-xs text-white/40 mt-2">
-            Exemplu: socobarbershop
+          <p className="text-lg font-medium mt-1">
+            💎 {plan?.name || "Free"}
           </p>
         </div>
 
-        <button
-          type="submit"
-          className="bg-white text-black px-5 py-3 rounded-lg font-medium"
-        >
-          Salvează modificările
-        </button>
-      </form>
+        <div>
+          <p className="text-sm text-white/60">
+            Frizeri activi
+          </p>
+
+          <p className="text-lg font-medium mt-1">
+            {activeBarbers ?? 0} / {plan?.max_barbers ?? 1}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-sm text-white/60">
+            Programări luna aceasta
+          </p>
+
+          <p className="text-lg font-medium mt-1">
+            {monthBookings ?? 0}
+          </p>
+        </div>
+
+      </div>
     </div>
-  );
+
+    {/* FORM */}
+    <form
+      action={updateSalon}
+      className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
+    >
+
+      <div>
+        <label className="block text-sm text-white/60 mb-2">
+          Nume salon
+        </label>
+
+        <input
+          type="text"
+          name="name"
+          defaultValue={tenant?.name || ""}
+          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm text-white/60 mb-2">
+          Slug salon
+        </label>
+
+        <input
+          type="text"
+          name="slug"
+          defaultValue={tenant?.slug || ""}
+          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+        />
+
+        <p className="text-xs text-white/40 mt-2">
+          Exemplu: socobarbershop
+        </p>
+      </div>
+
+      <button
+        type="submit"
+        className="bg-white text-black px-5 py-3 rounded-lg font-medium"
+      >
+        Salvează modificările
+      </button>
+
+    </form>
+  </div>
+);
 }

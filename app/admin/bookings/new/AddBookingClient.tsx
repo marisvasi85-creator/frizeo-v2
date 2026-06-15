@@ -175,7 +175,7 @@ setLoadingSlots(false);
           holdData.error || "Slot ocupat"
         );
       }
-
+console.log("EMAIL CLIENT:", email);
       const createRes = await fetch(
         "/api/bookings/create",
         {
@@ -190,7 +190,7 @@ setLoadingSlots(false);
       );
 
       const createData = await createRes.json();
-
+console.log("CREATE RESPONSE:", createData);
       if (!createRes.ok) {
         throw new Error(
           createData.error || "Eroare creare"
