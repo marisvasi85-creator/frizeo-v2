@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
+import { createGoogleEvent } from "@/lib/google/createEvent";
 
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
@@ -173,7 +174,56 @@ console.log("BOOKING LIMIT:", limit);if (!limit.allowed) {
 
     const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
     const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
+    // =========================
+// 📅 GOOGLE CALENDAR
+// =========================
 
+try {
+  const { data: googleAccount } = await supabase
+    .from("barber_google_accounts")
+    .select("*")
+    .eq("barber_id", data.barber_id)
+    .single();
+
+  if (googleAccount?.access_token) {
+
+    const startDateTime =
+      `${data.date}T${data.start_time}`;
+
+    const endDateTime =
+      `${data.date}T${data.end_time}`;
+
+    const event = await createGoogleEvent({
+      accessToken: googleAccount.access_token,
+      calendarId:
+        googleAccount.calendar_id || "primary",
+      title:
+        `${serviceName} - ${client_name}`,
+      start: startDateTime,
+      end: endDateTime,
+    });
+
+    if (event?.id) {
+      await supabase
+        .from("bookings")
+        .update({
+          google_event_id: event.id,
+        })
+        .eq("id", data.id);
+
+      console.log(
+        "GOOGLE EVENT CREATED:",
+        event.id
+      );
+    }
+  }
+
+} catch (e) {
+  console.error(
+    "GOOGLE CALENDAR ERROR:",
+    e
+  );
+}
     // =========================
     // 📩 EMAIL CLIENT
     // =========================
