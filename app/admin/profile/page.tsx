@@ -16,23 +16,63 @@ export default async function ProfilePage() {
   const { data: barber } = await supabase
     .from("barbers")
     .select(`
-      display_name,
-      phone,
-      slug
-    `)
+  id,
+  display_name,
+  phone,
+  slug,
+  google_calendar_connected
+`)
     .eq("user_id", user.id)
     .single();
+  
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">
-        Profil
-      </h1>
+  <div className="space-y-6">
 
-      <form
-        action={updateProfile}
-        className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
-      >
+    <h1 className="text-2xl font-semibold">
+      Profil
+    </h1>
+
+    {/* GOOGLE CALENDAR */}
+    <div className="bg-[#161618] border border-white/10 rounded-xl p-6">
+      <h2 className="text-lg font-semibold mb-4">
+        Google Calendar
+      </h2>
+
+      {barber?.google_calendar_connected ? (
+        <div className="flex items-center justify-between">
+          <p className="text-green-400">
+            ✅ Calendar conectat
+          </p>
+
+          <a
+            href="/api/google/connect"
+            className="px-4 py-2 bg-white/10 rounded-lg"
+          >
+            Reconectează
+          </a>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between">
+          <p className="text-white/60">
+            Calendar neconectat
+          </p>
+
+          <a
+            href="/api/google/connect"
+            className="px-4 py-2 bg-white text-black rounded-lg font-medium"
+          >
+            Conectează Google Calendar
+          </a>
+        </div>
+      )}
+    </div>
+
+    <form
+      action={updateProfile}
+      className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
+    >
+  
         <div>
           <label className="block text-sm text-white/60 mb-2">
             Nume afișat
