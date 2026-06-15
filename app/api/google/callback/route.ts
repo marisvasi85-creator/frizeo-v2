@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
 export async function GET(req: NextRequest) {
@@ -42,8 +42,7 @@ console.log(
 
   const tokenData = await tokenRes.json();
 console.log("TOKEN DATA:", tokenData);
-  const supabase =
-    await createSupabaseServerClient();
+  const supabase = supabaseAdmin;
 
   const barber =
     await getCurrentBarberInTenant();
