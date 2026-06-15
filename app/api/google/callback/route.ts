@@ -3,6 +3,15 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 
 export async function GET(req: NextRequest) {
+  console.log(
+  "CALLBACK URL:",
+  req.nextUrl.toString()
+);
+
+console.log(
+  "CODE:",
+  req.nextUrl.searchParams.get("code")
+);
   const code = req.nextUrl.searchParams.get("code");
 
   if (!code) {
@@ -32,34 +41,46 @@ export async function GET(req: NextRequest) {
   );
 
   const tokenData = await tokenRes.json();
-
+console.log("TOKEN DATA:", tokenData);
   const supabase =
     await createSupabaseServerClient();
 
   const barber =
     await getCurrentBarberInTenant();
-
+console.log("BARBER:", barber);
   if (!barber) {
     return NextResponse.redirect(
       `${process.env.NEXT_PUBLIC_APP_URL}/admin/profile`
     );
   }
 
-  await supabase
-    .from("barbers")
-    .update({
-      google_calendar_connected: true,
-      google_access_token:
-        tokenData.access_token,
-      google_refresh_token:
-        tokenData.refresh_token,
-      google_token_expires_at: new Date(
-        Date.now() +
-          tokenData.expires_in * 1000
-      ).toISOString(),
-      google_calendar_id: "primary",
-    })
-    .eq("id", barber.id);
+  const googleUserRes = await fetch(
+  "https://www.googleapis.com/oauth2/v2/userinfo",
+  {
+    headers: {
+      Authorization: `Bearer ${tokenData.access_token}`,
+    },
+  }
+);
+
+const googleUser = await googleUserRes.json();
+console.log("GOOGLE USER:", googleUser);
+const { error } = await supabase
+  .from("barber_google_accounts")
+  .upsert({
+    barber_id: barber.id,
+    google_email: googleUser.email,
+    access_token: tokenData.access_token,
+    refresh_token: tokenData.refresh_token,
+    expires_at: new Date(
+      Date.now() + tokenData.expires_in * 1000
+    ).toISOString(),
+    calendar_id: "primary",
+  });
+
+if (error) {
+  console.error("GOOGLE UPSERT ERROR:", error);
+}
 
   return NextResponse.redirect(
     `${process.env.NEXT_PUBLIC_APP_URL}/admin/profile`
