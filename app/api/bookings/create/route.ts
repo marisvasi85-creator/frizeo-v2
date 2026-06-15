@@ -5,6 +5,7 @@ import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirm
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 import { createGoogleEvent } from "@/lib/google/createEvent";
+import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
@@ -174,9 +175,6 @@ console.log("BOOKING LIMIT:", limit);if (!limit.allowed) {
 
     const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
     const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
-    // =========================
-// 📅 GOOGLE CALENDAR
-// =========================
 
 // =========================
 // 📅 GOOGLE CALENDAR
@@ -203,12 +201,66 @@ try {
 
   if (googleAccount?.access_token) {
 
+  let accessToken =
+    googleAccount.access_token;
+
+  const expiresAt = new Date(
+    googleAccount.expires_at
+  );
+
+  const now = new Date();
+
+  const shouldRefresh =
+    expiresAt.getTime() <
+    now.getTime() + 5 * 60 * 1000;
+
+  if (
+    shouldRefresh &&
+    googleAccount.refresh_token
+  ) {
+
     console.log(
-      "CREATING GOOGLE EVENT"
+      "REFRESHING GOOGLE TOKEN"
     );
 
-    const startDateTime =
-      `${data.date}T${data.start_time}`;
+    const refreshed =
+      await refreshAccessToken(
+        googleAccount.refresh_token
+      );
+
+    if (refreshed?.access_token) {
+
+      accessToken =
+        refreshed.access_token;
+
+      await supabase
+        .from("barber_google_accounts")
+        .update({
+          access_token:
+            refreshed.access_token,
+
+          expires_at: new Date(
+            Date.now() +
+              refreshed.expires_in * 1000
+          ).toISOString(),
+        })
+        .eq(
+          "barber_id",
+          data.barber_id
+        );
+
+      console.log(
+        "GOOGLE TOKEN REFRESHED"
+      );
+    }
+  }
+
+  console.log(
+    "CREATING GOOGLE EVENT"
+  );
+
+  const startDateTime =
+    `${data.date}T${data.start_time}`;
 
     const endDateTime =
       `${data.date}T${data.end_time}`;
@@ -219,8 +271,7 @@ console.log("EVENT DESCRIPTION:",
 Telefon: ${client_phone}
 Serviciu: ${serviceName}`);
     const event = await createGoogleEvent({
-  accessToken: googleAccount.access_token,
-
+  accessToken: accessToken,
   calendarId:
     googleAccount.calendar_id || "primary",
 
