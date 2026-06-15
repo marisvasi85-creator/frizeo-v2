@@ -212,16 +212,29 @@ try {
 
     const endDateTime =
       `${data.date}T${data.end_time}`;
+console.log("EVENT TITLE:", `${client_name} | ${client_phone} | ${serviceName}`);
 
+console.log("EVENT DESCRIPTION:",
+`Client: ${client_name}
+Telefon: ${client_phone}
+Serviciu: ${serviceName}`);
     const event = await createGoogleEvent({
-      accessToken: googleAccount.access_token,
-      calendarId:
-        googleAccount.calendar_id || "primary",
-      title:
-        `${serviceName} - ${client_name}`,
-      start: startDateTime,
-      end: endDateTime,
-    });
+  accessToken: googleAccount.access_token,
+
+  calendarId:
+    googleAccount.calendar_id || "primary",
+
+  title:
+    `${client_name} | ${client_phone} | ${serviceName}`,
+
+  description:
+`Client: ${client_name}
+Telefon: ${client_phone}
+Serviciu: ${serviceName}`,
+
+  start: startDateTime,
+  end: endDateTime,
+});
 
     console.log(
       "GOOGLE EVENT RESPONSE:",

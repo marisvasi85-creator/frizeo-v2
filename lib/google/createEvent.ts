@@ -1,13 +1,17 @@
+// lib/google/createEvent.ts
+
 export async function createGoogleEvent({
   accessToken,
   calendarId,
   title,
+  description,
   start,
   end,
 }: {
   accessToken: string;
   calendarId: string;
   title: string;
+  description?: string;
   start: string;
   end: string;
 }) {
@@ -23,10 +27,13 @@ export async function createGoogleEvent({
       },
       body: JSON.stringify({
         summary: title,
+        description,
+
         start: {
           dateTime: start,
           timeZone: "Europe/Bucharest",
         },
+
         end: {
           dateTime: end,
           timeZone: "Europe/Bucharest",
@@ -38,7 +45,11 @@ export async function createGoogleEvent({
   const data = await res.json();
 
   if (!res.ok) {
-    console.error("GOOGLE EVENT ERROR:", data);
+    console.error(
+      "GOOGLE EVENT ERROR:",
+      JSON.stringify(data, null, 2)
+    );
+
     return null;
   }
 
