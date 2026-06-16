@@ -4,6 +4,7 @@ import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
 
 export async function POST(req: NextRequest) {
   try {
@@ -150,6 +151,35 @@ await supabase
         }),
       });
     }
+
+    // 🔥 SMS CLIENT
+
+try {
+
+  if (booking.client_phone) {
+
+    await sendSms({
+      phone: booking.client_phone,
+
+      message:
+`Frizeo
+
+Programarea ta a fost anulata.
+
+${booking.date}
+${booking.start_time}`,
+    });
+
+  }
+
+} catch (e) {
+
+  console.error(
+    "SMS CANCEL ERROR:",
+    e
+  );
+
+}
 
     return NextResponse.json({ success: true });
 
