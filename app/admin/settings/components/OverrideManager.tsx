@@ -94,20 +94,19 @@ export default function OverrideManager({
 
 <div className="flex flex-col md:flex-row gap-3">
           <input
-  type="date"
+  type="text"
+  placeholder="Selectează data"
   value={date}
-  onChange={(e) =>
-    setDate(e.target.value)
-  }
+  readOnly
   className="
-    bg-[#0F0F10]
+    bg-red-500
     text-white
     border
-    border-white/10
+    border-white
     px-3
     py-2
     rounded
-    min-h-[48px]
+    w-full
   "
 />
 
