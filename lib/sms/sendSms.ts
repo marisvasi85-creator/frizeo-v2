@@ -8,10 +8,19 @@ export async function sendSms({
   try {
     const sender = 4;
 
+    const formattedPhone = phone
+      .replace(/\s/g, "")
+      .replace(/^0/, "40");
+
+    console.log(
+      "SMS PHONE:",
+      formattedPhone
+    );
+
     const url =
       `https://app.smso.ro/api/v1/send` +
       `?sender=${sender}` +
-      `&to=${encodeURIComponent(phone)}` +
+      `&to=${encodeURIComponent(formattedPhone)}` +
       `&body=${encodeURIComponent(message)}` +
       `&apiKey=${process.env.SMSO_API_KEY}`;
 
@@ -19,7 +28,10 @@ export async function sendSms({
 
     const data = await res.json();
 
-    console.log("SMS RESPONSE:", data);
+    console.log(
+      "SMS RESPONSE:",
+      data
+    );
 
     return data;
 
