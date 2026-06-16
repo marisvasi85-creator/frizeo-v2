@@ -5,6 +5,7 @@ import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
+import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
 export async function POST(req: NextRequest) {
   try {
@@ -44,6 +45,11 @@ export async function POST(req: NextRequest) {
         { status: 404 }
       );
     }
+
+    const settings =
+  await getNotificationSettings(
+    booking.tenant_id
+  );
 
     // 🔥 GOOGLE CALENDAR
 
@@ -140,8 +146,10 @@ await supabase
   .eq("id", booking.id);
   
     // 🔥 EMAIL CLIENT
-    if (booking.client_email) {
-      await sendEmail({
+if (
+  booking.client_email &&
+  settings?.cancel_email_enabled
+) {      await sendEmail({
         to: booking.client_email,
         subject: "Programare anulată",
         html: cancelBookingTemplate({
@@ -154,9 +162,12 @@ await supabase
 
     // 🔥 SMS CLIENT
 
-try {
+if (
+  booking.client_phone &&
+  settings?.cancel_sms_enabled
+) {
 
-  if (booking.client_phone) {
+  try {
 
     await sendSms({
       phone: booking.client_phone,
@@ -164,20 +175,21 @@ try {
       message:
 `Frizeo
 
-Programarea ta a fost anulata.
-
+Programarea ta din
 ${booking.date}
-${booking.start_time}`,
+${booking.start_time}
+
+a fost anulata.`,
     });
 
+  } catch (e) {
+
+    console.error(
+      "CANCEL SMS ERROR:",
+      e
+    );
+
   }
-
-} catch (e) {
-
-  console.error(
-    "SMS CANCEL ERROR:",
-    e
-  );
 
 }
 

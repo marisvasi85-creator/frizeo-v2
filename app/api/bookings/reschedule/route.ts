@@ -6,6 +6,7 @@ import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
+import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
 export async function POST(req: Request) {
   try {
@@ -94,7 +95,10 @@ export async function POST(req: Request) {
     const finalName = client_name ?? oldBooking.client_name;
     const finalPhone = client_phone ?? oldBooking.client_phone;
     const finalEmail = client_email ?? oldBooking.client_email;
-
+    const settings =
+  await getNotificationSettings(
+    oldBooking.tenant_id
+  );
     // 🔥 CREATE BOOKING NOU (RPC)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe_v2", {
@@ -305,7 +309,10 @@ Serviciu: ${serviceName}`,
       .eq("id", oldBooking.id);
 
     // 🔥 EMAIL CLIENT
-    if (finalEmail) {
+    if (
+  finalEmail &&
+  settings?.reschedule_email_enabled
+) {
       try {
         const baseUrl =
           process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -332,11 +339,15 @@ Serviciu: ${serviceName}`,
       }
     }
 
+
     // 🔥 SMS CLIENT
 
-try {
+if (
+  finalPhone &&
+  settings?.reschedule_sms_enabled
+) {
 
-  if (finalPhone) {
+  try {
 
     await sendSms({
       phone: finalPhone,
@@ -350,14 +361,14 @@ ${new_date}
 ${new_start_time}`,
     });
 
+  } catch (e) {
+
+    console.error(
+      "RESCHEDULE SMS ERROR:",
+      e
+    );
+
   }
-
-} catch (e) {
-
-  console.error(
-    "SMS RESCHEDULE ERROR:",
-    e
-  );
 
 }
 
