@@ -92,16 +92,24 @@ export default function OverrideManager({
 
       <div className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4">
 
-        <div className="flex gap-3 flex-wrap">
-
+<div className="flex flex-col md:flex-row gap-3">
           <input
-            type="date"
-            value={date}
-            onChange={(e) =>
-              setDate(e.target.value)
-            }
-            className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded"
-          />
+  type="date"
+  value={date}
+  onChange={(e) =>
+    setDate(e.target.value)
+  }
+  className="
+    bg-[#0F0F10]
+    text-white
+    border
+    border-white/10
+    px-3
+    py-2
+    rounded
+    min-h-[48px]
+  "
+/>
 
           <button
             onClick={addOverride}
