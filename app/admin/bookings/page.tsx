@@ -45,8 +45,16 @@ const filteredBookings =
   return (
     <div className="p-6 text-white space-y-6">
 
-      <div className="flex items-center justify-between">
-
+<div
+  className="
+    flex
+    flex-col
+    gap-3
+    md:flex-row
+    md:items-center
+    md:justify-between
+  "
+>
         <h1 className="text-2xl font-semibold">
           Programări
         </h1>
@@ -56,15 +64,16 @@ const filteredBookings =
     setSelectedBarber(e.target.value)
   }
   className="
-    mt-3
-    bg-zinc-900
-    border
-    border-zinc-700
-    rounded-lg
-    px-3
-    py-2
-    text-sm
-  "
+  w-full
+  md:w-auto
+  bg-zinc-900
+  border
+  border-zinc-700
+  rounded-lg
+  px-3
+  py-3
+  text-sm
+"
 >
   {barberNames.map((name) => (
     <option
@@ -79,7 +88,17 @@ const filteredBookings =
 </select>
         <Link
           href="/admin/bookings/new"
-          className="bg-white text-black px-4 py-2 rounded-xl font-medium"
+          className="
+  w-full
+  md:w-auto
+  bg-white
+  text-black
+  px-4
+  py-3
+  rounded-xl
+  font-medium
+  text-center
+"
         >
           + Adaugă programare
         </Link>
