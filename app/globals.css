@@ -54,3 +54,7 @@ body {
     transform: translateY(0);
   }
 }
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+}
