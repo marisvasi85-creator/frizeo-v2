@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
+import { sendSms } from "@/lib/sms/sendSms";
 
 export async function GET() {
   try {
@@ -21,8 +22,14 @@ export async function GET() {
     // 🔥 2. IA DOAR CE E NECESAR (OPTIM)
     const { data: bookings, error } = await supabase
       .from("bookings")
-      .select("id, client_email, date, start_time, reminder_2h_sent")
-      .eq("status", "confirmed")
+.select(`
+  id,
+  client_email,
+  client_phone,
+  date,
+  start_time,
+  reminder_2h_sent
+`)      .eq("status", "confirmed")
       .eq("reminder_2h_sent", false)
       .eq("date", today); // 🔥 DOAR AZI (IMPORTANT)
 
@@ -47,13 +54,44 @@ export async function GET() {
               to: b.client_email,
               subject: "Reminder programare",
               html: `
-                <div style="font-family: Arial">
-                  <h3>Reminder programare</h3>
-                  <p>Ai programare azi la <b>${b.start_time}</b></p>
-                </div>
+                <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+  <h3>⏰ Reminder programare</h3>
+
+  <p>
+    Salut!
+  </p>
+
+  <p>
+    Îți reamintim că ai o programare astăzi la
+    <strong>${b.start_time}</strong>.
+  </p>
+
+  <p>
+    Ne vedem în curând!
+  </p>
+
+  <p style="margin-top:20px;color:#666;">
+    Acest mesaj a fost trimis prin Frizeo.
+  </p>
+</div>
               `,
             });
           }
+
+          if (b.client_phone) {
+
+  await sendSms({
+    phone: b.client_phone,
+
+    message:
+`Frizeo Reminder
+
+Ai programare azi la ${b.start_time}.
+
+Te asteptam!`,
+  });
+
+}
 
           // 🔥 ANTI DUPLICATE
           await supabase
