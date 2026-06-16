@@ -6,6 +6,7 @@ import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booki
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
 
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
@@ -339,6 +340,35 @@ Serviciu: ${serviceName}`,
         console.error("CLIENT EMAIL ERROR:", e);
       }
     }
+
+    // =========================
+// 📱 SMS CLIENT
+// =========================
+
+try {
+
+  await sendSms({
+    phone: client_phone,
+
+    message:
+`Frizeo
+
+Programarea ta este confirmata.
+
+${formattedDate}
+${formattedTime}
+
+${serviceName}`,
+  });
+
+} catch (e) {
+
+  console.error(
+    "SMS CLIENT ERROR:",
+    e
+  );
+
+}
 
     // =========================
     // 📩 EMAIL BARBER
