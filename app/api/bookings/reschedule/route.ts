@@ -5,6 +5,7 @@ import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
 
 export async function POST(req: Request) {
   try {
@@ -330,6 +331,35 @@ Serviciu: ${serviceName}`,
         console.error("EMAIL ERROR:", e);
       }
     }
+
+    // 🔥 SMS CLIENT
+
+try {
+
+  if (finalPhone) {
+
+    await sendSms({
+      phone: finalPhone,
+
+      message:
+`Frizeo
+
+Programarea ta a fost reprogramata.
+
+${new_date}
+${new_start_time}`,
+    });
+
+  }
+
+} catch (e) {
+
+  console.error(
+    "SMS RESCHEDULE ERROR:",
+    e
+  );
+
+}
 
     return NextResponse.json({
       success: true,
