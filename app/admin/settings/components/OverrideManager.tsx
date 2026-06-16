@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 type Override = {
   id: string;
@@ -14,6 +16,8 @@ export default function OverrideManager({
   barberId: string;
 }) {
   const [date, setDate] = useState("");
+  const [selectedDate, setSelectedDate] =
+  useState<Date | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [overrides, setOverrides] = useState<Override[]>([]);
@@ -72,9 +76,10 @@ export default function OverrideManager({
     );
 
     if (res.ok) {
-      loadOverrides();
+  setDate("");
+  setSelectedDate(null);
+  loadOverrides();
     }
-  }
 
   return (
     <div className="space-y-6">
@@ -93,20 +98,29 @@ export default function OverrideManager({
       <div className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4">
 
 <div className="flex flex-col md:flex-row gap-3">
-          <input
-  type="text"
-  placeholder="Selectează data"
-  value={date}
-  readOnly
+          <DatePicker
+  selected={selectedDate}
+  onChange={(date: Date | null) => {
+    setSelectedDate(date);
+
+    if (date) {
+      const formatted =
+        date.toISOString().split("T")[0];
+
+      setDate(formatted);
+    }
+  }}
+  dateFormat="dd.MM.yyyy"
+  placeholderText="Selectează data"
   className="
-    bg-red-500
+    w-full
+    bg-[#0F0F10]
     text-white
     border
-    border-white
+    border-white/10
     px-3
-    py-2
-    rounded
-    w-full
+    py-3
+    rounded-lg
   "
 />
 
@@ -168,4 +182,5 @@ export default function OverrideManager({
 
     </div>
   );
+}
 }
