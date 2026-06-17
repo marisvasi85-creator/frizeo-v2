@@ -9,10 +9,18 @@ export default async function SalonPage({
   const { slug } = await params;
 
   const { data: salon } = await supabaseAdmin
-    .from("tenants")
-    .select("id,name,slug")
-    .eq("slug", slug)
-    .single();
+  .from("tenants")
+  .select(`
+    id,
+    name,
+    slug,
+    logo_url,
+    phone,
+    address,
+    description
+  `)
+  .eq("slug", slug)
+  .single();
 
   if (!salon) {
     return (
@@ -28,25 +36,60 @@ export default async function SalonPage({
     id,
     display_name,
     slug,
-    active
+    active,
+    avatar_url,
+    bio,
+    instagram_url
   `)
     .eq("tenant_id", salon.id)
     .eq("active", true)
     .order("display_name");
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-semibold">
-          {salon.name}
-        </h1>
+  <div className="max-w-4xl mx-auto p-6 space-y-8">
 
-        <p className="text-gray-500 mt-2">
-          Alege frizerul
+    <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">
+
+      {salon.logo_url && (
+        <img
+          src={salon.logo_url}
+          alt=""
+          className="w-24 h-24 rounded-2xl object-cover mx-auto mb-4"
+        />
+      )}
+
+      <h1 className="text-3xl font-bold">
+        {salon.name}
+      </h1>
+
+      {salon.phone && (
+        <p className="text-gray-600 mt-3">
+          📞 {salon.phone}
         </p>
-      </div>
+      )}
 
-      <div className="space-y-3">
+      {salon.address && (
+        <p className="text-gray-600">
+          📍 {salon.address}
+        </p>
+      )}
+
+      {salon.description && (
+        <p className="text-gray-700 mt-4 max-w-2xl mx-auto">
+          {salon.description}
+        </p>
+      )}
+
+    </div>
+
+    <div>
+
+      <h2 className="text-2xl font-semibold mb-4">
+        Alege frizerul
+      </h2>
+
+      <div className="grid gap-4">
+
         {barbers?.map((barber) => (
           <Link
             key={barber.id}
@@ -54,18 +97,67 @@ export default async function SalonPage({
             className="
               block
               border
-              rounded-xl
-              p-4
-              hover:bg-gray-50
+              rounded-2xl
+              p-5
+              hover:shadow-md
               transition
+              bg-white
             "
           >
-            <div className="font-medium">
-              {barber.display_name}
+
+            <div className="flex items-center gap-4">
+
+              {barber.avatar_url ? (
+                <img
+                  src={barber.avatar_url}
+                  alt=""
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200" />
+              )}
+
+              <div className="flex-1">
+
+                <h3 className="text-lg font-semibold">
+                  {barber.display_name}
+                </h3>
+
+                {barber.bio && (
+                  <p className="text-sm text-gray-600 mt-1">
+                    {barber.bio}
+                  </p>
+                )}
+
+                {barber.instagram_url && (
+                  <p className="text-sm text-blue-600 mt-2">
+                    Instagram
+                  </p>
+                )}
+
+              </div>
+
+              <div
+                className="
+                  px-4
+                  py-2
+                  rounded-lg
+                  bg-black
+                  text-white
+                  text-sm
+                "
+              >
+                Rezervă
+              </div>
+
             </div>
+
           </Link>
         ))}
+
       </div>
+
     </div>
-  );
-}
+
+  </div>
+);}
