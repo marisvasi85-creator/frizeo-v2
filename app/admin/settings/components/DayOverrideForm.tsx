@@ -57,8 +57,21 @@ export default function DayOverrideForm() {
     <div className="space-y-3 border p-4 rounded-xl">
       <h3 className="font-semibold">Override zi</h3>
 
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-
+<input
+  type="date"
+  value={date}
+  onChange={(e) => setDate(e.target.value)}
+  className="
+    w-full
+    bg-[#0F0F10]
+    border
+    border-white/10
+    rounded-lg
+    px-4
+    py-3
+    text-white
+  "
+/>
       <label className="flex gap-2">
         <input
           type="checkbox"
@@ -70,12 +83,47 @@ export default function DayOverrideForm() {
 
       {!isClosed && (
         <>
-          <input type="time" onChange={(e) => setStart(e.target.value)} />
-          <input type="time" onChange={(e) => setEnd(e.target.value)} />
+<input
+  type="time"
+  value={start}
+  onChange={(e) => setStart(e.target.value)}
+  className="
+    w-full
+    bg-[#0F0F10]
+    border
+    border-white/10
+    rounded-lg
+    px-4
+    py-3
+    text-white
+  "
+/>
+<input
+  type="time"
+  value={end}
+  onChange={(e) => setEnd(e.target.value)}
+  className="
+    w-full
+    bg-[#0F0F10]
+    border
+    border-white/10
+    rounded-lg
+    px-4
+    py-3
+    text-white
+  "
+/>
         </>
       )}
 
-      <button onClick={saveOverride} className="bg-black text-white p-2 rounded">
+      <button onClick={saveOverride} className="
+  bg-white
+  text-black
+  px-4
+  py-3
+  rounded-lg
+  font-medium
+">
         {loading ? "Se salvează..." : "Salvează"}
       </button>
 

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
+import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
+import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
+import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
 export async function POST(req: NextRequest) {
   try {
@@ -42,15 +46,110 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 🔥 UPDATE STATUS
-    await supabase
-      .from("bookings")
-      .update({ status: "cancelled" })
-      .eq("id", booking.id);
+    const settings =
+  await getNotificationSettings(
+    booking.tenant_id
+  );
 
+    // 🔥 GOOGLE CALENDAR
+
+try {
+
+  if (booking.google_event_id) {
+
+    const { data: googleAccount } =
+      await supabase
+        .from("barber_google_accounts")
+        .select("*")
+        .eq("barber_id", booking.barber_id)
+        .single();
+
+    if (googleAccount?.access_token) {
+
+      let accessToken =
+        googleAccount.access_token;
+
+      const expiresAt = new Date(
+        googleAccount.expires_at
+      );
+
+      const shouldRefresh =
+        expiresAt.getTime() <
+        Date.now() + 5 * 60 * 1000;
+
+      if (
+        shouldRefresh &&
+        googleAccount.refresh_token
+      ) {
+
+        const refreshed =
+          await refreshAccessToken(
+            googleAccount.refresh_token
+          );
+
+        if (refreshed?.access_token) {
+
+          accessToken =
+            refreshed.access_token;
+
+          await supabase
+            .from("barber_google_accounts")
+            .update({
+              access_token:
+                refreshed.access_token,
+
+              expires_at: new Date(
+                Date.now() +
+                  refreshed.expires_in *
+                    1000
+              ).toISOString(),
+            })
+            .eq(
+              "barber_id",
+              booking.barber_id
+            );
+        }
+      }
+
+      await deleteGoogleEvent({
+        accessToken,
+        calendarId:
+          googleAccount.calendar_id ||
+          "primary",
+        eventId:
+          booking.google_event_id,
+      });
+
+      console.log(
+        "GOOGLE EVENT DELETED:",
+        booking.google_event_id
+      );
+    }
+  }
+
+} catch (e) {
+
+  console.error(
+    "GOOGLE DELETE ERROR:",
+    e
+  );
+
+}
+
+// 🔥 UPDATE STATUS
+
+await supabase
+  .from("bookings")
+  .update({
+    status: "cancelled",
+  })
+  .eq("id", booking.id);
+  
     // 🔥 EMAIL CLIENT
-    if (booking.client_email) {
-      await sendEmail({
+if (
+  booking.client_email &&
+  settings?.cancel_email_enabled
+) {      await sendEmail({
         to: booking.client_email,
         subject: "Programare anulată",
         html: cancelBookingTemplate({
@@ -60,6 +159,39 @@ export async function POST(req: NextRequest) {
         }),
       });
     }
+
+    // 🔥 SMS CLIENT
+
+if (
+  booking.client_phone &&
+  settings?.cancel_sms_enabled
+) {
+
+  try {
+
+    await sendSms({
+      phone: booking.client_phone,
+
+      message:
+`Frizeo
+
+Programarea ta din
+${booking.date}
+${booking.start_time}
+
+a fost anulata.`,
+    });
+
+  } catch (e) {
+
+    console.error(
+      "CANCEL SMS ERROR:",
+      e
+    );
+
+  }
+
+}
 
     return NextResponse.json({ success: true });
 

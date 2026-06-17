@@ -11,8 +11,13 @@ export default function CopySalonLink({
       onClick={() =>
         navigator.clipboard.writeText(url)
       }
-      className="px-4 py-3 bg-white/10 rounded-lg"
-    >
+className="
+  px-4
+  py-3
+  bg-white/10
+  rounded-lg
+  shrink-0
+"    >
       Copiază
     </button>
   );

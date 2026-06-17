@@ -6,6 +6,8 @@ import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booki
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
+import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
 function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
@@ -56,8 +58,16 @@ export async function POST(req: Request) {
 const limit = await checkBookingLimit(
   booking.tenant_id
 );
+
 console.log("BOOKING TENANT:", booking.tenant_id);
-console.log("BOOKING LIMIT:", limit);if (!limit.allowed) {
+console.log("BOOKING LIMIT:", limit);
+
+const settings =
+  await getNotificationSettings(
+    booking.tenant_id
+  );
+
+if (!limit.allowed) {
   return NextResponse.json(
     {
       error:
@@ -320,7 +330,10 @@ Serviciu: ${serviceName}`,
     // =========================
     // 📩 EMAIL CLIENT
     // =========================
-    if (client_email) {
+    if (
+  client_email &&
+  settings?.booking_email_enabled
+) {
       try {
         await sendEmail({
           to: client_email,
@@ -341,9 +354,46 @@ Serviciu: ${serviceName}`,
     }
 
     // =========================
+// 📱 SMS CLIENT
+// =========================
+
+if (
+  client_phone &&
+  settings?.booking_sms_enabled
+) {
+
+try {
+
+  await sendSms({
+    phone: client_phone,
+
+    message:
+`Frizeo
+
+Programarea ta este confirmata.
+
+${formattedDate}
+${formattedTime}
+
+${serviceName}`,
+  });
+
+} catch (e) {
+
+  console.error(
+    "SMS CLIENT ERROR:",
+    e
+  );
+
+}
+}
+    // =========================
     // 📩 EMAIL BARBER
     // =========================
-    if (barberEmail) {
+    if (
+  barberEmail &&
+  settings?.booking_email_enabled
+) {
       try {
         await sendEmail({
           to: barberEmail,

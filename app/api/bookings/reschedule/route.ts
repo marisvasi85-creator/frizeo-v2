@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
+import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
+import { createGoogleEvent } from "@/lib/google/createEvent";
+import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { sendSms } from "@/lib/sms/sendSms";
+import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
 export async function POST(req: Request) {
   try {
@@ -90,7 +95,10 @@ export async function POST(req: Request) {
     const finalName = client_name ?? oldBooking.client_name;
     const finalPhone = client_phone ?? oldBooking.client_phone;
     const finalEmail = client_email ?? oldBooking.client_email;
-
+    const settings =
+  await getNotificationSettings(
+    oldBooking.tenant_id
+  );
     // 🔥 CREATE BOOKING NOU (RPC)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe_v2", {
@@ -148,6 +156,149 @@ export async function POST(req: Request) {
       });
     }
 
+    // 🔥 GOOGLE CALENDAR RESCHEDULE
+
+try {
+
+  if (oldBooking.google_event_id) {
+
+    const { data: googleAccount } =
+      await supabase
+        .from("barber_google_accounts")
+        .select("*")
+        .eq("barber_id", oldBooking.barber_id)
+        .single();
+
+    if (googleAccount?.access_token) {
+
+      let accessToken =
+        googleAccount.access_token;
+
+      const expiresAt = new Date(
+        googleAccount.expires_at
+      );
+
+      const shouldRefresh =
+        expiresAt.getTime() <
+        Date.now() + 5 * 60 * 1000;
+
+      if (
+        shouldRefresh &&
+        googleAccount.refresh_token
+      ) {
+
+        const refreshed =
+          await refreshAccessToken(
+            googleAccount.refresh_token
+          );
+
+        if (refreshed?.access_token) {
+
+          accessToken =
+            refreshed.access_token;
+
+          await supabase
+            .from("barber_google_accounts")
+            .update({
+              access_token:
+                refreshed.access_token,
+
+              expires_at: new Date(
+                Date.now() +
+                  refreshed.expires_in *
+                    1000
+              ).toISOString(),
+            })
+            .eq(
+              "barber_id",
+              oldBooking.barber_id
+            );
+        }
+      }
+
+      // DELETE EVENT VECHI
+
+      await deleteGoogleEvent({
+        accessToken,
+        calendarId:
+          googleAccount.calendar_id ||
+          "primary",
+        eventId:
+          oldBooking.google_event_id,
+      });
+
+      // SERVICE
+
+      const { data: service } =
+        await supabase
+          .from("barber_services")
+          .select("display_name,name")
+          .eq(
+            "id",
+            newBooking.barber_service_id
+          )
+          .single();
+
+      const serviceName =
+        service?.display_name ||
+        service?.name ||
+        "Serviciu";
+
+      // CREATE EVENT NOU
+
+      const event =
+        await createGoogleEvent({
+          accessToken,
+
+          calendarId:
+            googleAccount.calendar_id ||
+            "primary",
+
+          title:
+            `${finalName} | ${finalPhone} | ${serviceName}`,
+
+          description:
+`Client: ${finalName}
+Telefon: ${finalPhone}
+Serviciu: ${serviceName}`,
+
+          start:
+            `${newBooking.date}T${newBooking.start_time}`,
+
+          end:
+            `${newBooking.date}T${newBooking.end_time}`,
+        });
+
+      if (event?.id) {
+
+        await supabase
+          .from("bookings")
+          .update({
+            google_event_id:
+              event.id,
+          })
+          .eq(
+            "id",
+            newBooking.id
+          );
+
+        console.log(
+          "GOOGLE EVENT RECREATED:",
+          event.id
+        );
+      }
+    }
+  }
+
+} catch (e) {
+
+  console.error(
+    "GOOGLE RESCHEDULE ERROR:",
+    e
+  );
+
+}
+
     // 🔥 ANULEAZĂ VECHIUL BOOKING
     await supabase
       .from("bookings")
@@ -158,7 +309,10 @@ export async function POST(req: Request) {
       .eq("id", oldBooking.id);
 
     // 🔥 EMAIL CLIENT
-    if (finalEmail) {
+    if (
+  finalEmail &&
+  settings?.reschedule_email_enabled
+) {
       try {
         const baseUrl =
           process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -184,6 +338,39 @@ export async function POST(req: Request) {
         console.error("EMAIL ERROR:", e);
       }
     }
+
+
+    // 🔥 SMS CLIENT
+
+if (
+  finalPhone &&
+  settings?.reschedule_sms_enabled
+) {
+
+  try {
+
+    await sendSms({
+      phone: finalPhone,
+
+      message:
+`Frizeo
+
+Programarea ta a fost reprogramata.
+
+${new_date}
+${new_start_time}`,
+    });
+
+  } catch (e) {
+
+    console.error(
+      "RESCHEDULE SMS ERROR:",
+      e
+    );
+
+  }
+
+}
 
     return NextResponse.json({
       success: true,

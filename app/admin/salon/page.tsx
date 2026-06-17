@@ -72,9 +72,9 @@ const { count: monthBookings } = await supabase
 
   return (
   <div className="space-y-6">
-    <h1 className="text-2xl font-semibold">
-      Salon
-    </h1>
+    <h1 className="text-2xl font-semibold text-red-500">
+  TEST DEPLOY
+</h1>
 
     {/* INFO */}
     <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
@@ -84,23 +84,47 @@ const { count: monthBookings } = await supabase
           Link public salon
         </p>
 
-        <div className="mt-2 flex gap-2">
-          <input
-            value={salonUrl}
-            readOnly
-            className="flex-1 bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-          />
+        <div className="mt-2 flex flex-col md:flex-row gap-2">
 
-          <a
-            href={salonUrl}
-            target="_blank"
-            className="px-4 py-3 bg-white text-black rounded-lg"
-          >
-            Deschide
-          </a>
-                      <CopySalonLink url={salonUrl} />
+  <input
+    value={salonUrl}
+    readOnly
+    className="
+      w-full
+      min-w-0
+      bg-[#0F0F10]
+      border
+      border-white/10
+      rounded-lg
+      px-4
+      py-3
+      truncate
+    "
+  />
 
-        </div>
+  <div className="flex gap-2">
+
+    <a
+      href={salonUrl}
+      target="_blank"
+      className="
+        flex-1
+        text-center
+        px-4
+        py-3
+        bg-white
+        text-black
+        rounded-lg
+      "
+    >
+      Deschide
+    </a>
+
+    <CopySalonLink url={salonUrl} />
+
+  </div>
+
+</div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">

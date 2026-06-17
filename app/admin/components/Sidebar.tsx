@@ -14,6 +14,8 @@ const ownerItems = [
 
   { href: "/admin/profile", label: "Profil", icon: "👤" },
 
+  { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
+
   { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
 
   { href: "/admin/salon", label: "Salon", icon: "🏪" },
@@ -31,6 +33,8 @@ const barberItems = [
   { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
 
   { href: "/admin/profile", label: "Profil", icon: "👤" },
+
+  { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
 ];
 
 
