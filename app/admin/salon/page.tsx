@@ -72,9 +72,9 @@ const { count: monthBookings } = await supabase
 
   return (
   <div className="space-y-6">
-    <h1 className="text-2xl font-semibold">
-      Salon
-    </h1>
+    <h1 className="text-2xl font-semibold text-red-500">
+  TEST DEPLOY
+</h1>
 
     {/* INFO */}
     <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
