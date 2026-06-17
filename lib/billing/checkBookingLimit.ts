@@ -7,6 +7,20 @@ export async function checkBookingLimit(
   const plan = await getCurrentPlan(tenantId);
 
   if (!plan) {
+    if (
+  plan.status === "trialing" &&
+  plan.trial_ends_at
+) {
+  const trialEnds =
+    new Date(plan.trial_ends_at);
+
+  if (trialEnds > new Date()) {
+    return {
+      allowed: true,
+      trial: true,
+    };
+  }
+}
     return {
       allowed: false,
       reason: "Plan inexistent",

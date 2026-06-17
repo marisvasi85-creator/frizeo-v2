@@ -69,6 +69,28 @@ export async function POST(req: Request) {
       user_id: userId,
       tenant_id: tenant.id,
     });
+    
+const trialEnds = new Date();
+trialEnds.setDate(trialEnds.getDate() + 15);
+
+await supabaseAdmin
+  .from("subscriptions")
+  .insert({
+    tenant_id: tenant.id,
+    plan_id:
+      "1bc6a7ca-f1a1-4b7a-812b-aeacbcdaed93", // Free
+
+    status: "trialing",
+
+    current_period_start:
+      new Date().toISOString(),
+
+    current_period_end:
+      trialEnds.toISOString(),
+
+    trial_ends_at:
+      trialEnds.toISOString(),
+  });
 
     // 🔥 REDIRECT FINAL
     return NextResponse.json({

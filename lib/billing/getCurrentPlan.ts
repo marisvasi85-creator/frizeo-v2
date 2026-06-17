@@ -3,23 +3,29 @@ import { createSupabasePublicClient } from "@/lib/supabase/public";
 export async function getCurrentPlan(
   tenantId: string
 ) {
-  const supabase = createSupabasePublicClient();
+  const supabase =
+    createSupabasePublicClient();
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("plan_id")
-    .eq("tenant_id", tenantId)
-    .single();
+  const { data: subscription } =
+    await supabase
+      .from("subscriptions")
+      .select(`
+        *,
+        plans (*)
+      `)
+      .eq("tenant_id", tenantId)
+      .single();
 
-  if (!subscription?.plan_id) {
+  if (!subscription) {
     return null;
   }
 
-  const { data: plan } = await supabase
-    .from("plans")
-    .select("*")
-    .eq("id", subscription.plan_id)
-    .single();
+  return {
+    ...subscription.plans,
+    trial_ends_at:
+      subscription.trial_ends_at,
 
-  return plan ?? null;
+    status:
+      subscription.status,
+  };
 }

@@ -4,7 +4,7 @@ import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenan
 import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import BookingLinkCard from "./BookingLinkCard";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
-
+import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 
 export default async function DashboardPage() {  const supabase = await createSupabaseServerClient();
 const role = await getCurrentRole();
@@ -21,6 +21,10 @@ const role = await getCurrentRole();
   if (!barber) {
     redirect("/login");
   }
+  const currentPlan =
+  await getCurrentPlan(
+    barber.tenant_id
+  );
 
   const status = await getDashboardStatus(user.id);
 
@@ -106,6 +110,49 @@ const role = await getCurrentRole();
     </div>
   </div>
 )}
+{currentPlan?.status === "trialing" &&
+  currentPlan?.trial_ends_at && (() => {
+
+    const daysLeft = Math.max(
+      0,
+      Math.ceil(
+        (
+          new Date(currentPlan.trial_ends_at).getTime() -
+          Date.now()
+        ) /
+        (1000 * 60 * 60 * 24)
+      )
+    );
+
+    return (
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5">
+
+        <div className="font-semibold text-blue-300">
+          🎁 Trial activ
+        </div>
+
+        <p className="text-white/70 mt-2">
+          Beneficiezi de toate funcțiile Frizeo.
+        </p>
+
+        <p className="text-white mt-3 font-medium">
+          Mai ai {daysLeft} zile rămase.
+        </p>
+
+        <p className="text-white/50 text-sm mt-2">
+          După expirare vei fi trecut pe planul Free.
+        </p>
+
+        <a
+          href="/admin/billing"
+          className="inline-block mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm"
+        >
+          Vezi planurile
+        </a>
+
+      </div>
+    );
+  })()}
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 

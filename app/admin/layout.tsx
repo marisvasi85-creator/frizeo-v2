@@ -27,9 +27,6 @@ console.log("ROLE:", role);
 
 console.log("ADMIN STATUS:", status);
 
-if (!status.completed) {
-  redirect("/admin/onboarding");
-}
 // if (!status.completed) {
 //   redirect("/admin/onboarding");
 // }
