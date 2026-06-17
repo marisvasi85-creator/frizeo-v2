@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { updateProfile } from "./actions";
+import AvatarUpload from "./AvatarUpload";
 
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -20,6 +21,9 @@ export default async function ProfilePage() {
   display_name,
   phone,
   slug,
+  avatar_url,
+  bio,
+  instagram_url,
   google_calendar_connected
 `)
     .eq("user_id", user.id)
@@ -68,6 +72,10 @@ export default async function ProfilePage() {
       )}
     </div>
 
+<AvatarUpload
+  currentUrl={barber?.avatar_url}
+/>
+
     <form
       action={updateProfile}
       className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
@@ -115,6 +123,37 @@ export default async function ProfilePage() {
             Exemplu: ion-popescu
           </p>
         </div>
+
+<div>
+  <label className="block text-sm text-white/60 mb-2">
+    Instagram
+  </label>
+
+  <input
+    type="text"
+    name="instagram_url"
+    defaultValue={
+      barber?.instagram_url || ""
+    }
+    placeholder="https://instagram.com/..."
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+  />
+</div>
+
+<div>
+  <label className="block text-sm text-white/60 mb-2">
+    Descriere / Bio
+  </label>
+
+  <textarea
+    name="bio"
+    rows={5}
+    defaultValue={
+      barber?.bio || ""
+    }
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+  />
+</div>
 
         <button
           type="submit"

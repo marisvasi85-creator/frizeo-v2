@@ -4,6 +4,7 @@ import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenan
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { updateSalon } from "./actions";
 import CopySalonLink from "./CopySalonLink";
+import LogoUpload from "./LogoUpload";
 
 export default async function SalonPage() {
   const supabase = await createSupabaseServerClient();
@@ -25,7 +26,7 @@ export default async function SalonPage() {
     .select("*")
     .eq("id", barber.tenant_id)
     .single();
-
+console.log("TENANT:", tenant);
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select(`
@@ -72,9 +73,6 @@ const { count: monthBookings } = await supabase
 
   return (
   <div className="space-y-6">
-    <h1 className="text-2xl font-semibold text-red-500">
-  TEST DEPLOY
-</h1>
 
     {/* INFO */}
     <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
@@ -161,7 +159,10 @@ const { count: monthBookings } = await supabase
 
       </div>
     </div>
-
+    
+<LogoUpload
+  currentUrl={tenant?.logo_url}
+/>
     {/* FORM */}
     <form
       action={updateSalon}
@@ -197,6 +198,44 @@ const { count: monthBookings } = await supabase
           Exemplu: socobarbershop
         </p>
       </div>
+<div>
+  <label className="block text-sm text-white/60 mb-2">
+    Telefon
+  </label>
+
+  <input
+    type="text"
+    name="phone"
+    defaultValue={tenant?.phone || ""}
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+  />
+</div>
+
+<div>
+  <label className="block text-sm text-white/60 mb-2">
+    Adresă
+  </label>
+
+  <input
+    type="text"
+    name="address"
+    defaultValue={tenant?.address || ""}
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+  />
+</div>
+
+<div>
+  <label className="block text-sm text-white/60 mb-2">
+    Descriere salon
+  </label>
+
+  <textarea
+    name="description"
+    defaultValue={tenant?.description || ""}
+    rows={5}
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+  />
+</div>
 
       <button
         type="submit"

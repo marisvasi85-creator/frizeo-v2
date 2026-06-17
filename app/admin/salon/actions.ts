@@ -18,13 +18,29 @@ export async function updateSalon(formData: FormData) {
     .toLowerCase()
     .replace(/\s+/g, "-");
 
-  await supabase
+  const phone =
+    (formData.get("phone") as string) || null;
+
+  const address =
+    (formData.get("address") as string) || null;
+
+  const description =
+    (formData.get("description") as string) || null;
+
+  const { data, error } = await supabase
     .from("tenants")
     .update({
       name,
       slug,
+      phone,
+      address,
+      description,
     })
-    .eq("id", barber.tenant_id);
+    .eq("id", barber.tenant_id)
+    .select();
+
+  console.log("UPDATE TENANT DATA:", data);
+  console.log("UPDATE TENANT ERROR:", error);
 
   revalidatePath("/admin/salon");
 }

@@ -15,6 +15,12 @@ export async function updateProfile(formData: FormData) {
 
   const phone =
     formData.get("phone") as string;
+  
+    const bio =
+  (formData.get("bio") as string) || null;
+
+const instagram_url =
+  (formData.get("instagram_url") as string) || null;
 
   const slug = (formData.get("slug") as string)
   .trim()
@@ -36,12 +42,14 @@ if (existingSlug) {
 }
 
     await supabase
-    .from("barbers")
-    .update({
-      display_name,
-      phone,
-      slug,
-    })
+  .from("barbers")
+  .update({
+    display_name,
+    phone,
+    slug,
+    bio,
+    instagram_url,
+  })
     .eq("id", barber.id);
 
   revalidatePath("/admin/profile");
