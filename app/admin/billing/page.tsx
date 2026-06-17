@@ -41,6 +41,25 @@ if (role !== "owner") {
 
   const currentPlan = subscription?.plans;
 
+  const isTrial =
+  subscription?.status === "trialing";
+
+const trialEnds =
+  subscription?.trial_ends_at
+    ? new Date(subscription.trial_ends_at)
+    : null;
+
+const trialDaysLeft =
+  trialEnds
+    ? Math.max(
+        0,
+        Math.ceil(
+          (trialEnds.getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24)
+        )
+      )
+    : 0;
+
   return (
     <div className="space-y-8">
 
@@ -58,15 +77,19 @@ if (role !== "owner") {
           </p>
 
           <h2 className="text-3xl font-bold">
-            💎 {currentPlan?.name || "Free"}
-          </h2>
+  {isTrial
+    ? "🚀 Trial Gratuit"
+    : `💎 ${currentPlan?.name || "Free"}`}
+</h2>
 
           <p className="text-white/60">
-            Status:{" "}
-            {subscription?.status === "active"
-              ? "Activ"
-              : subscription?.status || "Activ"}
-          </p>
+  Status:{" "}
+  {isTrial
+    ? `Trial (${trialDaysLeft} zile rămase)`
+    : subscription?.status === "active"
+    ? "Activ"
+    : subscription?.status || "Activ"}
+</p>
 
           <p className="text-white/60">
             Frizeri activi:{" "}
@@ -75,6 +98,20 @@ if (role !== "owner") {
             {currentPlan?.max_barbers ?? 1}
           </p>
 
+{isTrial && (
+  <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+    <p className="font-medium text-blue-300">
+      🚀 Perioadă de probă activă
+    </p>
+
+    <p className="text-sm text-white/70 mt-1">
+      Ai acces complet la toate funcțiile Frizeo
+      încă {trialDaysLeft} zile.
+      După expirare vei trece automat pe planul Free.
+    </p>
+  </div>
+  
+)}
         </div>
 
       </div>
