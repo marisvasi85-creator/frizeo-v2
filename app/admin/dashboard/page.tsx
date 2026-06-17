@@ -60,7 +60,7 @@ const role = await getCurrentRole();
 
   
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 min-w-0">
 
       {/* HEADER */}
       <div>
@@ -80,7 +80,7 @@ const role = await getCurrentRole();
       Administrare salon
     </h2>
 
-    <div className="flex gap-3 flex-wrap">
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3">
 
       <a
         href="/admin/barbers"
@@ -142,32 +142,32 @@ const role = await getCurrentRole();
           Acțiuni rapide
         </h2>
 
-        <div className="flex gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3">
 
           <a
   href="/admin/bookings/new"
-  className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium"
+  className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
 >
   Adaugă programare
 </a>
 
           <a
             href="/admin/bookings"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
           >
             Programări
           </a>
 
           <a
             href="/admin/services"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
           >
             Servicii
           </a>
 
           <a
             href="/admin/settings"
-            className="px-4 py-2 bg-white/10 rounded-lg text-sm"
+            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
           >
             Program
           </a>

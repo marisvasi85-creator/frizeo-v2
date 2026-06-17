@@ -23,30 +23,45 @@ export default function BookingLinkCard() {
         Trimite acest link clienților pentru programări online.
       </p>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2">
 
-        <input
-          value={url}
-          readOnly
-          className="flex-1 border px-3 py-2 rounded text-sm text-black bg-gray-50"
-        />
+  <input
+    value={url}
+    readOnly
+    className="
+      w-full
+      min-w-0
+      border
+      px-3
+      py-2
+      rounded
+      text-sm
+      text-black
+      bg-gray-50
+      truncate
+    "
+  />
 
-        <button
-          onClick={() => navigator.clipboard.writeText(url)}
-          className="px-3 py-2 bg-black text-white rounded text-sm"
-        >
-          Copiază
-        </button>
+  <div className="flex gap-2">
 
-        <a
-          href={url}
-          target="_blank"
-          className="px-3 py-2 bg-gray-200 rounded text-sm"
-        >
-          Deschide
-        </a>
+    <button
+      onClick={() => navigator.clipboard.writeText(url)}
+      className="flex-1 px-3 py-2 bg-black text-white rounded text-sm"
+    >
+      Copiază
+    </button>
 
-      </div>
+    <a
+      href={url}
+      target="_blank"
+      className="flex-1 px-3 py-2 bg-gray-200 rounded text-sm text-center"
+    >
+      Deschide
+    </a>
+
+  </div>
+
+</div>
     </div>
   );
 }
