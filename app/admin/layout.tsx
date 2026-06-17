@@ -34,26 +34,15 @@ if (!status.completed) {
 //   redirect("/admin/onboarding");
 // }
   return (
-    <div className="flex min-h-screen bg-[#0B0B0C] text-white">
-<main
-  className="
-    flex-1
-    p-6
-    md:p-10
-    pb-20
-    md:pb-10
-    bg-[#0F0F10]
-    overflow-x-hidden
-  "
-></main>
-      <Sidebar role={role} />
+  <div className="flex min-h-screen bg-[#0B0B0C] text-white">
 
-      <main className="flex-1 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
-        {children}
-      </main>
+    <Sidebar role={role} />
 
-      <MobileNav role={role} />
+    <main className="flex-1 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
+      {children}
+    </main>
 
-    </div>
-  );
-}
+    <MobileNav role={role} />
+
+  </div>
+);}
