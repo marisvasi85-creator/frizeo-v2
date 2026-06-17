@@ -62,125 +62,161 @@ export default function ServicesClient({
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+  <div className="w-full space-y-6">
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-semibold">Servicii</h1>
+    {/* HEADER */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <h1 className="text-2xl font-semibold">
+        Servicii
+      </h1>
 
-        <button
-          onClick={() => setOpenAdd(true)}
-          className="bg-white text-black px-4 py-2 rounded"
+      <button
+        onClick={() => setOpenAdd(true)}
+        className="bg-white text-black px-4 py-2 rounded-xl font-medium w-full sm:w-auto"
+      >
+        + Adaugă
+      </button>
+    </div>
+
+    {/* LIST */}
+    <div className="space-y-4">
+
+      {items.map((s) => (
+        <div
+          key={s.id}
+          className="
+            p-5
+            rounded-xl
+            bg-[#161618]
+            border
+            border-white/10
+            flex
+            flex-col
+            md:flex-row
+            md:items-center
+            md:justify-between
+            gap-4
+          "
         >
-          + Adaugă
-        </button>
-      </div>
 
-      {/* LIST */}
-      <div className="space-y-3">
-
-        {items.map((s) => (
-          <div
-            key={s.id} // 🔥 ASTA E SINGURUL KEY CORECT
-            className="p-4 rounded-xl bg-[#0F0F10] flex justify-between items-center"
-          >
-
-            {/* LEFT */}
-            <div>
-              <div className="font-medium">
-                {s.display_name || s.name}
-              </div>
-
-              <div className="text-xs text-white/50">
-                {s.duration} min
-              </div>
+          {/* LEFT */}
+          <div>
+            <div className="font-semibold text-lg">
+              {s.display_name || s.name}
             </div>
 
-            {/* RIGHT */}
-            <div className="flex items-center gap-4">
-
-              {/* PRICE */}
-              <span className="text-white/60">
-                {s.price ? `${s.price} lei` : "—"}
-              </span>
-
-              {/* TOGGLE */}
-              <button
-                onClick={() => toggleActive(s.id, s.active)}
-                className={`relative w-10 h-5 rounded-full transition ${
-                  s.active ? "bg-green-500" : "bg-zinc-600"
-                }`}
-              >
-                <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${
-                    s.active ? "translate-x-5" : ""
-                  }`}
-                />
-              </button>
-
-              {/* EDIT */}
-              <button
-                onClick={() => setEditingService(s)}
-                className="text-blue-400 text-sm"
-              >
-                Edit
-              </button>
-
-              {/* DELETE */}
-              <button
-                onClick={() => handleDelete(s.id)}
-                className="text-red-500 text-sm"
-              >
-                Șterge
-              </button>
-
+            <div className="text-sm text-white/50 mt-1">
+              {s.duration} min
             </div>
           </div>
-        ))}
 
-        {items.length === 0 && (
-          <p className="text-white/60 text-center py-6">
-            Nu există servicii.
-          </p>
-        )}
+          {/* RIGHT */}
+          <div className="flex flex-wrap items-center gap-3">
 
-      </div>
+            <span className="text-white/70 font-medium">
+              {s.price ? `${s.price} lei` : "—"}
+            </span>
 
-      {/* ADD */}
-      {openAdd && (
-        <AddServiceModal
-          barberId={barberId}
-          onClose={() => setOpenAdd(false)}
-          onCreated={(newService: any) => {
-            setOpenAdd(false);
+            <button
+              onClick={() => toggleActive(s.id, s.active)}
+              className={`relative w-10 h-5 rounded-full transition ${
+                s.active
+                  ? "bg-green-500"
+                  : "bg-zinc-600"
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition ${
+                  s.active
+                    ? "translate-x-5"
+                    : ""
+                }`}
+              />
+            </button>
 
-            const service = newService.service || newService;
+            <button
+              onClick={() => setEditingService(s)}
+              className="
+                px-3
+                py-1.5
+                rounded-lg
+                bg-blue-500/15
+                text-blue-400
+                text-sm
+              "
+            >
+              Edit
+            </button>
 
-            setItems((prev) => [...prev, service]);
-          }}
-        />
-      )}
+            <button
+              onClick={() => handleDelete(s.id)}
+              className="
+                px-3
+                py-1.5
+                rounded-lg
+                bg-red-500/15
+                text-red-400
+                text-sm
+              "
+            >
+              Șterge
+            </button>
 
-      {/* EDIT */}
-      {editingService && (
-        <AddServiceModal
-          service={editingService}
-          barberId={barberId}
-          onClose={() => setEditingService(null)}
-          onCreated={(updated: any) => {
-            setEditingService(null);
+          </div>
+        </div>
+      ))}
 
-            const service = updated.service || updated;
-
-            setItems((prev) =>
-              prev.map((s) =>
-                s.id === service.id ? service : s
-              )
-            );
-          }}
-        />
+      {items.length === 0 && (
+        <div className="text-center py-12 text-white/60">
+          Nu există servicii.
+        </div>
       )}
 
     </div>
-  );
-}
+
+    {/* ADD */}
+    {openAdd && (
+      <AddServiceModal
+        barberId={barberId}
+        onClose={() => setOpenAdd(false)}
+        onCreated={(newService: any) => {
+          setOpenAdd(false);
+
+          const service =
+            newService.service || newService;
+
+          setItems((prev) => [
+            ...prev,
+            service,
+          ]);
+        }}
+      />
+    )}
+
+    {/* EDIT */}
+    {editingService && (
+      <AddServiceModal
+        service={editingService}
+        barberId={barberId}
+        onClose={() =>
+          setEditingService(null)
+        }
+        onCreated={(updated: any) => {
+          setEditingService(null);
+
+          const service =
+            updated.service || updated;
+
+          setItems((prev) =>
+            prev.map((s) =>
+              s.id === service.id
+                ? service
+                : s
+            )
+          );
+        }}
+      />
+    )}
+
+  </div>
+);}
