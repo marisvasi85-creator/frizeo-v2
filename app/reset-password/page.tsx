@@ -35,9 +35,12 @@ if (password !== confirmPassword) {
     });
 
     if (error) {
-      alert("Eroare");
-      return;
-    }
+  console.error(error);
+
+  alert(error.message);
+
+  return;
+}
 
     alert("Parola schimbată");
     window.location.href = "/login";
@@ -64,6 +67,7 @@ if (password !== confirmPassword) {
   onChange={(e) =>
     setConfirmPassword(e.target.value)
   }
+
   className="w-full bg-zinc-800 p-3 rounded"
 />
 <div className="text-sm space-y-1">
