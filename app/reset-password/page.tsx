@@ -9,12 +9,8 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    const hash = window.location.hash;
-
-    if (!hash.includes("type=recovery")) {
-      window.location.href = "/login";
-    }
-  }, []);
+  console.log(window.location.href);
+}, []);
 
   async function updatePassword() {
     const { error } = await supabase.auth.updateUser({
