@@ -7,12 +7,29 @@ export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
 
   const [password, setPassword] = useState("");
-
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const passwordValid =
+  password.length >= 8 &&
+  /[A-Z]/.test(password) &&
+  /[a-z]/.test(password) &&
+  /\d/.test(password);
+  
   useEffect(() => {
   console.log(window.location.href);
 }, []);
 
   async function updatePassword() {
+    if (!passwordValid) {
+  alert(
+    "Parola trebuie să conțină minim 8 caractere, o literă mare, o literă mică și o cifră."
+  );
+  return;
+}
+
+if (password !== confirmPassword) {
+  alert("Parolele nu coincid.");
+  return;
+}
     const { error } = await supabase.auth.updateUser({
       password,
     });
@@ -41,7 +58,57 @@ export default function ResetPasswordPage() {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full bg-zinc-800 p-3 rounded"
         />
+        <input
+  type="password"
+  placeholder="Confirmă parola"
+  onChange={(e) =>
+    setConfirmPassword(e.target.value)
+  }
+  className="w-full bg-zinc-800 p-3 rounded"
+/>
+<div className="text-sm space-y-1">
 
+  <p
+    className={
+      password.length >= 8
+        ? "text-green-400"
+        : "text-zinc-500"
+    }
+  >
+    ✓ minim 8 caractere
+  </p>
+
+  <p
+    className={
+      /[A-Z]/.test(password)
+        ? "text-green-400"
+        : "text-zinc-500"
+    }
+  >
+    ✓ literă mare
+  </p>
+
+  <p
+    className={
+      /[a-z]/.test(password)
+        ? "text-green-400"
+        : "text-zinc-500"
+    }
+  >
+    ✓ literă mică
+  </p>
+
+  <p
+    className={
+      /\d/.test(password)
+        ? "text-green-400"
+        : "text-zinc-500"
+    }
+  >
+    ✓ cifră
+  </p>
+
+</div>
         <button
           onClick={updatePassword}
           className="w-full bg-white text-black py-2 rounded"
