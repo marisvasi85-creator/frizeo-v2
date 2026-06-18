@@ -1,3 +1,5 @@
+import Footer from "@/app/components/Footer";
+
 export default function BookingLayout({
   children,
 }: {
@@ -6,6 +8,8 @@ export default function BookingLayout({
   return (
     <div className="bg-white min-h-screen">
       {children}
+
+      <Footer />
     </div>
   );
 }
