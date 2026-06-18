@@ -51,8 +51,8 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-        triggerError(data.error || "Date incorecte");
-        setLoading(false);
+alert(data.error);
+triggerError(data.error || "Date incorecte");        setLoading(false);
         return;
       }
 

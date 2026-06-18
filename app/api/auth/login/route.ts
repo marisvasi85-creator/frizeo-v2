@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     });
 
     if (error || !data.user) {
+      console.log("LOGIN ERROR:", error);
       return NextResponse.json(
         { error: "Email sau parolă greșită" },
         { status: 400 }
