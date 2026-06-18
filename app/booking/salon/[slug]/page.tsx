@@ -22,6 +22,12 @@ export default async function SalonPage({
   .eq("slug", slug)
   .single();
 
+  const { data: gallery } = await supabaseAdmin
+  .from("salon_gallery")
+  .select("*")
+  .eq("tenant_id", salon?.id)
+  .order("created_at");
+
   if (!salon) {
     return (
       <div className="max-w-xl mx-auto p-6">
@@ -59,8 +65,8 @@ export default async function SalonPage({
       )}
 
       <h1 className="text-3xl font-bold">
-        {salon.name}
-      </h1>
+  {salon.name}
+</h1>
 
       {salon.phone && (
         <p className="text-gray-600 mt-3">
@@ -79,6 +85,35 @@ export default async function SalonPage({
           {salon.description}
         </p>
       )}
+      
+      {gallery && gallery.length > 0 && (
+  <div className="mt-8">
+
+    <h2 className="text-xl font-semibold mb-4">
+      Galerie
+    </h2>
+
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+      {gallery.map((img) => (
+        <img
+          key={img.id}
+          src={img.image_url}
+          alt=""
+          className="
+            w-full
+            h-48
+            object-cover
+            rounded-xl
+            border
+          "
+        />
+      ))}
+
+    </div>
+
+  </div>
+)}
 
     </div>
 
