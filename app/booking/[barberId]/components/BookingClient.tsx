@@ -38,10 +38,15 @@ export default function BookingClient({
   // SERVICES
   // =========================
   useEffect(() => {
-    fetch(`/api/services?barberId=${barberId}`)
-      .then((r) => r.json())
-      .then((d) => setServices(d.services || []));
-  }, [barberId]);
+  fetch(`/api/services?barberId=${barberId}`)
+    .then((r) => r.json())
+    .then((d) => {
+      console.log("SERVICES API:", d);
+      console.log("SERVICES ARRAY:", d.services);
+
+      setServices(d.services || []);
+    });
+}, [barberId]);
 
   // =========================
   // AVAILABILITY
@@ -184,8 +189,8 @@ export default function BookingClient({
         <p className="text-gray-500 mt-1">
           la <span className="font-medium text-black">{barberName}</span>
         </p>
-      </div>
 
+</div>
       <Calendar
         value={date}
         onChange={setDate}
@@ -195,25 +200,23 @@ export default function BookingClient({
       />
 
       {date && (
-        <div className="space-y-3">
-          {services.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => setServiceId(s.id)}
-              className={`
-                w-full p-4 rounded-xl border
-                ${
-                  serviceId === s.id
-                    ? "bg-black text-white"
-                    : "bg-white hover:bg-gray-50"
-                }
-              `}
-            >
-              {s.display_name} ({s.duration} min)
-            </button>
-          ))}
-        </div>
-      )}
+  <div className="space-y-3">
+    {services.map((s) => (
+      <button
+        key={s.id}
+        type="button"
+        onClick={() => setServiceId(s.id)}
+        className={`w-full p-4 rounded-xl border transition ${
+          serviceId === s.id
+            ? "bg-black text-white"
+            : "bg-white hover:bg-gray-50"
+        }`}
+      >
+        {s.display_name} ({s.duration} min)
+      </button>
+    ))}
+  </div>
+)}
 
       {(loadingSlots || slots.length > 0) && (
         <SlotPicker

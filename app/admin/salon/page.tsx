@@ -5,6 +5,7 @@ import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { updateSalon } from "./actions";
 import CopySalonLink from "./CopySalonLink";
 import LogoUpload from "./LogoUpload";
+import GalleryUpload from "./GalleryUpload";
 
 export default async function SalonPage() {
   const supabase = await createSupabaseServerClient();
@@ -37,6 +38,16 @@ console.log("TENANT:", tenant);
     `)
     .eq("tenant_id", barber.tenant_id)
     .single();
+
+    const { data: gallery } =
+  await supabase
+    .from("salon_gallery")
+    .select("*")
+    .eq(
+      "tenant_id",
+      barber.tenant_id
+    )
+    .order("created_at");
 
   const { count: activeBarbers } = await supabase
     .from("barbers")
@@ -162,6 +173,9 @@ const { count: monthBookings } = await supabase
     
 <LogoUpload
   currentUrl={tenant?.logo_url}
+/>
+<GalleryUpload
+  images={gallery || []}
 />
     {/* FORM */}
     <form
