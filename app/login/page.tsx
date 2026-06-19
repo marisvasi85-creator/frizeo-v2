@@ -12,6 +12,7 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [shake, setShake] = useState(false);
 
   function isValidEmail(email: string) {
@@ -51,9 +52,12 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || data.error) {
-alert(data.error);
-triggerError(data.error || "Date incorecte");        setLoading(false);
-        return;
+triggerError(
+  data.error ||
+  "Email sau parolă incorectă."
+);
+
+return;
       }
 
       // 🔥 REDIRECT CORECT
@@ -67,28 +71,43 @@ triggerError(data.error || "Date incorecte");        setLoading(false);
   }
 
   async function forgotPassword() {
-    if (!isValidEmail(email)) {
-      triggerError("Introdu email valid");
-      return;
-    }
+  setError("");
+  setSuccess("");
 
-    const res = await fetch("/api/auth/reset-password", {
+  if (!isValidEmail(email)) {
+    triggerError(
+      "Introdu o adresă de email validă."
+    );
+    return;
+  }
+
+  const res = await fetch(
+    "/api/auth/reset-password",
+    {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type":
+          "application/json",
       },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await res.json();
-
-    if (data.error) {
-      triggerError("Eroare la resetare");
-      return;
+      body: JSON.stringify({
+        email,
+      }),
     }
+  );
 
-    alert("Verifică emailul pentru resetare parolă");
+  const data = await res.json();
+
+  if (!res.ok || data.error) {
+    triggerError(
+      "Nu am putut trimite emailul de resetare."
+    );
+    return;
   }
+
+  setSuccess(
+    "Dacă există un cont asociat acestei adrese de email, am trimis un link pentru resetarea parolei. Verifică Inbox-ul și Spam-ul."
+  );
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4">
@@ -110,11 +129,22 @@ triggerError(data.error || "Date incorecte");        setLoading(false);
         </div>
 
         {/* ERROR */}
-        {error && (
-          <div className="text-red-400 text-sm text-center">
-            {error}
-          </div>
-        )}
+        {success && (
+  <div
+    className="
+      bg-green-500/10
+      border
+      border-green-500/30
+      text-green-300
+      text-sm
+      rounded-lg
+      p-3
+      text-center
+    "
+  >
+    {success}
+  </div>
+)}
 
         {/* FORM */}
         <div className="space-y-4">

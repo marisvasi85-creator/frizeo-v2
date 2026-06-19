@@ -1,49 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
 
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] =
+    useState("");
+
   const passwordValid =
-  password.length >= 8 &&
-  /[A-Z]/.test(password) &&
-  /[a-z]/.test(password) &&
-  /\d/.test(password);
-  
-  useEffect(() => {
-  console.log(window.location.href);
-}, []);
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /\d/.test(password);
 
   async function updatePassword() {
-    if (!passwordValid) {
-  alert(
-    "Parola trebuie să conțină minim 8 caractere, o literă mare, o literă mică și o cifră."
-  );
-  return;
-}
+    setError("");
+    setSuccess("");
 
-if (password !== confirmPassword) {
-  alert("Parolele nu coincid.");
-  return;
-}
-    const { error } = await supabase.auth.updateUser({
-      password,
-    });
+    if (!passwordValid) {
+      setError(
+        "Parola trebuie să conțină minim 8 caractere, o literă mare, o literă mică și o cifră."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        "Parolele introduse nu coincid."
+      );
+      return;
+    }
+
+    const { error } =
+      await supabase.auth.updateUser({
+        password,
+      });
 
     if (error) {
-  console.error(error);
+      setError(
+        error.message ||
+          "Nu am putut schimba parola."
+      );
+      return;
+    }
 
-  alert(error.message);
+    setSuccess(
+      "Parola a fost schimbată cu succes. Vei fi redirecționat către pagina de autentificare."
+    );
 
-  return;
-}
-
-    alert("Parola schimbată");
-    window.location.href = "/login";
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 2500);
   }
 
   return (
@@ -51,73 +65,114 @@ if (password !== confirmPassword) {
 
       <div className="bg-zinc-900 p-6 rounded-xl space-y-4 w-full max-w-sm">
 
-        <h2 className="text-lg font-semibold">
-          Setează parola nouă
-        </h2>
+        <div>
+          <h2 className="text-xl font-semibold">
+            Setează parola nouă
+          </h2>
+
+          <p className="text-sm text-zinc-400 mt-1">
+            Alege o parolă sigură pentru
+            contul tău Frizeo.
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg p-3">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg p-3">
+            {success}
+          </div>
+        )}
 
         <input
           type="password"
           placeholder="Parolă nouă"
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded"
+          value={password}
+          onChange={(e) =>
+            setPassword(e.target.value)
+          }
+          className="w-full bg-zinc-800 p-3 rounded-lg"
         />
+
         <input
-  type="password"
-  placeholder="Confirmă parola"
-  onChange={(e) =>
-    setConfirmPassword(e.target.value)
-  }
+          type="password"
+          placeholder="Confirmă parola"
+          value={confirmPassword}
+          onChange={(e) =>
+            setConfirmPassword(
+              e.target.value
+            )
+          }
+          className="w-full bg-zinc-800 p-3 rounded-lg"
+        />
 
-  className="w-full bg-zinc-800 p-3 rounded"
-/>
-<div className="text-sm space-y-1">
+        {confirmPassword &&
+          password !== confirmPassword && (
+            <p className="text-red-400 text-sm">
+              Parolele nu coincid.
+            </p>
+          )}
 
-  <p
-    className={
-      password.length >= 8
-        ? "text-green-400"
-        : "text-zinc-500"
-    }
-  >
-    ✓ minim 8 caractere
-  </p>
+        {confirmPassword &&
+          password === confirmPassword && (
+            <p className="text-green-400 text-sm">
+              ✓ Parolele coincid
+            </p>
+          )}
 
-  <p
-    className={
-      /[A-Z]/.test(password)
-        ? "text-green-400"
-        : "text-zinc-500"
-    }
-  >
-    ✓ literă mare
-  </p>
+        <div className="text-sm space-y-1">
 
-  <p
-    className={
-      /[a-z]/.test(password)
-        ? "text-green-400"
-        : "text-zinc-500"
-    }
-  >
-    ✓ literă mică
-  </p>
+          <p
+            className={
+              password.length >= 8
+                ? "text-green-400"
+                : "text-zinc-500"
+            }
+          >
+            ✓ minim 8 caractere
+          </p>
 
-  <p
-    className={
-      /\d/.test(password)
-        ? "text-green-400"
-        : "text-zinc-500"
-    }
-  >
-    ✓ cifră
-  </p>
+          <p
+            className={
+              /[A-Z]/.test(password)
+                ? "text-green-400"
+                : "text-zinc-500"
+            }
+          >
+            ✓ o literă mare
+          </p>
 
-</div>
+          <p
+            className={
+              /[a-z]/.test(password)
+                ? "text-green-400"
+                : "text-zinc-500"
+            }
+          >
+            ✓ o literă mică
+          </p>
+
+          <p
+            className={
+              /\d/.test(password)
+                ? "text-green-400"
+                : "text-zinc-500"
+            }
+          >
+            ✓ o cifră
+          </p>
+
+        </div>
+
         <button
           onClick={updatePassword}
-          className="w-full bg-white text-black py-2 rounded"
+          className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-gray-200 transition"
         >
-          Salvează
+          Schimbă parola
         </button>
 
       </div>

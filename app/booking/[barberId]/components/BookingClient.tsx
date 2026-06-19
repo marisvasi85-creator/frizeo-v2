@@ -33,7 +33,9 @@ export default function BookingClient({
   const [email, setEmail] = useState("");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
-
+  const servicesRef = useRef<HTMLDivElement>(null);
+const slotsRef = useRef<HTMLDivElement>(null);
+const formRef = useRef<HTMLDivElement>(null);
   // =========================
   // SERVICES
   // =========================
@@ -192,20 +194,41 @@ export default function BookingClient({
 
 </div>
       <Calendar
-        value={date}
-        onChange={setDate}
-        weeklySchedule={weeklySchedule}
-        overrides={overrides}
-        availableDays={availableDays}
-      />
+  value={date}
+  onChange={(value: string) => {
+    setDate(value);
+
+    setTimeout(() => {
+      servicesRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 200);
+  }}
+  weeklySchedule={weeklySchedule}
+  overrides={overrides}
+  availableDays={availableDays}
+/>
 
       {date && (
-  <div className="space-y-3">
+  <div
+    ref={servicesRef}
+    className="space-y-3"
+  >
     {services.map((s) => (
       <button
         key={s.id}
         type="button"
-        onClick={() => setServiceId(s.id)}
+        onClick={() => {
+  setServiceId(s.id);
+
+  setTimeout(() => {
+    slotsRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 300);
+}}
         className={`w-full p-4 rounded-xl border transition ${
           serviceId === s.id
             ? "bg-black text-white"
@@ -219,16 +242,30 @@ export default function BookingClient({
 )}
 
       {(loadingSlots || slots.length > 0) && (
-        <SlotPicker
-          slots={slots}
-          selected={selectedSlot}
-          onSelect={setSelectedSlot}
-          loading={loadingSlots}
-        />
-      )}
+  <div ref={slotsRef}>
+    <SlotPicker
+      slots={slots}
+      selected={selectedSlot}
+      onSelect={(slot) => {
+        setSelectedSlot(slot);
+
+        setTimeout(() => {
+          formRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 200);
+      }}
+      loading={loadingSlots}
+    />
+  </div>
+)}
 
       {selectedSlot && (
-        <div className="space-y-3">
+  <div
+    ref={formRef}
+    className="space-y-3"
+  >
           <input
             placeholder="Nume"
             value={name}
