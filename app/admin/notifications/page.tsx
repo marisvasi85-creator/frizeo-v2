@@ -1,11 +1,14 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { updateNotifications } from "./actions";
+import SaveButton from "./SaveButton";
 
 export default async function NotificationsPage() {
   const barber =
     await getCurrentBarberInTenant();
-console.log("BARBER:", barber);
+
+  console.log("BARBER:", barber);
+
   if (!barber) return null;
 
   const supabase =
@@ -93,12 +96,7 @@ console.log("BARBER:", barber);
           }
         />
 
-        <button
-          type="submit"
-          className="bg-white text-black px-5 py-3 rounded-lg font-medium"
-        >
-          Salvează
-        </button>
+        <SaveButton />
 
       </form>
 

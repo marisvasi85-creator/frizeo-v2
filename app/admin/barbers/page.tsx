@@ -28,15 +28,17 @@ if (role !== "owner") {
     .eq("active", true);
 
   const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select(`
-      plan:plans (
-        name,
-        max_barbers
-      )
-    `)
-    .eq("tenant_id", barber.tenant_id)
-    .single();
+  .from("subscriptions")
+  .select(`
+    status,
+    trial_ends_at,
+    plan:plans (
+      name,
+      max_barbers
+    )
+  `)
+  .eq("tenant_id", barber.tenant_id)
+  .single();
 
 const { data: tenant } = await supabase
   .from("tenants")
@@ -45,10 +47,32 @@ const { data: tenant } = await supabase
   .single();
 
   const plan = subscription?.plan as any;
+  const isTrial =
+  subscription?.status === "trialing";
+
+const trialEnds =
+  subscription?.trial_ends_at
+    ? new Date(subscription.trial_ends_at)
+    : null;
+
+const trialDaysLeft =
+  trialEnds
+    ? Math.max(
+        0,
+        Math.ceil(
+          (trialEnds.getTime() - Date.now()) /
+          (1000 * 60 * 60 * 24)
+        )
+      )
+    : 0;
 
   return (
     <BarbersClient
-  currentPlan={plan?.name ?? "Free"}
+  currentPlan={
+    isTrial
+      ? `🚀 Trial Gratuit (${trialDaysLeft} zile)`
+      : plan?.name ?? "Free"
+  }
   activeBarbers={activeBarbers ?? 0}
   maxBarbers={plan?.max_barbers ?? 1}
   tenantSlug={tenant?.slug ?? ""}

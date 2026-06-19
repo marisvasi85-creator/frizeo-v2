@@ -31,6 +31,11 @@ export default function BookingClient({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [bookingLoading, setBookingLoading] =
+  useState(false);
+
+const [bookingSuccess, setBookingSuccess] =
+  useState(false);
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
   const servicesRef = useRef<HTMLDivElement>(null);
@@ -138,8 +143,9 @@ const formRef = useRef<HTMLDivElement>(null);
   // CREATE BOOKING
   // =========================
   const createBooking = async () => {
-    if (!selectedSlot || !date || !serviceId) return;
+  if (!selectedSlot || !date || !serviceId) return;
 
+  setBookingLoading(true);
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
@@ -177,9 +183,15 @@ const formRef = useRef<HTMLDivElement>(null);
 
     const createData = await create.json();
 
-    router.push(`/booking/confirmed/${createData.bookingId}`);
-  };
+    setBookingLoading(false);
+setBookingSuccess(true);
 
+setTimeout(() => {
+  router.push(
+    `/booking/confirmed/${createData.bookingId}`
+  );
+}, 500);
+  }
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
 
@@ -288,11 +300,16 @@ const formRef = useRef<HTMLDivElement>(null);
           />
 
           <button
-            onClick={createBooking}
-            className="w-full bg-black text-white p-3 rounded-xl"
-          >
-            Programează-te
-          </button>
+  onClick={createBooking}
+  disabled={bookingLoading}
+  className="w-full bg-black text-white p-3 rounded-xl disabled:opacity-70"
+>
+  {bookingLoading
+    ? "Se salvează programarea..."
+    : bookingSuccess
+    ? "Programare salvată ✓"
+    : "Programează-te"}
+</button>
         </div>
       )}
     </div>

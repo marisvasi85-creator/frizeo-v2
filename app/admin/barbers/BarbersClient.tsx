@@ -175,31 +175,40 @@ useEffect(() => {
         <input
           placeholder="Nume"
           value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+onChange={(e) => {
+  setName(e.target.value);
+  setMessage("");
+}}          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
         />
         <input
   placeholder="Email"
   value={email}
-  onChange={(e) => setEmail(e.target.value)}
+  onChange={(e) => {
+    setEmail(e.target.value);
+    setMessage("");
+  }}
   className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
 />
         <input
           placeholder="Telefon"
           value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+onChange={(e) => {
+  setPhone(e.target.value);
+  setMessage("");
+}}          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
         />
 
         <button
-          onClick={addBarber}
-          disabled={loading}
-          className="bg-white text-black px-4 py-2 rounded"
-        >
-          {loading
-            ? "Se salvează..."
-            :  "Trimite invitația"}
-        </button>
+  onClick={addBarber}
+  disabled={loading}
+  className="bg-white text-black px-4 py-2 rounded disabled:opacity-70"
+>
+  {loading
+    ? "Se trimite..."
+    : message.startsWith("✓")
+    ? "Invitație trimisă ✓"
+    : "Trimite invitația"}
+</button>
 
         {message && (
           <div className="text-sm text-white/70">

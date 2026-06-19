@@ -127,7 +127,7 @@ const trialDaysLeft =
 
           {plans?.map((plan) => {
             const isCurrent =
-              currentPlan?.id === plan.id;
+  currentPlan?.id === plan.id;
 
             return (
               <div
@@ -146,10 +146,16 @@ const trialDaysLeft =
                   </h3>
 
                   {isCurrent && (
-                    <span className="text-xs bg-green-500 text-black px-2 py-1 rounded">
-                      ACTIV
-                    </span>
-                  )}
+  <span
+    className={`text-xs px-2 py-1 rounded ${
+      isTrial
+        ? "bg-blue-500 text-white"
+        : "bg-green-500 text-black"
+    }`}
+  >
+    {isTrial ? "TRIAL ACTIV" : "ACTIV"}
+  </span>
+)}
 
                 </div>
 
@@ -180,29 +186,29 @@ const trialDaysLeft =
 
                 </div>
 
-                <div className="mt-6">
-
-                  {plan.slug === "custom" ? (
-                    <a
-                      href="mailto:office@frizeo.ro"
-                      className="block w-full text-center bg-white text-black py-2 rounded"
-                    >
-                      Contactează-ne
-                    </a>
-                  ) : isCurrent ? (
-                    <button
-                      disabled
-                      className="w-full bg-green-500 text-black py-2 rounded"
-                    >
-                      Plan activ
-                    </button>
-                  ) : (
-                    <UpgradeButton
-                      planId={plan.id}
-                    />
-                  )}
-
-                </div>
+<div className="mt-6">
+  {plan.slug === "custom" ? (
+    <a
+      href="mailto:office@frizeo.ro"
+      className="block w-full text-center bg-white text-black py-2 rounded"
+    >
+      Contactează-ne
+    </a>
+  ) : isCurrent ? (
+    <button
+      disabled
+      className={`w-full py-2 rounded ${
+        isTrial
+          ? "bg-blue-500 text-white"
+          : "bg-green-500 text-black"
+      }`}
+    >
+      {isTrial ? "Trial activ" : "Plan activ"}
+    </button>
+  ) : (
+    <UpgradeButton planId={plan.id} />
+  )}
+</div>
 
               </div>
             );
