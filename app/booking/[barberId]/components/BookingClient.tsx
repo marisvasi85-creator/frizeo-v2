@@ -143,9 +143,12 @@ const formRef = useRef<HTMLDivElement>(null);
   // CREATE BOOKING
   // =========================
   const createBooking = async () => {
+    console.log("CLICK");
   if (!selectedSlot || !date || !serviceId) return;
 
   setBookingLoading(true);
+    console.log("LOADING TRUE");
+
     const service = services.find((s) => s.id === serviceId);
     const duration = service?.duration || 30;
 
