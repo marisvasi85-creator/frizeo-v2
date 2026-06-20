@@ -215,9 +215,9 @@ setTimeout(() => {
 
     setTimeout(() => {
       servicesRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+  behavior: "smooth",
+  block: "center",
+});
     }, 200);
   }}
   weeklySchedule={weeklySchedule}
@@ -239,9 +239,9 @@ setTimeout(() => {
 
   setTimeout(() => {
     slotsRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+  behavior: "smooth",
+  block: "center",
+});
   }, 300);
 }}
         className={`w-full p-4 rounded-xl border transition ${
@@ -266,9 +266,9 @@ setTimeout(() => {
 
         setTimeout(() => {
           formRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+  behavior: "smooth",
+  block: "center",
+});
         }, 200);
       }}
       loading={loadingSlots}
