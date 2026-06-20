@@ -128,6 +128,38 @@ useEffect(() => {
     }
   }
 
+  async function deleteBarber(
+  barberId: string
+) {
+  const ok = confirm(
+    "Sigur dorești să ștergi acest frizer?"
+  );
+
+  if (!ok) return;
+
+  const res = await fetch(
+    "/api/barbers/delete",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        barberId,
+      }),
+    }
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    alert(data.error);
+    return;
+  }
+
+  loadBarbers();
+}
+
   return (
     <div className="space-y-8">
 
@@ -304,6 +336,13 @@ onChange={(e) => {
                   ? "Dezactivează"
                   : "Activează"}
               </button>
+
+              <button
+  onClick={() => deleteBarber(barber.id)}
+  className="text-sm text-red-400 hover:text-red-300"
+>
+  Șterge
+</button>
 
             </div>
 
