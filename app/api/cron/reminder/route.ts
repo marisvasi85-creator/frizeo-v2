@@ -4,7 +4,21 @@ import { sendEmail } from "@/lib/email/email";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 
-export async function GET() {
+export async function GET(req: Request) {
+
+  const { searchParams } =
+    new URL(req.url);
+
+  if (
+    searchParams.get("secret") !==
+    process.env.CRON_SECRET
+  ) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const supabase = await createSupabaseServerClient();
 

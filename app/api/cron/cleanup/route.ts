@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function GET() {
+export async function GET(req: Request) {
+
+  const { searchParams } =
+    new URL(req.url);
+
+  if (
+    searchParams.get("secret") !==
+    process.env.CRON_SECRET
+  ) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -16,6 +30,7 @@ export async function GET() {
 
     if (error) {
       console.error("CLEANUP ERROR:", error);
+
       return NextResponse.json(
         { error: "Cleanup failed" },
         { status: 500 }
@@ -24,7 +39,9 @@ export async function GET() {
 
     console.log("CLEANUP OK");
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+    });
 
   } catch (err) {
     console.error("CLEANUP CRASH:", err);
