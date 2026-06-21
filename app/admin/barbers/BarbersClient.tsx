@@ -5,6 +5,10 @@ import {
   publicBookingPath,
   publicBookingUrl,
 } from "@/lib/booking/publicBookingPath";
+import AdminCard from "../components/AdminCard";
+import AdminButton from "../components/AdminButton";
+import EmptyState from "../components/EmptyState";
+import { AdminInput } from "../components/AdminInput";
 
 type Barber = {
   id: string;
@@ -171,7 +175,8 @@ useEffect(() => {
         <h1 className="text-2xl font-semibold">
           Frizeri
         </h1>
-      <div className="mt-4 bg-[#161618] border border-white/10 rounded-xl p-4">
+      <div className="mt-4">
+        <AdminCard padding="sm">
   <div className="text-sm text-white/60">
     Plan curent
   </div>
@@ -189,62 +194,63 @@ useEffect(() => {
   </div>
 
   {activeBarbers >= maxBarbers && (
-  <a
+  <AdminButton
+    size="sm"
     href="/admin/billing"
-    className="inline-block mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm"
+    className="inline-block mt-4"
   >
     Upgrade abonament pentru mai mulți frizeri
-  </a>
+  </AdminButton>
 )}
-</div>
+        </AdminCard>
+      </div>
         <p className="text-white/60 mt-1">
           Gestionează frizerii salonului.
         </p>
       </div>
 
-      <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
+      <AdminCard className="space-y-4">
 
         <h2 className="font-medium">
           Invită frizer
         </h2>
 
-        <input
+        <AdminInput
           placeholder="Nume"
           value={name}
 onChange={(e) => {
   setName(e.target.value);
   setMessage("");
-}}          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+}}
         />
-        <input
+        <AdminInput
   placeholder="Email"
   value={email}
   onChange={(e) => {
     setEmail(e.target.value);
     setMessage("");
   }}
-  className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
 />
-        <input
+        <AdminInput
           placeholder="Telefon"
           value={phone}
 onChange={(e) => {
   setPhone(e.target.value);
   setMessage("");
-}}          className="w-full bg-[#0F0F10] border border-white/10 rounded px-3 py-2"
+}}
         />
 
-        <button
+        <AdminButton
   onClick={addBarber}
-  disabled={loading}
-  className="bg-white text-black px-4 py-2 rounded disabled:opacity-70"
+  disabled={loading || message.startsWith("✓")}
+  loading={loading}
+  loadingLabel="Se trimite..."
+  size="sm"
 >
-  {loading
-    ? "Se trimite..."
-    : message.startsWith("✓")
+  {message.startsWith("✓")
     ? "Invitație trimisă ✓"
     : "Trimite invitația"}
-</button>
+</AdminButton>
 
         {message && (
           <div className="text-sm text-white/70">
@@ -252,20 +258,19 @@ onChange={(e) => {
           </div>
         )}
 
-      </div>
+      </AdminCard>
 
       <div className="space-y-3">
 
         {barbers.length === 0 && (
-          <div className="text-white/50">
-            Nu există frizeri.
-          </div>
+          <EmptyState className="py-8">Nu există frizeri.</EmptyState>
         )}
 
         {barbers.map((barber) => (
-          <div
+          <AdminCard
             key={barber.id}
-            className="bg-[#161618] border border-white/10 rounded-xl p-4 flex justify-between items-center"
+            padding="sm"
+            className="flex justify-between items-center"
           >
             <div>
 
@@ -291,23 +296,27 @@ onChange={(e) => {
 
     <div className="flex gap-2">
 
-      <button
+      <AdminButton
+        variant="secondary"
+        size="sm"
         onClick={() =>
           navigator.clipboard.writeText(bookingUrl)
         }
-        className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
+        className="text-xs px-2 py-1"
       >
         Copiază link
-      </button>
+      </AdminButton>
 
-      <a
+      <AdminButton
+        variant="secondary"
+        size="sm"
         href={bookingPath}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
+        className="text-xs px-2 py-1"
       >
         Deschide
-      </a>
+      </AdminButton>
 
     </div>
 
@@ -355,7 +364,7 @@ onChange={(e) => {
 
             </div>
 
-          </div>
+          </AdminCard>
         ))}
 
       </div>
@@ -366,16 +375,11 @@ onChange={(e) => {
   </h2>
 
   {invitations.length === 0 && (
-    <div className="text-white/50">
-      Nu există invitații.
-    </div>
+    <EmptyState className="py-8">Nu există invitații.</EmptyState>
   )}
 
   {invitations.map((invite) => (
-    <div
-      key={invite.id}
-      className="bg-[#161618] border border-white/10 rounded-xl p-4"
-    >
+    <AdminCard key={invite.id} padding="sm">
       <div className="font-medium">
         {invite.full_name}
       </div>
@@ -395,7 +399,7 @@ onChange={(e) => {
           </span>
         )}
       </div>
-    </div>
+    </AdminCard>
   ))}
 </div>
     </div>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-
-const inputClass =
-  "w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white";
+import AdminModal from "../../components/AdminModal";
+import AdminButton from "../../components/AdminButton";
+import { AdminInput, AdminSelect } from "../../components/AdminInput";
 
 export default function AddServiceModal({
   barberId,
@@ -55,58 +55,57 @@ export default function AddServiceModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161618] border border-white/10 p-6 rounded-xl w-full max-w-sm space-y-4">
-        <h2 className="text-lg font-semibold">
-          {service ? "Editează serviciu" : "Adaugă serviciu"}
-        </h2>
+    <AdminModal
+      onClose={onClose}
+      maxWidth="max-w-sm"
+      title={service ? "Editează serviciu" : "Adaugă serviciu"}
+    >
+      <AdminInput
+        placeholder="Nume serviciu"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
 
-        <input
-          placeholder="Nume serviciu"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={inputClass}
-        />
+      <AdminSelect
+        value={duration}
+        onChange={(e) => setDuration(e.target.value)}
+      >
+        <option value="">Alege durata</option>
+        <option value="15">15 min</option>
+        <option value="30">30 min</option>
+        <option value="45">45 min</option>
+        <option value="60">60 min</option>
+        <option value="75">75 min</option>
+        <option value="90">90 min</option>
+        <option value="120">120 min</option>
+      </AdminSelect>
 
-        <select
-          value={duration}
-          onChange={(e) => setDuration(e.target.value)}
-          className={inputClass}
+      <AdminInput
+        placeholder="Preț (opțional)"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+      />
+
+      <div className="flex gap-2">
+        <AdminButton
+          variant="secondary"
+          fullWidth
+          onClick={onClose}
+          className="py-3"
         >
-          <option value="">Alege durata</option>
-          <option value="15">15 min</option>
-          <option value="30">30 min</option>
-          <option value="45">45 min</option>
-          <option value="60">60 min</option>
-          <option value="75">75 min</option>
-          <option value="90">90 min</option>
-          <option value="120">120 min</option>
-        </select>
+          Anulează
+        </AdminButton>
 
-        <input
-          placeholder="Preț (opțional)"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          className={inputClass}
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-white/10 py-3 rounded-lg text-white"
-          >
-            Anulează
-          </button>
-
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="flex-1 bg-white text-black py-3 rounded-lg font-medium disabled:opacity-50"
-          >
-            {loading ? "Se salvează..." : "Salvează"}
-          </button>
-        </div>
+        <AdminButton
+          fullWidth
+          loading={loading}
+          loadingLabel="Se salvează..."
+          onClick={handleSubmit}
+          className="py-3"
+        >
+          Salvează
+        </AdminButton>
       </div>
-    </div>
+    </AdminModal>
   );
 }

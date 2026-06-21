@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import EditBookingModal from "./components/EditBookingModal";
-
-const inputClass =
-  "w-full md:w-auto bg-[#0F0F10] border border-white/10 rounded-lg px-3 py-3 text-sm text-white";
+import AdminPageHeader from "../components/AdminPageHeader";
+import AdminCard from "../components/AdminCard";
+import AdminButton from "../components/AdminButton";
+import EmptyState from "../components/EmptyState";
+import { AdminSelect } from "../components/AdminInput";
 
 function formatCancelConfirm(booking: any) {
   const time = booking.start_time?.slice(0, 5) || "";
@@ -73,41 +74,38 @@ export default function AdminBookingsPage() {
 
   return (
     <div className="text-white space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <h1 className="text-2xl font-semibold">Programări</h1>
+      <AdminPageHeader title="Programări">
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <AdminSelect
+            value={selectedBarber}
+            onChange={(e) => setSelectedBarber(e.target.value)}
+            className="md:w-auto py-3 px-3 text-sm"
+          >
+            {barberNames.map((name) => (
+              <option key={name} value={name}>
+                {name === "all" ? "Toți frizerii" : name}
+              </option>
+            ))}
+          </AdminSelect>
 
-        <select
-          value={selectedBarber}
-          onChange={(e) => setSelectedBarber(e.target.value)}
-          className={inputClass}
-        >
-          {barberNames.map((name) => (
-            <option key={name} value={name}>
-              {name === "all" ? "Toți frizerii" : name}
-            </option>
-          ))}
-        </select>
-
-        <Link
-          href="/admin/bookings/new"
-          className="w-full md:w-auto bg-white text-black px-4 py-3 rounded-lg font-medium text-center"
-        >
-          + Adaugă programare
-        </Link>
-      </div>
+          <AdminButton href="/admin/bookings/new" className="py-3 px-4">
+            + Adaugă programare
+          </AdminButton>
+        </div>
+      </AdminPageHeader>
 
       {loading ? (
         <div className="text-white/60">Se încarcă...</div>
       ) : filteredBookings.length === 0 ? (
-        <div className="text-center py-12 text-white/60">
-          Nu există programări.
-        </div>
+        <EmptyState>Nu există programări.</EmptyState>
       ) : (
         <div className="space-y-3">
           {filteredBookings.map((booking) => (
-            <div
+            <AdminCard
               key={booking.id}
-              className="bg-[#161618] border border-white/10 rounded-xl p-4 flex items-stretch gap-3 hover:border-white/20 transition"
+              padding="sm"
+              hoverable
+              className="flex items-stretch gap-3"
             >
               <button
                 type="button"
@@ -141,15 +139,16 @@ export default function AdminBookingsPage() {
                 </div>
               </button>
 
-              <button
-                type="button"
+              <AdminButton
+                variant="danger"
+                size="sm"
                 onClick={() => cancelBooking(booking)}
                 disabled={cancellingId === booking.id}
-                className="shrink-0 self-center px-3 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 disabled:opacity-50"
+                className="shrink-0 self-center"
               >
                 {cancellingId === booking.id ? "..." : "Anulează"}
-              </button>
-            </div>
+              </AdminButton>
+            </AdminCard>
           ))}
         </div>
       )}

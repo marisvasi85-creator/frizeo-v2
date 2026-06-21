@@ -5,6 +5,9 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { CalendarDays } from "lucide-react";
 import type { Override, OverrideMode } from "@/types/override";
+import AdminButton from "../../components/AdminButton";
+import AdminCard from "../../components/AdminCard";
+import EmptyState from "../../components/EmptyState";
 
 function toLocalDateString(date: Date) {
   const y = date.getFullYear();
@@ -192,7 +195,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
         </p>
       </div>
 
-      <div className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4">
+      <AdminCard padding="sm" className="space-y-4">
         <div className="relative w-full">
           <DatePicker
             selected={selectedDate}
@@ -298,29 +301,31 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <div className="flex flex-wrap gap-2">
-          <button
+          <AdminButton
             onClick={saveOverride}
             disabled={!date || loading}
-            className="bg-white text-black px-4 py-3 rounded-lg font-medium disabled:opacity-50"
+            loading={loading}
+            loadingLabel="Se salvează..."
           >
-            {loading ? "Se salvează..." : "Salvează zi specială"}
-          </button>
+            Salvează zi specială
+          </AdminButton>
 
           {date && (
-            <button
-              type="button"
+            <AdminButton
+              variant="secondary"
               onClick={resetForm}
-              className="px-4 py-3 rounded-lg text-sm text-white/70 border border-white/10"
             >
               Anulează
-            </button>
+            </AdminButton>
           )}
         </div>
-      </div>
+      </AdminCard>
 
       <div className="space-y-3">
         {overrides.length === 0 && (
-          <div className="text-white/50 text-sm">Nu există zile speciale.</div>
+          <EmptyState className="py-8 text-sm">
+            Nu există zile speciale.
+          </EmptyState>
         )}
 
         {overrides
@@ -329,9 +334,10 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
             const info = describeOverride(item);
 
             return (
-              <div
+              <AdminCard
                 key={item.id ?? item.date}
-                className="bg-[#161618] border border-white/10 p-4 rounded-xl flex justify-between items-start gap-4"
+                padding="sm"
+                className="flex justify-between items-start gap-4"
               >
                 <div>
                   <div className="font-medium">{formatDateRO(item.date)}</div>
@@ -357,7 +363,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
                     Șterge
                   </button>
                 </div>
-              </div>
+              </AdminCard>
             );
           })}
       </div>

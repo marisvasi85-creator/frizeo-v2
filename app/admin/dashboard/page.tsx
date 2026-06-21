@@ -5,6 +5,8 @@ import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import BookingLinkCard from "./BookingLinkCard";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
+import AdminCard from "../components/AdminCard";
+import AdminButton from "../components/AdminButton";
 
 export default async function DashboardPage() {  const supabase = await createSupabaseServerClient();
 const role = await getCurrentRole();
@@ -79,36 +81,25 @@ const role = await getCurrentRole();
       {/* 🔥 BOOKING LINK (CLIENT COMPONENT) */}
 <BookingLinkCard />
 {role === "owner" && (
-  <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+  <AdminCard>
     <h2 className="text-lg font-semibold mb-4">
       Administrare salon
     </h2>
 
     <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-
-      <a
-        href="/admin/barbers"
-        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
-      >
+      <AdminButton variant="secondary" size="sm" href="/admin/barbers">
         Frizeri
-      </a>
+      </AdminButton>
 
-      <a
-        href="/admin/salon"
-        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
-      >
+      <AdminButton variant="secondary" size="sm" href="/admin/salon">
         Salon
-      </a>
+      </AdminButton>
 
-      <a
-        href="/admin/billing"
-        className="px-4 py-2 bg-white/10 rounded-lg text-sm"
-      >
+      <AdminButton variant="secondary" size="sm" href="/admin/billing">
         Abonament
-      </a>
-
+      </AdminButton>
     </div>
-  </div>
+  </AdminCard>
 )}
 {currentPlan?.status === "trialing" &&
   currentPlan?.trial_ends_at && (() => {
@@ -143,12 +134,13 @@ const role = await getCurrentRole();
           După expirare vei fi trecut pe planul Free.
         </p>
 
-        <a
+        <AdminButton
+          size="sm"
           href="/admin/billing"
-          className="inline-block mt-4 px-4 py-2 bg-white text-black rounded-lg text-sm"
+          className="inline-block mt-4"
         >
           Vezi planurile
-        </a>
+        </AdminButton>
 
       </div>
     );
@@ -156,74 +148,59 @@ const role = await getCurrentRole();
       {/* STATS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-        <div className="bg-[#161618] p-5 rounded-xl border border-white/10">
+        <AdminCard padding="sm">
           <p className="text-sm text-white/60">Programări azi</p>
           <p className="text-3xl font-bold mt-2">
             {todayBookings?.length || 0}
           </p>
-        </div>
+        </AdminCard>
 
-        <div className="bg-[#161618] p-5 rounded-xl border border-white/10">
+        <AdminCard padding="sm">
           <p className="text-sm text-white/60">Status</p>
           <p className="text-lg mt-2">
             {todayBookings && todayBookings.length > 0
               ? "Ai clienți azi"
               : "Zi liberă"}
           </p>
-        </div>
+        </AdminCard>
 
-        <div className="bg-[#161618] p-5 rounded-xl border border-white/10">
+        <AdminCard padding="sm">
           <p className="text-sm text-white/60">Următoarea programare</p>
           <p className="text-lg mt-2">
             {upcoming && upcoming.length > 0
               ? `${upcoming[0].date} ${upcoming[0].start_time}`
               : "—"}
           </p>
-        </div>
+        </AdminCard>
 
       </div>
 
       {/* QUICK ACTIONS */}
-      <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+      <AdminCard>
         <h2 className="text-lg font-semibold mb-4">
           Acțiuni rapide
         </h2>
 
         <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+          <AdminButton size="sm" href="/admin/bookings/new">
+            Adaugă programare
+          </AdminButton>
 
-          <a
-  href="/admin/bookings/new"
-  className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
->
-  Adaugă programare
-</a>
-
-          <a
-            href="/admin/bookings"
-            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
-          >
+          <AdminButton size="sm" href="/admin/bookings">
             Programări
-          </a>
+          </AdminButton>
 
-          <a
-            href="/admin/services"
-            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
-          >
+          <AdminButton size="sm" href="/admin/services">
             Servicii
-          </a>
+          </AdminButton>
 
-          <a
-            href="/admin/settings"
-            className="w-full sm:w-auto px-4 py-2 bg-white text-black rounded-lg text-sm font-medium text-center"
-          >
+          <AdminButton size="sm" href="/admin/settings">
             Program
-          </a>
-
+          </AdminButton>
         </div>
-      </div>
+      </AdminCard>
 
-      {/* AZI */}
-      <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+      <AdminCard>
         <h2 className="text-lg font-semibold mb-4">
           Programările de azi
         </h2>
@@ -251,10 +228,9 @@ const role = await getCurrentRole();
             ))}
           </div>
         )}
-      </div>
+      </AdminCard>
 
-      {/* URMĂTOARELE */}
-      <div className="bg-[#161618] p-6 rounded-xl border border-white/10">
+      <AdminCard>
         <h2 className="text-lg font-semibold mb-4">
           Următoarele programări
         </h2>
@@ -278,7 +254,7 @@ const role = await getCurrentRole();
             ))}
           </div>
         )}
-      </div>
+      </AdminCard>
 
     </div>
   );

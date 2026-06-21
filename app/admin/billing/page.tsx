@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import UpgradeButton from "./UpgradeButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import AdminPageHeader from "../components/AdminPageHeader";
+import AdminCard from "../components/AdminCard";
 export default async function BillingPage() {
   const supabase = await createSupabaseServerClient();
 
@@ -63,13 +65,9 @@ const trialDaysLeft =
   return (
     <div className="space-y-8">
 
-      {/* CURRENT PLAN */}
-      <div className="bg-[#161618] border border-white/10 rounded-xl p-6">
+      <AdminPageHeader title="Abonament" />
 
-        <h1 className="text-2xl font-semibold mb-4">
-          Abonament
-        </h1>
-
+      <AdminCard>
         <div className="space-y-3">
 
           <p className="text-white/60 text-sm">
@@ -114,7 +112,7 @@ const trialDaysLeft =
 )}
         </div>
 
-      </div>
+      </AdminCard>
 
       {/* PLANS */}
       <div>

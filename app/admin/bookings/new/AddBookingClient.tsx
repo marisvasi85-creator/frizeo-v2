@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 import { Slot } from "@/types/slots";
+import AdminButton from "../../components/AdminButton";
+import AdminCard from "../../components/AdminCard";
+import { AdminInput, AdminSelect } from "../../components/AdminInput";
 
 export default function AddBookingClient({
   barberId,
@@ -211,14 +214,13 @@ console.log("CREATE RESPONSE:", createData);
       <h1 className="text-2xl font-semibold">Adaugă programare</h1>
 
 {role === "owner" && (
-  <select
+  <AdminSelect
     value={selectedBarberId}
     onChange={(e) =>
       setSelectedBarberId(
         e.target.value
       )
     }
-    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
   >
     {barbers.map((barber) => (
       <option
@@ -228,12 +230,11 @@ console.log("CREATE RESPONSE:", createData);
         {barber.display_name}
       </option>
     ))}
-  </select>
+  </AdminSelect>
 )}
-      <select
+      <AdminSelect
         value={serviceId}
         onChange={(e) => setServiceId(e.target.value)}
-        className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
       >
         <option value="">
           Alege serviciu
@@ -244,7 +245,7 @@ console.log("CREATE RESPONSE:", createData);
             {s.display_name} ({s.duration} min)
           </option>
         ))}
-      </select>
+      </AdminSelect>
 
       <Calendar
         value={date}
@@ -266,45 +267,42 @@ console.log("CREATE RESPONSE:", createData);
         )}
 
       {selectedSlot && (
-        <div className="space-y-3 bg-[#161618] border border-white/10 rounded-xl p-4">
+        <AdminCard padding="sm" className="space-y-3">
 
-          <input
+          <AdminInput
             placeholder="Nume client"
             value={name}
             onChange={(e) =>
               setName(e.target.value)
             }
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
-          <input
+          <AdminInput
             placeholder="Telefon"
             value={phone}
             onChange={(e) =>
               setPhone(e.target.value)
             }
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
-          <input
+          <AdminInput
             placeholder="Email (opțional)"
             value={email}
             onChange={(e) =>
               setEmail(e.target.value)
             }
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
-          <button
+          <AdminButton
             onClick={createBooking}
             disabled={saving}
-            className="w-full bg-white text-black px-4 py-3 rounded-lg font-medium disabled:opacity-50"
+            loading={saving}
+            loadingLabel="Se creează..."
+            fullWidth
           >
-            {saving
-              ? "Se creează..."
-              : "Creează programare"}
-          </button>
-        </div>
+            Creează programare
+          </AdminButton>
+        </AdminCard>
       )}
 
     </div>

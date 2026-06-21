@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
+import AdminButton from "./AdminButton";
 
 type Props = {
   label?: string;
@@ -31,13 +32,14 @@ export default function FormSaveButton({
         <span className="text-green-400 text-sm">{savedLabel}</span>
       )}
 
-      <button
+      <AdminButton
         type="submit"
-        disabled={pending}
-        className="bg-white text-black px-5 py-3 rounded-lg font-medium disabled:opacity-50"
+        loading={pending}
+        loadingLabel="Se salvează..."
+        className="px-5 py-3"
       >
-        {pending ? "Se salvează..." : label}
-      </button>
+        {label}
+      </AdminButton>
     </div>
   );
 }

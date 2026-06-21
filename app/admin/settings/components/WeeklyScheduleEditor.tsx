@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { saveWeeklySchedule } from "../actions";
+import AdminButton from "../../components/AdminButton";
 
 type Day = {
   day_of_week: number;
@@ -246,13 +247,15 @@ setLoading(false);
     </div>
   )}
 
-  <button
+  <AdminButton
     onClick={handleSave}
     disabled={loading}
-    className="bg-white text-black px-4 py-2 rounded text-sm disabled:opacity-50"
+    loading={loading}
+    loadingLabel="Se salvează..."
+    size="sm"
   >
-    {loading ? "Se salvează..." : "Salvează"}
-  </button>
+    Salvează
+  </AdminButton>
 
 </div>
 

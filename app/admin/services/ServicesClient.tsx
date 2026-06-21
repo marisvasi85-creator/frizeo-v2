@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import AddServiceModal from "./components/AddServiceModal";
+import AdminButton from "../components/AdminButton";
+import AdminCard from "../components/AdminCard";
+import EmptyState from "../components/EmptyState";
 
 export default function ServicesClient({
   services,
@@ -70,34 +73,16 @@ export default function ServicesClient({
         Servicii
       </h1>
 
-      <button
-        onClick={() => setOpenAdd(true)}
-        className="bg-white text-black px-4 py-2 rounded-lg font-medium w-full sm:w-auto"
-      >
+      <AdminButton onClick={() => setOpenAdd(true)} className="w-full sm:w-auto">
         + Adaugă
-      </button>
+      </AdminButton>
     </div>
 
     {/* LIST */}
     <div className="space-y-4">
 
       {items.map((s) => (
-        <div
-          key={s.id}
-          className="
-            p-5
-            rounded-xl
-            bg-[#161618]
-            border
-            border-white/10
-            flex
-            flex-col
-            md:flex-row
-            md:items-center
-            md:justify-between
-            gap-4
-          "
-        >
+        <AdminCard key={s.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
           {/* LEFT */}
           <div>
@@ -163,13 +148,11 @@ export default function ServicesClient({
             </button>
 
           </div>
-        </div>
+        </AdminCard>
       ))}
 
       {items.length === 0 && (
-        <div className="text-center py-12 text-white/60">
-          Nu există servicii.
-        </div>
+        <EmptyState>Nu există servicii.</EmptyState>
       )}
 
     </div>

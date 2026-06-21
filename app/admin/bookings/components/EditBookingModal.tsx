@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Calendar from "@/app/components/Calendar";
+import AdminButton from "../../components/AdminButton";
+import { AdminInput } from "../../components/AdminInput";
 
 type ApiSlot = {
   type: "free" | "booking" | "break";
@@ -32,9 +34,6 @@ type Booking = {
     duration?: number;
   };
 };
-
-const inputClass =
-  "w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white";
 
 function normTime(t: string) {
   return t.slice(0, 5);
@@ -268,25 +267,22 @@ export default function EditBookingModal({
           </div>
         )}
 
-        <input
+        <AdminInput
           placeholder="Nume client"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className={inputClass}
         />
 
-        <input
+        <AdminInput
           placeholder="Telefon"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className={inputClass}
         />
 
-        <input
+        <AdminInput
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className={inputClass}
         />
 
         <div className="rounded-xl border border-white/10 bg-[#0F0F10] p-3 edit-booking-calendar">
@@ -363,33 +359,39 @@ export default function EditBookingModal({
         </div>
 
         <div className="flex gap-2">
-          <button
-            type="button"
+          <AdminButton
+            variant="secondary"
+            fullWidth
             onClick={onClose}
             disabled={loading || cancelling}
-            className="flex-1 bg-white/10 py-3 rounded-lg text-white disabled:opacity-50"
+            className="py-3"
           >
             Închide
-          </button>
+          </AdminButton>
 
-          <button
-            type="button"
+          <AdminButton
+            fullWidth
             onClick={handleSave}
             disabled={!canSave || loading || cancelling}
-            className="flex-1 bg-white text-black py-3 rounded-lg font-medium disabled:opacity-50"
+            loading={loading}
+            loadingLabel="Se salvează..."
+            className="py-3"
           >
-            {loading ? "Se salvează..." : "Salvează"}
-          </button>
+            Salvează
+          </AdminButton>
         </div>
 
-        <button
-          type="button"
+        <AdminButton
+          variant="danger"
+          fullWidth
           onClick={handleCancelBooking}
           disabled={loading || cancelling}
-          className="w-full py-3 rounded-lg text-sm text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50"
+          loading={cancelling}
+          loadingLabel="Se anulează..."
+          className="py-3"
         >
-          {cancelling ? "Se anulează..." : "Anulează programarea"}
-        </button>
+          Anulează programarea
+        </AdminButton>
       </div>
 
       <style jsx global>{`
