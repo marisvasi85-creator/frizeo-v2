@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
 export async function GET(req: Request) {
-
-  const { searchParams } =
-    new URL(req.url);
-
-  if (
-    searchParams.get("secret") !==
-    process.env.CRON_SECRET
-  ) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
@@ -36,8 +30,6 @@ export async function GET(req: Request) {
         { status: 500 }
       );
     }
-
-    console.log("CLEANUP OK");
 
     return NextResponse.json({
       success: true,

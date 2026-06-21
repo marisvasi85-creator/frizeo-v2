@@ -13,7 +13,6 @@ export default async function AdminLayout({
   const supabase = await createSupabaseServerClient();
   const role = await getCurrentRole();
 
-console.log("ROLE:", role);
   const {
     data: { user },
     error,
@@ -24,8 +23,6 @@ console.log("ROLE:", role);
   }
 
   const status = await getDashboardStatus(user.id);
-
-console.log("ADMIN STATUS:", status);
 
 // if (!status.completed) {
 //   redirect("/admin/onboarding");

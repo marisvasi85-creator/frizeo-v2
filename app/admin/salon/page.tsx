@@ -6,6 +6,7 @@ import { updateSalon } from "./actions";
 import CopySalonLink from "./CopySalonLink";
 import LogoUpload from "./LogoUpload";
 import GalleryUpload from "./GalleryUpload";
+import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
 
 export default async function SalonPage() {
   const supabase = await createSupabaseServerClient();
@@ -76,9 +77,7 @@ const { count: monthBookings } = await supabase
       .split("T")[0]
   );
 
-  const salonUrl = `${
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-  }/booking/salon/${tenant?.slug || ""}`;
+  const salonUrl = publicSalonUrl(tenant?.slug || "");
 
   const plan = subscription?.plans as any;
 

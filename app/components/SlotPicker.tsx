@@ -8,13 +8,16 @@ export default function SlotPicker({
   onSelect,
   onBookingClick,
   loading = false,
+  variant = "dark",
 }: {
   slots: Slot[];
   selected: string | null;
   onSelect: (slot: string) => void;
   onBookingClick?: (booking: any) => void;
   loading?: boolean;
+  variant?: "light" | "dark";
 }) {
+  const isLight = variant === "light";
 
   // =========================
   // 🔥 LOADING
@@ -131,8 +134,12 @@ export default function SlotPicker({
                     p-3 rounded-xl border transition
                     ${
                       selected === s.time
-                        ? "bg-white text-black"
-                        : "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+                        ? isLight
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-black"
+                        : isLight
+                          ? "bg-white text-black border-gray-200 hover:bg-gray-50"
+                          : "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
                     }
                   `}
                 >

@@ -25,9 +25,6 @@ export async function middleware(req: any) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 🔥 DEBUG TEMPORAR
-  console.log("USER IN MIDDLEWARE:", user);
-
   if (!user && req.nextUrl.pathname.startsWith("/admin")) {
     return NextResponse.redirect(new URL("/login", req.url));
   }

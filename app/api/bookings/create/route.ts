@@ -59,9 +59,6 @@ const limit = await checkBookingLimit(
   booking.tenant_id
 );
 
-console.log("BOOKING TENANT:", booking.tenant_id);
-console.log("BOOKING LIMIT:", limit);
-
 const settings =
   await getNotificationSettings(
     booking.tenant_id
@@ -198,17 +195,6 @@ try {
     .eq("barber_id", data.barber_id)
     .single();
 
-  console.log(
-    "GOOGLE ACCOUNT:",
-    googleAccount
-  );
-
-  if (!googleAccount) {
-    console.log(
-      "NO GOOGLE ACCOUNT FOUND"
-    );
-  }
-
   if (googleAccount?.access_token) {
 
   let accessToken =
@@ -228,10 +214,6 @@ try {
     shouldRefresh &&
     googleAccount.refresh_token
   ) {
-
-    console.log(
-      "REFRESHING GOOGLE TOKEN"
-    );
 
     const refreshed =
       await refreshAccessToken(
@@ -258,28 +240,15 @@ try {
           "barber_id",
           data.barber_id
         );
-
-      console.log(
-        "GOOGLE TOKEN REFRESHED"
-      );
     }
   }
-
-  console.log(
-    "CREATING GOOGLE EVENT"
-  );
 
   const startDateTime =
     `${data.date}T${data.start_time}`;
 
     const endDateTime =
       `${data.date}T${data.end_time}`;
-console.log("EVENT TITLE:", `${client_name} | ${client_phone} | ${serviceName}`);
 
-console.log("EVENT DESCRIPTION:",
-`Client: ${client_name}
-Telefon: ${client_phone}
-Serviciu: ${serviceName}`);
     const event = await createGoogleEvent({
   accessToken: accessToken,
   calendarId:
@@ -297,11 +266,6 @@ Serviciu: ${serviceName}`,
   end: endDateTime,
 });
 
-    console.log(
-      "GOOGLE EVENT RESPONSE:",
-      event
-    );
-
     if (event?.id) {
 
       await supabase
@@ -310,11 +274,6 @@ Serviciu: ${serviceName}`,
           google_event_id: event.id,
         })
         .eq("id", data.id);
-
-      console.log(
-        "GOOGLE EVENT CREATED:",
-        event.id
-      );
     }
   }
 

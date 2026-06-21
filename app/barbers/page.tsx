@@ -1,42 +1,61 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 
 export default async function BarbersPage() {
-  const supabase = await createSupabaseServerClient();
-
-  const { data: barbers } = await supabase
+  const { data: barbers } = await supabaseAdmin
     .from("barbers")
-    .select("id, display_name")
+    .select(`
+      id,
+      display_name,
+      slug,
+      tenant:tenants (
+        slug
+      )
+    `)
+    .eq("active", true)
     .order("display_name");
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-16">
-
       <h1 className="text-3xl font-semibold mb-10 text-center">
         Alege un frizer
       </h1>
 
-      <div className="grid gap-4">
-        {barbers?.map((b) => (
-          <Link
-            key={b.id}
-            href={`/booking/${b.id}`}
-            className="p-5 rounded-xl border hover:bg-gray-50 transition flex justify-between items-center"
-          >
-            <div>
-              <p className="font-medium text-lg">
-                {b.display_name || "Frizer"}
-              </p>
-              <p className="text-sm text-gray-500">
-                Vezi programări disponibile
-              </p>
-            </div>
+      {!barbers?.length ? (
+        <p className="text-center text-gray-500">
+          Nu există frizeri disponibili momentan.
+        </p>
+      ) : (
+        <div className="grid gap-4">
+          {barbers.map((b) => {
+            const tenantSlug = (b.tenant as { slug?: string } | null)?.slug;
+            const href =
+              tenantSlug && b.slug
+                ? publicBookingPath(tenantSlug, b.slug)
+                : `/booking/${b.id}`;
 
-            <div className="text-gray-400 text-xl">→</div>
-          </Link>
-        ))}
-      </div>
+            return (
+              <Link
+                key={b.id}
+                href={href}
+                className="p-5 rounded-xl border hover:bg-gray-50 transition flex justify-between items-center"
+              >
+                <div>
+                  <p className="font-medium text-lg">
+                    {b.display_name || "Frizer"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Vezi programări disponibile
+                  </p>
+                </div>
 
+                <div className="text-gray-400 text-xl">→</div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </main>
   );
 }

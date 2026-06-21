@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
 export async function GET(req: Request) {
-
-  const { searchParams } =
-    new URL(req.url);
-
-  if (
-    searchParams.get("secret") !==
-    process.env.CRON_SECRET
-  ) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }

@@ -5,36 +5,58 @@ import { useRouter } from "next/navigation";
 import SlotPicker from "@/app/components/SlotPicker";
 import Calendar from "@/app/components/Calendar";
 import RescheduleInfo from "./RescheduleInfo";
-import { Slot } from "@/types/slots"; // 🔥 IMPORTANT
+import { Slot } from "@/types/slots";
 
 export default function RescheduleClient({ booking, token }: any) {
   const router = useRouter();
 
   const [date, setDate] = useState(booking.date);
-  const [slots, setSlots] = useState<Slot[]>([]); // 🔥 FIX
+  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [duration, setDuration] = useState(30);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
+  const [overrides, setOverrides] = useState<any[]>([]);
+  const [availableDays, setAvailableDays] = useState<string[]>([]);
 
   const slotsRef = useRef<HTMLDivElement>(null);
 
-  // =========================
-  // 🔥 LOAD SERVICE
-  // =========================
   useEffect(() => {
     fetch(`/api/services?barberId=${booking.barber_id}`)
       .then((r) => r.json())
-      .then((services) => {
-        const s = services.find(
+      .then((data) => {
+        const s = data.services?.find(
           (x: any) => x.id === booking.barber_service_id
         );
         if (s) setDuration(s.duration || 30);
       });
   }, [booking]);
 
-  // =========================
-  // 🔥 LOAD SLOTS (CORE FIX)
-  // =========================
+  useEffect(() => {
+    const load = async () => {
+      const today = new Date();
+      const from = today.toISOString().slice(0, 10);
+
+      const future = new Date();
+      future.setDate(today.getDate() + 30);
+      const to = future.toISOString().slice(0, 10);
+
+      const res = await fetch(
+        `/api/availability?barberId=${booking.barber_id}&from=${from}&to=${to}`
+      );
+
+      const data = await res.json();
+
+      setAvailableDays(data.availableDays || []);
+      setWeeklySchedule(data.weeklySchedule || []);
+      setOverrides(data.overrides || []);
+    };
+
+    load();
+  }, [booking.barber_id]);
+
   useEffect(() => {
     if (!date) return;
 
@@ -43,8 +65,6 @@ export default function RescheduleClient({ booking, token }: any) {
     )
       .then((r) => r.json())
       .then((data) => {
-        console.log("RESCHEDULE SLOTS:", data);
-
         const fixed: Slot[] = (data.slots || [])
           .map((s: any) => {
             if (s.type === "booking") {
@@ -60,19 +80,11 @@ export default function RescheduleClient({ booking, token }: any) {
             }
 
             if (s.type === "break") {
-              return {
-                type: "break",
-                start: s.start,
-                end: s.end,
-              };
+              return { type: "break", start: s.start, end: s.end };
             }
 
-            return {
-              type: "free",
-              time: s.time,
-            };
+            return { type: "free", time: s.time };
           })
-          // 🔥 PUBLIC → DOAR SLOTURI LIBERE
           .filter((s: Slot) => s.type === "free");
 
         setSlots(fixed);
@@ -83,21 +95,17 @@ export default function RescheduleClient({ booking, token }: any) {
       });
   }, [date, booking]);
 
-  // =========================
-  // 🔥 SUBMIT
-  // =========================
   const handleSubmit = async () => {
     if (!selectedSlot) return;
 
     const endTime = addMinutes(selectedSlot, duration);
 
     setLoading(true);
+    setError("");
 
     const res = await fetch("/api/bookings/reschedule", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         token,
         new_date: date,
@@ -109,7 +117,7 @@ export default function RescheduleClient({ booking, token }: any) {
     const data = await res.json();
 
     if (!res.ok) {
-      alert(data.error);
+      setError(data.error || "Nu am putut reprograma.");
       setLoading(false);
       return;
     }
@@ -119,18 +127,12 @@ export default function RescheduleClient({ booking, token }: any) {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-
       <div>
-        <h2 className="text-2xl font-semibold">
-          Reprogramează programarea
-        </h2>
-        <p className="text-sm text-gray-500">
-          Selectează o nouă dată și oră
-        </p>
+        <h2 className="text-2xl font-semibold">Reprogramează programarea</h2>
+        <p className="text-sm text-gray-500">Selectează o nouă dată și oră</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-10">
-
         <div className="space-y-6">
           <RescheduleInfo booking={booking} />
 
@@ -141,6 +143,9 @@ export default function RescheduleClient({ booking, token }: any) {
                 setDate(d);
                 setSelectedSlot(null);
               }}
+              weeklySchedule={weeklySchedule}
+              overrides={overrides}
+              availableDays={availableDays}
             />
           </div>
         </div>
@@ -158,6 +163,7 @@ export default function RescheduleClient({ booking, token }: any) {
               </p>
             ) : (
               <SlotPicker
+                variant="light"
                 slots={slots}
                 selected={selectedSlot}
                 onSelect={setSelectedSlot}
@@ -165,7 +171,12 @@ export default function RescheduleClient({ booking, token }: any) {
             )}
           </div>
 
+          {error && (
+            <p className="text-red-600 text-sm mt-4">{error}</p>
+          )}
+
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={!selectedSlot || loading}
             className={`
@@ -179,9 +190,7 @@ export default function RescheduleClient({ booking, token }: any) {
           >
             {loading ? "Se procesează..." : "Confirmă reprogramarea"}
           </button>
-
         </div>
-
       </div>
     </div>
   );

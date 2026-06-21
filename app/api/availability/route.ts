@@ -10,7 +10,7 @@ export async function GET(req: Request) {
     const barberId = searchParams.get("barberId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-console.log("🔥 AVAIL PARAMS:", { barberId, from, to });
+
     if (!barberId || !from || !to) {
       return NextResponse.json({
         availableDays: [],
@@ -24,7 +24,7 @@ console.log("🔥 AVAIL PARAMS:", { barberId, from, to });
       .from("barber_weekly_schedule")
       .select("day_of_week, is_working")
       .eq("barber_id", barberId);
-console.log("🔥 WEEKLY:", weekly);
+
     // 🔥 OVERRIDES
     const { data: overrides } = await supabase
       .from("barber_day_overrides")
@@ -37,7 +37,7 @@ console.log("🔥 WEEKLY:", weekly);
       .select("date, status")
       .eq("barber_id", barberId)
       .in("status", ["confirmed", "pending"]);
-console.log("🔥 BOOKINGS:", bookings);
+
     const bookingsMap = new Map<string, number>();
 
     bookings?.forEach((b) => {

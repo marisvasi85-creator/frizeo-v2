@@ -3,16 +3,10 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
+import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
 export async function GET(req: Request) {
-
-  const { searchParams } =
-    new URL(req.url);
-
-  if (
-    searchParams.get("secret") !==
-    process.env.CRON_SECRET
-  ) {
+  if (!isAuthorizedCron(req)) {
     return NextResponse.json(
       { error: "Unauthorized" },
       { status: 401 }
@@ -189,11 +183,6 @@ Te asteptam!`,
         sentCount++;
       }
     }
-
-    console.log(
-      "REMINDER OK:",
-      sentCount
-    );
 
     return NextResponse.json({
       success: true,

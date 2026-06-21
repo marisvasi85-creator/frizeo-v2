@@ -1,35 +1,32 @@
-import BookingClient from "./components/BookingClient";
+import { permanentRedirect, notFound } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 
-export default async function Page({
+export default async function LegacyBarberIdBookingRedirect({
   params,
 }: {
   params: Promise<{ barberId: string }>;
 }) {
   const { barberId } = await params;
 
-  if (!barberId) {
-    return <div>Barber invalid</div>;
+  const { data: barber } = await supabaseAdmin
+    .from("barbers")
+    .select(`
+      slug,
+      tenant:tenants (
+        slug
+      )
+    `)
+    .eq("id", barberId)
+    .eq("active", true)
+    .single();
+
+  const tenantSlug = (barber?.tenant as { slug?: string } | null)?.slug;
+  const barberSlug = barber?.slug;
+
+  if (!tenantSlug || !barberSlug) {
+    notFound();
   }
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000";
-
-  const res = await fetch(
-    `${baseUrl}/api/barber/profile?barberId=${barberId}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  const data = await res.json();
-
-  return (
-    <BookingClient
-      barberId={barberId}
-      barberName={
-        data?.profile?.display_name || "Frizer"
-      }
-    />
-  );
+  permanentRedirect(publicBookingPath(tenantSlug, barberSlug));
 }

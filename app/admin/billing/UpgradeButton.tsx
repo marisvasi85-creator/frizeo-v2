@@ -1,36 +1,14 @@
 "use client";
 
-export default function UpgradeButton({
-  planId,
-}: {
-  planId: string;
-}) {
-  async function handleUpgrade() {
-    const res = await fetch(
-      "/api/billing/checkout",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-        body: JSON.stringify({
-          planId,
-        }),
-      }
-    );
-
-    const data = await res.json();
-
-    alert(data.message);
-  }
-
+export default function UpgradeButton() {
   return (
     <button
-      onClick={handleUpgrade}
-      className="w-full bg-white text-black py-2 rounded"
+      type="button"
+      disabled
+      title="Plățile online vor fi disponibile în curând"
+      className="w-full bg-white/10 text-white/50 py-2 rounded cursor-not-allowed"
     >
-      Upgrade
+      În curând
     </button>
   );
 }

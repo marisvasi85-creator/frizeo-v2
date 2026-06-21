@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 
 export default async function SalonPage({
   params,
@@ -128,7 +129,7 @@ export default async function SalonPage({
         {barbers?.map((barber) => (
           <Link
             key={barber.id}
-            href={`/booking/salon/${slug}/${barber.slug}`}
+            href={publicBookingPath(slug, barber.slug)}
             className="
               block
               border

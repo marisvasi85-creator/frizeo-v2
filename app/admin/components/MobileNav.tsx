@@ -5,20 +5,25 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const ownerMainItems = [
-  { href: "/admin/dashboard", icon: "🏠" },
-  { href: "/admin/bookings", icon: "📋" },
-  { href: "/admin/barbers", icon: "👥" },
-  { href: "/admin/notifications", icon: "🔔" },
+  { href: "/admin/dashboard", icon: "🏠", label: "Dashboard" },
+  { href: "/admin/bookings", icon: "📋", label: "Programări" },
+  { href: "/admin/services", icon: "✂️", label: "Servicii" },
+  { href: "/admin/barbers", icon: "👥", label: "Frizeri" },
 ];
 
 const barberMainItems = [
-  { href: "/admin/dashboard", icon: "🏠" },
-  { href: "/admin/bookings", icon: "📋" },
-  { href: "/admin/services", icon: "✂️" },
-  { href: "/admin/notifications", icon: "🔔" },
+  { href: "/admin/dashboard", icon: "🏠", label: "Dashboard" },
+  { href: "/admin/bookings", icon: "📋", label: "Programări" },
+  { href: "/admin/services", icon: "✂️", label: "Servicii" },
+  { href: "/admin/notifications", icon: "🔔", label: "Notificări" },
 ];
 
 const ownerMoreItems = [
+  {
+    href: "/admin/notifications",
+    icon: "🔔",
+    label: "Notificări",
+  },
   {
     href: "/admin/profile",
     icon: "👤",
@@ -153,6 +158,7 @@ export default function MobileNav({
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
               className={`text-xl transition ${
                 active
                   ? "text-white"
@@ -165,9 +171,9 @@ export default function MobileNav({
         })}
 
         <button
-          onClick={() =>
-            setOpen(true)
-          }
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-label="Mai mult"
           className="text-xl text-white/70"
         >
           ☰

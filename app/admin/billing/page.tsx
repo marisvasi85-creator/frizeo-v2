@@ -206,7 +206,7 @@ const trialDaysLeft =
       {isTrial ? "Trial activ" : "Plan activ"}
     </button>
   ) : (
-    <UpgradeButton planId={plan.id} />
+    <UpgradeButton />
   )}
 </div>
 

@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  publicBookingPath,
+  publicBookingUrl,
+} from "@/lib/booking/publicBookingPath";
 
 type Barber = {
   id: string;
@@ -268,25 +272,28 @@ onChange={(e) => {
               <div className="font-medium">
                 {barber.display_name}
               </div>
-              {barber.slug && (
+              {barber.slug && tenantSlug && (
   <div className="text-xs text-white/40 mt-1">
-    /{barber.slug}
+    {publicBookingPath(tenantSlug, barber.slug)}
   </div>
 )}
-{barber.slug && tenantSlug && (
+{barber.slug && tenantSlug && (() => {
+  const slug = barber.slug;
+  const bookingPath = publicBookingPath(tenantSlug, slug);
+  const bookingUrl = publicBookingUrl(tenantSlug, slug, appUrl);
+
+  return (
   <div className="mt-2 space-y-2">
 
     <div className="text-xs text-white/40 break-all">
-  {`${appUrl}/${tenantSlug}/${barber.slug}`}
+  {bookingUrl}
 </div>
 
     <div className="flex gap-2">
 
       <button
         onClick={() =>
-          navigator.clipboard.writeText(
-  `${appUrl}/${tenantSlug}/${barber.slug}`
-)
+          navigator.clipboard.writeText(bookingUrl)
         }
         className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
       >
@@ -294,8 +301,9 @@ onChange={(e) => {
       </button>
 
       <a
-        href={`/${tenantSlug}/${barber.slug}`}
+        href={bookingPath}
         target="_blank"
+        rel="noopener noreferrer"
         className="text-xs px-2 py-1 bg-white/10 rounded hover:bg-white/20"
       >
         Deschide
@@ -304,7 +312,8 @@ onChange={(e) => {
     </div>
 
   </div>
-)}
+  );
+})()}
               <div className="text-sm text-white/60">
                 {barber.phone || "Fără telefon"}
               </div>

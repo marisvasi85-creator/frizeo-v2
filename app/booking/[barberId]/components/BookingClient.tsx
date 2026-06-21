@@ -4,7 +4,11 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
-import { Slot } from "@/types/slots"; // 🔥 FOLOSEȘTI TIP GLOBAL
+import { Slot } from "@/types/slots";
+
+function isValidPhone(phone: string) {
+  return /^(\+40|0)[0-9]{9}$/.test(phone.replace(/\s/g, ""));
+}
 
 export default function BookingClient({
   barberId,
@@ -27,37 +31,31 @@ export default function BookingClient({
   const [availableDays, setAvailableDays] = useState<string[]>([]);
 
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [servicesError, setServicesError] = useState("");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [bookingLoading, setBookingLoading] =
-  useState(false);
-
-const [bookingSuccess, setBookingSuccess] =
-  useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState("");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
   const servicesRef = useRef<HTMLDivElement>(null);
-const slotsRef = useRef<HTMLDivElement>(null);
-const formRef = useRef<HTMLDivElement>(null);
-  // =========================
-  // SERVICES
-  // =========================
+  const slotsRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-  fetch(`/api/services?barberId=${barberId}`)
-    .then((r) => r.json())
-    .then((d) => {
-      console.log("SERVICES API:", d);
-      console.log("SERVICES ARRAY:", d.services);
+    fetch(`/api/services?barberId=${barberId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.services?.length) {
+          setServicesError("Nu există servicii disponibile momentan.");
+        }
+        setServices(d.services || []);
+      })
+      .catch(() => setServicesError("Nu am putut încărca serviciile."));
+  }, [barberId]);
 
-      setServices(d.services || []);
-    });
-}, [barberId]);
-
-  // =========================
-  // AVAILABILITY
-  // =========================
   useEffect(() => {
     const load = async () => {
       const today = new Date();
@@ -81,9 +79,6 @@ const formRef = useRef<HTMLDivElement>(null);
     load();
   }, [barberId]);
 
-  // =========================
-  // SLOTS (CORE FIX)
-  // =========================
   useEffect(() => {
     if (!date || !serviceId) return;
 
@@ -116,180 +111,191 @@ const formRef = useRef<HTMLDivElement>(null);
             }
 
             if (s.type === "break") {
-              return {
-                type: "break",
-                start: s.start,
-                end: s.end,
-              };
+              return { type: "break", start: s.start, end: s.end };
             }
 
-            return {
-              type: "free",
-              time: s.time,
-            };
+            return { type: "free", time: s.time };
           })
-          // 🔥 PUBLIC → DOAR SLOTURI LIBERE
           .filter((s: Slot) => s.type === "free");
 
         slotsCache.current[cacheKey] = fixed;
-
         setSlots(fixed);
         setSelectedSlot(null);
       })
       .finally(() => setLoadingSlots(false));
   }, [date, serviceId, barberId]);
 
-  // =========================
-  // CREATE BOOKING
-  // =========================
   const createBooking = async () => {
-    console.log("CLICK");
-  if (!selectedSlot || !date || !serviceId) return;
+    setBookingError("");
 
-  setBookingLoading(true);
-    console.log("LOADING TRUE");
+    if (!selectedSlot || !date || !serviceId) return;
 
-    const service = services.find((s) => s.id === serviceId);
-    const duration = service?.duration || 30;
+    if (!name.trim()) {
+      setBookingError("Numele este obligatoriu.");
+      return;
+    }
 
-    const [y, m, dDay] = date.split("-").map(Number);
-    const [h, min] = selectedSlot.split(":").map(Number);
+    if (!isValidPhone(phone)) {
+      setBookingError("Introdu un număr de telefon valid (ex: 07xxxxxxxx).");
+      return;
+    }
 
-    const d = new Date(y, m - 1, dDay);
-    d.setHours(h);
-    d.setMinutes(min + duration);
+    setBookingLoading(true);
 
-    const endTime = d.toTimeString().slice(0, 5);
+    try {
+      const service = services.find((s) => s.id === serviceId);
+      const duration = service?.duration || 30;
 
-    const hold = await fetch("/api/bookings/hold", {
-      method: "POST",
-      body: JSON.stringify({
-        barber_id: barberId,
-        barber_service_id: serviceId,
-        date,
-        start_time: selectedSlot,
-        end_time: endTime,
-      }),
-    });
+      const [y, m, dDay] = date.split("-").map(Number);
+      const [h, min] = selectedSlot.split(":").map(Number);
 
-    const holdData = await hold.json();
+      const d = new Date(y, m - 1, dDay);
+      d.setHours(h);
+      d.setMinutes(min + duration);
 
-    const create = await fetch("/api/bookings/create", {
-      method: "POST",
-      body: JSON.stringify({
-        bookingId: holdData.holdId,
-        client_name: name,
-        client_phone: phone,
-        client_email: email || null,
-      }),
-    });
+      const endTime = d.toTimeString().slice(0, 5);
 
-    const createData = await create.json();
+      const hold = await fetch("/api/bookings/hold", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barber_id: barberId,
+          barber_service_id: serviceId,
+          date,
+          start_time: selectedSlot,
+          end_time: endTime,
+        }),
+      });
 
-    setBookingLoading(false);
-setBookingSuccess(true);
+      const holdData = await hold.json();
 
-setTimeout(() => {
-  router.push(
-    `/booking/confirmed/${createData.bookingId}`
-  );
-}, 500);
-  }
+      if (!hold.ok) {
+        setBookingError(holdData.error || "Slotul nu mai este disponibil.");
+        return;
+      }
+
+      const create = await fetch("/api/bookings/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: holdData.holdId,
+          client_name: name.trim(),
+          client_phone: phone.replace(/\s/g, ""),
+          client_email: email.trim() || null,
+        }),
+      });
+
+      const createData = await create.json();
+
+      if (!create.ok) {
+        setBookingError(createData.error || "Nu am putut salva programarea.");
+        return;
+      }
+
+      router.push(`/booking/confirmed/${createData.bookingId}`);
+    } catch {
+      setBookingError("Eroare de conexiune. Încearcă din nou.");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6">
-
       <div className="text-center">
-        <h1 className="text-3xl font-semibold">
-          Programează-te
-        </h1>
-
+        <h1 className="text-3xl font-semibold">Programează-te</h1>
         <p className="text-gray-500 mt-1">
           la <span className="font-medium text-black">{barberName}</span>
         </p>
+      </div>
 
-</div>
       <Calendar
-  value={date}
-  onChange={(value: string) => {
-    setDate(value);
+        value={date}
+        onChange={(value: string) => {
+          setDate(value);
+          setTimeout(() => {
+            servicesRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+          }, 200);
+        }}
+        weeklySchedule={weeklySchedule}
+        overrides={overrides}
+        availableDays={availableDays}
+      />
 
-    setTimeout(() => {
-      servicesRef.current?.scrollIntoView({
-  behavior: "smooth",
-  block: "center",
-});
-    }, 200);
-  }}
-  weeklySchedule={weeklySchedule}
-  overrides={overrides}
-  availableDays={availableDays}
-/>
+      {servicesError && (
+        <p className="text-red-600 text-sm text-center">{servicesError}</p>
+      )}
 
-      {date && (
-  <div
-    ref={servicesRef}
-    className="space-y-3"
-  >
-    {services.map((s) => (
-      <button
-        key={s.id}
-        type="button"
-        onClick={() => {
-  setServiceId(s.id);
+      {date && services.length > 0 && (
+        <div ref={servicesRef} className="space-y-3">
+          <p className="text-sm text-gray-500 font-medium">Alege serviciul</p>
+          {services.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => {
+                setServiceId(s.id);
+                setTimeout(() => {
+                  slotsRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }, 300);
+              }}
+              className={`w-full p-4 rounded-xl border transition ${
+                serviceId === s.id
+                  ? "bg-black text-white"
+                  : "bg-white hover:bg-gray-50"
+              }`}
+            >
+              {s.display_name} ({s.duration} min)
+            </button>
+          ))}
+        </div>
+      )}
 
-  setTimeout(() => {
-    slotsRef.current?.scrollIntoView({
-  behavior: "smooth",
-  block: "center",
-});
-  }, 300);
-}}
-        className={`w-full p-4 rounded-xl border transition ${
-          serviceId === s.id
-            ? "bg-black text-white"
-            : "bg-white hover:bg-gray-50"
-        }`}
-      >
-        {s.display_name} ({s.duration} min)
-      </button>
-    ))}
-  </div>
-)}
+      {serviceId && (loadingSlots || slots.length > 0) && (
+        <div ref={slotsRef}>
+          <SlotPicker
+            variant="light"
+            slots={slots}
+            selected={selectedSlot}
+            onSelect={(slot) => {
+              setSelectedSlot(slot);
+              setTimeout(() => {
+                formRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              }, 200);
+            }}
+            loading={loadingSlots}
+          />
+        </div>
+      )}
 
-      {(loadingSlots || slots.length > 0) && (
-  <div ref={slotsRef}>
-    <SlotPicker
-      slots={slots}
-      selected={selectedSlot}
-      onSelect={(slot) => {
-        setSelectedSlot(slot);
-
-        setTimeout(() => {
-          formRef.current?.scrollIntoView({
-  behavior: "smooth",
-  block: "center",
-});
-        }, 200);
-      }}
-      loading={loadingSlots}
-    />
-  </div>
-)}
+      {serviceId && !loadingSlots && slots.length === 0 && date && (
+        <p className="text-gray-500 text-sm text-center">
+          Nu există ore disponibile în această zi.
+        </p>
+      )}
 
       {selectedSlot && (
-  <div
-    ref={formRef}
-    className="space-y-3"
-  >
+        <div ref={formRef} className="space-y-3">
+          <p className="text-sm text-gray-500 font-medium">Datele tale</p>
+
           <input
-            placeholder="Nume"
+            placeholder="Nume complet"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full p-3 border rounded-xl"
           />
 
           <input
-            placeholder="Telefon"
+            placeholder="Telefon (07xxxxxxxx)"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="w-full p-3 border rounded-xl"
@@ -297,22 +303,24 @@ setTimeout(() => {
 
           <input
             placeholder="Email (opțional)"
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 border rounded-xl"
           />
 
+          {bookingError && (
+            <p className="text-red-600 text-sm">{bookingError}</p>
+          )}
+
           <button
-  onClick={createBooking}
-  disabled={bookingLoading}
-  className="w-full bg-black text-white p-3 rounded-xl disabled:opacity-70"
->
-  {bookingLoading
-    ? "Se salvează programarea..."
-    : bookingSuccess
-    ? "Programare salvată ✓"
-    : "Programează-te"}
-</button>
+            type="button"
+            onClick={createBooking}
+            disabled={bookingLoading}
+            className="w-full bg-black text-white p-3 rounded-xl disabled:opacity-70"
+          >
+            {bookingLoading ? "Se salvează programarea..." : "Confirmă programarea"}
+          </button>
         </div>
       )}
     </div>

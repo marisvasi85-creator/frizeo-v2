@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { publicBookingUrl } from "@/lib/booking/publicBookingPath";
 
 export async function GET() {
   const supabase = await createSupabaseServerClient();
@@ -9,10 +10,7 @@ export async function GET() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json(
-      { url: null },
-      { status: 401 }
-    );
+    return NextResponse.json({ url: null }, { status: 401 });
   }
 
   const { data: barber } = await supabase
@@ -26,23 +24,14 @@ export async function GET() {
     .eq("user_id", user.id)
     .single();
 
-  if (!barber) {
-    return NextResponse.json({
-      url: null,
-    });
+  const tenantSlug = (barber?.tenant as { slug?: string } | null)?.slug;
+  const barberSlug = barber?.slug;
+
+  if (!tenantSlug || !barberSlug) {
+    return NextResponse.json({ url: null });
   }
 
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000";
-
-  const tenantSlug =
-    (barber.tenant as any)?.slug;
-
-  const barberSlug =
-    barber.slug;
-
   return NextResponse.json({
-  url: `${appUrl}/booking/salon/${tenantSlug}/${barberSlug}`,
-});
+    url: publicBookingUrl(tenantSlug, barberSlug),
+  });
 }

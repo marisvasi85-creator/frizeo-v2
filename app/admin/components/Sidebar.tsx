@@ -86,10 +86,10 @@ export default function Sidebar({
         {/* UPGRADE CTA */}
         {role === "owner" && (
   <Link
-    href="/admin/billing/upgrade"
+    href="/admin/billing"
     className="block text-center bg-white text-black py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition"
   >
-    Upgrade plan
+    Abonament
   </Link>
 )}
 

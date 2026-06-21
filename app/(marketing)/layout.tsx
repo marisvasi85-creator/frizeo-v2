@@ -24,7 +24,7 @@ export default function MarketingLayout({
               href="/login"
               className="text-sm text-gray-600 hover:text-black"
             >
-              Login
+              Autentificare
             </Link>
 
             <Link

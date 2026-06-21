@@ -23,12 +23,9 @@ export default function Footer() {
 
           <ul className="space-y-2">
             <li>
-              <a
-                href="#cum-functioneaza"
-                className="hover:text-black"
-              >
+              <Link href="/barbers" className="hover:text-black">
                 Cum funcționează
-              </a>
+              </Link>
             </li>
 
             <li>
@@ -41,11 +38,8 @@ export default function Footer() {
             </li>
 
             <li>
-              <Link
-                href="/login"
-                className="hover:text-black"
-              >
-                Login
+              <Link href="/login" className="hover:text-black">
+                Autentificare
               </Link>
             </li>
           </ul>
