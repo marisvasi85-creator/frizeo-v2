@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
+import {
+  isValidPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 // ===================================
 // GET INVITATION
@@ -66,6 +70,13 @@ export async function POST(req: Request) {
     if (!token || !password) {
       return NextResponse.json(
         { error: "Date incomplete" },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidPassword(password)) {
+      return NextResponse.json(
+        { error: PASSWORD_REQUIREMENTS_MESSAGE },
         { status: 400 }
       );
     }

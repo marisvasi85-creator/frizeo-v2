@@ -2,52 +2,38 @@
 
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import PasswordRequirements from "@/app/components/auth/PasswordRequirements";
+import {
+  isValidPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
 
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
-
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] =
-    useState("");
-
-  const passwordValid =
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password);
+  const [success, setSuccess] = useState("");
 
   async function updatePassword() {
     setError("");
     setSuccess("");
 
-    if (!passwordValid) {
-      setError(
-        "Parola trebuie să conțină minim 8 caractere, o literă mare, o literă mică și o cifră."
-      );
+    if (!isValidPassword(password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(
-        "Parolele introduse nu coincid."
-      );
+      setError("Parolele introduse nu coincid.");
       return;
     }
 
-    const { error } =
-      await supabase.auth.updateUser({
-        password,
-      });
+    const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setError(
-        error.message ||
-          "Nu am putut schimba parola."
-      );
+      setError(error.message || "Nu am putut schimba parola.");
       return;
     }
 
@@ -62,17 +48,11 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
-
       <div className="bg-zinc-900 p-6 rounded-xl space-y-4 w-full max-w-sm">
-
         <div>
-          <h2 className="text-xl font-semibold">
-            Setează parola nouă
-          </h2>
-
+          <h2 className="text-xl font-semibold">Setează parola nouă</h2>
           <p className="text-sm text-zinc-400 mt-1">
-            Alege o parolă sigură pentru
-            contul tău Frizeo.
+            Alege o parolă sigură pentru contul tău Frizeo.
           </p>
         </div>
 
@@ -92,9 +72,7 @@ export default function ResetPasswordPage() {
           type="password"
           placeholder="Parolă nouă"
           value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
+          onChange={(e) => setPassword(e.target.value)}
           className="w-full bg-zinc-800 p-3 rounded-lg"
         />
 
@@ -102,71 +80,19 @@ export default function ResetPasswordPage() {
           type="password"
           placeholder="Confirmă parola"
           value={confirmPassword}
-          onChange={(e) =>
-            setConfirmPassword(
-              e.target.value
-            )
-          }
+          onChange={(e) => setConfirmPassword(e.target.value)}
           className="w-full bg-zinc-800 p-3 rounded-lg"
         />
 
-        {confirmPassword &&
-          password !== confirmPassword && (
-            <p className="text-red-400 text-sm">
-              Parolele nu coincid.
-            </p>
-          )}
+        {confirmPassword && password !== confirmPassword && (
+          <p className="text-red-400 text-sm">Parolele nu coincid.</p>
+        )}
 
-        {confirmPassword &&
-          password === confirmPassword && (
-            <p className="text-green-400 text-sm">
-              ✓ Parolele coincid
-            </p>
-          )}
+        {confirmPassword && password === confirmPassword && (
+          <p className="text-green-400 text-sm">✓ Parolele coincid</p>
+        )}
 
-        <div className="text-sm space-y-1">
-
-          <p
-            className={
-              password.length >= 8
-                ? "text-green-400"
-                : "text-zinc-500"
-            }
-          >
-            ✓ minim 8 caractere
-          </p>
-
-          <p
-            className={
-              /[A-Z]/.test(password)
-                ? "text-green-400"
-                : "text-zinc-500"
-            }
-          >
-            ✓ o literă mare
-          </p>
-
-          <p
-            className={
-              /[a-z]/.test(password)
-                ? "text-green-400"
-                : "text-zinc-500"
-            }
-          >
-            ✓ o literă mică
-          </p>
-
-          <p
-            className={
-              /\d/.test(password)
-                ? "text-green-400"
-                : "text-zinc-500"
-            }
-          >
-            ✓ o cifră
-          </p>
-
-        </div>
+        <PasswordRequirements password={password} />
 
         <button
           onClick={updatePassword}
@@ -174,7 +100,6 @@ export default function ResetPasswordPage() {
         >
           Schimbă parola
         </button>
-
       </div>
     </div>
   );

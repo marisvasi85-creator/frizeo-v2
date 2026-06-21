@@ -2,22 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  isValidEmail,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [shake, setShake] = useState(false);
-
-  function isValidEmail(value: string) {
-    return /\S+@\S+\.\S+/.test(value);
-  }
 
   function triggerError(msg: string) {
     setError(msg);
@@ -31,12 +30,12 @@ export default function LoginPage() {
     setSuccess("");
 
     if (!isValidEmail(email)) {
-      triggerError("Email invalid");
+      triggerError("Email invalid.");
       return;
     }
 
     if (!password) {
-      triggerError("Parola este obligatorie");
+      triggerError("Parola este obligatorie.");
       return;
     }
 
@@ -139,16 +138,7 @@ export default function LoginPage() {
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
           />
 
-          <div className="flex justify-between items-center text-sm text-zinc-400">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={() => setRemember(!remember)}
-              />
-              Ține-mă minte
-            </label>
-
+          <div className="flex justify-end text-sm text-zinc-400">
             <button type="button" onClick={forgotPassword} className="hover:underline">
               Ai uitat parola?
             </button>

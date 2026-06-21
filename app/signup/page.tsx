@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import PasswordRequirements from "@/app/components/auth/PasswordRequirements";
+import {
+  isValidEmail,
+  isValidPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -15,19 +21,30 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const passwordValid =
-    form.password.length >= 8 &&
-    /[A-Z]/.test(form.password) &&
-    /[a-z]/.test(form.password) &&
-    /\d/.test(form.password);
-
   async function handleSignup() {
     setError("");
 
-    if (!passwordValid) {
-      setError(
-        "Parola trebuie să conțină minim 8 caractere, o literă mare, o literă mică și o cifră."
-      );
+    const name = form.fullName.trim();
+    const email = form.email.trim();
+    const phone = form.phone.trim();
+
+    if (!name || name.length < 2) {
+      setError("Introdu numele complet.");
+      return;
+    }
+
+    if (!isValidEmail(email)) {
+      setError("Email invalid.");
+      return;
+    }
+
+    if (!phone || phone.replace(/\D/g, "").length < 6) {
+      setError("Introdu un număr de telefon valid.");
+      return;
+    }
+
+    if (!isValidPassword(form.password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
       return;
     }
 
@@ -42,7 +59,12 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          fullName: name,
+          email,
+          phone,
+          password: form.password,
+        }),
       });
 
       const data = await res.json();
@@ -77,6 +99,7 @@ export default function SignupPage() {
         <div className="space-y-3">
           <input
             placeholder="Nume complet"
+            value={form.fullName}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
             onChange={(e) => setForm({ ...form, fullName: e.target.value })}
           />
@@ -85,6 +108,7 @@ export default function SignupPage() {
             type="email"
             autoComplete="email"
             placeholder="Email"
+            value={form.email}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
             onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
@@ -93,6 +117,7 @@ export default function SignupPage() {
             type="tel"
             autoComplete="tel"
             placeholder="Telefon"
+            value={form.phone}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
             onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
@@ -101,6 +126,7 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             placeholder="Parolă"
+            value={form.password}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
@@ -109,6 +135,7 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             placeholder="Confirmă parola"
+            value={form.confirmPassword}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
             onChange={(e) =>
               setForm({ ...form, confirmPassword: e.target.value })
@@ -116,20 +143,7 @@ export default function SignupPage() {
           />
         </div>
 
-        <div className="text-sm space-y-1">
-          <p className={form.password.length >= 8 ? "text-green-400" : "text-zinc-500"}>
-            ✓ minim 8 caractere
-          </p>
-          <p className={/[A-Z]/.test(form.password) ? "text-green-400" : "text-zinc-500"}>
-            ✓ literă mare
-          </p>
-          <p className={/[a-z]/.test(form.password) ? "text-green-400" : "text-zinc-500"}>
-            ✓ literă mică
-          </p>
-          <p className={/\d/.test(form.password) ? "text-green-400" : "text-zinc-500"}>
-            ✓ cifră
-          </p>
-        </div>
+        <PasswordRequirements password={form.password} />
 
         <button
           type="button"

@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import PasswordRequirements from "@/app/components/auth/PasswordRequirements";
+import {
+  isValidPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 export default function AcceptInvitePage() {
   const params = useParams();
@@ -59,10 +64,8 @@ export default function AcceptInvitePage() {
   async function acceptInvite() {
     setError("");
 
-    if (password.length < 6) {
-      setError(
-        "Parola trebuie să aibă minim 6 caractere"
-      );
+    if (!isValidPassword(password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
       return;
     }
 
@@ -175,6 +178,8 @@ export default function AcceptInvitePage() {
           }
           className="w-full bg-zinc-800 text-white rounded-lg px-4 py-3"
         />
+
+        <PasswordRequirements password={password} />
 
         <button
           onClick={acceptInvite}

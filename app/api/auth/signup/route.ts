@@ -1,55 +1,85 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  isValidEmail,
+  isValidPassword,
+  mapAuthError,
+  normalizeEmail,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/auth/credentials";
 
 export async function POST(req: Request) {
   try {
     const { email, password, fullName, phone } = await req.json();
 
+    const name = (fullName || "").trim();
+    const emailNorm = normalizeEmail(email || "");
+    const phoneNorm = (phone || "").trim();
+
+    if (!name || name.length < 2) {
+      return NextResponse.json(
+        { error: "Introdu numele complet." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidEmail(emailNorm)) {
+      return NextResponse.json({ error: "Email invalid." }, { status: 400 });
+    }
+
+    if (!phoneNorm || phoneNorm.replace(/\D/g, "").length < 6) {
+      return NextResponse.json(
+        { error: "Introdu un număr de telefon valid." },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidPassword(password || "")) {
+      return NextResponse.json(
+        { error: PASSWORD_REQUIREMENTS_MESSAGE },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createSupabaseServerClient();
 
-    // 🔥 SIGNUP + LOGIN AUTOMAT (IMPORTANT)
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: emailNorm,
       password,
     });
 
     if (error || !data.user) {
       return NextResponse.json(
-        { error: error?.message || "Signup failed" },
+        { error: mapAuthError(error?.message) },
         { status: 400 }
       );
     }
 
     const userId = data.user.id;
 
-    // =========================
-    // 🔥 PROFILE
-    // =========================
     await supabaseAdmin.from("profiles").insert({
       id: userId,
-      full_name: fullName,
-      phone,
+      full_name: name,
+      phone: phoneNorm,
     });
 
-    const tenantSlug =
-  `${fullName}-salon`
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+    const tenantSlug = `${name}-salon`
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
 
-const barberSlug =
-  fullName
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+    const barberSlug = name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
     // =========================
     // 🔥 TENANT
     // =========================
     const { data: tenant } = await supabaseAdmin
   .from("tenants")
   .insert({
-    name: fullName + " Salon",
+    name: name + " Salon",
     slug: tenantSlug,
   })
   .select()
@@ -72,8 +102,8 @@ const barberSlug =
   .insert({
     user_id: userId,
     tenant_id: tenant.id,
-    display_name: fullName,
-    phone,
+    display_name: name,
+    phone: phoneNorm,
     slug: barberSlug,
   })
   .select()
@@ -263,7 +293,7 @@ await supabaseAdmin
 
   } catch (e: any) {
     return NextResponse.json(
-      { error: e.message },
+      { error: mapAuthError(e.message) },
       { status: 500 }
     );
   }
