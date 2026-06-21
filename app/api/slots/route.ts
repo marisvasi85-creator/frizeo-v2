@@ -39,7 +39,21 @@ export async function GET(req: Request) {
     .eq("day_of_week", day)
     .maybeSingle();
 
-  const resolved = resolveDaySchedule(schedule, override);
+  let effectiveOverride = override;
+
+  if (mode === "admin" && excludeBookingId && override?.is_closed) {
+    const { data: excludedBooking } = await supabase
+      .from("bookings")
+      .select("date")
+      .eq("id", excludeBookingId)
+      .maybeSingle();
+
+    if (excludedBooking?.date === date) {
+      effectiveOverride = null;
+    }
+  }
+
+  const resolved = resolveDaySchedule(schedule, effectiveOverride);
 
   if (!resolved.isWorking || !resolved.workStart || !resolved.workEnd) {
     return NextResponse.json({ slots: [] });
@@ -60,7 +74,7 @@ export async function GET(req: Request) {
 
   let duration = resolved.slotDuration ?? 15;
 
-  if (mode !== "admin" && serviceId) {
+  if (serviceId) {
     const { data: service } = await supabase
       .from("barber_services")
       .select("duration")
@@ -96,17 +110,25 @@ export async function GET(req: Request) {
       });
 
       if (mode === "admin") {
-        const isStart =
-          booking && timeToMinutes(booking.start_time) === slotStart;
+        if (booking) {
+          const isStart =
+            timeToMinutes(booking.start_time) === slotStart;
 
-        if (isStart) {
-          arr.push({
-            type: "booking",
-            time: booking.start_time.slice(0, 5),
-            end: booking.end_time.slice(0, 5),
-            booking,
-          });
+          if (isStart) {
+            arr.push({
+              type: "booking",
+              time: booking.start_time.slice(0, 5),
+              end: booking.end_time.slice(0, 5),
+              booking,
+            });
+          }
           continue;
+        }
+
+        if (breakStart !== null && breakEnd !== null) {
+          const overlapsBreak =
+            slotStart < breakEnd && slotEnd > breakStart;
+          if (overlapsBreak) continue;
         }
 
         arr.push({

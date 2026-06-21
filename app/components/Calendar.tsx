@@ -12,18 +12,25 @@ function toLocalISO(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function parseLocalDate(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export default function Calendar({
   value,
   onChange,
   weeklySchedule = [],
   overrides = [],
   availableDays = [],
+  allowDates = [],
 }: any) {
   return (
     <div className="flex justify-center mb-6">
       <DayPicker
         mode="single"
-        selected={value ? new Date(value) : undefined}
+        defaultMonth={value ? parseLocalDate(value) : undefined}
+        selected={value ? parseLocalDate(value) : undefined}
         onSelect={(date) => {
           if (!date) return;
           onChange(toLocalISO(date));
@@ -43,6 +50,8 @@ export default function Calendar({
           const day = jsDay === 0 ? 7 : jsDay;
 
           const iso = toLocalISO(date);
+
+          if (allowDates.includes(iso)) return false;
 
           const schedule = weeklySchedule.find(
             (s: any) => s.day_of_week === day
@@ -67,7 +76,21 @@ export default function Calendar({
         }}
 
         modifiersClassNames={{
-          hasSlots: "bg-green-200 text-black rounded-full",
+          hasSlots: "rdp-day_has-slots",
+          selected: "rdp-day_selected-custom",
+        }}
+        modifiersStyles={{
+          hasSlots: {
+            backgroundColor: "rgba(16, 185, 129, 0.45)",
+            color: "#ffffff",
+            fontWeight: 600,
+            borderRadius: "9999px",
+          },
+          selected: {
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            borderRadius: "9999px",
+          },
         }}
       />
     </div>
