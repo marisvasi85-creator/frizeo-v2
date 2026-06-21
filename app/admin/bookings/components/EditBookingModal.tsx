@@ -31,10 +31,12 @@ export default function EditBookingModal({
   booking,
   onClose,
   onSaved,
+  onCancelled,
 }: {
   booking: Booking;
   onClose: () => void;
   onSaved: () => void;
+  onCancelled?: () => void;
 }) {
   const [name, setName] = useState(booking.client_name);
   const [phone, setPhone] = useState(booking.client_phone || "");
@@ -43,6 +45,7 @@ export default function EditBookingModal({
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
   const slotsRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +102,35 @@ export default function EditBookingModal({
     }
 
     onSaved();
+    onClose();
+  }
+
+  async function handleCancelBooking() {
+    const time = booking.start_time?.slice(0, 5) || "";
+    const ok = confirm(
+      `Anulezi programarea lui ${booking.client_name} din ${booking.date} la ${time}?`
+    );
+
+    if (!ok) return;
+
+    setCancelling(true);
+    setError("");
+
+    const res = await fetch("/api/bookings/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: booking.id }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Nu s-a putut anula programarea");
+      setCancelling(false);
+      return;
+    }
+
+    onCancelled?.();
     onClose();
   }
 
@@ -179,20 +211,32 @@ export default function EditBookingModal({
 
         <div className="flex gap-2">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 bg-white/10 py-3 rounded-lg text-white"
+            disabled={loading || cancelling}
+            className="flex-1 bg-white/10 py-3 rounded-lg text-white disabled:opacity-50"
           >
-            Anulează
+            Închide
           </button>
 
           <button
+            type="button"
             onClick={handleSave}
-            disabled={!selectedSlot || loading}
+            disabled={!selectedSlot || loading || cancelling}
             className="flex-1 bg-white text-black py-3 rounded-lg font-medium disabled:opacity-50"
           >
             {loading ? "Se salvează..." : "Salvează"}
           </button>
         </div>
+
+        <button
+          type="button"
+          onClick={handleCancelBooking}
+          disabled={loading || cancelling}
+          className="w-full py-3 rounded-lg text-sm text-red-400 border border-red-500/30 hover:bg-red-500/10 disabled:opacity-50"
+        >
+          {cancelling ? "Se anulează..." : "Anulează programarea"}
+        </button>
       </div>
     </div>
   );

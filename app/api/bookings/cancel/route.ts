@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
@@ -41,15 +43,43 @@ export async function POST(req: NextRequest) {
 
     if (!booking) {
       return NextResponse.json(
-        { error: "Booking not found" },
+        { error: "Programarea nu a fost găsită" },
         { status: 404 }
       );
     }
 
-    const settings =
-  await getNotificationSettings(
-    booking.tenant_id
-  );
+    if (booking.status === "cancelled") {
+      return NextResponse.json(
+        { error: "Programarea este deja anulată" },
+        { status: 400 }
+      );
+    }
+
+    if (bookingId) {
+      const barber = await getCurrentBarberInTenant();
+
+      if (!barber) {
+        return NextResponse.json(
+          { error: "Neautorizat" },
+          { status: 401 }
+        );
+      }
+
+      const role = await getCurrentRole();
+      const allowed =
+        role === "owner"
+          ? booking.tenant_id === barber.tenant_id
+          : booking.barber_id === barber.id;
+
+      if (!allowed) {
+        return NextResponse.json(
+          { error: "Neautorizat" },
+          { status: 403 }
+        );
+      }
+    }
+
+    const settings = await getNotificationSettings(booking.tenant_id);
 
     // 🔥 GOOGLE CALENDAR
 
