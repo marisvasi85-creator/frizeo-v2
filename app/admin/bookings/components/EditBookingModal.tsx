@@ -24,6 +24,9 @@ type Booking = {
   };
 };
 
+const inputClass =
+  "w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white";
+
 export default function EditBookingModal({
   booking,
   onClose,
@@ -36,20 +39,13 @@ export default function EditBookingModal({
   const [name, setName] = useState(booking.client_name);
   const [phone, setPhone] = useState(booking.client_phone || "");
   const [email, setEmail] = useState(booking.client_email || "");
-
   const [date, setDate] = useState(booking.date);
-
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const slotsRef = useRef<HTMLDivElement>(null);
 
-  // =========================
-  // 🔥 LOAD SLOTS (EXCLUDE CURENT)
-  // =========================
   useEffect(() => {
     if (!date) return;
 
@@ -66,9 +62,6 @@ export default function EditBookingModal({
       });
   }, [date, booking]);
 
-  // =========================
-  // 🔥 SAVE (REPROGRAMARE + UPDATE CLIENT)
-  // =========================
   async function handleSave() {
     if (!selectedSlot) {
       setError("Alege un interval");
@@ -91,8 +84,6 @@ export default function EditBookingModal({
         new_date: date,
         new_start_time: selectedSlot,
         new_end_time: endTime,
-
-        // 🔥 UPDATE CLIENT
         client_name: name,
         client_phone: phone,
         client_email: email,
@@ -112,49 +103,41 @@ export default function EditBookingModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-zinc-900 p-6 rounded-xl w-full max-w-md space-y-4">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#161618] border border-white/10 p-6 rounded-xl w-full max-w-md space-y-4">
+        <h2 className="text-lg font-semibold">Editează programarea</h2>
 
-        <h2 className="text-white text-lg font-semibold">
-          Editează programarea
-        </h2>
-
-        {/* INFO */}
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-white/50">
           Curent: {booking.date} {booking.start_time} - {booking.end_time}
         </div>
 
         {error && (
-          <div className="bg-red-500/20 text-red-400 p-2 rounded text-sm">
+          <div className="bg-red-500/20 text-red-400 p-2 rounded-lg text-sm">
             {error}
           </div>
         )}
 
-        {/* NUME */}
         <input
           placeholder="Nume"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded text-white"
+          className={inputClass}
         />
 
-        {/* TELEFON */}
         <input
           placeholder="Telefon"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded text-white"
+          className={inputClass}
         />
 
-        {/* EMAIL */}
         <input
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded text-white"
+          className={inputClass}
         />
 
-        {/* DATA */}
         <input
           type="date"
           value={date}
@@ -162,12 +145,10 @@ export default function EditBookingModal({
             setDate(e.target.value);
             setSelectedSlot(null);
           }}
-          className="w-full bg-zinc-800 p-3 rounded text-white"
+          className={inputClass}
         />
 
-        {/* SLOTURI */}
         <div ref={slotsRef} className="grid grid-cols-3 gap-2">
-
           {slots.map((s) => {
             const isSelected = selectedSlot === s.time;
 
@@ -176,20 +157,15 @@ export default function EditBookingModal({
                 key={s.time}
                 disabled={s.occupied}
                 onClick={() => !s.occupied && setSelectedSlot(s.time)}
-                className={`py-2 rounded text-sm transition
-                  
-                  ${
-                    s.occupied
-                      ? "bg-red-500 text-white cursor-not-allowed"
-                      : isSelected
-                      ? "bg-blue-500 text-white"
-                      : "bg-zinc-800 text-white hover:bg-white hover:text-black"
-                  }
-                `}
+                className={`py-2 rounded-lg text-sm transition ${
+                  s.occupied
+                    ? "bg-red-500/80 text-white cursor-not-allowed"
+                    : isSelected
+                      ? "bg-white text-black"
+                      : "bg-[#0F0F10] border border-white/10 text-white hover:border-white/30"
+                }`}
               >
-                <div className="font-semibold">
-                  {s.time}
-                </div>
+                <div className="font-semibold">{s.time}</div>
 
                 {s.occupied && s.booking && (
                   <div className="text-xs opacity-80">
@@ -199,14 +175,12 @@ export default function EditBookingModal({
               </button>
             );
           })}
-
         </div>
 
-        {/* ACTIONS */}
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 bg-zinc-700 py-2 rounded text-white"
+            className="flex-1 bg-white/10 py-3 rounded-lg text-white"
           >
             Anulează
           </button>
@@ -214,20 +188,16 @@ export default function EditBookingModal({
           <button
             onClick={handleSave}
             disabled={!selectedSlot || loading}
-            className="flex-1 bg-white text-black py-2 rounded"
+            className="flex-1 bg-white text-black py-3 rounded-lg font-medium disabled:opacity-50"
           >
             {loading ? "Se salvează..." : "Salvează"}
           </button>
         </div>
-
       </div>
     </div>
   );
 }
 
-// =========================
-// 🔧 UTILS
-// =========================
 function addMinutes(time: string, minutes: number) {
   const [h, m] = time.split(":").map(Number);
   const d = new Date();

@@ -20,7 +20,7 @@ export default async function SettingsPage() {
     <div className="space-y-8">
 
       <div>
-        <h1 className="text-xl font-semibold mb-4">
+        <h1 className="text-2xl font-semibold mb-4">
           Program de lucru
         </h1>
 

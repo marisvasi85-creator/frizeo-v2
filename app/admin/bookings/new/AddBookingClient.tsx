@@ -207,7 +207,9 @@ console.log("CREATE RESPONSE:", createData);
   }
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-6">
+    <div className="max-w-xl mx-auto space-y-6">
+      <h1 className="text-2xl font-semibold">Adaugă programare</h1>
+
 {role === "owner" && (
   <select
     value={selectedBarberId}
@@ -216,7 +218,7 @@ console.log("CREATE RESPONSE:", createData);
         e.target.value
       )
     }
-    className="w-full bg-zinc-800 p-3 rounded text-white"
+    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
   >
     {barbers.map((barber) => (
       <option
@@ -231,7 +233,7 @@ console.log("CREATE RESPONSE:", createData);
       <select
         value={serviceId}
         onChange={(e) => setServiceId(e.target.value)}
-        className="w-full bg-zinc-800 p-3 rounded text-white"
+        className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
       >
         <option value="">
           Alege serviciu
@@ -264,7 +266,7 @@ console.log("CREATE RESPONSE:", createData);
         )}
 
       {selectedSlot && (
-        <div className="space-y-3 border border-zinc-800 rounded-xl p-4">
+        <div className="space-y-3 bg-[#161618] border border-white/10 rounded-xl p-4">
 
           <input
             placeholder="Nume client"
@@ -272,7 +274,7 @@ console.log("CREATE RESPONSE:", createData);
             onChange={(e) =>
               setName(e.target.value)
             }
-            className="w-full p-3 rounded-xl bg-zinc-800 text-white"
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
           <input
@@ -281,7 +283,7 @@ console.log("CREATE RESPONSE:", createData);
             onChange={(e) =>
               setPhone(e.target.value)
             }
-            className="w-full p-3 rounded-xl bg-zinc-800 text-white"
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
           <input
@@ -290,13 +292,13 @@ console.log("CREATE RESPONSE:", createData);
             onChange={(e) =>
               setEmail(e.target.value)
             }
-            className="w-full p-3 rounded-xl bg-zinc-800 text-white"
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white"
           />
 
           <button
             onClick={createBooking}
             disabled={saving}
-            className="w-full bg-white text-black p-3 rounded-xl font-medium"
+            className="w-full bg-white text-black px-4 py-3 rounded-lg font-medium disabled:opacity-50"
           >
             {saving
               ? "Se creează..."

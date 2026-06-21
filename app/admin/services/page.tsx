@@ -29,11 +29,9 @@ export default async function ServicesPage() {
   }
 
   return (
-    <div className="p-6">
-      <ServicesClient
-        services={services ?? []}
-        barberId={barber.id}
-      />
-    </div>
+    <ServicesClient
+      services={services ?? []}
+      barberId={barber.id}
+    />
   );
 }

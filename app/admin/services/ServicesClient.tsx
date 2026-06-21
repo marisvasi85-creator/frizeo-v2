@@ -72,7 +72,7 @@ export default function ServicesClient({
 
       <button
         onClick={() => setOpenAdd(true)}
-        className="bg-white text-black px-4 py-2 rounded-xl font-medium w-full sm:w-auto"
+        className="bg-white text-black px-4 py-2 rounded-lg font-medium w-full sm:w-auto"
       >
         + Adaugă
       </button>

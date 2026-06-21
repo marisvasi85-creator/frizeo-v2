@@ -68,7 +68,7 @@ const role = await getCurrentRole();
 
       {/* HEADER */}
       <div>
-        <h1 className="text-3xl font-semibold">
+        <h1 className="text-2xl font-semibold">
           Salut, {barber.display_name} 👋
         </h1>
         <p className="text-white/60 mt-1">
