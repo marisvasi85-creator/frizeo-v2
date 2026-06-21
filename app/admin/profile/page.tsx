@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
+import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
@@ -111,7 +112,7 @@ export default async function ProfilePage({
 
       <AvatarUpload currentUrl={barber.avatar_url} />
 
-      <form
+      <FormWithSaveFeedback
         action={updateProfile}
         className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
       >
@@ -179,13 +180,7 @@ export default async function ProfilePage({
           />
         </div>
 
-        <button
-          type="submit"
-          className="bg-white text-black px-5 py-3 rounded-lg font-medium"
-        >
-          Salvează modificările
-        </button>
-      </form>
+      </FormWithSaveFeedback>
     </div>
   );
 }

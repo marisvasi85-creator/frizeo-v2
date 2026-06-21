@@ -7,6 +7,7 @@ import CopySalonLink from "./CopySalonLink";
 import LogoUpload from "./LogoUpload";
 import GalleryUpload from "./GalleryUpload";
 import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
+import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 
 export default async function SalonPage() {
   const supabase = await createSupabaseServerClient();
@@ -177,7 +178,7 @@ const { count: monthBookings } = await supabase
   images={gallery || []}
 />
     {/* FORM */}
-    <form
+    <FormWithSaveFeedback
       action={updateSalon}
       className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
     >
@@ -250,14 +251,7 @@ const { count: monthBookings } = await supabase
   />
 </div>
 
-      <button
-        type="submit"
-        className="bg-white text-black px-5 py-3 rounded-lg font-medium"
-      >
-        Salvează modificările
-      </button>
-
-    </form>
+    </FormWithSaveFeedback>
   </div>
 );
 }
