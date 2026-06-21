@@ -1,3 +1,8 @@
+export function toDBTime(t: string | null | undefined) {
+  if (!t) return null;
+  return t.length === 5 ? `${t}:00` : t;
+}
+
 export function timeToMinutes(t: string) {
   const [h, m] = t.slice(0, 5).split(":").map(Number);
   return h * 60 + m;

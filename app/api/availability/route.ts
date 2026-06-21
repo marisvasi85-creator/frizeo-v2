@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { addDays, format } from "date-fns";
+import { jsDayToScheduleDay } from "@/lib/schedule/time";
 
 export async function GET(req: Request) {
   try {
@@ -19,31 +21,15 @@ export async function GET(req: Request) {
       });
     }
 
-    // 🔥 WEEKLY
     const { data: weekly } = await supabase
       .from("barber_weekly_schedule")
-      .select("day_of_week, is_working")
+      .select("*")
       .eq("barber_id", barberId);
 
-    // 🔥 OVERRIDES
     const { data: overrides } = await supabase
       .from("barber_day_overrides")
-      .select("date, is_closed")
+      .select("*")
       .eq("barber_id", barberId);
-
-    // 🔥 BOOKINGS
-    const { data: bookings } = await supabase
-      .from("bookings")
-      .select("date, status")
-      .eq("barber_id", barberId)
-      .in("status", ["confirmed", "pending"]);
-
-    const bookingsMap = new Map<string, number>();
-
-    bookings?.forEach((b) => {
-      const count = bookingsMap.get(b.date) || 0;
-      bookingsMap.set(b.date, count + 1);
-    });
 
     const availableDays: string[] = [];
 
@@ -52,22 +38,13 @@ export async function GET(req: Request) {
 
     while (current <= end) {
       const dateStr = format(current, "yyyy-MM-dd");
+      const day = jsDayToScheduleDay(dateStr);
 
-      const jsDay = current.getDay();
-      const day = jsDay === 0 ? 7 : jsDay;
+      const schedule = weekly?.find((w) => w.day_of_week === day);
+      const override = overrides?.find((o) => o.date === dateStr);
+      const resolved = resolveDaySchedule(schedule, override);
 
-      const isWorking =
-        weekly?.find((w) => w.day_of_week === day)?.is_working === true;
-
-      const isClosed =
-        overrides?.find((o) => o.date === dateStr)?.is_closed === true;
-
-      const bookingsCount = bookingsMap.get(dateStr) || 0;
-
-      const hasSlots =
-        isWorking && !isClosed && bookingsCount < 20;
-
-      if (hasSlots) {
+      if (resolved.isWorking) {
         availableDays.push(dateStr);
       }
 
@@ -79,7 +56,6 @@ export async function GET(req: Request) {
       weeklySchedule: weekly ?? [],
       overrides: overrides ?? [],
     });
-
   } catch (err) {
     console.error("AVAILABILITY ERROR:", err);
     return NextResponse.json({

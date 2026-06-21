@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { toDBTime } from "@/lib/schedule/time";
 
 /* =========================
    GET override(s)
@@ -54,14 +55,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       overrides: data || [],
     });
-
   } catch (err) {
     console.error("OVERRIDE GET ERROR:", err);
 
-    return NextResponse.json(
-      { error: "GET ERROR" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "GET ERROR" }, { status: 500 });
   }
 }
 
@@ -76,6 +73,8 @@ export async function POST(req: NextRequest) {
       barber_id,
       date,
       is_closed,
+      work_start,
+      work_end,
       break_enabled,
       break_start,
       break_end,
@@ -89,9 +88,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const closed = is_closed === true;
+    const hasCustomHours = !closed && work_start && work_end;
+
+    if (!closed && !hasCustomHours && break_enabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Pentru pauză specială fără program custom, folosește programul săptămânal.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (hasCustomHours && work_start >= work_end) {
+      return NextResponse.json(
+        { error: "Ora de început trebuie să fie înainte de ora de final" },
+        { status: 400 }
+      );
+    }
+
+    if (hasCustomHours && break_enabled) {
+      if (!break_start || !break_end) {
+        return NextResponse.json(
+          { error: "Completează intervalul pauzei" },
+          { status: 400 }
+        );
+      }
+
+      if (break_start >= break_end) {
+        return NextResponse.json(
+          { error: "Pauza este invalidă" },
+          { status: 400 }
+        );
+      }
+
+      if (break_start < work_start || break_end > work_end) {
+        return NextResponse.json(
+          { error: "Pauza trebuie să fie în intervalul programului" },
+          { status: 400 }
+        );
+      }
+    }
+
     const supabase = await createSupabaseServerClient();
 
-    // 🔥 IMPORTANT PENTRU RLS
     const { data: barber, error: barberError } = await supabase
       .from("barbers")
       .select("tenant_id")
@@ -108,28 +149,21 @@ export async function POST(req: NextRequest) {
     const payload = {
       barber_id,
       tenant_id: barber.tenant_id,
-
       date,
-      is_closed: is_closed ?? false,
-
-      break_enabled: is_closed
-        ? false
-        : break_enabled ?? false,
-
+      is_closed: closed,
+      work_start: closed || !hasCustomHours ? null : toDBTime(work_start),
+      work_end: closed || !hasCustomHours ? null : toDBTime(work_end),
+      break_enabled: closed || !hasCustomHours ? false : !!break_enabled,
       break_start:
-        is_closed || !break_enabled
+        closed || !hasCustomHours || !break_enabled
           ? null
-          : break_start ?? null,
-
+          : toDBTime(break_start),
       break_end:
-        is_closed || !break_enabled
+        closed || !hasCustomHours || !break_enabled
           ? null
-          : break_end ?? null,
-
+          : toDBTime(break_end),
       slot_duration:
-        is_closed
-          ? null
-          : slot_duration ?? null,
+        closed || !hasCustomHours ? null : slot_duration ?? null,
     };
 
     const { data, error } = await supabase
@@ -142,26 +176,17 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error("OVERRIDE UPSERT ERROR:", error);
 
-      return NextResponse.json(
-        {
-          error: error.message,
-        },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       data,
     });
-
   } catch (err) {
     console.error("OVERRIDE POST ERROR:", err);
 
-    return NextResponse.json(
-      { error: "POST ERROR" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "POST ERROR" }, { status: 500 });
   }
 }
 
@@ -191,22 +216,15 @@ export async function DELETE(req: NextRequest) {
       .eq("date", date);
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
     });
-
   } catch (err) {
     console.error("OVERRIDE DELETE ERROR:", err);
 
-    return NextResponse.json(
-      { error: "DELETE ERROR" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "DELETE ERROR" }, { status: 500 });
   }
 }

@@ -1,8 +1,14 @@
 export type Override = {
   id?: string;
-  barber_id: string;
+  barber_id?: string;
   date: string;
   is_closed: boolean;
-  start_time: string | null;
-  end_time: string | null;
+  work_start: string | null;
+  work_end: string | null;
+  break_enabled: boolean;
+  break_start: string | null;
+  break_end: string | null;
+  slot_duration?: number | null;
 };
+
+export type OverrideMode = "closed" | "custom";

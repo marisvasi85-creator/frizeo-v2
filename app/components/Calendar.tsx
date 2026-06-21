@@ -3,6 +3,8 @@
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
+import { hasCustomOverrideHours } from "@/lib/schedule/resolveDaySchedule";
+
 function toLocalISO(date: Date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -49,6 +51,9 @@ export default function Calendar({
           const override = overrides.find((o: any) => o.date === iso);
 
           if (override?.is_closed) return true;
+
+          if (hasCustomOverrideHours(override)) return false;
+
           if (!schedule?.is_working) return true;
 
           return false;

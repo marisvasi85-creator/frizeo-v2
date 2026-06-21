@@ -12,6 +12,7 @@ import {
   jsDayToScheduleDay,
   timesOverlap,
 } from "@/lib/schedule/time";
+import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 
 export async function POST(req: Request) {
   try {
@@ -77,25 +78,39 @@ if (!limit.allowed) {
     // =========================
     const day = jsDayToScheduleDay(booking.date);
 
-    const { data: schedules } = await supabase
+    const { data: schedule } = await supabase
       .from("barber_weekly_schedule")
       .select("*")
-      .eq("barber_id", booking.barber_id);
+      .eq("barber_id", booking.barber_id)
+      .eq("day_of_week", day)
+      .maybeSingle();
 
-    const schedule = schedules?.find(
-      (s) => s.day_of_week === day
-    );
+    const { data: override } = await supabase
+      .from("barber_day_overrides")
+      .select("*")
+      .eq("barber_id", booking.barber_id)
+      .eq("date", booking.date)
+      .maybeSingle();
+
+    const resolved = resolveDaySchedule(schedule, override);
+
+    if (!resolved.isWorking) {
+      return NextResponse.json(
+        { error: "Ziua selectată nu este disponibilă" },
+        { status: 400 }
+      );
+    }
 
     if (
-      schedule?.break_enabled &&
-      schedule.break_start &&
-      schedule.break_end
+      resolved.breakEnabled &&
+      resolved.breakStart &&
+      resolved.breakEnd
     ) {
       const overlap = timesOverlap(
         booking.start_time,
         booking.end_time,
-        schedule.break_start,
-        schedule.break_end
+        resolved.breakStart,
+        resolved.breakEnd
       );
 
       if (overlap) {

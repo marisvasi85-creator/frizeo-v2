@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getActiveBookings } from "@/lib/schedule/bookings";
+import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import {
   jsDayToScheduleDay,
   minutesToTime,
@@ -20,16 +21,13 @@ export async function GET(req: Request) {
   }
 
   const supabase = await createSupabaseServerClient();
+
   const { data: override } = await supabase
     .from("barber_day_overrides")
-    .select("is_closed")
+    .select("*")
     .eq("barber_id", barberId)
     .eq("date", date)
     .maybeSingle();
-
-  if (override?.is_closed) {
-    return NextResponse.json({ slots: [] });
-  }
 
   const day = jsDayToScheduleDay(date);
 
@@ -38,26 +36,28 @@ export async function GET(req: Request) {
     .select("*")
     .eq("barber_id", barberId)
     .eq("day_of_week", day)
-    .single();
+    .maybeSingle();
 
-  if (!schedule || !schedule.is_working) {
+  const resolved = resolveDaySchedule(schedule, override);
+
+  if (!resolved.isWorking || !resolved.workStart || !resolved.workEnd) {
     return NextResponse.json({ slots: [] });
   }
 
-  const start = timeToMinutes(schedule.work_start);
-  const end = timeToMinutes(schedule.work_end);
+  const start = timeToMinutes(resolved.workStart);
+  const end = timeToMinutes(resolved.workEnd);
 
   const breakStart =
-    schedule.break_enabled && schedule.break_start
-      ? timeToMinutes(schedule.break_start)
+    resolved.breakEnabled && resolved.breakStart
+      ? timeToMinutes(resolved.breakStart)
       : null;
 
   const breakEnd =
-    schedule.break_enabled && schedule.break_end
-      ? timeToMinutes(schedule.break_end)
+    resolved.breakEnabled && resolved.breakEnd
+      ? timeToMinutes(resolved.breakEnd)
       : null;
 
-  let duration = 15;
+  let duration = resolved.slotDuration ?? 15;
 
   if (mode !== "admin" && serviceId) {
     const { data: service } = await supabase
@@ -116,7 +116,7 @@ export async function GET(req: Request) {
 
       if (booking) continue;
 
-      if (breakStart && breakEnd) {
+      if (breakStart !== null && breakEnd !== null) {
         const overlapsBreak = slotStart < breakEnd && slotEnd > breakStart;
         if (overlapsBreak) continue;
       }
@@ -132,7 +132,7 @@ export async function GET(req: Request) {
 
   let finalSlots: any[] = [];
 
-  if (!breakStart || !breakEnd) {
+  if (breakStart === null || breakEnd === null) {
     finalSlots = generateSlots(start, end);
   } else if (mode === "admin") {
     finalSlots = [
