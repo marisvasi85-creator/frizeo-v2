@@ -15,6 +15,7 @@ export async function GET(req: Request) {
   const date = searchParams.get("date");
   const serviceId = searchParams.get("serviceId");
   const mode = searchParams.get("mode");
+  const excludeBookingId = searchParams.get("excludeBookingId");
 
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
@@ -76,7 +77,9 @@ export async function GET(req: Request) {
     .eq("date", date)
     .in("status", ["confirmed", "pending"]);
 
-  const activeBookings = getActiveBookings(bookings);
+  const activeBookings = getActiveBookings(bookings).filter(
+    (b) => b.id !== excludeBookingId
+  );
 
   function generateSlots(startMin: number, endMin: number) {
     const arr: any[] = [];

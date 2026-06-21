@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Slot = {
-  time: string;
-  occupied: boolean;
-  booking?: any;
+type ApiSlot = {
+  type: "free" | "booking" | "break";
+  time?: string;
+  start?: string;
+  end?: string;
+  booking?: {
+    id: string;
+    client_name?: string;
+  };
 };
 
 type Booking = {
@@ -27,6 +32,10 @@ type Booking = {
 const inputClass =
   "w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white";
 
+function normTime(t: string) {
+  return t.slice(0, 5);
+}
+
 export default function EditBookingModal({
   booking,
   onClose,
@@ -42,8 +51,10 @@ export default function EditBookingModal({
   const [phone, setPhone] = useState(booking.client_phone || "");
   const [email, setEmail] = useState(booking.client_email || "");
   const [date, setDate] = useState(booking.date);
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [slots, setSlots] = useState<ApiSlot[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(
+    normTime(booking.start_time)
+  );
   const [loading, setLoading] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState("");
@@ -53,60 +64,106 @@ export default function EditBookingModal({
     if (!date) return;
 
     fetch(
-      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&excludeBookingId=${booking.id}`
+      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&mode=admin&excludeBookingId=${booking.id}`
     )
       .then((r) => r.json())
       .then((data) => {
-        setSlots(Array.isArray(data?.slots) ? data.slots : []);
+        const loaded: ApiSlot[] = Array.isArray(data?.slots) ? data.slots : [];
+        setSlots(loaded);
+
+        const currentTime = normTime(booking.start_time);
+        const currentStillFree = loaded.some(
+          (s) => s.type === "free" && s.time === currentTime
+        );
+
+        if (date === booking.date && currentStillFree) {
+          setSelectedSlot(currentTime);
+        } else if (
+          selectedSlot &&
+          !loaded.some((s) => s.type === "free" && s.time === selectedSlot)
+        ) {
+          setSelectedSlot(null);
+        }
 
         setTimeout(() => {
           slotsRef.current?.scrollIntoView({ behavior: "smooth" });
         }, 100);
       });
-  }, [date, booking]);
+  }, [date, booking.barber_id, booking.barber_service_id, booking.date, booking.id, booking.start_time]);
 
   async function handleSave() {
     if (!selectedSlot) {
-      setError("Alege un interval");
+      setError("Alege un interval disponibil");
       return;
     }
 
     setLoading(true);
     setError("");
 
+    const startTime = normTime(selectedSlot);
     const duration = booking.barber_services?.duration || 30;
-    const endTime = addMinutes(selectedSlot, duration);
+    const endTime = addMinutes(startTime, duration);
+    const unchanged =
+      date === booking.date &&
+      startTime === normTime(booking.start_time);
 
-    const res = await fetch("/api/bookings/reschedule", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token: booking.reschedule_token,
-        new_date: date,
-        new_start_time: selectedSlot,
-        new_end_time: endTime,
-        client_name: name,
-        client_phone: phone,
-        client_email: email,
-      }),
-    });
+    try {
+      if (unchanged) {
+        const res = await fetch("/api/bookings/update-full", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: booking.id,
+            client_name: name,
+            client_phone: phone,
+            client_email: email || null,
+            barber_service_id: booking.barber_service_id,
+            date,
+            start_time: startTime,
+          }),
+        });
 
-    const data = await res.json();
+        const data = await res.json();
 
-    if (!res.ok) {
-      setError(data.error || "Eroare");
+        if (!res.ok) {
+          setError(data.error || "Eroare la salvare");
+          setLoading(false);
+          return;
+        }
+      } else {
+        const res = await fetch("/api/bookings/reschedule", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            token: booking.reschedule_token,
+            new_date: date,
+            new_start_time: startTime,
+            new_end_time: endTime,
+            client_name: name,
+            client_phone: phone,
+            client_email: email,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data.error || "Eroare la reprogramare");
+          setLoading(false);
+          return;
+        }
+      }
+
+      onSaved();
+      onClose();
+    } catch {
+      setError("Eroare server. Încearcă din nou.");
       setLoading(false);
-      return;
     }
-
-    onSaved();
-    onClose();
   }
 
   async function handleCancelBooking() {
-    const time = booking.start_time?.slice(0, 5) || "";
+    const time = normTime(booking.start_time);
     const ok = confirm(
       `Anulezi programarea lui ${booking.client_name} din ${booking.date} la ${time}?`
     );
@@ -134,13 +191,16 @@ export default function EditBookingModal({
     onClose();
   }
 
+  const displaySlots = slots.filter((s) => s.type !== "break");
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161618] border border-white/10 p-6 rounded-xl w-full max-w-md space-y-4">
+      <div className="bg-[#161618] border border-white/10 p-6 rounded-xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold">Editează programarea</h2>
 
         <div className="text-xs text-white/50">
-          Curent: {booking.date} {booking.start_time} - {booking.end_time}
+          Curent: {booking.date} {normTime(booking.start_time)} –{" "}
+          {normTime(booking.end_time)}
         </div>
 
         {error && (
@@ -180,34 +240,44 @@ export default function EditBookingModal({
           className={inputClass}
         />
 
-        <div ref={slotsRef} className="grid grid-cols-3 gap-2">
-          {slots.map((s) => {
-            const isSelected = selectedSlot === s.time;
+        {displaySlots.length === 0 ? (
+          <p className="text-sm text-white/50">
+            Nu există intervale disponibile în această zi.
+          </p>
+        ) : (
+          <div ref={slotsRef} className="grid grid-cols-3 gap-2">
+            {displaySlots.map((s, index) => {
+              if (s.type === "break") return null;
 
-            return (
-              <button
-                key={s.time}
-                disabled={s.occupied}
-                onClick={() => !s.occupied && setSelectedSlot(s.time)}
-                className={`py-2 rounded-lg text-sm transition ${
-                  s.occupied
-                    ? "bg-red-500/80 text-white cursor-not-allowed"
-                    : isSelected
-                      ? "bg-white text-black"
-                      : "bg-[#0F0F10] border border-white/10 text-white hover:border-white/30"
-                }`}
-              >
-                <div className="font-semibold">{s.time}</div>
+              const time = s.time || "";
+              const isFree = s.type === "free";
+              const isSelected = selectedSlot === time;
 
-                {s.occupied && s.booking && (
-                  <div className="text-xs opacity-80">
-                    {s.booking.client_name}
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={`${s.type}-${time}-${index}`}
+                  type="button"
+                  disabled={!isFree}
+                  onClick={() => isFree && setSelectedSlot(time)}
+                  className={`py-2 rounded-lg text-sm transition ${
+                    !isFree
+                      ? "bg-red-500/80 text-white cursor-not-allowed"
+                      : isSelected
+                        ? "bg-white text-black"
+                        : "bg-[#0F0F10] border border-white/10 text-white hover:border-white/30"
+                  }`}
+                >
+                  <div className="font-semibold">{time}</div>
+                  {!isFree && s.booking && (
+                    <div className="text-xs opacity-80 truncate px-1">
+                      {s.booking.client_name}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="flex gap-2">
           <button

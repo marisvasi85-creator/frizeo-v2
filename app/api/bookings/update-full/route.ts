@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     id,
     client_name,
     client_phone,
+    client_email,
     barber_service_id,
     date,
     start_time,
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
     .update({
       client_name,
       client_phone,
+      client_email: client_email ?? null,
       barber_service_id,
       date,
       start_time,
