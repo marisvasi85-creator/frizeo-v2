@@ -8,11 +8,10 @@ import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
-
-function timeToMinutes(t: string) {
-  const [h, m] = t.slice(0, 5).split(":").map(Number);
-  return h * 60 + m;
-}
+import {
+  jsDayToScheduleDay,
+  timesOverlap,
+} from "@/lib/schedule/time";
 
 export async function POST(req: Request) {
   try {
@@ -76,11 +75,7 @@ if (!limit.allowed) {
     // =========================
     // 🔥 VALIDARE PAUZĂ (CORECT)
     // =========================
-    const [y, m, d] = booking.date.split("-").map(Number);
-    const local = new Date(y, m - 1, d);
-
-    const jsDay = local.getDay();
-    const day = jsDay === 0 ? 7 : jsDay;
+    const day = jsDayToScheduleDay(booking.date);
 
     const { data: schedules } = await supabase
       .from("barber_weekly_schedule")
@@ -96,13 +91,12 @@ if (!limit.allowed) {
       schedule.break_start &&
       schedule.break_end
     ) {
-      const start = timeToMinutes(booking.start_time);
-      const end = timeToMinutes(booking.end_time);
-
-      const bStart = timeToMinutes(schedule.break_start);
-      const bEnd = timeToMinutes(schedule.break_end);
-
-      const overlap = start < bEnd && end > bStart;
+      const overlap = timesOverlap(
+        booking.start_time,
+        booking.end_time,
+        schedule.break_start,
+        schedule.break_end
+      );
 
       if (overlap) {
         return NextResponse.json(

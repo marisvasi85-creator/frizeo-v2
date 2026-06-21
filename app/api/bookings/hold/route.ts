@@ -1,28 +1,17 @@
 import { NextResponse } from "next/server";
 import { createSupabasePublicClient } from "@/lib/supabase/public";
-
-function timeToMinutes(t: string) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-function minutesToTime(m: number) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-}
+import { getActiveBookings } from "@/lib/schedule/bookings";
+import {
+  addMinutesToTime,
+  timesOverlap,
+} from "@/lib/schedule/time";
 
 export async function POST(req: Request) {
   try {
     const supabase = createSupabasePublicClient();
     const body = await req.json();
 
-    const {
-      barber_id,
-      barber_service_id,
-      date,
-      start_time,
-    } = body;
+    const { barber_id, barber_service_id, date, start_time } = body;
 
     if (!barber_id || !barber_service_id || !date || !start_time) {
       return NextResponse.json(
@@ -31,9 +20,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // =========================
-    // 🔥 SERVICE
-    // =========================
     const { data: service } = await supabase
       .from("barber_services")
       .select("duration")
@@ -47,29 +33,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // =========================
-    // 🔥 SETTINGS
-    // =========================
-    const { data: settings } = await supabase
-      .from("barber_settings")
-      .select("break_between_enabled, break_between_minutes")
-      .eq("barber_id", barber_id)
-      .single();
+    const end_time = addMinutesToTime(start_time, service.duration);
 
-    const breakEnabled = settings?.break_between_enabled ?? false;
-    const breakMinutes = settings?.break_between_minutes ?? 0;
-
-    const effectiveDuration = breakEnabled
-      ? service.duration + breakMinutes
-      : service.duration;
-
-    const startMin = timeToMinutes(start_time);
-    const endMin = startMin + effectiveDuration;
-    const end_time = minutesToTime(endMin);
-
-    // =========================
-    // 🔥 TENANT
-    // =========================
     const { data: barber } = await supabase
       .from("barbers")
       .select("tenant_id")
@@ -83,31 +48,22 @@ export async function POST(req: Request) {
       );
     }
 
-    // =========================
-    // 🔥 OVERLAP CHECK (IDENTIC cu slots)
-    // =========================
     const { data: existing } = await supabase
       .from("bookings")
       .select("start_time, end_time, status, expires_at")
       .eq("barber_id", barber_id)
       .eq("date", date);
 
-    const now = new Date();
+    const active = getActiveBookings(existing);
 
-    const active = (existing || []).filter((b: any) => {
-      if (b.status === "confirmed") return true;
-      if (b.status === "pending" && b.expires_at) {
-        return new Date(b.expires_at) > now;
-      }
-      return false;
-    });
-
-    const overlap = active.some((b: any) => {
-      return (
-        startMin < timeToMinutes(b.end_time) &&
-        endMin > timeToMinutes(b.start_time)
-      );
-    });
+    const overlap = active.some((booking) =>
+      timesOverlap(
+        start_time,
+        end_time,
+        booking.start_time,
+        booking.end_time
+      )
+    );
 
     if (overlap) {
       return NextResponse.json(
@@ -116,9 +72,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // =========================
-    // 🔥 HOLD
-    // =========================
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
     const { data, error } = await supabase
@@ -150,7 +103,6 @@ export async function POST(req: Request) {
       end_time,
       expiresAt: data.expires_at,
     });
-
   } catch (err) {
     console.error("HOLD ERROR:", err);
 

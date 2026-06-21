@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-function timeToMinutes(t: string) {
-  const [h, m] = t.slice(0, 5).split(":").map(Number);
-  return h * 60 + m;
-}
-
-function minutesToTime(m: number) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-}
+import { getActiveBookings } from "@/lib/schedule/bookings";
+import {
+  jsDayToScheduleDay,
+  minutesToTime,
+  timeToMinutes,
+} from "@/lib/schedule/time";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -26,28 +21,24 @@ export async function GET(req: Request) {
 
   const supabase = await createSupabaseServerClient();
   const { data: override } = await supabase
-  .from("barber_day_overrides")
-  .select("is_closed")
-  .eq("barber_id", barberId)
-  .eq("date", date)
-  .maybeSingle();
+    .from("barber_day_overrides")
+    .select("is_closed")
+    .eq("barber_id", barberId)
+    .eq("date", date)
+    .maybeSingle();
 
-if (override?.is_closed) {
-  return NextResponse.json({ slots: [] });
-}
-  // DATE
-  const [y, m, d] = date.split("-").map(Number);
-  const local = new Date(y, m - 1, d);
-  const jsDay = local.getDay();
-  const day = jsDay === 0 ? 7 : jsDay;
+  if (override?.is_closed) {
+    return NextResponse.json({ slots: [] });
+  }
 
-  // SCHEDULE
+  const day = jsDayToScheduleDay(date);
+
   const { data: schedule } = await supabase
-  .from("barber_weekly_schedule")
-  .select("*")
-  .eq("barber_id", barberId)
-  .eq("day_of_week", day)
-  .single();
+    .from("barber_weekly_schedule")
+    .select("*")
+    .eq("barber_id", barberId)
+    .eq("day_of_week", day)
+    .single();
 
   if (!schedule || !schedule.is_working) {
     return NextResponse.json({ slots: [] });
@@ -66,7 +57,6 @@ if (override?.is_closed) {
       ? timeToMinutes(schedule.break_end)
       : null;
 
-  // 🔥 DURATA
   let duration = 15;
 
   if (mode !== "admin" && serviceId) {
@@ -79,7 +69,6 @@ if (override?.is_closed) {
     if (service) duration = service.duration;
   }
 
-  // BOOKINGS
   const { data: bookings } = await supabase
     .from("bookings")
     .select("*")
@@ -87,89 +76,79 @@ if (override?.is_closed) {
     .eq("date", date)
     .in("status", ["confirmed", "pending"]);
 
+  const activeBookings = getActiveBookings(bookings);
+
   function generateSlots(startMin: number, endMin: number) {
-  const arr: any[] = [];
+    const arr: any[] = [];
+    const step = mode === "admin" ? 15 : duration;
 
-  const step = mode === "admin" ? 15 : duration;
+    for (let t = startMin; t + duration <= endMin; t += step) {
+      const slotStart = t;
+      const slotEnd = t + duration;
 
-  for (let t = startMin; t + duration <= endMin; t += step) {
-    const slotStart = t;
-    const slotEnd = t + duration;
+      const booking = activeBookings.find((b) => {
+        const bStart = timeToMinutes(b.start_time);
+        const bEnd = timeToMinutes(b.end_time);
+        return slotStart < bEnd && slotEnd > bStart;
+      });
 
-    const booking = bookings?.find((b) => {
-      const bStart = timeToMinutes(b.start_time);
-      const bEnd = timeToMinutes(b.end_time);
-      return slotStart < bEnd && slotEnd > bStart;
-    });
+      if (mode === "admin") {
+        const isStart =
+          booking && timeToMinutes(booking.start_time) === slotStart;
 
-    // 🔥 ADMIN
-    if (mode === "admin") {
-      const isStart =
-        booking &&
-        timeToMinutes(booking.start_time) === slotStart;
+        if (isStart) {
+          arr.push({
+            type: "booking",
+            time: booking.start_time.slice(0, 5),
+            end: booking.end_time.slice(0, 5),
+            booking,
+          });
+          continue;
+        }
 
-      // 🔴 dacă e început booking → afișează booking
-      if (isStart) {
         arr.push({
-          type: "booking",
-          time: booking.start_time.slice(0, 5),
-          end: booking.end_time.slice(0, 5),
-          booking,
+          type: "free",
+          time: minutesToTime(t),
         });
+
         continue;
       }
 
-      // 🔵 restul sloturilor EXISTĂ și sunt clickabile
+      if (booking) continue;
+
+      if (breakStart && breakEnd) {
+        const overlapsBreak = slotStart < breakEnd && slotEnd > breakStart;
+        if (overlapsBreak) continue;
+      }
+
       arr.push({
         type: "free",
         time: minutesToTime(t),
       });
-
-      continue;
     }
 
-    // ========================
-    // 🔥 PUBLIC
-    // ========================
-    if (booking) continue;
-
-    if (breakStart && breakEnd) {
-      const overlapsBreak =
-        slotStart < breakEnd && slotEnd > breakStart;
-
-      if (overlapsBreak) continue;
-    }
-
-    arr.push({
-      type: "free",
-      time: minutesToTime(t),
-    });
+    return arr;
   }
-
-  return arr;
-}
 
   let finalSlots: any[] = [];
 
   if (!breakStart || !breakEnd) {
     finalSlots = generateSlots(start, end);
+  } else if (mode === "admin") {
+    finalSlots = [
+      ...generateSlots(start, breakStart),
+      {
+        type: "break",
+        start: minutesToTime(breakStart),
+        end: minutesToTime(breakEnd),
+      },
+      ...generateSlots(breakEnd, end),
+    ];
   } else {
-    if (mode === "admin") {
-      finalSlots = [
-        ...generateSlots(start, breakStart),
-        {
-          type: "break",
-          start: minutesToTime(breakStart),
-          end: minutesToTime(breakEnd),
-        },
-        ...generateSlots(breakEnd, end),
-      ];
-    } else {
-      finalSlots = [
-        ...generateSlots(start, breakStart),
-        ...generateSlots(breakEnd, end),
-      ];
-    }
+    finalSlots = [
+      ...generateSlots(start, breakStart),
+      ...generateSlots(breakEnd, end),
+    ];
   }
 
   return NextResponse.json({ slots: finalSlots });

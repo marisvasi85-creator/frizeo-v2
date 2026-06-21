@@ -15,7 +15,7 @@ export default async function SettingsPage() {
     .from("barber_weekly_schedule")
     .select("*")
     .eq("barber_id", barber.id);
-console.log("🔥 SCHEDULE FROM DB", schedule);
+
   return (
     <div className="space-y-8">
 

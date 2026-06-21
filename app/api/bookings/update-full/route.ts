@@ -1,16 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-// 🔥 helper corect
-function toMinutes(t: string) {
-  const [h, m] = t.slice(0, 5).split(":").map(Number);
-  return h * 60 + m;
-}
-
-function minutesToTime(m: number) {
-  const h = Math.floor(m / 60);
-  const min = m % 60;
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-}
+import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
 
 export async function POST(req: Request) {
   const supabase = await createSupabaseServerClient();
@@ -29,7 +18,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "Date lipsă" }, { status: 400 });
   }
 
-  // 🔥 serviciu (durata)
   const { data: service } = await supabase
     .from("barber_services")
     .select("duration")
@@ -37,14 +25,8 @@ export async function POST(req: Request) {
     .single();
 
   const duration = service?.duration || 30;
+  const end_time = addMinutesToTime(start_time, duration);
 
-  // 🔥 calcul corect end_time
-  const startMin = toMinutes(start_time);
-  const endMin = startMin + duration;
-
-  const end_time = minutesToTime(endMin);
-
-  // 🔥 bookings existente
   const { data: existing } = await supabase
     .from("bookings")
     .select("id, start_time, end_time")
@@ -52,19 +34,14 @@ export async function POST(req: Request) {
     .neq("id", id)
     .in("status", ["confirmed", "pending"]);
 
-  // 🔥 overlap CORECT (numeric)
-  const overlap = existing?.some((b: any) => {
-    const bStart = toMinutes(b.start_time);
-    const bEnd = toMinutes(b.end_time);
-
-    return startMin < bEnd && endMin > bStart;
-  });
+  const overlap = existing?.some((booking) =>
+    timesOverlap(start_time, end_time, booking.start_time, booking.end_time)
+  );
 
   if (overlap) {
     return Response.json({ error: "Slot ocupat" }, { status: 400 });
   }
 
-  // 🔥 update
   const { error } = await supabase
     .from("bookings")
     .update({
@@ -72,7 +49,7 @@ export async function POST(req: Request) {
       client_phone,
       barber_service_id,
       date,
-      start_time: minutesToTime(startMin),
+      start_time,
       end_time,
     })
     .eq("id", id);

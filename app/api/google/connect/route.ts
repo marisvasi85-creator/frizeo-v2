@@ -7,7 +7,10 @@ export async function GET() {
     response_type: "code",
     access_type: "offline",
     prompt: "consent",
-    scope: "https://www.googleapis.com/auth/calendar",
+    scope: [
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/userinfo.email",
+    ].join(" "),
   });
 
   return NextResponse.redirect(
