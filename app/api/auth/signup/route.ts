@@ -8,6 +8,8 @@ import {
   normalizeEmail,
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
+import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
+import { PLAN_SLUGS } from "@/lib/billing/plans";
 
 export async function POST(req: Request) {
   try {
@@ -120,46 +122,39 @@ export async function POST(req: Request) {
 const trialEnds = new Date();
 trialEnds.setDate(trialEnds.getDate() + 15);
 
+const proPlusPlanId =
+  (await getPlanIdBySlug(PLAN_SLUGS.PRO_PLUS)) ??
+  (await getPlanIdBySlug(PLAN_SLUGS.FREE));
+
+if (!proPlusPlanId) {
+  return NextResponse.json(
+    { error: "Configurare planuri incompletă. Contactează suportul." },
+    { status: 500 }
+  );
+}
+
 await supabaseAdmin
   .from("subscriptions")
   .insert({
     tenant_id: tenant.id,
-    plan_id:
-      "1bc6a7ca-f1a1-4b7a-812b-aeacbcdaed93", // Free
-
+    plan_id: proPlusPlanId,
     status: "trialing",
-
-    current_period_start:
-      new Date().toISOString(),
-
-    current_period_end:
-      trialEnds.toISOString(),
-
-    trial_ends_at:
-      trialEnds.toISOString(),
+    current_period_start: new Date().toISOString(),
+    current_period_end: trialEnds.toISOString(),
+    trial_ends_at: trialEnds.toISOString(),
   });
 
-  // =========================
-// 🔔 NOTIFICĂRI IMPLICITE
-// =========================
-
-await supabaseAdmin
-  .from("notification_settings")
-  .insert({
-    tenant_id: tenant.id,
-
-    booking_email_enabled: true,
-    booking_sms_enabled: false,
-
-    reminder_email_enabled: true,
-    reminder_sms_enabled: false,
-
-    reschedule_email_enabled: true,
-    reschedule_sms_enabled: false,
-
-    cancel_email_enabled: true,
-    cancel_sms_enabled: false,
-  });
+await supabaseAdmin.from("notification_settings").insert({
+  tenant_id: tenant.id,
+  booking_email_enabled: true,
+  booking_sms_enabled: true,
+  reminder_email_enabled: true,
+  reminder_sms_enabled: true,
+  reschedule_email_enabled: true,
+  reschedule_sms_enabled: true,
+  cancel_email_enabled: true,
+  cancel_sms_enabled: true,
+});
   // =========================
 // ✂️ SERVICII IMPLICITE
 // =========================

@@ -1,6 +1,7 @@
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import type { Viewport } from "next";
+import CookieBanner from "./components/CookieBanner";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -27,6 +28,7 @@ export default function RootLayout({
         />
 
         {children}
+        <CookieBanner />
       </body>
     </html>
   );

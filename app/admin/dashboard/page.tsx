@@ -123,7 +123,7 @@ const role = await getCurrentRole();
         </div>
 
         <p className="text-white/70 mt-2">
-          Beneficiezi de toate funcțiile Frizeo.
+          Beneficiezi de acces Pro+ (SMS, 3 frizeri, programări nelimitate).
         </p>
 
         <p className="text-white mt-3 font-medium">

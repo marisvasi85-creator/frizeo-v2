@@ -2,6 +2,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
+import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
+import { planAllowsSms } from "@/lib/billing/plans";
 
 export default async function NotificationsPage() {
   const barber = await getCurrentBarberInTenant();
@@ -16,9 +18,19 @@ export default async function NotificationsPage() {
     .eq("tenant_id", barber.tenant_id)
     .single();
 
+  const plan = await getCurrentPlan(barber.tenant_id);
+  const smsAllowed = planAllowsSms(plan);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Notificări</h1>
+
+      {!smsAllowed && (
+        <p className="text-sm text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
+          SMS-urile sunt disponibile pe planurile plătite (Pro, Pro+) sau în
+          perioada de trial. Upgrade din Abonament pentru a activa SMS.
+        </p>
+      )}
 
       <FormWithSaveFeedback
         action={updateNotifications}
@@ -33,7 +45,8 @@ export default async function NotificationsPage() {
         <NotificationToggle
           name="booking_sms_enabled"
           label="SMS confirmare"
-          defaultChecked={data?.booking_sms_enabled ?? true}
+          defaultChecked={data?.booking_sms_enabled ?? false}
+          disabled={!smsAllowed}
         />
 
         <NotificationToggle
@@ -45,7 +58,8 @@ export default async function NotificationsPage() {
         <NotificationToggle
           name="reminder_sms_enabled"
           label="SMS reminder"
-          defaultChecked={data?.reminder_sms_enabled ?? true}
+          defaultChecked={data?.reminder_sms_enabled ?? false}
+          disabled={!smsAllowed}
         />
 
         <NotificationToggle
@@ -57,7 +71,8 @@ export default async function NotificationsPage() {
         <NotificationToggle
           name="reschedule_sms_enabled"
           label="SMS reprogramare"
-          defaultChecked={data?.reschedule_sms_enabled ?? true}
+          defaultChecked={data?.reschedule_sms_enabled ?? false}
+          disabled={!smsAllowed}
         />
 
         <NotificationToggle
@@ -69,7 +84,8 @@ export default async function NotificationsPage() {
         <NotificationToggle
           name="cancel_sms_enabled"
           label="SMS anulare"
-          defaultChecked={data?.cancel_sms_enabled ?? true}
+          defaultChecked={data?.cancel_sms_enabled ?? false}
+          disabled={!smsAllowed}
         />
       </FormWithSaveFeedback>
     </div>
@@ -80,20 +96,25 @@ function NotificationToggle({
   name,
   label,
   defaultChecked,
+  disabled,
 }: {
   name: string;
   label: string;
   defaultChecked: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex items-center justify-between">
+    <label
+      className={`flex items-center justify-between ${disabled ? "opacity-50" : ""}`}
+    >
       <span>{label}</span>
 
       <input
         type="checkbox"
         name={name}
         defaultChecked={defaultChecked}
-        className="h-5 w-5"
+        disabled={disabled}
+        className="h-5 w-5 disabled:cursor-not-allowed"
       />
     </label>
   );

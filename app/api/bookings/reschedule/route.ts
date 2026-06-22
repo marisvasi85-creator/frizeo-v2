@@ -7,6 +7,7 @@ import { createGoogleEvent } from "@/lib/google/createEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
+import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 
 export async function POST(req: Request) {
   try {
@@ -99,6 +100,7 @@ export async function POST(req: Request) {
   await getNotificationSettings(
     oldBooking.tenant_id
   );
+    const smsAllowed = await smsAllowedForTenant(oldBooking.tenant_id);
     // 🔥 CREATE BOOKING NOU (RPC)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe_v2", {
@@ -344,7 +346,8 @@ Serviciu: ${serviceName}`,
 
 if (
   finalPhone &&
-  settings?.reschedule_sms_enabled
+  settings?.reschedule_sms_enabled &&
+  smsAllowed
 ) {
 
   try {

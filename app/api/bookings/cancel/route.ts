@@ -8,6 +8,7 @@ import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
+import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 
 export async function POST(req: NextRequest) {
   try {
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = await getNotificationSettings(booking.tenant_id);
+    const smsAllowed = await smsAllowedForTenant(booking.tenant_id);
 
     // 🔥 GOOGLE CALENDAR
 
@@ -194,7 +196,8 @@ if (
 
 if (
   booking.client_phone &&
-  settings?.cancel_sms_enabled
+  settings?.cancel_sms_enabled &&
+  smsAllowed
 ) {
 
   try {

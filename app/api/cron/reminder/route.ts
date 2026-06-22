@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/email";
 import { sendSms } from "@/lib/sms/sendSms";
+import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
@@ -85,6 +86,8 @@ export async function GET(req: Request) {
             b.tenant_id
           );
 
+        const smsAllowed = await smsAllowedForTenant(b.tenant_id);
+
         // =========================
         // EMAIL
         // =========================
@@ -141,7 +144,8 @@ export async function GET(req: Request) {
 
         if (
           b.client_phone &&
-          settings?.reminder_sms_enabled
+          settings?.reminder_sms_enabled &&
+          smsAllowed
         ) {
 
           try {

@@ -103,7 +103,7 @@ const trialDaysLeft =
     </p>
 
     <p className="text-sm text-white/70 mt-1">
-      Ai acces complet la toate funcțiile Frizeo
+      Ai acces Pro+ (3 frizeri, SMS, programări nelimitate)
       încă {trialDaysLeft} zile.
       După expirare vei trece automat pe planul Free.
     </p>
@@ -160,19 +160,24 @@ const trialDaysLeft =
                 <div className="mt-4">
 
                   <div className="text-3xl font-bold">
-                    {plan.price} lei
+                    {plan.slug === "custom"
+                      ? "La cerere"
+                      : `${plan.price} lei`}
                   </div>
 
-                  <div className="text-white/60 text-sm">
-                    / lună
-                  </div>
+                  {plan.slug !== "custom" && (
+                    <div className="text-white/60 text-sm">/ lună</div>
+                  )}
 
                 </div>
 
                 <div className="mt-6 space-y-2 text-sm">
 
                   <div>
-                    👥 {plan.max_barbers} frizeri
+                    👥{" "}
+                    {plan.max_barbers
+                      ? `${plan.max_barbers} frizeri`
+                      : "Frizeri personalizat"}
                   </div>
 
                   <div>
