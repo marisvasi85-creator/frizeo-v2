@@ -20,6 +20,7 @@ export default function SignupPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   async function handleSignup() {
     setError("");
@@ -53,6 +54,13 @@ export default function SignupPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError(
+        "Trebuie să accepți termenii și condițiile și politica de confidențialitate."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -64,6 +72,7 @@ export default function SignupPage() {
           email,
           phone,
           password: form.password,
+          acceptedTerms: true,
         }),
       });
 
@@ -144,6 +153,34 @@ export default function SignupPage() {
         </div>
 
         <PasswordRequirements password={form.password} />
+
+        <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            onChange={(e) => setAcceptedTerms(e.target.checked)}
+            className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
+          />
+          <span>
+            Accept{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="text-white underline hover:no-underline"
+            >
+              termenii și condițiile
+            </Link>{" "}
+            și{" "}
+            <Link
+              href="/privacy"
+              target="_blank"
+              className="text-white underline hover:no-underline"
+            >
+              politica de confidențialitate
+            </Link>
+            .
+          </span>
+        </label>
 
         <button
           type="button"

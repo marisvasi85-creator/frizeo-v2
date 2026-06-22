@@ -21,6 +21,13 @@ export default function MarketingLayout({
           <div className="flex items-center gap-4">
 
             <Link
+              href="/pricing"
+              className="text-sm text-gray-600 hover:text-black"
+            >
+              Prețuri
+            </Link>
+
+            <Link
               href="/login"
               className="text-sm text-gray-600 hover:text-black"
             >

@@ -13,7 +13,7 @@ import { PLAN_SLUGS } from "@/lib/billing/plans";
 
 export async function POST(req: Request) {
   try {
-    const { email, password, fullName, phone } = await req.json();
+    const { email, password, fullName, phone, acceptedTerms } = await req.json();
 
     const name = (fullName || "").trim();
     const emailNorm = normalizeEmail(email || "");
@@ -40,6 +40,16 @@ export async function POST(req: Request) {
     if (!isValidPassword(password || "")) {
       return NextResponse.json(
         { error: PASSWORD_REQUIREMENTS_MESSAGE },
+        { status: 400 }
+      );
+    }
+
+    if (!acceptedTerms) {
+      return NextResponse.json(
+        {
+          error:
+            "Trebuie să accepți termenii și condițiile și politica de confidențialitate.",
+        },
         { status: 400 }
       );
     }

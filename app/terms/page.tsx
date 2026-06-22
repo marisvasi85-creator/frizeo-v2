@@ -38,8 +38,9 @@ export default function TermsPage() {
       <ul>
         {LEGAL_PRICING.plans.map((p) => (
           <li key={p.name}>
-            <strong>{p.name}</strong> — {p.price}, {p.barbers} frizer(i),{" "}
-            {p.bookings} programări
+            <strong>{p.name}</strong> — {p.price}
+            {p.priceNote ?? ""}, {p.barbers}, {p.bookings}
+            {p.sms ? ", SMS inclus" : ", fără SMS"}
           </li>
         ))}
       </ul>
