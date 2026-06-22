@@ -7,8 +7,8 @@ export default function PricingPage() {
       <section className="px-6 py-20 max-w-5xl mx-auto text-center">
         <h1 className="text-4xl font-semibold mb-4">Prețuri simple</h1>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          {LEGAL_PRICING.trialDays} zile trial Pro+ cu SMS inclus — fără card.
-          După trial treci automat pe Free dacă nu alegi un plan plătit.
+          {LEGAL_PRICING.trialDays} zile trial Pro+ cu SMS inclus. După trial
+          rămâi pe Free sau treci la Pro / Pro+.
         </p>
       </section>
 
@@ -64,8 +64,7 @@ export default function PricingPage() {
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-10 max-w-2xl mx-auto">
-          Plățile online vor fi disponibile în curând. Până atunci, upgrade
-          Pro / Pro+ se poate activa manual — scrie-ne la{" "}
+          Planul Custom se configurează individual —{" "}
           <a
             href={`mailto:${LEGAL_COMPANY.billingEmail}`}
             className="text-black underline"

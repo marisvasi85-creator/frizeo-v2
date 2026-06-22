@@ -46,8 +46,12 @@ export default function TermsPage() {
       </ul>
       <p>
         <strong>Trial:</strong> {LEGAL_PRICING.trialDays} zile cu acces Pro+
-        (inclusiv SMS). Fără card. După trial, contul trece automat pe planul
+        (inclusiv SMS), gratuit. După trial, contul trece automat pe planul
         Free, dacă nu activezi un plan plătit.
+      </p>
+      <p>
+        <strong>Plată:</strong> planurile Pro și Pro+ sunt cu abonament lunar.
+        Poți anula oricând din cont.
       </p>
       <p>
         <strong>SMS:</strong> disponibil doar pe planuri plătite și în perioada
@@ -59,8 +63,8 @@ export default function TermsPage() {
         <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>.
       </p>
       <p>
-        Plățile online prin Stripe vor fi disponibile la activare. Până atunci,
-        upgrade-urile pot fi procesate manual (transfer bancar / factură).
+        Plățile pentru planul Custom se stabilesc individual și pot fi
+        procesate prin factură sau altă metodă agreată.
       </p>
 
       <h2>5. Obligațiile Salonului</h2>

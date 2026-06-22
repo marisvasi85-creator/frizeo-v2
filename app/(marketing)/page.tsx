@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LEGAL_PRICING } from "@/lib/legal/company";
 
 export default function Page() {
   return (
@@ -42,7 +43,7 @@ export default function Page() {
         </div>
 
         <p className="text-sm text-gray-400 mt-4">
-          Fără card. Fără instalare. Gata în câteva minute.
+          Fără instalare. Gata în câteva minute.
         </p>
       </section>
 
@@ -227,8 +228,8 @@ export default function Page() {
         </h2>
 
         <p className="mb-8 text-gray-300 max-w-lg mx-auto">
-          Perioadă de probă cu toate funcțiile. Fără card,
-          fără complicații — doar programări care funcționează.
+          {LEGAL_PRICING.trialDays} zile trial Pro+ gratuit. Apoi alegi planul
+          potrivit — sau rămâi pe Free.
         </p>
 
         <Link
