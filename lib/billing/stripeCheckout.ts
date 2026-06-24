@@ -18,6 +18,7 @@ export async function createSubscriptionCheckout(
 
   const sessionParams: StripeTypes.Checkout.SessionCreateParams = {
     mode: "subscription",
+    payment_method_types: ["card"],
     line_items: [{ price: params.stripePriceId, quantity: 1 }],
     success_url: params.successUrl,
     cancel_url: params.cancelUrl,
