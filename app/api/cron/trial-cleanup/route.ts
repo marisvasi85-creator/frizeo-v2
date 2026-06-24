@@ -24,6 +24,7 @@ export async function GET(req: Request) {
       .from("subscriptions")
       .select("tenant_id")
       .eq("status", "trialing")
+      .is("stripe_subscription_id", null)
       .lt("trial_ends_at", now);
 
     if (!expiredTrials?.length) {
@@ -39,6 +40,7 @@ export async function GET(req: Request) {
         plan_id: freePlanId,
       })
       .eq("status", "trialing")
+      .is("stripe_subscription_id", null)
       .lt("trial_ends_at", now)
       .select();
 

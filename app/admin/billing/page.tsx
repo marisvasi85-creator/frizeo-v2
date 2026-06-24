@@ -5,7 +5,12 @@ import UpgradeButton from "./UpgradeButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
-export default async function BillingPage() {
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
+  const { checkout: checkoutStatus } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const barber = await getCurrentBarberInTenant();
@@ -66,6 +71,18 @@ const trialDaysLeft =
     <div className="space-y-8">
 
       <AdminPageHeader title="Abonament" />
+
+      {checkoutStatus === "success" && (
+        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
+          Plata a fost procesată. Planul tău se actualizează în câteva secunde.
+        </div>
+      )}
+
+      {checkoutStatus === "canceled" && (
+        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-yellow-200 text-sm">
+          Plata a fost anulată. Poți încerca din nou când dorești.
+        </div>
+      )}
 
       <AdminCard>
         <div className="space-y-3">
@@ -209,7 +226,7 @@ const trialDaysLeft =
       {isTrial ? "Trial activ" : "Plan activ"}
     </button>
   ) : (
-    <UpgradeButton />
+    <UpgradeButton planId={plan.id} planName={plan.name} />
   )}
 </div>
 
