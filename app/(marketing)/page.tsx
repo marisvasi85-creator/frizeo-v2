@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LEGAL_PRICING } from "@/lib/legal/company";
 
+const LANDING_VIDEO_ID = "do-k1cNkCOg";
+
 export default function Page() {
   return (
     <main className="bg-white text-gray-900">
@@ -45,6 +47,22 @@ export default function Page() {
         <p className="text-sm text-gray-400 mt-4">
           Fără instalare. Gata în câteva minute.
         </p>
+
+        <div className="mt-12 max-w-3xl mx-auto text-left">
+          <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-black">
+            <iframe
+              src={`https://www.youtube-nocookie.com/embed/${LANDING_VIDEO_ID}?rel=0`}
+              title="Frizeo — programări online pentru frizerii și saloane"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+              className="absolute inset-0 h-full w-full"
+            />
+          </div>
+          <p className="mt-3 text-center text-sm text-gray-500">
+            Vezi cum arată pagina de programări — serviciu, calendar, confirmare.
+          </p>
+        </div>
       </section>
 
       {/* CUM FUNCTIONEAZA */}
@@ -201,24 +219,6 @@ export default function Page() {
             </p>
           </div>
         </div>
-      </section>
-
-      {/* DEMO */}
-      <section className="bg-gray-50 py-20 px-6 text-center">
-        <h2 className="text-3xl font-semibold mb-4">
-          Vezi cum arată pentru clienți
-        </h2>
-        <p className="text-gray-600 mb-8 max-w-lg mx-auto">
-          Pagină simplă de programări — serviciu, calendar, confirmare.
-          Exact ce văd clienții tăi când deschid link-ul.
-        </p>
-
-        <Link
-          href="/barbers"
-          className="inline-block bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition font-medium"
-        >
-          Deschide demo
-        </Link>
       </section>
 
       {/* CTA FINAL */}
