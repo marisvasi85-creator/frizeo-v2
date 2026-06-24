@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import {
-  createOrReuseStripeCustomer,
   createSubscriptionCheckout,
+  resolveStripeCustomer,
+  retrieveActiveStripeSubscription,
 } from "@/lib/billing/stripeCheckout";
 import { PLAN_SLUGS, type PlanSlug } from "@/lib/billing/plans";
 import { getAppUrl, getStripePriceId } from "@/lib/billing/stripePrices";
@@ -106,11 +107,16 @@ export async function POST(req: Request) {
     const stripe = getStripe();
 
     if (subscription.stripe_subscription_id) {
-      const stripeSub = await stripe.subscriptions.retrieve(
+      const stripeSub = await retrieveActiveStripeSubscription(
         subscription.stripe_subscription_id
       );
 
-      if (
+      if (!stripeSub) {
+        await supabaseAdmin
+          .from("subscriptions")
+          .update({ stripe_subscription_id: null })
+          .eq("tenant_id", tenant.tenant_id);
+      } else if (
         stripeSub.status === "active" ||
         stripeSub.status === "trialing" ||
         stripeSub.status === "past_due"
@@ -139,17 +145,20 @@ export async function POST(req: Request) {
       }
     }
 
-    const customerId = await createOrReuseStripeCustomer({
+    const { customerId, clearedStaleId } = await resolveStripeCustomer({
       customerId: subscription.stripe_customer_id as string | null,
       email: user.email,
       name: tenant.name,
       tenantId: tenant.tenant_id,
     });
 
-    if (customerId !== subscription.stripe_customer_id) {
+    if (customerId !== subscription.stripe_customer_id || clearedStaleId) {
       const { error: customerSaveError } = await supabaseAdmin
         .from("subscriptions")
-        .update({ stripe_customer_id: customerId })
+        .update({
+          stripe_customer_id: customerId,
+          ...(clearedStaleId ? { stripe_subscription_id: null } : {}),
+        })
         .eq("tenant_id", tenant.tenant_id);
 
       if (customerSaveError) {

@@ -1,4 +1,5 @@
-import type Stripe from "stripe";
+import Stripe from "stripe";
+import type StripeTypes from "stripe";
 import { getStripe } from "@/lib/stripe";
 
 type CheckoutParams = {
@@ -12,10 +13,10 @@ type CheckoutParams = {
 
 export async function createSubscriptionCheckout(
   params: CheckoutParams
-): Promise<Stripe.Checkout.Session> {
+): Promise<StripeTypes.Checkout.Session> {
   const stripe = getStripe();
 
-  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+  const sessionParams: StripeTypes.Checkout.SessionCreateParams = {
     mode: "subscription",
     line_items: [{ price: params.stripePriceId, quantity: 1 }],
     success_url: params.successUrl,
@@ -36,17 +37,32 @@ export async function createSubscriptionCheckout(
   return stripe.checkout.sessions.create(sessionParams);
 }
 
-export async function createOrReuseStripeCustomer(params: {
+function isMissingStripeResource(err: unknown): boolean {
+  return (
+    err instanceof Stripe.errors.StripeError &&
+    err.code === "resource_missing"
+  );
+}
+
+export async function resolveStripeCustomer(params: {
   customerId: string | null;
   email: string;
   name: string;
   tenantId: string;
-}): Promise<string> {
+}): Promise<{ customerId: string; clearedStaleId: boolean }> {
+  const stripe = getStripe();
+
   if (params.customerId) {
-    return params.customerId;
+    try {
+      await stripe.customers.retrieve(params.customerId);
+      return { customerId: params.customerId, clearedStaleId: false };
+    } catch (err) {
+      if (!isMissingStripeResource(err)) {
+        throw err;
+      }
+    }
   }
 
-  const stripe = getStripe();
   const customer = await stripe.customers.create({
     email: params.email,
     name: params.name,
@@ -55,5 +71,24 @@ export async function createOrReuseStripeCustomer(params: {
     },
   });
 
-  return customer.id;
+  return {
+    customerId: customer.id,
+    clearedStaleId: Boolean(params.customerId),
+  };
+}
+
+export async function retrieveActiveStripeSubscription(
+  subscriptionId: string
+): Promise<StripeTypes.Subscription | null> {
+  const stripe = getStripe();
+
+  try {
+    return await stripe.subscriptions.retrieve(subscriptionId);
+  } catch (err) {
+    if (isMissingStripeResource(err)) {
+      return null;
+    }
+
+    throw err;
+  }
 }
