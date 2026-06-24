@@ -73,7 +73,10 @@ export async function POST(req: Request) {
     const stripePriceId = getStripePriceId(planSlug);
     if (!stripePriceId) {
       return NextResponse.json(
-        { error: "Preț Stripe negăsit pentru plan." },
+        {
+          error:
+            "Price ID Stripe lipsă. Adaugă STRIPE_PRICE_PRO și STRIPE_PRICE_PRO_PLUS în Vercel.",
+        },
         { status: 500 }
       );
     }
