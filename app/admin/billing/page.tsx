@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import UpgradeButton from "./UpgradeButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
 export default async function BillingPage({
@@ -32,10 +33,12 @@ if (role !== "owner") {
     .eq("tenant_id", barber.tenant_id)
     .single();
 
-  const { data: plans } = await supabase
+  const { data: plansRaw } = await supabase
     .from("plans")
     .select("*")
-    .order("price", { ascending: true });
+    .in("slug", CANONICAL_PLAN_SLUGS);
+
+  const plans = sortPlansByCanonicalOrder(plansRaw ?? []);
 
   const { count: activeBarbers } = await supabase
     .from("barbers")
