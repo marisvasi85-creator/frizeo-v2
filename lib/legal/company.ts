@@ -1,14 +1,14 @@
 export const LEGAL_COMPANY = {
-  name: "[DENUMIRE FIRMĂ]",
-  cui: "[CUI]",
-  regCom: "[Nr. Reg. Com.]",
-  address: "[Adresă sediu social, România]",
-  representative: "[Reprezentant legal]",
+  name: "Electricsmart.Co SRL",
+  cui: "47684690",
+  regCom: "J02/287/2023",
+  address: "România, Arad, Socodor, nr. 77",
+  representative: "Maris Toader",
   email: "info@frizeo.ro",
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
   website: "https://www.frizeo.ro",
-  lastUpdated: "22 iunie 2026",
+  lastUpdated: "20 iunie 2026",
 };
 
 export const LEGAL_LINKS = {
