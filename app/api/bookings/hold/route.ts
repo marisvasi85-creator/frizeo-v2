@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import {
   addMinutesToTime,
@@ -8,7 +8,7 @@ import {
 
 export async function POST(req: Request) {
   try {
-    const supabase = createSupabasePublicClient();
+    const supabase = supabaseAdmin;
     const body = await req.json();
 
     const { barber_id, barber_service_id, date, start_time } = body;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
@@ -17,7 +17,7 @@ import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = supabaseAdmin;
     const body = await req.json();
 
     const {

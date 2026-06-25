@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
@@ -11,7 +11,7 @@ import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = supabaseAdmin;
     const body = await req.json();
 
     const {

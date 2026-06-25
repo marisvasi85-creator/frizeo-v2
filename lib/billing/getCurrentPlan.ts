@@ -1,10 +1,9 @@
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function getCurrentPlan(
   tenantId: string
 ) {
-  const supabase =
-    createSupabasePublicClient();
+  const supabase = supabaseAdmin;
 
   const { data: subscription } =
     await supabase

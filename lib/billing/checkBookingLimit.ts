@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentPlan } from "./getCurrentPlan";
 
 export async function checkBookingLimit(
@@ -19,8 +19,6 @@ export async function checkBookingLimit(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
-
   const now = new Date();
 
   const firstDay = new Date(
@@ -31,7 +29,7 @@ export async function checkBookingLimit(
     .toISOString()
     .slice(0, 10);
 
-  const { count } = await supabase
+  const { count } = await supabaseAdmin
     .from("bookings")
     .select("*", {
       count: "exact",

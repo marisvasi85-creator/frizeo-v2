@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ slots: [] });
   }
 
-  const supabase = await createSupabaseServerClient();
+  const supabase = supabaseAdmin;
 
   const { data: override } = await supabase
     .from("barber_day_overrides")

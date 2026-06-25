@@ -1,7 +1,7 @@
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function canCreateBarber(tenantId: string) {
-  const supabase = createSupabasePublicClient();
+  const supabase = supabaseAdmin;
 
   // 🔥 plan
   const { data: sub } = await supabase

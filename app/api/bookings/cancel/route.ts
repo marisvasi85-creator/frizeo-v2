@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { sendEmail } from "@/lib/email/email";
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // 🔥 PUBLIC
     if (token) {
-      const { data } = await supabase
+      const { data } = await supabaseAdmin
         .from("bookings")
         .select("*")
         .eq("cancel_token", token)
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
 
     const settings = await getNotificationSettings(booking.tenant_id);
     const smsAllowed = await smsAllowedForTenant(booking.tenant_id);
+    const db = token ? supabaseAdmin : supabase;
 
     // 🔥 GOOGLE CALENDAR
 
@@ -90,7 +92,7 @@ try {
   if (booking.google_event_id) {
 
     const { data: googleAccount } =
-      await supabase
+      await db
         .from("barber_google_accounts")
         .select("*")
         .eq("barber_id", booking.barber_id)
@@ -124,7 +126,7 @@ try {
           accessToken =
             refreshed.access_token;
 
-          await supabase
+          await db
             .from("barber_google_accounts")
             .update({
               access_token:
@@ -170,7 +172,7 @@ try {
 
 // 🔥 UPDATE STATUS
 
-await supabase
+await db
   .from("bookings")
   .update({
     status: "cancelled",
