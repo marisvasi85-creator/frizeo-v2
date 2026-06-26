@@ -11,16 +11,30 @@ export async function getCurrentBarberInTenant() {
   if (!user) return null;
 
   const tenant = await getActiveTenant();
-  if (!tenant) return null;
 
-  const { data, error } = await supabase
+  if (tenant) {
+    const { data } = await supabase
+      .from("barbers")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("tenant_id", tenant.tenant_id)
+      .maybeSingle();
+
+    if (data) return data;
+  }
+
+  const { data: fallback } = await supabase
     .from("barbers")
     .select("*")
     .eq("user_id", user.id)
-    .eq("tenant_id", tenant.tenant_id)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) return null;
+  if (!fallback) return null;
 
-  return data;
+  await supabase.from("user_active_tenant").upsert({
+    user_id: user.id,
+    tenant_id: fallback.tenant_id,
+  });
+
+  return fallback;
 }

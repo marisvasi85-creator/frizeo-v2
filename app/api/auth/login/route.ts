@@ -37,6 +37,19 @@ export async function POST(req: Request) {
       );
     }
 
+    const { data: barber } = await supabase
+      .from("barbers")
+      .select("tenant_id")
+      .eq("user_id", data.user.id)
+      .maybeSingle();
+
+    if (barber?.tenant_id) {
+      await supabase.from("user_active_tenant").upsert({
+        user_id: data.user.id,
+        tenant_id: barber.tenant_id,
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(
