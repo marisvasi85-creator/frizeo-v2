@@ -14,19 +14,13 @@ export function publicBookingUrl(
   barberSlug: string,
   appUrl?: string
 ) {
-  const base =
-    appUrl ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000";
+  const base = appUrl || "http://localhost:3000";
 
-  return `${base}${publicBookingPath(tenantSlug, barberSlug)}`;
+  return `${base.replace(/\/$/, "")}${publicBookingPath(tenantSlug, barberSlug)}`;
 }
 
 export function publicSalonUrl(tenantSlug: string, appUrl?: string) {
-  const base =
-    appUrl ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:3000";
+  const base = appUrl || "http://localhost:3000";
 
-  return `${base}${publicSalonPath(tenantSlug)}`;
+  return `${base.replace(/\/$/, "")}${publicSalonPath(tenantSlug)}`;
 }

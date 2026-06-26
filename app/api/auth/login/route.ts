@@ -37,17 +37,36 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: barber } = await supabase
-      .from("barbers")
-      .select("tenant_id")
-      .eq("user_id", data.user.id)
-      .maybeSingle();
+    const { data: memberships } = await supabase
+      .from("tenant_users")
+      .select("tenant_id, role")
+      .eq("user_id", data.user.id);
 
-    if (barber?.tenant_id) {
+    const ownerTenant = memberships?.find((m) => m.role === "owner");
+    const managerTenant = memberships?.find((m) => m.role === "manager");
+    const preferredTenantId =
+      ownerTenant?.tenant_id ??
+      managerTenant?.tenant_id ??
+      memberships?.[0]?.tenant_id;
+
+    if (preferredTenantId) {
       await supabase.from("user_active_tenant").upsert({
         user_id: data.user.id,
-        tenant_id: barber.tenant_id,
+        tenant_id: preferredTenantId,
       });
+    } else {
+      const { data: barber } = await supabase
+        .from("barbers")
+        .select("tenant_id")
+        .eq("user_id", data.user.id)
+        .maybeSingle();
+
+      if (barber?.tenant_id) {
+        await supabase.from("user_active_tenant").upsert({
+          user_id: data.user.id,
+          tenant_id: barber.tenant_id,
+        });
+      }
     }
 
     return NextResponse.json({ success: true });
