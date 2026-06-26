@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ROLE_PRIORITY: Record<string, number> = {
   owner: 0,
@@ -15,7 +16,8 @@ export async function getCurrentRole() {
 
   if (!user) return null;
 
-  const { data: memberships } = await supabase
+  // service_role: tenant_users RLS is circular via tenant_users_same_tenant
+  const { data: memberships } = await supabaseAdmin
     .from("tenant_users")
     .select("tenant_id, role")
     .eq("user_id", user.id);
