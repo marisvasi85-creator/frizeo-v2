@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   isValidEmail,
   isValidPassword,
@@ -37,7 +38,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: memberships } = await supabase
+    const { data: memberships } = await supabaseAdmin
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", data.user.id);

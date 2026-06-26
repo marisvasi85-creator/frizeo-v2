@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 
 export type TenantRole = "owner" | "manager" | "barber";
@@ -15,7 +16,7 @@ export async function getUserRoleInTenant(): Promise<TenantRole | null> {
   const tenant = await getActiveTenant();
   if (!tenant) return null;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("tenant_users")
     .select("role")
     .eq("tenant_id", tenant.tenant_id)
