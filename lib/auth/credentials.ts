@@ -40,9 +40,4 @@ export function mapAuthError(message?: string): string {
   return message || "A apărut o eroare. Încearcă din nou.";
 }
 
-export function getAppUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    "https://frizeo.ro"
-  );
-}
+export { getAppUrl } from "@/lib/app/getAppUrl";
