@@ -25,9 +25,4 @@ export function getPlanSlugFromStripePriceId(
   return null;
 }
 
-export function getAppUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-    "https://www.frizeo.ro"
-  );
-}
+export { getAppUrl } from "@/lib/app/getAppUrl";
