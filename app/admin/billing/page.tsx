@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import UpgradeButton from "./UpgradeButton";
+import BillingPlansSection from "./BillingPlansSection";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
+import { getTenantBillingProfile } from "@/lib/billing/getTenantBillingProfile";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -116,6 +117,8 @@ const trialDaysLeft =
     Boolean(subscription?.stripe_subscription_id) &&
     (currentPlan?.slug === "free" || isTrial);
 
+  const billingProfile = await getTenantBillingProfile(barber.tenant_id);
+
   return (
     <div className="space-y-8">
 
@@ -190,118 +193,13 @@ const trialDaysLeft =
 
       </AdminCard>
 
-      {/* PLANS */}
-      <div>
-
-        <h2 className="text-xl font-semibold mb-4">
-          Planuri disponibile
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-
-          {plans?.map((plan) => {
-            const isCurrent =
-  currentPlan?.id === plan.id;
-
-            return (
-              <div
-                key={plan.id}
-                className={`rounded-xl border p-6 ${
-                  isCurrent
-                    ? "border-green-500 bg-green-500/10"
-                    : "border-white/10 bg-[#161618]"
-                }`}
-              >
-
-                <div className="flex justify-between items-center">
-
-                  <h3 className="text-xl font-semibold">
-                    {plan.name}
-                  </h3>
-
-                  {isCurrent && (
-  <span
-    className={`text-xs px-2 py-1 rounded ${
-      isTrial
-        ? "bg-blue-500 text-white"
-        : "bg-green-500 text-black"
-    }`}
-  >
-    {isTrial ? "TRIAL ACTIV" : "ACTIV"}
-  </span>
-)}
-
-                </div>
-
-                <div className="mt-4">
-
-                  <div className="text-3xl font-bold">
-                    {plan.slug === "custom"
-                      ? "La cerere"
-                      : `${plan.price} lei`}
-                  </div>
-
-                  {plan.slug !== "custom" && (
-                    <div className="text-white/60 text-sm">/ lună</div>
-                  )}
-
-                </div>
-
-                <div className="mt-6 space-y-2 text-sm">
-
-                  <div>
-                    👥{" "}
-                    {plan.max_barbers
-                      ? `${plan.max_barbers} frizeri`
-                      : "Frizeri personalizat"}
-                  </div>
-
-                  <div>
-                    📅{" "}
-                    {plan.max_bookings_per_month
-                      ? `${plan.max_bookings_per_month} programări / lună`
-                      : "Programări nelimitate"}
-                  </div>
-
-                </div>
-
-<div className="mt-6">
-  {plan.slug === "custom" ? (
-    <a
-      href="mailto:office@frizeo.ro"
-      className="block w-full text-center bg-white text-black py-2 rounded"
-    >
-      Contactează-ne
-    </a>
-  ) : isCurrent ? (
-    <button
-      disabled
-      className={`w-full py-2 rounded ${
-        isTrial
-          ? "bg-blue-500 text-white"
-          : "bg-green-500 text-black"
-      }`}
-    >
-      {isTrial ? "Trial activ" : "Plan activ"}
-    </button>
-  ) : (
-    <UpgradeButton
-      planId={plan.id}
-      planName={plan.name}
-      allowBankTransfer={
-        allowBankTransfer && plan.slug !== "free"
-      }
-    />
-  )}
-</div>
-
-              </div>
-            );
-          })}
-
-        </div>
-
-      </div>
+      <BillingPlansSection
+        initialProfile={billingProfile}
+        plans={plans ?? []}
+        currentPlanId={currentPlan?.id}
+        isTrial={isTrial}
+        allowBankTransfer={allowBankTransfer}
+      />
 
     </div>
   );

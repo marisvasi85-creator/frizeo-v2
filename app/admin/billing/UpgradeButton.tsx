@@ -7,19 +7,25 @@ type PaymentMethod = "card" | "bank_transfer";
 type Props = {
   planId: string;
   planName: string;
-  /** Free plan — show card + bank transfer. Paid upgrade — card only. */
   allowBankTransfer?: boolean;
+  billingComplete?: boolean;
 };
 
 export default function UpgradeButton({
   planId,
   planName,
   allowBankTransfer = true,
+  billingComplete = true,
 }: Props) {
   const [loading, setLoading] = useState<PaymentMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleUpgrade(paymentMethod: PaymentMethod) {
+    if (!billingComplete) {
+      setError("Salvează mai întâi datele de facturare de mai sus.");
+      return;
+    }
+
     setLoading(paymentMethod);
     setError(null);
 
@@ -55,7 +61,7 @@ export default function UpgradeButton({
       <button
         type="button"
         onClick={() => handleUpgrade("card")}
-        disabled={loading !== null}
+        disabled={loading !== null || !billingComplete}
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading === "card" ? "Se deschide plata…" : `💳 Card — ${planName}`}
@@ -65,7 +71,7 @@ export default function UpgradeButton({
         <button
           type="button"
           onClick={() => handleUpgrade("bank_transfer")}
-          disabled={loading !== null}
+          disabled={loading !== null || !billingComplete}
           className="w-full border border-white/20 text-white py-2 rounded hover:bg-white/5 transition disabled:opacity-60 disabled:cursor-not-allowed text-sm"
         >
           {loading === "bank_transfer"

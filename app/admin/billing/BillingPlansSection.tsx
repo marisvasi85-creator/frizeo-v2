@@ -1,0 +1,155 @@
+"use client";
+
+import { useState } from "react";
+import {
+  isBillingProfileComplete,
+  type TenantBillingProfile,
+} from "@/lib/billing/billingProfile";
+import BillingProfileForm from "./BillingProfileForm";
+import UpgradeButton from "./UpgradeButton";
+
+type Plan = {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  max_barbers: number | null;
+  max_bookings_per_month: number | null;
+};
+
+type Props = {
+  initialProfile: TenantBillingProfile | null;
+  plans: Plan[];
+  currentPlanId: string | undefined;
+  isTrial: boolean;
+  allowBankTransfer: boolean;
+};
+
+export default function BillingPlansSection({
+  initialProfile,
+  plans,
+  currentPlanId,
+  isTrial,
+  allowBankTransfer,
+}: Props) {
+  const [billingComplete, setBillingComplete] = useState(
+    isBillingProfileComplete(initialProfile)
+  );
+
+  return (
+    <>
+      <BillingProfileForm
+        initialProfile={initialProfile}
+        onCompleteChange={setBillingComplete}
+      />
+
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Planuri disponibile</h2>
+
+        {!billingComplete && (
+          <p className="text-sm text-white/60 mb-4">
+            Salvează datele de facturare de mai sus, apoi alege planul și metoda
+            de plată.
+          </p>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {plans.map((plan) => {
+            const isCurrent = currentPlanId === plan.id;
+
+            return (
+              <div
+                key={plan.id}
+                className={`rounded-xl border p-6 ${
+                  isCurrent
+                    ? "border-green-500 bg-green-500/10"
+                    : "border-white/10 bg-[#161618]"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-semibold">{plan.name}</h3>
+
+                  {isCurrent && (
+                    <span
+                      className={`text-xs px-2 py-1 rounded ${
+                        isTrial
+                          ? "bg-blue-500 text-white"
+                          : "bg-green-500 text-black"
+                      }`}
+                    >
+                      {isTrial ? "TRIAL ACTIV" : "ACTIV"}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4">
+                  <div className="text-3xl font-bold">
+                    {plan.slug === "custom"
+                      ? "La cerere"
+                      : `${plan.price} lei`}
+                  </div>
+                  {plan.slug !== "custom" && (
+                    <div className="text-white/60 text-sm">/ lună</div>
+                  )}
+                </div>
+
+                <div className="mt-6 space-y-2 text-sm">
+                  <div>
+                    👥{" "}
+                    {plan.max_barbers
+                      ? `${plan.max_barbers} frizeri`
+                      : "Frizeri personalizat"}
+                  </div>
+                  <div>
+                    📅{" "}
+                    {plan.max_bookings_per_month
+                      ? `${plan.max_bookings_per_month} programări / lună`
+                      : "Programări nelimitate"}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  {plan.slug === "custom" ? (
+                    <a
+                      href="mailto:office@frizeo.ro"
+                      className="block w-full text-center bg-white text-black py-2 rounded"
+                    >
+                      Contactează-ne
+                    </a>
+                  ) : isCurrent ? (
+                    <button
+                      type="button"
+                      disabled
+                      className={`w-full py-2 rounded ${
+                        isTrial
+                          ? "bg-blue-500 text-white"
+                          : "bg-green-500 text-black"
+                      }`}
+                    >
+                      {isTrial ? "Trial activ" : "Plan activ"}
+                    </button>
+                  ) : plan.slug === "free" ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                    >
+                      Plan Free
+                    </button>
+                  ) : (
+                    <UpgradeButton
+                      planId={plan.id}
+                      planName={plan.name}
+                      allowBankTransfer={allowBankTransfer}
+                      billingComplete={billingComplete}
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
