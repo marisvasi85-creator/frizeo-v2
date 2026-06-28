@@ -12,6 +12,7 @@ import {
 import { PLAN_SLUGS, isPlanDowngrade, type PlanSlug } from "@/lib/billing/plans";
 import { getAppUrl, getStripePriceId } from "@/lib/billing/stripePrices";
 import { stripeErrorMessage } from "@/lib/stripe";
+import { isTenantBillingProfileComplete } from "@/lib/billing/getTenantBillingProfile";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -48,6 +49,20 @@ export async function POST(req: Request) {
 
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const billingComplete = await isTenantBillingProfileComplete(
+      tenant.tenant_id
+    );
+
+    if (!billingComplete) {
+      return NextResponse.json(
+        {
+          error:
+            "Completează datele de facturare înainte de a plăti.",
+        },
+        { status: 400 }
+      );
     }
 
     const body = await req.json();

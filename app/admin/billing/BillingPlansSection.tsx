@@ -17,6 +17,7 @@ type Props = {
   currentPlanId: string | undefined;
   currentPlanSlug: string | undefined;
   isTrial: boolean;
+  billingComplete: boolean;
 };
 
 export default function BillingPlansSection({
@@ -24,13 +25,14 @@ export default function BillingPlansSection({
   currentPlanId,
   currentPlanSlug,
   isTrial,
+  billingComplete,
 }: Props) {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
         Alegi planul → plătești cu cardul în Stripe → revii aici cu planul activ.
-        Factura fiscală se emite separat (FGO).
+        Factura fiscală se emite automat prin SmartBill.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -137,11 +139,26 @@ export default function BillingPlansSection({
                     Plan Free
                   </button>
                 ) : isPaidPlan ? (
-                  <UpgradeButton
-                    planId={plan.id}
-                    planName={plan.name}
-                    trialEarlyPurchase={canPurchaseDuringTrial}
-                  />
+                  billingComplete ? (
+                    <UpgradeButton
+                      planId={plan.id}
+                      planName={plan.name}
+                      trialEarlyPurchase={canPurchaseDuringTrial}
+                    />
+                  ) : (
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                      >
+                        Completează date facturare
+                      </button>
+                      <p className="text-xs text-white/50 text-center">
+                        Salvează datele SmartBill mai sus, apoi alege planul.
+                      </p>
+                    </div>
+                  )
                 ) : null}
               </div>
             </div>
