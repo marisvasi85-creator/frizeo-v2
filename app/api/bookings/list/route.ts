@@ -5,27 +5,85 @@ import {
 } from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-const BOOKING_SELECT = `
-  *,
-  barber_services (
-    display_name,
-    name,
-    duration
-  ),
-  barbers (
-    display_name
-  )
-`;
+type BookingRow = Record<string, unknown> & {
+  id: string;
+  barber_id?: string | null;
+  barber_service_id?: string | null;
+  barbers?: { display_name?: string } | null;
+  barber_services?: {
+    display_name?: string;
+    name?: string;
+    duration?: number;
+  } | null;
+};
 
-function mapBookings(data: Record<string, unknown>[] | null) {
-  return (data ?? []).map((row) => {
-    const { barbers, ...rest } = row as typeof row & {
-      barbers?: { display_name?: string } | null;
-    };
+async function enrichBookings(bookings: BookingRow[]) {
+  if (bookings.length === 0) {
+    return [];
+  }
+
+  const serviceIds = [
+    ...new Set(
+      bookings
+        .map((b) => b.barber_service_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const barberIds = [
+    ...new Set(
+      bookings
+        .map((b) => b.barber_id)
+        .filter((id): id is string => Boolean(id))
+    ),
+  ];
+
+  const [servicesResult, barbersResult] = await Promise.all([
+    serviceIds.length
+      ? supabaseAdmin
+          .from("barber_services")
+          .select("id, display_name, name, duration")
+          .in("id", serviceIds)
+      : Promise.resolve({ data: [] }),
+    barberIds.length
+      ? supabaseAdmin
+          .from("barbers")
+          .select("id, display_name")
+          .in("id", barberIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const servicesById = new Map(
+    (servicesResult.data ?? []).map((service) => [service.id, service])
+  );
+
+  const barbersById = new Map(
+    (barbersResult.data ?? []).map((barber) => [barber.id, barber])
+  );
+
+  return bookings.map((row) => {
+    const { barbers, barber_services, ...rest } = row;
+
+    const embeddedService = Array.isArray(barber_services)
+      ? barber_services[0]
+      : barber_services;
+
+    const embeddedBarber = Array.isArray(barbers) ? barbers[0] : barbers;
+
+    const service =
+      embeddedService ??
+      (row.barber_service_id
+        ? servicesById.get(row.barber_service_id) ?? null
+        : null);
+
+    const barber =
+      embeddedBarber ??
+      (row.barber_id ? barbersById.get(row.barber_id) ?? null : null);
 
     return {
       ...rest,
-      barber: barbers ?? null,
+      barber_services: service,
+      barber,
     };
   });
 }
@@ -56,7 +114,7 @@ export async function GET() {
 
   let query = supabaseAdmin
     .from("bookings")
-    .select(BOOKING_SELECT)
+    .select("*")
     .neq("status", "cancelled");
 
   if (barberIdFilter) {
@@ -78,33 +136,16 @@ export async function GET() {
     }
   }
 
-  let { data, error } = await query
+  const { data, error } = await query
     .order("date", { ascending: false })
     .order("start_time", { ascending: false });
-
-  if (error) {
-    console.error("bookings/list embed:", error);
-
-    let plainQuery = supabaseAdmin
-      .from("bookings")
-      .select("*")
-      .neq("status", "cancelled");
-
-    if (barberIdFilter) {
-      plainQuery = plainQuery.eq("barber_id", barberIdFilter);
-    } else {
-      plainQuery = plainQuery.eq("tenant_id", auth.tenantId);
-    }
-
-    ({ data, error } = await plainQuery
-      .order("date", { ascending: false })
-      .order("start_time", { ascending: false }));
-  }
 
   if (error) {
     console.error("bookings/list:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ bookings: mapBookings(data) });
+  const bookings = await enrichBookings((data ?? []) as BookingRow[]);
+
+  return NextResponse.json({ bookings });
 }

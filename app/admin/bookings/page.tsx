@@ -1,52 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import EditBookingModal from "./components/EditBookingModal";
+import BookingsGroupedList from "./components/BookingsGroupedList";
 import AdminPageHeader from "../components/AdminPageHeader";
-import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 import EmptyState from "../components/EmptyState";
 import { AdminSelect } from "../components/AdminInput";
+import {
+  groupBookingsForList,
+  type BookingRow,
+  type GroupMode,
+} from "@/lib/bookings/groupBookingsForList";
+import { cn } from "../components/cn";
 
-function formatCancelConfirm(booking: any) {
-  const time = booking.start_time?.slice(0, 5) || "";
-  return `Anulezi programarea lui ${booking.client_name} din ${booking.date} la ${time}? Clientul va primi notificare dacă e activată.`;
-}
+const GROUP_MODES: { value: GroupMode; label: string }[] = [
+  { value: "day", label: "Zile" },
+  { value: "week", label: "Săptămâni" },
+  { value: "month", label: "Luni" },
+];
+
+type BarberOption = {
+  id: string;
+  display_name: string;
+  active?: boolean;
+};
 
 export default function AdminBookingsPage() {
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [barbers, setBarbers] = useState<BarberOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
-  const [selectedBarber, setSelectedBarber] = useState("all");
+  const [selectedBarberId, setSelectedBarberId] = useState("all");
+  const [groupMode, setGroupMode] = useState<GroupMode>("day");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  async function loadBookings() {
+  async function loadData() {
     setLoading(true);
     setLoadError("");
 
-    const res = await fetch("/api/bookings/list");
-    const data = await res.json();
+    const [bookingsRes, barbersRes] = await Promise.all([
+      fetch("/api/bookings/list"),
+      fetch("/api/barbers"),
+    ]);
 
-    if (!res.ok) {
-      setLoadError(data.error || "Nu am putut încărca programările.");
+    const bookingsData = await bookingsRes.json();
+    const barbersData = await barbersRes.json();
+
+    if (!bookingsRes.ok) {
+      setLoadError(bookingsData.error || "Nu am putut încărca programările.");
       setBookings([]);
+      setBarbers(barbersData.barbers || []);
       setLoading(false);
       return;
     }
 
-    setBookings(data.bookings || []);
+    setBookings(bookingsData.bookings || []);
+    setBarbers(barbersData.barbers || []);
     setLoading(false);
   }
 
   useEffect(() => {
-    loadBookings();
+    loadData();
   }, []);
 
-  async function cancelBooking(booking: any) {
-    const ok = confirm(formatCancelConfirm(booking));
-    if (!ok) return;
-
+  async function cancelBooking(booking: BookingRow) {
     setCancellingId(booking.id);
 
     const res = await fetch("/api/bookings/cancel", {
@@ -64,35 +83,33 @@ export default function AdminBookingsPage() {
     }
 
     setCancellingId(null);
-    await loadBookings();
+    await loadData();
   }
 
-  const barberNames = [
-    "all",
-    ...new Set(
-      bookings.map((b) => b.barber?.display_name).filter(Boolean)
-    ),
-  ];
-
   const filteredBookings =
-    selectedBarber === "all"
+    selectedBarberId === "all"
       ? bookings
-      : bookings.filter(
-          (b) => b.barber?.display_name === selectedBarber
-        );
+      : bookings.filter((b) => b.barber_id === selectedBarberId);
+
+  const timeline = useMemo(
+    () => groupBookingsForList(filteredBookings, groupMode),
+    [filteredBookings, groupMode]
+  );
 
   return (
     <div className="text-white space-y-6">
       <AdminPageHeader title="Programări">
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <AdminSelect
-            value={selectedBarber}
-            onChange={(e) => setSelectedBarber(e.target.value)}
+            value={selectedBarberId}
+            onChange={(e) => setSelectedBarberId(e.target.value)}
             className="md:w-auto py-3 px-3 text-sm"
           >
-            {barberNames.map((name) => (
-              <option key={name} value={name}>
-                {name === "all" ? "Toți frizerii" : name}
+            <option value="all">Toți frizerii</option>
+            {barbers.map((barber) => (
+              <option key={barber.id} value={barber.id}>
+                {barber.display_name}
+                {!barber.active ? " (inactiv)" : ""}
               </option>
             ))}
           </AdminSelect>
@@ -103,6 +120,26 @@ export default function AdminBookingsPage() {
         </div>
       </AdminPageHeader>
 
+      {!loading && !loadError && filteredBookings.length > 0 && (
+        <div className="inline-flex rounded-lg border border-white/10 p-1 bg-[#0F0F10]">
+          {GROUP_MODES.map((mode) => (
+            <button
+              key={mode.value}
+              type="button"
+              onClick={() => setGroupMode(mode.value)}
+              className={cn(
+                "px-4 py-2 text-sm rounded-md transition",
+                groupMode === mode.value
+                  ? "bg-white text-black font-medium"
+                  : "text-white/60 hover:text-white"
+              )}
+            >
+              {mode.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="text-white/60">Se încarcă...</div>
       ) : loadError ? (
@@ -110,58 +147,13 @@ export default function AdminBookingsPage() {
       ) : filteredBookings.length === 0 ? (
         <EmptyState>Nu există programări.</EmptyState>
       ) : (
-        <div className="space-y-3">
-          {filteredBookings.map((booking) => (
-            <AdminCard
-              key={booking.id}
-              padding="sm"
-              hoverable
-              className="flex items-stretch gap-3"
-            >
-              <button
-                type="button"
-                onClick={() => setEditing(booking)}
-                className="flex-1 text-left min-w-0"
-              >
-                <div className="flex justify-between items-center gap-3">
-                  <div>
-                    <div className="font-semibold">{booking.client_name}</div>
-                    <div className="text-sm text-white/60">
-                      {booking.client_phone}
-                    </div>
-                    {booking.barber?.display_name && (
-                      <div className="text-xs text-blue-400 mt-1">
-                        👤 {booking.barber.display_name}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <div className="font-medium">
-                      {booking.barber_services?.display_name ||
-                        booking.barber_services?.name ||
-                        "Serviciu"}
-                    </div>
-                    <div className="text-sm text-white/60">{booking.date}</div>
-                    <div className="text-sm text-white/60">
-                      {booking.start_time?.slice(0, 5)}
-                    </div>
-                  </div>
-                </div>
-              </button>
-
-              <AdminButton
-                variant="danger"
-                size="sm"
-                onClick={() => cancelBooking(booking)}
-                disabled={cancellingId === booking.id}
-                className="shrink-0 self-center"
-              >
-                {cancellingId === booking.id ? "..." : "Anulează"}
-              </AdminButton>
-            </AdminCard>
-          ))}
-        </div>
+        <BookingsGroupedList
+          upcoming={timeline.upcoming}
+          past={timeline.past}
+          onEdit={setEditing}
+          onCancel={cancelBooking}
+          cancellingId={cancellingId}
+        />
       )}
 
       {editing && (
@@ -170,11 +162,11 @@ export default function AdminBookingsPage() {
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
-            loadBookings();
+            loadData();
           }}
           onCancelled={() => {
             setEditing(null);
-            loadBookings();
+            loadData();
           }}
         />
       )}

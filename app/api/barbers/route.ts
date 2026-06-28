@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET() {
   try {
-    const supabase = await createSupabaseServerClient();
-
     const barber = await getCurrentBarberInTenant();
 
     if (!barber) {
-      return NextResponse.json(
-        { barbers: [] },
-        { status: 401 }
-      );
+      return NextResponse.json({ barbers: [] }, { status: 401 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("barbers")
       .select(`
   id,
