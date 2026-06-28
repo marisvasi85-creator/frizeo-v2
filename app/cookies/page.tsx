@@ -1,5 +1,13 @@
 import LegalPageLayout from "@/app/components/LegalPageLayout";
 import { LEGAL_COMPANY } from "@/lib/legal/company";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Politica cookies",
+  description:
+    "Ce cookie-uri și stocare locală folosește Frizeo, inclusiv sesiune, Stripe Checkout și Google Calendar.",
+  path: "/cookies",
+});
 
 export default function CookiesPage() {
   const c = LEGAL_COMPANY;

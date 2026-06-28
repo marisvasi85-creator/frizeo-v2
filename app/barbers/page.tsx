@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Frizeri disponibili",
+  description:
+    "Alege un frizer și programează-te online. Pagini publice de programări Frizeo.",
+  path: "/barbers",
+  keywords: ["programare frizer online", "frizeri frizeo"],
+});
 
 export default async function BarbersPage() {
   const { data: barbers } = await supabaseAdmin

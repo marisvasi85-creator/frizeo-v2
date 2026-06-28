@@ -1,10 +1,31 @@
 import Link from "next/link";
-import { LEGAL_PRICING } from "@/lib/legal/company";
+import type { Metadata } from "next";
+import JsonLd from "@/app/components/JsonLd";
+import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import {
+  jsonLdGraph,
+  organizationJsonLd,
+  softwareApplicationJsonLd,
+  webSiteJsonLd,
+} from "@/lib/site/jsonLd";
 
 const LANDING_VIDEO_ID = "do-k1cNkCOg";
 
+export const metadata: Metadata = {
+  alternates: { canonical: LEGAL_COMPANY.website },
+  openGraph: { url: LEGAL_COMPANY.website },
+};
+
 export default function Page() {
   return (
+    <>
+      <JsonLd
+        data={jsonLdGraph(
+          organizationJsonLd(),
+          webSiteJsonLd(),
+          softwareApplicationJsonLd()
+        )}
+      />
     <main className="bg-white text-gray-900">
 
       {/* HERO */}
@@ -241,5 +262,6 @@ export default function Page() {
       </section>
 
     </main>
+    </>
   );
 }

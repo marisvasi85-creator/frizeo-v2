@@ -1,8 +1,29 @@
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import { breadcrumbJsonLd } from "@/lib/site/jsonLd";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Prețuri",
+  description: `Planuri Free, Pro și Pro+ pentru programări online. ${LEGAL_PRICING.trialDays} zile trial Pro+ gratuit cu SMS inclus.`,
+  path: "/pricing",
+  keywords: [
+    "prețuri frizeo",
+    "abonament programări frizerie",
+    "plan pro frizerie",
+  ],
+});
 
 export default function PricingPage() {
   return (
+    <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Acasă", path: "/" },
+          { name: "Prețuri", path: "/pricing" },
+        ])}
+      />
     <main className="bg-white text-gray-900">
       <section className="px-6 py-20 max-w-5xl mx-auto text-center">
         <h1 className="text-4xl font-semibold mb-4">Prețuri simple</h1>
@@ -75,5 +96,6 @@ export default function PricingPage() {
         </p>
       </section>
     </main>
+    </>
   );
 }

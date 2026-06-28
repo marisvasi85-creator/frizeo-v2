@@ -1,8 +1,29 @@
 import Link from "next/link";
+import JsonLd from "@/app/components/JsonLd";
 import { LEGAL_COMPANY } from "@/lib/legal/company";
+import { breadcrumbJsonLd, contactPageJsonLd } from "@/lib/site/jsonLd";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Contact",
+  description:
+    "Contactează echipa Frizeo pentru suport, întrebări despre cont sau planuri Pro, Pro+ și Custom.",
+  path: "/contact",
+  keywords: ["contact frizeo", "suport programări frizerie"],
+});
 
 export default function ContactPage() {
   return (
+    <>
+      <JsonLd
+        data={contactPageJsonLd()}
+      />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Acasă", path: "/" },
+          { name: "Contact", path: "/contact" },
+        ])}
+      />
     <main className="bg-white text-gray-900">
       <section className="px-6 py-20 max-w-2xl mx-auto">
         <h1 className="text-4xl font-semibold mb-4">Contact</h1>
@@ -65,5 +86,6 @@ export default function ContactPage() {
         </p>
       </section>
     </main>
+    </>
   );
 }

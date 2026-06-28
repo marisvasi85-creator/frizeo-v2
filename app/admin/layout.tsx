@@ -4,6 +4,9 @@ import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
 import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { noIndexMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = noIndexMetadata;
 
 export default async function AdminLayout({
   children,

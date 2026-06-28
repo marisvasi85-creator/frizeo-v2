@@ -1,5 +1,13 @@
 import LegalPageLayout from "@/app/components/LegalPageLayout";
 import { LEGAL_COMPANY } from "@/lib/legal/company";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Politica de confidențialitate",
+  description:
+    "Cum prelucrăm datele personale în Frizeo: conturi salon, programări, plăți Stripe și drepturile tale GDPR.",
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   const c = LEGAL_COMPANY;

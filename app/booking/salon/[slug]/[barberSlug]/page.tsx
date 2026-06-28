@@ -1,5 +1,86 @@
 import BookingClient from "@/app/booking/[barberId]/components/BookingClient";
+import type { Metadata } from "next";
+import JsonLd from "@/app/components/JsonLd";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { barberBookingJsonLd } from "@/lib/site/jsonLd";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+async function getSalon(slug: string) {
+  const { data } = await supabaseAdmin
+    .from("tenants")
+    .select(`
+      id,
+      name,
+      slug,
+      logo_url,
+      phone,
+      address,
+      description
+    `)
+    .eq("slug", slug)
+    .single();
+
+  return data;
+}
+
+async function getActiveBarber(tenantId: string, barberSlug: string) {
+  const { data } = await supabaseAdmin
+    .from("barbers")
+    .select(`
+      id,
+      display_name,
+      avatar_url,
+      bio,
+      instagram_url
+    `)
+    .eq("tenant_id", tenantId)
+    .eq("slug", barberSlug)
+    .eq("active", true)
+    .single();
+
+  return data;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{
+    slug: string;
+    barberSlug: string;
+  }>;
+}): Promise<Metadata> {
+  const { slug, barberSlug } = await params;
+  const salon = await getSalon(slug);
+
+  if (!salon) {
+    return createPageMetadata({
+      title: "Salon inexistent",
+      description: "Pagina salonului nu a fost găsită.",
+      path: `/booking/salon/${slug}/${barberSlug}`,
+      noIndex: true,
+    });
+  }
+
+  const barber = await getActiveBarber(salon.id, barberSlug);
+
+  if (!barber) {
+    return createPageMetadata({
+      title: "Frizer indisponibil",
+      description: `${barberSlug} nu este disponibil pentru programări online.`,
+      path: `/booking/salon/${slug}/${barberSlug}`,
+      noIndex: true,
+    });
+  }
+
+  const barberName = barber.display_name || "Frizer";
+
+  return createPageMetadata({
+    title: `Programare online — ${barberName}`,
+    description: `Programează-te la ${barberName}, ${salon.name}. Alege serviciul, data și ora disponibilă.`,
+    path: `/booking/salon/${slug}/${barberSlug}`,
+    keywords: [barberName, salon.name, "programare frizer online"],
+  });
+}
 
 export default async function Page({
   params,
@@ -9,23 +90,8 @@ export default async function Page({
     barberSlug: string;
   }>;
 }) {
-  const {
-    slug,
-    barberSlug,
-  } = await params;
-
-  const { data: salon } = await supabaseAdmin
-  .from("tenants")
-  .select(`
-    id,
-    name,
-    logo_url,
-    phone,
-    address,
-    description
-  `)
-    .eq("slug", slug)
-    .single();
+  const { slug, barberSlug } = await params;
+  const salon = await getSalon(slug);
 
   if (!salon) {
     return <div>Salon inexistent</div>;
@@ -47,119 +113,96 @@ export default async function Page({
     );
   }
 
-  const { data: barber } = await supabaseAdmin
-  .from("barbers")
-  .select(`
-    id,
-    display_name,
-    avatar_url,
-    bio,
-    instagram_url
-  `)
-    .eq("tenant_id", salon.id)
-    .eq("slug", barberSlug)
-    .eq("active", true)
-    .single();
+  const barber = await getActiveBarber(salon.id, barberSlug);
 
   if (!barber) {
     return <div>Frizer inexistent</div>;
   }
 
+  const barberName = barber.display_name || "Frizer";
+
   return (
-  <div className="bg-white min-h-screen">
-
-    <div className="max-w-5xl mx-auto px-4 py-8">
-
-      <div className="bg-white border rounded-2xl p-6 mb-6">
-
-        <div className="flex flex-col md:flex-row gap-6 items-center">
-
-          {salon.logo_url && (
-            <img
-              src={salon.logo_url}
-              alt=""
-              className="w-24 h-24 rounded-2xl object-cover"
-            />
-          )}
-
-          <div>
-
-            <h1 className="text-3xl font-bold">
-              {salon.name}
-            </h1>
-
-            {salon.phone && (
-              <p className="text-gray-600 mt-2">
-                📞 {salon.phone}
-              </p>
-            )}
-
-            {salon.address && (
-              <p className="text-gray-600">
-                📍 {salon.address}
-              </p>
-            )}
-
-          </div>
-
-        </div>
-
-        {salon.description && (
-          <p className="mt-4 text-gray-700">
-            {salon.description}
-          </p>
-        )}
-
-      </div>
-
-      <div className="bg-white border rounded-2xl p-6 mb-8">
-
-        <div className="flex items-center gap-4">
-
-          {barber.avatar_url ? (
-            <img
-              src={barber.avatar_url}
-              alt=""
-              className="w-20 h-20 rounded-full object-cover"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-200" />
-          )}
-
-          <div>
-
-            <h2 className="text-xl font-semibold">
-              {barber.display_name}
-            </h2>
-
-            {barber.bio && (
-              <p className="text-gray-600">
-                {barber.bio}
-              </p>
-            )}
-
-            {barber.instagram_url && (
-              <a
-                href={barber.instagram_url}
-                target="_blank"
-                className="text-blue-600 text-sm"
-              >
-                Instagram
-              </a>
-            )}
-
-          </div>
-
-        </div>
-
-      </div>
-
-      <BookingClient
-        barberId={barber.id}
-        barberName={barber.display_name}
+    <>
+      <JsonLd
+        data={barberBookingJsonLd({
+          salon: {
+            name: salon.name,
+            slug: salon.slug,
+            phone: salon.phone,
+            address: salon.address,
+            description: salon.description,
+            logoUrl: salon.logo_url,
+          },
+          barberName,
+          barberSlug,
+        })}
       />
+      <div className="bg-white min-h-screen">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="bg-white border rounded-2xl p-6 mb-6">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              {salon.logo_url && (
+                <img
+                  src={salon.logo_url}
+                  alt={`Logo ${salon.name}`}
+                  className="w-24 h-24 rounded-2xl object-cover"
+                />
+              )}
 
-    </div>
+              <div>
+                <h1 className="text-3xl font-bold">{salon.name}</h1>
 
-  </div>
-);}
+                {salon.phone && (
+                  <p className="text-gray-600 mt-2">📞 {salon.phone}</p>
+                )}
+
+                {salon.address && (
+                  <p className="text-gray-600">📍 {salon.address}</p>
+                )}
+              </div>
+            </div>
+
+            {salon.description && (
+              <p className="mt-4 text-gray-700">{salon.description}</p>
+            )}
+          </div>
+
+          <div className="bg-white border rounded-2xl p-6 mb-8">
+            <div className="flex items-center gap-4">
+              {barber.avatar_url ? (
+                <img
+                  src={barber.avatar_url}
+                  alt={`${barberName} — ${salon.name}`}
+                  className="w-20 h-20 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200" />
+              )}
+
+              <div>
+                <h2 className="text-xl font-semibold">{barberName}</h2>
+
+                {barber.bio && (
+                  <p className="text-gray-600">{barber.bio}</p>
+                )}
+
+                {barber.instagram_url && (
+                  <a
+                    href={barber.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 text-sm"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <BookingClient barberId={barber.id} barberName={barberName} />
+        </div>
+      </div>
+    </>
+  );
+}

@@ -1,5 +1,13 @@
 import LegalPageLayout from "@/app/components/LegalPageLayout";
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+export const metadata = createPageMetadata({
+  title: "Termeni și condiții",
+  description:
+    "Termenii de utilizare Frizeo: planuri, plată Stripe, obligații salon, anulare abonament și lege aplicabilă.",
+  path: "/terms",
+});
 
 export default function TermsPage() {
   const c = LEGAL_COMPANY;
