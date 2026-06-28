@@ -4,16 +4,10 @@ import {
   publicBookingUrl,
   publicSalonUrl,
 } from "@/lib/booking/publicBookingPath";
+import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
+import { slugify } from "@/lib/utils/slugify";
 
 export async function GET() {
   const barber = await getCurrentBarberInTenant();
@@ -32,16 +26,8 @@ export async function GET() {
     return NextResponse.json({ url: null });
   }
 
-  let tenantSlug = tenant.slug;
+  const tenantSlug = await ensureTenantSlug(tenant);
   let barberSlug = barber.slug;
-
-  if (!tenantSlug) {
-    tenantSlug = slugify(tenant.name || "salon");
-    await supabaseAdmin
-      .from("tenants")
-      .update({ slug: tenantSlug })
-      .eq("id", tenant.id);
-  }
 
   if (!barberSlug) {
     barberSlug = slugify(barber.display_name || "frizer");

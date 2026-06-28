@@ -30,7 +30,8 @@ export default function ServicesClient({
     });
 
     if (!res.ok) {
-      alert("Eroare la ștergere");
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Eroare la ștergere");
       return;
     }
 
@@ -51,7 +52,8 @@ export default function ServicesClient({
     });
 
     if (!res.ok) {
-      alert("Eroare toggle");
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Eroare toggle");
       return;
     }
 
@@ -59,7 +61,7 @@ export default function ServicesClient({
 
     setItems((prev) =>
       prev.map((s) =>
-        s.id === id ? { ...s, active: data.active } : s
+        s.id === id ? { ...s, active: data.service.active } : s
       )
     );
   }

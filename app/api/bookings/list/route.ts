@@ -1,77 +1,72 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { NextResponse } from "next/server";
+import {
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
+  const auth = await requireTenantAccess(["owner", "manager", "barber"]);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return Response.json({ bookings: [] });
+  if (isAuthError(auth)) {
+    return NextResponse.json({ bookings: [] }, { status: 401 });
   }
 
-  const role = await getCurrentRole();
-
-  const { data: barber } = await supabase
-    .from("barbers")
-    .select("id, tenant_id")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!barber) {
-    return Response.json({ bookings: [] });
-  }
-
-  let query = supabase
+  let query = supabaseAdmin
     .from("bookings")
-    .select(`
-  *,
-  barber_services:barber_services!bookings_barber_service_id_fkey (
-    display_name,
-    name,
-    duration
-  ),
-  barber:barbers (
-    display_name
-  )
-`)
+    .select(
+      `
+      *,
+      barber_services (
+        display_name,
+        name,
+        duration
+      ),
+      barbers (
+        display_name
+      )
+    `
+    )
+    .eq("tenant_id", auth.tenantId)
     .neq("status", "cancelled");
 
-  // OWNER -> toate programările salonului
-  if (role === "owner") {
-    query = query.eq(
-      "tenant_id",
-      barber.tenant_id
-    );
-  }
+  if (auth.role === "barber") {
+    const { data: barber } = await supabaseAdmin
+      .from("barbers")
+      .select("id")
+      .eq("user_id", auth.user.id)
+      .eq("tenant_id", auth.tenantId)
+      .maybeSingle();
 
-  // BARBER -> doar programările lui
-  else {
-    query = query.eq(
-      "barber_id",
-      barber.id
-    );
+    if (!barber) {
+      return NextResponse.json({ bookings: [] });
+    }
+
+    query = query.eq("barber_id", barber.id);
   }
 
   const { data, error } = await query
-    .order("date", {
-      ascending: false,
-    })
-    .order("start_time", {
-      ascending: false,
-    });
+    .order("date", { ascending: false })
+    .order("start_time", { ascending: false });
 
   if (error) {
-    console.error(error);
-
-    return Response.json({
-      bookings: [],
-    });
+    console.error("bookings/list:", error);
+    return NextResponse.json(
+      { bookings: [], error: error.message },
+      { status: 500 }
+    );
   }
 
-  return Response.json({
-    bookings: data || [],
+  const bookings = (data ?? []).map((row) => {
+    const { barbers, ...rest } = row as typeof row & {
+      barbers?: { display_name?: string } | null;
+    };
+
+    return {
+      ...rest,
+      barber: barbers ?? null,
+    };
   });
+
+  return NextResponse.json({ bookings });
 }

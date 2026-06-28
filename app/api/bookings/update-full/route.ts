@@ -6,6 +6,7 @@ import {
   requireTenantAccess,
   serviceBelongsToTenant,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
 
 export async function POST(req: Request) {
@@ -38,7 +39,6 @@ export async function POST(req: Request) {
         : null;
 
     const canAccess = await bookingAccessibleByUser(
-      auth.supabase,
       id,
       auth.tenantId,
       auth.role,
@@ -51,7 +51,6 @@ export async function POST(req: Request) {
 
     if (barber_service_id) {
       const serviceOk = await serviceBelongsToTenant(
-        auth.supabase,
         barber_service_id,
         auth.tenantId
       );
@@ -61,13 +60,13 @@ export async function POST(req: Request) {
       }
     }
 
-    const { data: booking } = await auth.supabase
+    const { data: booking } = await supabaseAdmin
       .from("bookings")
       .select("barber_id")
       .eq("id", id)
       .single();
 
-    const { data: service } = await auth.supabase
+    const { data: service } = await supabaseAdmin
       .from("barber_services")
       .select("duration")
       .eq("id", barber_service_id)
@@ -76,7 +75,7 @@ export async function POST(req: Request) {
     const duration = service?.duration || 30;
     const end_time = addMinutesToTime(start_time, duration);
 
-    const { data: existing } = await auth.supabase
+    const { data: existing } = await supabaseAdmin
       .from("bookings")
       .select("id, start_time, end_time")
       .eq("date", date)
@@ -92,7 +91,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Slot ocupat" }, { status: 400 });
     }
 
-    const { error } = await auth.supabase
+    const { error } = await supabaseAdmin
       .from("bookings")
       .update({
         client_name,

@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { updateSalon } from "./actions";
@@ -7,11 +6,12 @@ import CopySalonLink from "./CopySalonLink";
 import LogoUpload from "./LogoUpload";
 import GalleryUpload from "./GalleryUpload";
 import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
+import { getAppUrl } from "@/lib/app/getAppUrl";
+import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 
 export default async function SalonPage() {
-  const supabase = await createSupabaseServerClient();
-
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
@@ -24,13 +24,13 @@ export default async function SalonPage() {
     redirect("/admin/dashboard");
   }
 
-  const { data: tenant } = await supabase
+  const { data: tenant } = await supabaseAdmin
     .from("tenants")
     .select("*")
     .eq("id", barber.tenant_id)
     .single();
-console.log("TENANT:", tenant);
-  const { data: subscription } = await supabase
+
+  const { data: subscription } = await supabaseAdmin
     .from("subscriptions")
     .select(`
       plans (
@@ -41,8 +41,7 @@ console.log("TENANT:", tenant);
     .eq("tenant_id", barber.tenant_id)
     .single();
 
-    const { data: gallery } =
-  await supabase
+    const { data: gallery } = await supabaseAdmin
     .from("salon_gallery")
     .select("*")
     .eq(
@@ -51,7 +50,7 @@ console.log("TENANT:", tenant);
     )
     .order("created_at");
 
-  const { count: activeBarbers } = await supabase
+  const { count: activeBarbers } = await supabaseAdmin
     .from("barbers")
     .select("*", {
       count: "exact",
@@ -63,7 +62,7 @@ console.log("TENANT:", tenant);
   const firstDayOfMonth = new Date();
 firstDayOfMonth.setDate(1);
 
-const { count: monthBookings } = await supabase
+const { count: monthBookings } = await supabaseAdmin
   .from("bookings")
   .select("*", {
     count: "exact",
@@ -78,7 +77,11 @@ const { count: monthBookings } = await supabase
       .split("T")[0]
   );
 
-  const salonUrl = publicSalonUrl(tenant?.slug || "");
+  const tenantSlug = tenant
+    ? await ensureTenantSlug(tenant)
+    : "";
+
+  const salonUrl = publicSalonUrl(tenantSlug, getAppUrl());
 
   const plan = subscription?.plans as any;
 

@@ -3,6 +3,7 @@ import type { User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { TenantRole } from "./getUserRoleInTenant";
 
 export type TenantAuthContext = {
@@ -37,18 +38,31 @@ export async function requireTenantAccess(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: membership, error } = await supabase
+  const { data: membership } = await supabase
     .from("tenant_users")
     .select("role")
     .eq("tenant_id", tenant.tenant_id)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (error || !membership) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let role = membership?.role as TenantRole | undefined;
+
+  if (!role) {
+    const { data: barber } = await supabase
+      .from("barbers")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("tenant_id", tenant.tenant_id)
+      .maybeSingle();
+
+    if (barber) {
+      role = "barber";
+    }
   }
 
-  const role = membership.role as TenantRole;
+  if (!role) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -78,29 +92,75 @@ export async function barberBelongsToTenant(
 }
 
 export async function serviceBelongsToTenant(
-  supabase: SupabaseClient,
   serviceId: string,
   tenantId: string
 ): Promise<boolean> {
-  const { data: service } = await supabase
+  const { data: service } = await supabaseAdmin
     .from("barber_services")
-    .select("barber_id")
+    .select("barber_id, tenant_id")
     .eq("id", serviceId)
     .maybeSingle();
 
-  if (!service?.barber_id) return false;
+  if (!service) return false;
 
-  return barberBelongsToTenant(supabase, service.barber_id, tenantId);
+  if (service.tenant_id && service.tenant_id !== tenantId) {
+    return false;
+  }
+
+  const { data: barber } = await supabaseAdmin
+    .from("barbers")
+    .select("id")
+    .eq("id", service.barber_id)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  return Boolean(barber);
+}
+
+export async function assertServiceAccess(
+  auth: TenantAuthContext,
+  serviceId: string
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const allowed = await serviceBelongsToTenant(serviceId, auth.tenantId);
+
+  if (!allowed) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+    };
+  }
+
+  if (auth.role === "barber") {
+    const barberId = await getCurrentBarberId(
+      auth.supabase,
+      auth.user.id,
+      auth.tenantId
+    );
+
+    const { data: service } = await supabaseAdmin
+      .from("barber_services")
+      .select("barber_id")
+      .eq("id", serviceId)
+      .maybeSingle();
+
+    if (!service || service.barber_id !== barberId) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: "Forbidden" }, { status: 403 }),
+      };
+    }
+  }
+
+  return { ok: true };
 }
 
 export async function bookingAccessibleByUser(
-  supabase: SupabaseClient,
   bookingId: string,
   tenantId: string,
   role: TenantRole,
   barberId: string | null
 ): Promise<boolean> {
-  const { data: booking } = await supabase
+  const { data: booking } = await supabaseAdmin
     .from("bookings")
     .select("id, tenant_id, barber_id")
     .eq("id", bookingId)

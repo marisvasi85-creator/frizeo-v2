@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  assertServiceAccess,
   isAuthError,
   requireTenantAccess,
-  serviceBelongsToTenant,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -20,19 +21,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing data" }, { status: 400 });
     }
 
-    const serviceOk = await serviceBelongsToTenant(
-      auth.supabase,
-      id,
-      auth.tenantId
-    );
-
-    if (!serviceOk) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const access = await assertServiceAccess(auth, id);
+    if (!access.ok) {
+      return access.response;
     }
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabaseAdmin
       .from("barber_services")
-      .update({ active })
+      .update({ active: Boolean(active) })
       .eq("id", id)
       .select()
       .single();

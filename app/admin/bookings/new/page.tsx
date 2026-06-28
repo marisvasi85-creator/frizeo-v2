@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import AddBookingClient from "./AddBookingClient";
 
 export default async function Page() {
@@ -14,17 +16,13 @@ export default async function Page() {
     redirect("/login");
   }
 
-  const { data: barber } = await supabase
-    .from("barbers")
-    .select("*")
-    .eq("user_id", user.id)
-    .single();
+  const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
     redirect("/admin");
   }
 
-  const { data: services } = await supabase
+  const { data: services } = await supabaseAdmin
     .from("barber_services")
     .select("*")
     .eq("barber_id", barber.id)
@@ -38,7 +36,7 @@ export default async function Page() {
   let barbers: any[] = [];
 
   if (role === "owner") {
-    const { data } = await supabase
+    const { data } = await supabaseAdmin
       .from("barbers")
       .select(`
         id,

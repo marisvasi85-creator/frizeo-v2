@@ -5,6 +5,7 @@ import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import BookingLinkCard from "./BookingLinkCard";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 
@@ -43,16 +44,14 @@ const role = await getCurrentRole();
   const today =
     new Date().toISOString().split("T")[0];
 
-  const { data: todayBookings } =
-    await supabase
+  const { data: todayBookings } = await supabaseAdmin
       .from("bookings")
       .select("*")
       .eq("barber_id", barber.id)
       .eq("date", today)
       .eq("status", "confirmed");
 
-  const { data: upcoming } =
-    await supabase
+  const { data: upcoming } = await supabaseAdmin
       .from("bookings")
       .select("*")
       .eq("barber_id", barber.id)

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabasePublicClient } from "@/lib/supabase/public";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,9 +9,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ services: [] });
   }
 
-  const supabase = createSupabasePublicClient();
-
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("barber_services")
     .select(`
       id,

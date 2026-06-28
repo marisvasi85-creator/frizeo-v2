@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  bookingAccessibleByUser,
+  getCurrentBarberId,
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
@@ -17,13 +20,32 @@ export async function POST(req: NextRequest) {
 
     const { token, bookingId } = body;
 
-    const supabase = await createSupabaseServerClient();
-
     let booking = null;
 
-    // 🔥 ADMIN
     if (bookingId) {
-      const { data } = await supabase
+      const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+
+      if (isAuthError(auth)) {
+        return auth;
+      }
+
+      const barberId =
+        auth.role === "barber"
+          ? await getCurrentBarberId(auth.supabase, auth.user.id, auth.tenantId)
+          : null;
+
+      const canAccess = await bookingAccessibleByUser(
+        bookingId,
+        auth.tenantId,
+        auth.role,
+        barberId
+      );
+
+      if (!canAccess) {
+        return NextResponse.json({ error: "Neautorizat" }, { status: 403 });
+      }
+
+      const { data } = await supabaseAdmin
         .from("bookings")
         .select("*")
         .eq("id", bookingId)
@@ -32,7 +54,6 @@ export async function POST(req: NextRequest) {
       booking = data;
     }
 
-    // 🔥 PUBLIC
     if (token) {
       const { data } = await supabaseAdmin
         .from("bookings")
@@ -57,133 +78,70 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (bookingId) {
-      const barber = await getCurrentBarberInTenant();
-
-      if (!barber) {
-        return NextResponse.json(
-          { error: "Neautorizat" },
-          { status: 401 }
-        );
-      }
-
-      const role = await getCurrentRole();
-      const allowed =
-        role === "owner"
-          ? booking.tenant_id === barber.tenant_id
-          : booking.barber_id === barber.id;
-
-      if (!allowed) {
-        return NextResponse.json(
-          { error: "Neautorizat" },
-          { status: 403 }
-        );
-      }
-    }
-
     const settings = await getNotificationSettings(booking.tenant_id);
     const smsAllowed = await smsAllowedForTenant(booking.tenant_id);
-    const db = token ? supabaseAdmin : supabase;
 
-    // 🔥 GOOGLE CALENDAR
+    try {
+      if (booking.google_event_id) {
+        const { data: googleAccount } = await supabaseAdmin
+          .from("barber_google_accounts")
+          .select("*")
+          .eq("barber_id", booking.barber_id)
+          .single();
 
-try {
+        if (googleAccount?.access_token) {
+          let accessToken = googleAccount.access_token;
 
-  if (booking.google_event_id) {
+          const expiresAt = new Date(googleAccount.expires_at);
 
-    const { data: googleAccount } =
-      await db
-        .from("barber_google_accounts")
-        .select("*")
-        .eq("barber_id", booking.barber_id)
-        .single();
+          const shouldRefresh =
+            expiresAt.getTime() < Date.now() + 5 * 60 * 1000;
 
-    if (googleAccount?.access_token) {
-
-      let accessToken =
-        googleAccount.access_token;
-
-      const expiresAt = new Date(
-        googleAccount.expires_at
-      );
-
-      const shouldRefresh =
-        expiresAt.getTime() <
-        Date.now() + 5 * 60 * 1000;
-
-      if (
-        shouldRefresh &&
-        googleAccount.refresh_token
-      ) {
-
-        const refreshed =
-          await refreshAccessToken(
-            googleAccount.refresh_token
-          );
-
-        if (refreshed?.access_token) {
-
-          accessToken =
-            refreshed.access_token;
-
-          await db
-            .from("barber_google_accounts")
-            .update({
-              access_token:
-                refreshed.access_token,
-
-              expires_at: new Date(
-                Date.now() +
-                  refreshed.expires_in *
-                    1000
-              ).toISOString(),
-            })
-            .eq(
-              "barber_id",
-              booking.barber_id
+          if (shouldRefresh && googleAccount.refresh_token) {
+            const refreshed = await refreshAccessToken(
+              googleAccount.refresh_token
             );
+
+            if (refreshed?.access_token) {
+              accessToken = refreshed.access_token;
+
+              await supabaseAdmin
+                .from("barber_google_accounts")
+                .update({
+                  access_token: refreshed.access_token,
+                  expires_at: new Date(
+                    Date.now() + refreshed.expires_in * 1000
+                  ).toISOString(),
+                })
+                .eq("barber_id", booking.barber_id);
+            }
+          }
+
+          await deleteGoogleEvent({
+            accessToken,
+            calendarId: googleAccount.calendar_id || "primary",
+            eventId: booking.google_event_id,
+          });
+
+          console.log("GOOGLE EVENT DELETED:", booking.google_event_id);
         }
       }
-
-      await deleteGoogleEvent({
-        accessToken,
-        calendarId:
-          googleAccount.calendar_id ||
-          "primary",
-        eventId:
-          booking.google_event_id,
-      });
-
-      console.log(
-        "GOOGLE EVENT DELETED:",
-        booking.google_event_id
-      );
+    } catch (e) {
+      console.error("GOOGLE DELETE ERROR:", e);
     }
-  }
 
-} catch (e) {
+    await supabaseAdmin
+      .from("bookings")
+      .update({
+        status: "cancelled",
+      })
+      .eq("id", booking.id);
 
-  console.error(
-    "GOOGLE DELETE ERROR:",
-    e
-  );
-
-}
-
-// 🔥 UPDATE STATUS
-
-await db
-  .from("bookings")
-  .update({
-    status: "cancelled",
-  })
-  .eq("id", booking.id);
-  
-    // 🔥 EMAIL CLIENT
-if (
-  booking.client_email &&
-  settings?.cancel_email_enabled
-) {      await sendEmail({
+    if (
+      booking.client_email &&
+      settings?.cancel_email_enabled
+    ) {
+      await sendEmail({
         to: booking.client_email,
         subject: "Programare anulată",
         html: cancelBookingTemplate({
@@ -194,48 +152,31 @@ if (
       });
     }
 
-    // 🔥 SMS CLIENT
-
-if (
-  booking.client_phone &&
-  settings?.cancel_sms_enabled &&
-  smsAllowed
-) {
-
-  try {
-
-    await sendSms({
-      phone: booking.client_phone,
-
-      message:
-`Frizeo
+    if (
+      booking.client_phone &&
+      settings?.cancel_sms_enabled &&
+      smsAllowed
+    ) {
+      try {
+        await sendSms({
+          phone: booking.client_phone,
+          message: `Frizeo
 
 Programarea ta din
 ${booking.date}
 ${booking.start_time}
 
 a fost anulata.`,
-    });
-
-  } catch (e) {
-
-    console.error(
-      "CANCEL SMS ERROR:",
-      e
-    );
-
-  }
-
-}
+        });
+      } catch (e) {
+        console.error("CANCEL SMS ERROR:", e);
+      }
+    }
 
     return NextResponse.json({ success: true });
-
   } catch (err) {
     console.error(err);
 
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

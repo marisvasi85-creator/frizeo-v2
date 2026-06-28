@@ -6,6 +6,7 @@ import {
   requireTenantAccess,
   serviceBelongsToTenant,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -36,7 +37,6 @@ export async function POST(req: Request) {
         : null;
 
     const canAccess = await bookingAccessibleByUser(
-      auth.supabase,
       id,
       auth.tenantId,
       auth.role,
@@ -49,7 +49,6 @@ export async function POST(req: Request) {
 
     if (barber_service_id) {
       const serviceOk = await serviceBelongsToTenant(
-        auth.supabase,
         barber_service_id,
         auth.tenantId
       );
@@ -59,7 +58,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const { data: service } = await auth.supabase
+    const { data: service } = await supabaseAdmin
       .from("barber_services")
       .select("duration")
       .eq("id", barber_service_id)
@@ -74,7 +73,7 @@ export async function POST(req: Request) {
 
     const end_time = end.toTimeString().slice(0, 5);
 
-    const { error } = await auth.supabase
+    const { error } = await supabaseAdmin
       .from("bookings")
       .update({
         client_name,

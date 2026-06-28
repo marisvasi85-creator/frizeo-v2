@@ -1,16 +1,14 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { redirect } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import ServicesClient from "./ServicesClient";
 
 export default async function ServicesPage() {
-  const supabase = await createSupabaseServerClient();
-
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) redirect("/login");
 
-  const { data: services, error } = await supabase
+  const { data: services, error } = await supabaseAdmin
     .from("barber_services")
     .select(`
       id,

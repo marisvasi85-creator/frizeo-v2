@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import {
+  assertServiceAccess,
   isAuthError,
   requireTenantAccess,
-  serviceBelongsToTenant,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ALLOWED_DURATIONS = [15, 30, 45, 60, 75, 90, 120];
 
@@ -27,17 +28,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Durată invalidă" }, { status: 400 });
     }
 
-    const serviceOk = await serviceBelongsToTenant(
-      auth.supabase,
-      id,
-      auth.tenantId
-    );
-
-    if (!serviceOk) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const access = await assertServiceAccess(auth, id);
+    if (!access.ok) {
+      return access.response;
     }
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabaseAdmin
       .from("barber_services")
       .update({
         name,

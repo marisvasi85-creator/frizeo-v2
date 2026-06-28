@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { cn } from "./cn";
 
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href);
+}
+
 type Variant = "primary" | "secondary" | "danger" | "ghost";
 type Size = "sm" | "md";
 
@@ -69,6 +73,14 @@ export default function AdminButton(props: AdminButtonProps) {
 
   if (href) {
     const { href: _href, ...linkProps } = rest as AdminButtonAsLink;
+
+    if (isExternalHref(href)) {
+      return (
+        <a href={href} className={classes} {...linkProps}>
+          {content}
+        </a>
+      );
+    }
 
     return (
       <Link href={href} className={classes} {...linkProps}>

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { addDays, format } from "date-fns";
 import { jsDayToScheduleDay } from "@/lib/schedule/time";
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
     const { searchParams } = new URL(req.url);
 
     const barberId = searchParams.get("barberId");
@@ -21,12 +20,12 @@ export async function GET(req: Request) {
       });
     }
 
-    const { data: weekly } = await supabase
+    const { data: weekly } = await supabaseAdmin
       .from("barber_weekly_schedule")
       .select("*")
       .eq("barber_id", barberId);
 
-    const { data: overrides } = await supabase
+    const { data: overrides } = await supabaseAdmin
       .from("barber_day_overrides")
       .select("*")
       .eq("barber_id", barberId);
