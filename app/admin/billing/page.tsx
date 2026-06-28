@@ -188,6 +188,7 @@ export default async function BillingPage({
       <BillingPlansSection
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
+        currentPlanSlug={currentPlan?.slug}
         isTrial={isTrial}
       />
     </div>

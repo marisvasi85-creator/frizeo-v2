@@ -1,6 +1,7 @@
 "use client";
 
 import UpgradeButton from "./UpgradeButton";
+import { isPlanDowngrade } from "@/lib/billing/plans";
 
 type Plan = {
   id: string;
@@ -14,12 +15,14 @@ type Plan = {
 type Props = {
   plans: Plan[];
   currentPlanId: string | undefined;
+  currentPlanSlug: string | undefined;
   isTrial: boolean;
 };
 
 export default function BillingPlansSection({
   plans,
   currentPlanId,
+  currentPlanSlug,
   isTrial,
 }: Props) {
   return (
@@ -34,6 +37,10 @@ export default function BillingPlansSection({
           const isCurrent = currentPlanId === plan.id;
           const isPaidPlan = plan.slug === "pro" || plan.slug === "pro-plus";
           const canPurchaseDuringTrial = isTrial && isCurrent && isPaidPlan;
+          const isLowerPlan =
+            !isCurrent &&
+            currentPlanSlug &&
+            isPlanDowngrade(currentPlanSlug, plan.slug);
 
           return (
             <div
@@ -94,6 +101,19 @@ export default function BillingPlansSection({
                   >
                     Contactează-ne
                   </a>
+                ) : isLowerPlan ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                    >
+                      Plan inferior
+                    </button>
+                    <p className="text-xs text-white/50 text-center">
+                      Beneficiezi deja de un plan mai mare.
+                    </p>
+                  </div>
                 ) : isCurrent && !canPurchaseDuringTrial ? (
                   <button
                     type="button"

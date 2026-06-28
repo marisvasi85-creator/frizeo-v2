@@ -54,3 +54,25 @@ export function isPaidPlan(plan: PlanLike | null | undefined): boolean {
   const slug = plan.slug ?? "";
   return slug !== PLAN_SLUGS.FREE && slug !== "";
 }
+
+/** free < pro < pro-plus < custom */
+const PLAN_TIER: Record<PlanSlug, number> = {
+  [PLAN_SLUGS.FREE]: 0,
+  [PLAN_SLUGS.PRO]: 1,
+  [PLAN_SLUGS.PRO_PLUS]: 2,
+  [PLAN_SLUGS.CUSTOM]: 3,
+};
+
+export function getPlanTier(slug: string | null | undefined): number {
+  if (slug && isCanonicalPlanSlug(slug)) {
+    return PLAN_TIER[slug];
+  }
+  return 0;
+}
+
+export function isPlanDowngrade(
+  currentSlug: string | null | undefined,
+  targetSlug: string | null | undefined
+): boolean {
+  return getPlanTier(targetSlug) < getPlanTier(currentSlug);
+}

@@ -9,7 +9,7 @@ import {
   getOpenInvoicePayUrl,
   retrieveActiveStripeSubscription,
 } from "@/lib/billing/changeSubscriptionPlan";
-import { PLAN_SLUGS, type PlanSlug } from "@/lib/billing/plans";
+import { PLAN_SLUGS, isPlanDowngrade, type PlanSlug } from "@/lib/billing/plans";
 import { getAppUrl, getStripePriceId } from "@/lib/billing/stripePrices";
 import { stripeErrorMessage } from "@/lib/stripe";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
 
     const { data: subscription, error: subError } = await supabaseAdmin
       .from("subscriptions")
-      .select("*")
+      .select("*, plans(slug)")
       .eq("tenant_id", tenant.tenant_id)
       .single();
 
@@ -97,6 +97,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Abonament negăsit." },
         { status: 404 }
+      );
+    }
+
+    const currentPlanSlug = (
+      subscription.plans as { slug?: string } | null
+    )?.slug;
+
+    if (isPlanDowngrade(currentPlanSlug, planSlug)) {
+      return NextResponse.json(
+        { error: "Beneficiezi deja de un plan mai mare." },
+        { status: 400 }
       );
     }
 
