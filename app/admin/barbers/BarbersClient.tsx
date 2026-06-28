@@ -35,8 +35,8 @@ export default function BarbersClient({
   tenantSlug: string;
 }) {  
   const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [invitations, setInvitations] =
-  useState<any[]>([]);
+  const [invitations, setInvitations] = useState<any[]>([]);
+  const [pendingCount, setPendingCount] = useState(pendingInvites);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -60,14 +60,9 @@ export default function BarbersClient({
     await invitesRes.json();
   
 
-  setBarbers(
-    barbersData.barbers || []
-  );
-console.log("BARBERS:", barbersData);
-  setInvitations(
-    invitesData.invitations || []
-  );
-  console.log("INVITATIONS:", invitesData);
+  setBarbers(barbersData.barbers || []);
+  setInvitations(invitesData.invitations || []);
+  setPendingCount(invitesData.invitations?.length ?? 0);
 }
 useEffect(() => {
   loadBarbers();
@@ -107,8 +102,10 @@ useEffect(() => {
       setPhone("");
 
       setMessage(
-  "✓ Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului."
-);
+        "✓ Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului."
+      );
+
+      await loadBarbers();
     }
   } catch {
     setMessage("Eroare server");
@@ -175,7 +172,7 @@ useEffect(() => {
   loadBarbers();
 }
 
-  const slotsUsed = activeBarbers + pendingInvites;
+  const slotsUsed = activeBarbers + pendingCount;
   const maxLabel =
     maxBarbers === null ? "∞" : String(maxBarbers);
   const atLimit = maxBarbers !== null && slotsUsed >= maxBarbers;
@@ -205,9 +202,9 @@ useEffect(() => {
     {slotsUsed} / {maxLabel}
   </div>
 
-  {pendingInvites > 0 && (
+  {pendingCount > 0 && (
     <div className="text-xs text-white/50 mt-1">
-      {activeBarbers} activi · {pendingInvites} invitații în așteptare
+      {activeBarbers} activi · {pendingCount} invitații în așteptare
     </div>
   )}
 

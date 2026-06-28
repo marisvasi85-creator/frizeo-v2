@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET() {
-  const supabase = await createSupabaseServerClient();
-
   const barber = await getCurrentBarberInTenant();
 
   if (!barber) {
-    return NextResponse.json({
-      invitations: [],
-    });
+    return NextResponse.json({ invitations: [] }, { status: 401 });
   }
 
-  const { data } = await supabase
+  const role = await getCurrentRole();
+
+  if (role !== "owner" && role !== "manager") {
+    return NextResponse.json({ invitations: [] }, { status: 403 });
+  }
+
+  const { data, error } = await supabaseAdmin
     .from("barber_invitations")
     .select(`
       id,
@@ -24,9 +27,16 @@ export async function GET() {
       created_at
     `)
     .eq("tenant_id", barber.tenant_id)
-    .order("created_at", {
-      ascending: false,
-    });
+    .eq("accepted", false)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("barbers/invitations:", error);
+    return NextResponse.json(
+      { invitations: [], error: error.message },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({
     invitations: data || [],
