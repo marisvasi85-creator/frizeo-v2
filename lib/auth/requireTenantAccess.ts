@@ -38,7 +38,8 @@ export async function requireTenantAccess(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: membership } = await supabase
+  // service_role: tenant_users RLS is circular without tenant_users_read_own
+  const { data: membership } = await supabaseAdmin
     .from("tenant_users")
     .select("role")
     .eq("tenant_id", tenant.tenant_id)
@@ -48,7 +49,7 @@ export async function requireTenantAccess(
   let role = membership?.role as TenantRole | undefined;
 
   if (!role) {
-    const { data: barber } = await supabase
+    const { data: barber } = await supabaseAdmin
       .from("barbers")
       .select("id")
       .eq("user_id", user.id)
@@ -132,7 +133,6 @@ export async function assertServiceAccess(
 
   if (auth.role === "barber") {
     const barberId = await getCurrentBarberId(
-      auth.supabase,
       auth.user.id,
       auth.tenantId
     );
@@ -178,11 +178,10 @@ export async function bookingAccessibleByUser(
 }
 
 export async function getCurrentBarberId(
-  supabase: SupabaseClient,
   userId: string,
   tenantId: string
 ): Promise<string | null> {
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from("barbers")
     .select("id")
     .eq("user_id", userId)

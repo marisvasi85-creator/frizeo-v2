@@ -16,15 +16,24 @@ function formatCancelConfirm(booking: any) {
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<any | null>(null);
   const [selectedBarber, setSelectedBarber] = useState("all");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   async function loadBookings() {
     setLoading(true);
+    setLoadError("");
 
     const res = await fetch("/api/bookings/list");
     const data = await res.json();
+
+    if (!res.ok) {
+      setLoadError(data.error || "Nu am putut încărca programările.");
+      setBookings([]);
+      setLoading(false);
+      return;
+    }
 
     setBookings(data.bookings || []);
     setLoading(false);
@@ -96,6 +105,8 @@ export default function AdminBookingsPage() {
 
       {loading ? (
         <div className="text-white/60">Se încarcă...</div>
+      ) : loadError ? (
+        <EmptyState>{loadError}</EmptyState>
       ) : filteredBookings.length === 0 ? (
         <EmptyState>Nu există programări.</EmptyState>
       ) : (

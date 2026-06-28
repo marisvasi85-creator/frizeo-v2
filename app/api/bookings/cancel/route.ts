@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
       const barberId =
         auth.role === "barber"
-          ? await getCurrentBarberId(auth.supabase, auth.user.id, auth.tenantId)
+          ? await getCurrentBarberId(auth.user.id, auth.tenantId)
           : null;
 
       const canAccess = await bookingAccessibleByUser(
