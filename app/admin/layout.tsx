@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
-import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
 
@@ -25,11 +24,6 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  const status = await getDashboardStatus(user.id);
-
-// if (!status.completed) {
-//   redirect("/admin/onboarding");
-// }
   return (
   <div className="flex min-h-screen bg-[#0B0B0C] text-white">
 

@@ -47,14 +47,6 @@ export function planAllowsSms(plan: PlanLike | null | undefined): boolean {
   );
 }
 
-export function isPaidPlan(plan: PlanLike | null | undefined): boolean {
-  if (!plan) return false;
-  if (plan.status === "trialing") return true;
-
-  const slug = plan.slug ?? "";
-  return slug !== PLAN_SLUGS.FREE && slug !== "";
-}
-
 /** free < pro < pro-plus < custom */
 const PLAN_TIER: Record<PlanSlug, number> = {
   [PLAN_SLUGS.FREE]: 0,

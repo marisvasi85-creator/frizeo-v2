@@ -39,5 +39,3 @@ export function mapAuthError(message?: string): string {
 
   return message || "A apărut o eroare. Încearcă din nou.";
 }
-
-export { getAppUrl } from "@/lib/app/getAppUrl";

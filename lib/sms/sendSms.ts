@@ -12,11 +12,6 @@ export async function sendSms({
       .replace(/\s/g, "")
       .replace(/^0/, "40");
 
-    console.log(
-      "SMS PHONE:",
-      formattedPhone
-    );
-
     const url =
       `https://app.smso.ro/api/v1/send` +
       `?sender=${sender}` +
@@ -27,11 +22,6 @@ export async function sendSms({
     const res = await fetch(url);
 
     const data = await res.json();
-
-    console.log(
-      "SMS RESPONSE:",
-      data
-    );
 
     return data;
 

@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { TenantRole } from "./getUserRoleInTenant";
+import type { TenantRole } from "./tenantRole";
 
 export type TenantAuthContext = {
   user: User;

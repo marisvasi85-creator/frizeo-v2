@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  getAppUrl,
-  isValidEmail,
-  normalizeEmail,
-} from "@/lib/auth/credentials";
+import { isValidEmail, normalizeEmail } from "@/lib/auth/credentials";
+import { getAppUrl } from "@/lib/app/getAppUrl";
 
 export async function POST(req: Request) {
   const { email } = await req.json();

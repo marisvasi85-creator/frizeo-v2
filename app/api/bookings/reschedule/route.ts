@@ -283,11 +283,6 @@ Serviciu: ${serviceName}`,
             "id",
             newBooking.id
           );
-
-        console.log(
-          "GOOGLE EVENT RECREATED:",
-          event.id
-        );
       }
     }
   }

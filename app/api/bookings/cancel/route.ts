@@ -122,8 +122,6 @@ export async function POST(req: NextRequest) {
             calendarId: googleAccount.calendar_id || "primary",
             eventId: booking.google_event_id,
           });
-
-          console.log("GOOGLE EVENT DELETED:", booking.google_event_id);
         }
       }
     } catch (e) {
