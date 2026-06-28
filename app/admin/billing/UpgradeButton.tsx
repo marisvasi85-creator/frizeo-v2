@@ -8,12 +8,15 @@ type Props = {
   planId: string;
   planName: string;
   allowBankTransfer?: boolean;
+  /** Trial pe același plan — afișează „Cumpără acum” */
+  trialEarlyPurchase?: boolean;
 };
 
 export default function UpgradeButton({
   planId,
   planName,
   allowBankTransfer = true,
+  trialEarlyPurchase = false,
 }: Props) {
   const [loading, setLoading] = useState<PaymentMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,11 @@ export default function UpgradeButton({
         return;
       }
 
+      if (data.success || data.planChanged) {
+        window.location.href = "/admin/billing?checkout=success";
+        return;
+      }
+
       setError("Răspuns invalid de la server.");
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
@@ -57,7 +65,11 @@ export default function UpgradeButton({
         disabled={loading !== null}
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading === "card" ? "Se deschide Stripe…" : `Alege ${planName}`}
+        {loading === "card"
+          ? "Se deschide Stripe…"
+          : trialEarlyPurchase
+            ? `Cumpără ${planName} acum`
+            : `Alege ${planName}`}
       </button>
 
       {allowBankTransfer && (

@@ -114,11 +114,14 @@ export async function POST(req: Request) {
 
     const stripe = getStripe();
 
+    const isAppTrial = subscription.status === "trialing";
+
     const existingStripeSub = subscription.stripe_subscription_id
       ? await retrieveActiveStripeSubscription(subscription.stripe_subscription_id)
       : null;
 
     const hasActiveStripeSub =
+      !isAppTrial &&
       existingStripeSub &&
       (existingStripeSub.status === "active" ||
         existingStripeSub.status === "trialing" ||
@@ -211,7 +214,7 @@ export async function POST(req: Request) {
       });
     }
 
-    if (subscription.stripe_subscription_id) {
+    if (subscription.stripe_subscription_id && !isAppTrial) {
       const stripeSub = existingStripeSub;
 
       if (!stripeSub) {
@@ -243,7 +246,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
           success: true,
-          url: successUrl,
+          planChanged: true,
         });
       }
     }

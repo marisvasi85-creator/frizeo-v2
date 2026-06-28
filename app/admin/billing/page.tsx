@@ -131,8 +131,8 @@ const trialDaysLeft =
 
       {checkoutStatus === "success" && (
         <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
-          Mulțumim! Plata a fost înregistrată. Planul tău este activ — poate dura
-          câteva secunde până apare mai sus.
+          Mulțumim! Plata sau schimbarea de plan a fost înregistrată. Dacă tocmai ai
+          plătit, planul apare mai sus în câteva secunde.
         </div>
       )}
 

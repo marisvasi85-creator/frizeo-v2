@@ -28,14 +28,16 @@ export default function BillingPlansSection({
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
-        Alegi planul → Stripe (date facturare + plată) → revii aici cu planul
-        activ.
+        {isTrial
+          ? "Ești în trial — poți cumpăra oricând Pro sau Pro+ înainte să expire. Stripe colectează datele de facturare și plata."
+          : "Alegi planul → Stripe (date facturare + plată) → revii aici cu planul activ."}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {plans.map((plan) => {
           const isCurrent = currentPlanId === plan.id;
           const isPaidPlan = plan.slug === "pro" || plan.slug === "pro-plus";
+          const canPurchaseDuringTrial = isTrial && isCurrent && isPaidPlan;
 
           return (
             <div
@@ -96,7 +98,7 @@ export default function BillingPlansSection({
                   >
                     Contactează-ne
                   </a>
-                ) : isCurrent ? (
+                ) : isCurrent && !canPurchaseDuringTrial ? (
                   <button
                     type="button"
                     disabled
@@ -121,6 +123,7 @@ export default function BillingPlansSection({
                     planId={plan.id}
                     planName={plan.name}
                     allowBankTransfer={allowBankTransfer}
+                    trialEarlyPurchase={canPurchaseDuringTrial}
                   />
                 ) : null}
               </div>
