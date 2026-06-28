@@ -2,24 +2,32 @@
 
 import { useState } from "react";
 
+type PaymentMethod = "card" | "bank_transfer";
+
 type Props = {
   planId: string;
   planName: string;
+  /** Free plan — show card + bank transfer. Paid upgrade — card only. */
+  allowBankTransfer?: boolean;
 };
 
-export default function UpgradeButton({ planId, planName }: Props) {
-  const [loading, setLoading] = useState(false);
+export default function UpgradeButton({
+  planId,
+  planName,
+  allowBankTransfer = true,
+}: Props) {
+  const [loading, setLoading] = useState<PaymentMethod | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleUpgrade() {
-    setLoading(true);
+  async function handleUpgrade(paymentMethod: PaymentMethod) {
+    setLoading(paymentMethod);
     setError(null);
 
     try {
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, paymentMethod }),
       });
 
       const data = await res.json();
@@ -38,22 +46,36 @@ export default function UpgradeButton({ planId, planName }: Props) {
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   }
 
   return (
-    <div>
+    <div className="space-y-2">
       <button
         type="button"
-        onClick={handleUpgrade}
-        disabled={loading}
+        onClick={() => handleUpgrade("card")}
+        disabled={loading !== null}
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading ? "Se deschide plata…" : `Alege ${planName}`}
+        {loading === "card" ? "Se deschide plata…" : `💳 Card — ${planName}`}
       </button>
+
+      {allowBankTransfer && (
+        <button
+          type="button"
+          onClick={() => handleUpgrade("bank_transfer")}
+          disabled={loading !== null}
+          className="w-full border border-white/20 text-white py-2 rounded hover:bg-white/5 transition disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+        >
+          {loading === "bank_transfer"
+            ? "Se generează factura…"
+            : `🏦 Transfer bancar — ${planName}`}
+        </button>
+      )}
+
       {error && (
-        <p className="mt-2 text-xs text-red-400 text-center">{error}</p>
+        <p className="text-xs text-red-400 text-center">{error}</p>
       )}
     </div>
   );

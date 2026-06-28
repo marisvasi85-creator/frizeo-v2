@@ -11,6 +11,15 @@ type CheckoutParams = {
   metadata: Record<string, string>;
 };
 
+type BankTransferParams = {
+  customerId: string;
+  stripePriceId: string;
+  metadata: Record<string, string>;
+  daysUntilDue?: number;
+};
+
+export type PaymentMethodChoice = "card" | "bank_transfer";
+
 export async function createSubscriptionCheckout(
   params: CheckoutParams
 ): Promise<StripeTypes.Checkout.Session> {
@@ -36,6 +45,46 @@ export async function createSubscriptionCheckout(
   }
 
   return stripe.checkout.sessions.create(sessionParams);
+}
+
+export async function createBankTransferSubscription(
+  params: BankTransferParams
+): Promise<{ subscription: StripeTypes.Subscription; invoiceUrl: string | null }> {
+  const stripe = getStripe();
+  const daysUntilDue =
+    params.daysUntilDue ??
+    Number(process.env.STRIPE_BANK_TRANSFER_DAYS_UNTIL_DUE ?? 7);
+
+  const subscription = await stripe.subscriptions.create({
+    customer: params.customerId,
+    items: [{ price: params.stripePriceId }],
+    collection_method: "send_invoice",
+    days_until_due: Number.isFinite(daysUntilDue) ? daysUntilDue : 7,
+    payment_settings: {
+      payment_method_types: ["customer_balance"],
+    },
+    metadata: {
+      ...params.metadata,
+      payment_method: "bank_transfer",
+    },
+  });
+
+  let invoiceUrl: string | null = null;
+  const latestInvoice = subscription.latest_invoice;
+  const invoiceId =
+    typeof latestInvoice === "string" ? latestInvoice : latestInvoice?.id;
+
+  if (invoiceId) {
+    let invoice = await stripe.invoices.retrieve(invoiceId);
+
+    if (invoice.status === "draft") {
+      invoice = await stripe.invoices.finalizeInvoice(invoiceId);
+    }
+
+    invoiceUrl = invoice.hosted_invoice_url ?? null;
+  }
+
+  return { subscription, invoiceUrl };
 }
 
 function isMissingStripeResource(err: unknown): boolean {

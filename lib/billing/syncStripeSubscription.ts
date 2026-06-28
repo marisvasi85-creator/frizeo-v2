@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPlanIdBySlug } from "./getPlanIdBySlug";
 import { isCanonicalPlanSlug, PLAN_SLUGS, type PlanSlug } from "./plans";
+import { shouldApplyPlanFromStripeSubscription } from "./shouldApplyPlanFromStripe";
 import { getPlanSlugFromStripePriceId } from "./stripePrices";
 
 async function disableSmsForTenant(tenantId: string) {
@@ -137,11 +138,13 @@ export async function syncStripeSubscription(
     update.current_period_end = new Date(periodEnd * 1000).toISOString();
   }
 
-  if (planId) {
+  const applyPlan = await shouldApplyPlanFromStripeSubscription(stripeSub);
+
+  if (planId && applyPlan) {
     update.plan_id = planId;
   }
 
-  if (mappedStatus === "active") {
+  if (mappedStatus === "active" && applyPlan) {
     update.trial_ends_at = null;
   }
 

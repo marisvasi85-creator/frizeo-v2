@@ -87,6 +87,19 @@ export async function POST(req: Request) {
         break;
       }
 
+      case "invoice.paid": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+        if (subscriptionId) {
+          const subscription = await getStripe().subscriptions.retrieve(
+            subscriptionId
+          );
+          await syncStripeSubscription(subscription);
+        }
+        break;
+      }
+
       default:
         break;
     }
