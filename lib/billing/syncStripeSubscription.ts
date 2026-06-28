@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPlanIdBySlug } from "./getPlanIdBySlug";
-import { PLAN_SLUGS } from "./plans";
+import { isCanonicalPlanSlug, PLAN_SLUGS, type PlanSlug } from "./plans";
 import { getPlanSlugFromStripePriceId } from "./stripePrices";
 
 async function disableSmsForTenant(tenantId: string) {
@@ -77,8 +77,37 @@ export async function syncStripeSubscription(
   }
 
   const priceId = stripeSub.items.data[0]?.price.id;
-  const slug = priceId ? getPlanSlugFromStripePriceId(priceId) : null;
-  const planId = slug ? await getPlanIdBySlug(slug) : null;
+  let slug: PlanSlug | null = priceId
+    ? getPlanSlugFromStripePriceId(priceId)
+    : null;
+
+  if (
+    !slug &&
+    stripeSub.metadata?.plan_slug &&
+    isCanonicalPlanSlug(stripeSub.metadata.plan_slug)
+  ) {
+    slug = stripeSub.metadata.plan_slug;
+  }
+
+  const planIdFromSlug = slug ? await getPlanIdBySlug(slug) : null;
+  let planId = planIdFromSlug;
+
+  if (!planId && stripeSub.metadata?.plan_id) {
+    const { data: plan } = await supabaseAdmin
+      .from("plans")
+      .select("id")
+      .eq("id", stripeSub.metadata.plan_id)
+      .maybeSingle();
+
+    planId = plan?.id ?? null;
+  }
+
+  if (!planId) {
+    console.error(
+      "syncStripeSubscription: plan_id nerezolvat",
+      { priceId, slug, subscriptionId: stripeSub.id, tenantId }
+    );
+  }
 
   const mappedStatus = mapStripeStatus(stripeSub.status);
 

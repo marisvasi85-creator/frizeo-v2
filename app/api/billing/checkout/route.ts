@@ -96,7 +96,7 @@ export async function POST(req: Request) {
     }
 
     const appUrl = getAppUrl();
-    const successUrl = `${appUrl}/admin/billing?checkout=success`;
+    const successUrl = `${appUrl}/admin/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
     const cancelUrl = `${appUrl}/admin/billing?checkout=canceled`;
     const metadata = {
       tenant_id: tenant.tenant_id,

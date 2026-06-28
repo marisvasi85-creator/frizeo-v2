@@ -3,15 +3,47 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import UpgradeButton from "./UpgradeButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
+import { getStripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
+
+async function syncAfterCheckout(
+  sessionId: string,
+  tenantId: string
+) {
+  try {
+    const session = await getStripe().checkout.sessions.retrieve(sessionId);
+
+    if (
+      session.mode !== "subscription" ||
+      typeof session.subscription !== "string"
+    ) {
+      return;
+    }
+
+    const subscription = await getStripe().subscriptions.retrieve(
+      session.subscription
+    );
+
+    await syncStripeSubscription(
+      subscription,
+      session.metadata?.tenant_id ?? tenantId
+    );
+  } catch (err) {
+    console.error("billing syncAfterCheckout:", err);
+  }
+}
+
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string }>;
+  searchParams: Promise<{ checkout?: string; session_id?: string }>;
 }) {
-  const { checkout: checkoutStatus } = await searchParams;
+  const { checkout: checkoutStatus, session_id: sessionId } =
+    await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const barber = await getCurrentBarberInTenant();
@@ -21,10 +53,15 @@ export default async function BillingPage({
   }
   const role = await getCurrentRole();
 
-if (role !== "owner") {
-  redirect("/admin/dashboard");
-}
-  const { data: subscription } = await supabase
+  if (role !== "owner") {
+    redirect("/admin/dashboard");
+  }
+
+  if (checkoutStatus === "success" && sessionId) {
+    await syncAfterCheckout(sessionId, barber.tenant_id);
+  }
+
+  const { data: subscription } = await supabaseAdmin
     .from("subscriptions")
     .select(`
       *,
