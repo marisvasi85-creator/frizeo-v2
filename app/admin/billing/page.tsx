@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import BillingPlansSection from "./BillingPlansSection";
+import ManageBillingButton from "./ManageBillingButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
@@ -48,10 +49,17 @@ async function syncAfterCheckout(
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ checkout?: string; session_id?: string }>;
+  searchParams: Promise<{
+    checkout?: string;
+    session_id?: string;
+    plan_changed?: string;
+  }>;
 }) {
-  const { checkout: checkoutStatus, session_id: sessionId } =
-    await searchParams;
+  const {
+    checkout: checkoutStatus,
+    session_id: sessionId,
+    plan_changed: planChanged,
+  } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
   const barber = await getCurrentBarberInTenant();
@@ -115,6 +123,9 @@ const trialDaysLeft =
       )
     : 0;
 
+  const hasStripeCustomer = Boolean(subscription?.stripe_customer_id);
+  const isPastDue = subscription?.status === "past_due";
+
   return (
     <div className="space-y-8">
 
@@ -122,8 +133,19 @@ const trialDaysLeft =
 
       {checkoutStatus === "success" && (
         <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
-          Mulțumim! Plata sau schimbarea de plan a fost înregistrată. Dacă tocmai ai
-          plătit, planul apare mai sus în câteva secunde.
+          {planChanged
+            ? "Planul a fost actualizat. Diferența de preț a fost încasată pe cardul salvat."
+            : "Mulțumim! Plata a fost înregistrată. Planul apare mai sus în câteva secunde."}
+        </div>
+      )}
+
+      {isPastDue && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
+          <p>
+            Ultima plată nu a reușit. Actualizează cardul ca să păstrezi accesul
+            la planul plătit.
+          </p>
+          {hasStripeCustomer && <ManageBillingButton />}
         </div>
       )}
 
@@ -179,6 +201,12 @@ const trialDaysLeft =
   
 )}
         </div>
+
+        {hasStripeCustomer && !isPastDue && (
+          <div className="pt-2">
+            <ManageBillingButton />
+          </div>
+        )}
 
       </AdminCard>
 

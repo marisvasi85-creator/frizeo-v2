@@ -83,7 +83,8 @@ export async function POST(req: Request) {
         break;
       }
 
-      case "invoice.payment_failed": {
+      case "invoice.payment_failed":
+      case "invoice.payment_action_required": {
         const invoice = event.data.object as Stripe.Invoice;
         const subscriptionId = getInvoiceSubscriptionId(invoice);
 

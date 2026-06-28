@@ -30,18 +30,18 @@ export default function UpgradeButton({
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setError(data.error || "Plata nu a putut fi inițiată.");
-        return;
-      }
-
       if (data.url) {
         window.location.href = data.url;
         return;
       }
 
+      if (!res.ok) {
+        setError(data.error || "Plata nu a putut fi inițiată.");
+        return;
+      }
+
       if (data.success || data.planChanged) {
-        window.location.href = "/admin/billing?checkout=success";
+        window.location.href = "/admin/billing?checkout=success&plan_changed=1";
         return;
       }
 
@@ -62,7 +62,7 @@ export default function UpgradeButton({
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading
-          ? "Se deschide Stripe…"
+          ? "Se procesează…"
           : trialEarlyPurchase
             ? `Cumpără ${planName} acum`
             : `Alege ${planName}`}

@@ -27,8 +27,8 @@ export default function BillingPlansSection({
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
         {isTrial
-          ? "Ești în trial — poți cumpăra oricând Pro sau Pro+ înainte să expire. Alegi metoda de plată în Stripe."
-          : "Alegi planul → Stripe (date facturare + plată) → revii aici cu planul activ."}
+          ? "Ești în trial — poți cumpăra oricând Pro sau Pro+ înainte să expire. Prima plată se face în Stripe Checkout."
+          : "Prima plată → Stripe Checkout. Upgrade Pro → Pro+ → se încasează diferența pe cardul salvat (prorata)."}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

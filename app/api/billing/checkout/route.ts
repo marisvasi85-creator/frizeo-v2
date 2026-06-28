@@ -7,8 +7,8 @@ import {
 } from "@/lib/billing/stripeCheckout";
 import { PLAN_SLUGS, type PlanSlug } from "@/lib/billing/plans";
 import { getAppUrl, getStripePriceId } from "@/lib/billing/stripePrices";
-import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
-import { getStripe, stripeErrorMessage } from "@/lib/stripe";
+import { upgradeStripeSubscription } from "@/lib/billing/upgradeStripeSubscription";
+import { stripeErrorMessage } from "@/lib/stripe";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -104,7 +104,6 @@ export async function POST(req: Request) {
       plan_slug: planSlug,
     };
 
-    const stripe = getStripe();
     const isAppTrial = subscription.status === "trialing";
 
     const existingStripeSub = subscription.stripe_subscription_id
@@ -157,8 +156,7 @@ export async function POST(req: Request) {
           .eq("tenant_id", tenant.tenant_id);
       } else if (
         stripeSub.status === "active" ||
-        stripeSub.status === "trialing" ||
-        stripeSub.status === "past_due"
+        stripeSub.status === "trialing"
       ) {
         const itemId = stripeSub.items.data[0]?.id;
 
@@ -169,18 +167,36 @@ export async function POST(req: Request) {
           );
         }
 
-        const updated = await stripe.subscriptions.update(stripeSub.id, {
-          items: [{ id: itemId, price: stripePriceId }],
-          proration_behavior: "create_prorations",
+        const result = await upgradeStripeSubscription({
+          subscriptionId: stripeSub.id,
+          itemId,
+          stripePriceId,
           metadata,
+          tenantId: tenant.tenant_id,
         });
 
-        await syncStripeSubscription(updated, tenant.tenant_id);
+        if (!result.ok) {
+          return NextResponse.json(
+            {
+              error: result.error,
+              ...(result.authUrl ? { url: result.authUrl } : {}),
+            },
+            { status: 402 }
+          );
+        }
 
         return NextResponse.json({
           success: true,
           planChanged: true,
         });
+      } else if (stripeSub.status === "past_due") {
+        return NextResponse.json(
+          {
+            error:
+              "Există o plată restantă. Actualizează cardul din „Gestionează facturarea” înainte de a schimba planul.",
+          },
+          { status: 402 }
+        );
       }
     }
 
