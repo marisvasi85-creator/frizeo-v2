@@ -82,19 +82,3 @@ export async function resolveStripeCustomer(params: {
     clearedStaleId: Boolean(params.customerId),
   };
 }
-
-export async function retrieveActiveStripeSubscription(
-  subscriptionId: string
-): Promise<StripeTypes.Subscription | null> {
-  const stripe = getStripe();
-
-  try {
-    return await stripe.subscriptions.retrieve(subscriptionId);
-  } catch (err) {
-    if (isMissingStripeResource(err)) {
-      return null;
-    }
-
-    throw err;
-  }
-}

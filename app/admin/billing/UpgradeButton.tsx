@@ -5,7 +5,6 @@ import { useState } from "react";
 type Props = {
   planId: string;
   planName: string;
-  /** Trial pe același plan — afișează „Cumpără acum” */
   trialEarlyPurchase?: boolean;
 };
 
@@ -35,17 +34,12 @@ export default function UpgradeButton({
         return;
       }
 
-      if (!res.ok) {
-        setError(data.error || "Plata nu a putut fi inițiată.");
+      if (data.success) {
+        window.location.href = "/admin/billing?checkout=success&updated=1";
         return;
       }
 
-      if (data.success || data.planChanged) {
-        window.location.href = "/admin/billing?checkout=success&plan_changed=1";
-        return;
-      }
-
-      setError("Răspuns invalid de la server.");
+      setError(data.error || "Plata nu a putut fi inițiată.");
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
     } finally {
@@ -64,7 +58,7 @@ export default function UpgradeButton({
         {loading
           ? "Se procesează…"
           : trialEarlyPurchase
-            ? `Cumpără ${planName} acum`
+            ? `Cumpără ${planName}`
             : `Alege ${planName}`}
       </button>
 

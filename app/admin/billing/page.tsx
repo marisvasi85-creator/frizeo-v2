@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import BillingPlansSection from "./BillingPlansSection";
-import ManageBillingButton from "./ManageBillingButton";
+import PayInvoiceButton from "./PayInvoiceButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
@@ -12,10 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
 
-async function syncAfterCheckout(
-  sessionId: string,
-  tenantId: string
-) {
+async function syncAfterCheckout(sessionId: string, tenantId: string) {
   try {
     const session = await getStripe().checkout.sessions.retrieve(sessionId);
 
@@ -52,13 +49,13 @@ export default async function BillingPage({
   searchParams: Promise<{
     checkout?: string;
     session_id?: string;
-    plan_changed?: string;
+    updated?: string;
   }>;
 }) {
   const {
     checkout: checkoutStatus,
     session_id: sessionId,
-    plan_changed: planChanged,
+    updated: planUpdated,
   } = await searchParams;
   const supabase = await createSupabaseServerClient();
 
@@ -105,47 +102,32 @@ export default async function BillingPage({
   const currentPlan = subscription?.plans;
 
   const isTrial =
-  subscription?.status === "trialing";
+    subscription?.status === "trialing" && !subscription?.stripe_subscription_id;
 
-const trialEnds =
-  subscription?.trial_ends_at
+  const trialEnds = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at)
     : null;
 
-const trialDaysLeft =
-  trialEnds
+  const trialDaysLeft = trialEnds
     ? Math.max(
         0,
         Math.ceil(
-          (trialEnds.getTime() - Date.now()) /
-          (1000 * 60 * 60 * 24)
+          (trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         )
       )
     : 0;
 
-  const hasStripeCustomer = Boolean(subscription?.stripe_customer_id);
   const isPastDue = subscription?.status === "past_due";
 
   return (
     <div className="space-y-8">
-
       <AdminPageHeader title="Abonament" />
 
       {checkoutStatus === "success" && (
         <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
-          {planChanged
-            ? "Planul a fost actualizat. Diferența de preț a fost încasată pe cardul salvat."
-            : "Mulțumim! Plata a fost înregistrată. Planul apare mai sus în câteva secunde."}
-        </div>
-      )}
-
-      {isPastDue && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
-          <p>
-            Ultima plată nu a reușit. Actualizează cardul ca să păstrezi accesul
-            la planul plătit.
-          </p>
-          {hasStripeCustomer && <ManageBillingButton />}
+          {planUpdated
+            ? "Planul a fost actualizat."
+            : "Mulțumim! Plata a fost înregistrată."}
         </div>
       )}
 
@@ -155,59 +137,52 @@ const trialDaysLeft =
         </div>
       )}
 
+      {isPastDue && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
+          <p>Ultima plată nu a reușit. Plătește factura ca să păstrezi planul activ.</p>
+          <PayInvoiceButton />
+        </div>
+      )}
+
       <AdminCard>
         <div className="space-y-3">
-
-          <p className="text-white/60 text-sm">
-            Plan curent
-          </p>
+          <p className="text-white/60 text-sm">Plan curent</p>
 
           <h2 className="text-3xl font-bold">
-  {isTrial
-    ? "🚀 Trial Gratuit"
-    : `💎 ${currentPlan?.name || "Free"}`}
-</h2>
+            {isTrial
+              ? "🚀 Trial Gratuit"
+              : `💎 ${currentPlan?.name || "Free"}`}
+          </h2>
 
           <p className="text-white/60">
-  Status:{" "}
-  {isTrial
-    ? `Trial (${trialDaysLeft} zile rămase)`
-    : subscription?.status === "past_due"
-    ? "Plată restantă"
-    : subscription?.status === "active"
-    ? "Activ"
-    : subscription?.status || "Activ"}
-</p>
+            Status:{" "}
+            {isTrial
+              ? `Trial (${trialDaysLeft} zile rămase)`
+              : isPastDue
+                ? "Plată restantă"
+                : subscription?.status === "active"
+                  ? "Activ"
+                  : subscription?.status || "Activ"}
+          </p>
 
           <p className="text-white/60">
-            Frizeri activi:{" "}
-            {activeBarbers ?? 0}
+            Frizeri activi: {activeBarbers ?? 0}
             {" / "}
             {currentPlan?.max_barbers ?? 1}
           </p>
 
-{isTrial && (
-  <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
-    <p className="font-medium text-blue-300">
-      🚀 Perioadă de probă activă
-    </p>
-
-    <p className="text-sm text-white/70 mt-1">
-      Ai acces Pro+ (3 frizeri, SMS, programări nelimitate)
-      încă {trialDaysLeft} zile.
-      După expirare vei trece automat pe planul Free.
-    </p>
-  </div>
-  
-)}
+          {isTrial && (
+            <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
+              <p className="font-medium text-blue-300">
+                🚀 Perioadă de probă activă
+              </p>
+              <p className="text-sm text-white/70 mt-1">
+                Ai acces Pro+ (3 frizeri, SMS, programări nelimitate) încă{" "}
+                {trialDaysLeft} zile. După expirare treci automat pe Free.
+              </p>
+            </div>
+          )}
         </div>
-
-        {hasStripeCustomer && !isPastDue && (
-          <div className="pt-2">
-            <ManageBillingButton />
-          </div>
-        )}
-
       </AdminCard>
 
       <BillingPlansSection
@@ -215,7 +190,6 @@ const trialDaysLeft =
         currentPlanId={currentPlan?.id}
         isTrial={isTrial}
       />
-
     </div>
   );
 }
