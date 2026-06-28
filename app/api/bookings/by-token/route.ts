@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     .from("bookings")
     .select("id, client_name, date, start_time, status")
     .eq("cancel_token", token)
+    .eq("status", "confirmed")
     .single();
 
   if (error || !data) {

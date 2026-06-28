@@ -1,40 +1,43 @@
-// lib/email/templates/reschedule-confirmation.ts
+import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
 
 type RescheduleConfirmationArgs = {
   barberName: string;
   date: string;
   time: string;
-  cancelLink: string;
-  rescheduleLink: string;
+  cancelUrl: string;
+  rescheduleUrl: string;
 };
 
 export function rescheduleConfirmationTemplate({
   barberName,
   date,
   time,
-  cancelLink,
-  rescheduleLink,
+  cancelUrl,
+  rescheduleUrl,
 }: RescheduleConfirmationArgs) {
+  const formattedTime = time.slice(0, 5);
+
   return `
-    <h2>Programare reprogramată ✂️</h2>
+    <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
+      <h2 style="color: #111;">Programare reprogramată</h2>
 
-    <p>Salut 👋</p>
+      <p>Salut,</p>
 
-    <p>
-      Programarea ta la <strong>${barberName}</strong> a fost
-      <strong>reprogramată cu succes</strong>.
-    </p>
+      <p>
+        Programarea ta la <strong>${barberName}</strong> a fost
+        <strong>reprogramată cu succes</strong>.
+      </p>
 
-    <p>
-      📅 <strong>${date}</strong><br/>
-      ⏰ <strong>${time}</strong>
-    </p>
+      <div style="background:#f5f5f5; padding:15px; border-radius:8px; margin:20px 0;">
+        <p><strong>Data:</strong> ${date}</p>
+        <p><strong>Ora:</strong> ${formattedTime}</p>
+      </div>
 
-    <p>
-      🔁 <a href="${rescheduleLink}">Reprogramează din nou</a><br/>
-      ❌ <a href="${cancelLink}">Anulează programarea</a>
-    </p>
+      <p>Poți modifica din nou sau anula programarea:</p>
 
-    <p>— Frizeo</p>
+      ${bookingActionButtonsHtml(cancelUrl, rescheduleUrl)}
+
+      <p style="font-size:12px; color:#aaa;">Frizeo • Sistem programări</p>
+    </div>
   `;
 }

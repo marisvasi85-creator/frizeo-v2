@@ -8,6 +8,8 @@ import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
+import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
+import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 
 export async function POST(req: Request) {
   try {
@@ -131,13 +133,16 @@ export async function POST(req: Request) {
 
     // 🔥 EMAIL BARBER
     let barberEmail: string | null = null;
+    let barberName = "Frizer";
 
     try {
       const { data: barber } = await supabase
         .from("barbers")
-        .select("user_id")
+        .select("user_id, display_name")
         .eq("id", oldBooking.barber_id)
         .single();
+
+      barberName = barber?.display_name || barberName;
 
       if (barber?.user_id) {
         const { data: userData } =
@@ -305,24 +310,30 @@ Serviciu: ${serviceName}`,
       })
       .eq("id", oldBooking.id);
 
+    const bookingWithTokens = await ensureBookingClientTokens(newBooking.id);
+
+    if (!bookingWithTokens?.cancel_token || !bookingWithTokens?.reschedule_token) {
+      return NextResponse.json(
+        { error: "Nu s-au putut genera link-urile pentru client" },
+        { status: 500 }
+      );
+    }
+
+    const { cancelUrl, rescheduleUrl } = bookingClientUrls(bookingWithTokens);
+    const formattedDate = new Date(new_date).toLocaleDateString("ro-RO");
+
     // 🔥 EMAIL CLIENT
     if (
   finalEmail &&
   settings?.reschedule_email_enabled
 ) {
       try {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-        const cancelLink = `${baseUrl}/cancel/${newBooking.cancel_token}`;
-        const rescheduleLink = `${baseUrl}/reschedule/${newBooking.reschedule_token}`;
-
         const html = rescheduleConfirmationTemplate({
-          barberName: "Barber",
-          date: new_date,
+          barberName,
+          date: formattedDate,
           time: new_start_time,
-          cancelLink,
-          rescheduleLink,
+          cancelUrl,
+          rescheduleUrl,
         });
 
         await sendEmail({

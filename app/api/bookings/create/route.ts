@@ -15,6 +15,7 @@ import {
 } from "@/lib/schedule/time";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
+import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 
 export async function POST(req: Request) {
   try {
@@ -201,11 +202,7 @@ if (!limit.allowed) {
     const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
     const formattedTime = data.start_time?.slice(0, 5);
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-    const cancelUrl = `${baseUrl}/cancel/${data.cancel_token}`;
-    const rescheduleUrl = `${baseUrl}/reschedule/${data.reschedule_token}`;
+    const { cancelUrl, rescheduleUrl } = bookingClientUrls(data);
 
 // =========================
 // 📅 GOOGLE CALENDAR

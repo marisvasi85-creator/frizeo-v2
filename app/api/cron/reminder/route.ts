@@ -5,6 +5,9 @@ import { sendSms } from "@/lib/sms/sendSms";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
+import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
+import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
+import { reminderEmailTemplate } from "@/lib/email/templates/reminder-email";
 
 export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
@@ -45,6 +48,8 @@ export async function GET(req: Request) {
           client_phone,
           date,
           start_time,
+          cancel_token,
+          reschedule_token,
           reminder_2h_sent
         `)
         .eq("status", "confirmed")
@@ -92,40 +97,25 @@ export async function GET(req: Request) {
         // EMAIL
         // =========================
 
-        if (
-          b.client_email &&
-          settings?.reminder_email_enabled
-        ) {
+        if (b.client_email && settings?.reminder_email_enabled) {
 
           try {
+            const tokens = await ensureBookingClientTokens(b.id);
+
+            if (!tokens?.cancel_token || !tokens?.reschedule_token) {
+              continue;
+            }
+
+            const { cancelUrl, rescheduleUrl } = bookingClientUrls(tokens);
 
             await sendEmail({
               to: b.client_email,
-              subject:
-                "Reminder programare",
-
-              html: `
-                <div style="font-family: Arial">
-
-                  <h2>
-                    Ne vedem în curând ✂️
-                  </h2>
-
-                  <p>
-                    Acesta este un reminder că ai o programare astăzi la ora
-                    <b> ${b.start_time}</b>.
-                  </p>
-
-                  <p>
-                    Te rugăm să ajungi cu câteva minute înainte.
-                  </p>
-
-                  <p>
-                    Îți mulțumim!
-                  </p>
-
-                </div>
-              `,
+              subject: "Reminder programare",
+              html: reminderEmailTemplate({
+                time: b.start_time,
+                cancelUrl,
+                rescheduleUrl,
+              }),
             });
 
           } catch (e) {
