@@ -115,15 +115,6 @@ const trialDaysLeft =
       )
     : 0;
 
-  const allowBankTransfer =
-    isTrial ||
-    currentPlan?.slug === "free" ||
-    !subscription?.stripe_subscription_id;
-
-  const pendingBankTransfer =
-    Boolean(subscription?.stripe_subscription_id) &&
-    (currentPlan?.slug === "free" || isTrial);
-
   return (
     <div className="space-y-8">
 
@@ -139,14 +130,6 @@ const trialDaysLeft =
       {checkoutStatus === "canceled" && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-yellow-200 text-sm">
           Plata a fost anulată. Poți încerca din nou când dorești.
-        </div>
-      )}
-
-      {pendingBankTransfer && (
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-4 text-blue-200 text-sm">
-          Ai o factură cu transfer bancar în așteptare. Planul se activează după
-          ce Stripe confirmă plata (de obicei 1–3 zile lucrătoare). Verifică emailul
-          cu instrucțiuni de plată sau contactează-ne dacă ai deja transferat.
         </div>
       )}
 
@@ -203,7 +186,6 @@ const trialDaysLeft =
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
         isTrial={isTrial}
-        allowBankTransfer={allowBankTransfer}
       />
 
     </div>

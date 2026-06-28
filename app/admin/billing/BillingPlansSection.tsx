@@ -15,21 +15,19 @@ type Props = {
   plans: Plan[];
   currentPlanId: string | undefined;
   isTrial: boolean;
-  allowBankTransfer: boolean;
 };
 
 export default function BillingPlansSection({
   plans,
   currentPlanId,
   isTrial,
-  allowBankTransfer,
 }: Props) {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
         {isTrial
-          ? "Ești în trial — poți cumpăra oricând Pro sau Pro+ înainte să expire. Stripe colectează datele de facturare și plata."
+          ? "Ești în trial — poți cumpăra oricând Pro sau Pro+ înainte să expire. Alegi metoda de plată în Stripe."
           : "Alegi planul → Stripe (date facturare + plată) → revii aici cu planul activ."}
       </p>
 
@@ -122,7 +120,6 @@ export default function BillingPlansSection({
                   <UpgradeButton
                     planId={plan.id}
                     planName={plan.name}
-                    allowBankTransfer={allowBankTransfer}
                     trialEarlyPurchase={canPurchaseDuringTrial}
                   />
                 ) : null}

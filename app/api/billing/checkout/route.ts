@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import {
-  createBankTransferSubscription,
   createSubscriptionCheckout,
   resolveStripeCustomer,
   retrieveActiveStripeSubscription,
-  type PaymentMethodChoice,
 } from "@/lib/billing/stripeCheckout";
 import { PLAN_SLUGS, type PlanSlug } from "@/lib/billing/plans";
 import { getAppUrl, getStripePriceId } from "@/lib/billing/stripePrices";
@@ -48,13 +46,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { planId, paymentMethod: rawPaymentMethod } = body as {
-      planId?: string;
-      paymentMethod?: PaymentMethodChoice;
-    };
-
-    const paymentMethod: PaymentMethodChoice =
-      rawPaymentMethod === "bank_transfer" ? "bank_transfer" : "card";
+    const { planId } = body as { planId?: string };
 
     if (!planId) {
       return NextResponse.json({ error: "Missing planId" }, { status: 400 });
@@ -113,19 +105,11 @@ export async function POST(req: Request) {
     };
 
     const stripe = getStripe();
-
     const isAppTrial = subscription.status === "trialing";
 
     const existingStripeSub = subscription.stripe_subscription_id
       ? await retrieveActiveStripeSubscription(subscription.stripe_subscription_id)
       : null;
-
-    const hasActiveStripeSub =
-      !isAppTrial &&
-      existingStripeSub &&
-      (existingStripeSub.status === "active" ||
-        existingStripeSub.status === "trialing" ||
-        existingStripeSub.status === "past_due");
 
     const userEmail = user.email;
     const tenantId = tenant.tenant_id;
@@ -161,57 +145,6 @@ export async function POST(req: Request) {
       }
 
       return customerId;
-    }
-
-    if (paymentMethod === "bank_transfer") {
-      if (hasActiveStripeSub) {
-        return NextResponse.json(
-          {
-            error:
-              "Transfer bancar disponibil doar la prima activare (de pe Free). Pentru schimbare plan folosește cardul.",
-          },
-          { status: 400 }
-        );
-      }
-
-      if (
-        existingStripeSub &&
-        (existingStripeSub.status === "incomplete" ||
-          existingStripeSub.status === "paused")
-      ) {
-        await stripe.subscriptions.cancel(existingStripeSub.id);
-        await supabaseAdmin
-          .from("subscriptions")
-          .update({ stripe_subscription_id: null })
-          .eq("tenant_id", tenant.tenant_id);
-      }
-
-      const customerId = await ensureCustomerId();
-      if (customerId instanceof NextResponse) return customerId;
-
-      const { subscription: bankSub, invoiceUrl } =
-        await createBankTransferSubscription({
-          customerId,
-          stripePriceId,
-          metadata,
-        });
-
-      await syncStripeSubscription(bankSub, tenant.tenant_id);
-
-      if (!invoiceUrl) {
-        return NextResponse.json(
-          {
-            error:
-              "Factura nu a putut fi generată. Verifică în Stripe că transferul bancar e activat.",
-          },
-          { status: 500 }
-        );
-      }
-
-      return NextResponse.json({
-        url: invoiceUrl,
-        bankTransfer: true,
-      });
     }
 
     if (subscription.stripe_subscription_id && !isAppTrial) {
