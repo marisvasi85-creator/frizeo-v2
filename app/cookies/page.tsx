@@ -58,6 +58,20 @@ export default function CookiesPage() {
         La conectarea Google Calendar, ești redirecționat către Google, care
         poate seta propriile cookie-uri conform politicii Google.
       </p>
+      <p>
+        La activarea unui plan plătit, ești redirecționat către{" "}
+        <strong>Stripe Checkout</strong> (stripe.com). Stripe poate seta
+        cookie-uri proprii pe domeniul lor, necesare pentru procesarea plății și
+        securitate. Detalii:{" "}
+        <a
+          href="https://stripe.com/cookie-settings"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          stripe.com/cookie-settings
+        </a>
+        .
+      </p>
 
       <h2>6. Contact</h2>
       <p>

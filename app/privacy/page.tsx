@@ -37,6 +37,11 @@ export default function PrivacyPage() {
         <li>Profil frizer: nume afișat, telefon, avatar, program</li>
         <li>Servicii, prețuri, durate</li>
         <li>Date abonament și utilizare platformă</li>
+        <li>
+          Date de facturare (persoană fizică sau juridică): nume/denumire,
+          adresă, CUI (dacă e cazul), colectate în Stripe Checkout și
+          sincronizate în contul salonului pentru emiterea facturilor fiscale
+        </li>
       </ul>
 
       <h3>3.2. Clienți finali (programări B2C)</h3>
@@ -47,7 +52,29 @@ export default function PrivacyPage() {
         <li>Token-uri pentru anulare/reprogramare</li>
       </ul>
 
-      <h3>3.3. Date tehnice</h3>
+      <h3>3.3. Plăți și facturare (Stripe)</h3>
+      <p>
+        Pentru planurile plătite, plata abonamentului lunar se face prin{" "}
+        <strong>Stripe</strong>. Nu stocăm pe serverele Frizeo numărul complet
+        al cardului bancar; acesta este procesat direct de Stripe.
+      </p>
+      <ul>
+        <li>Date transmise către Stripe: email, nume, adresă de facturare, CUI (PJ), date card</li>
+        <li>Identificatori Stripe (client, abonament, tranzacții) — păstrați în contul tău Frizeo</li>
+        <li>Istoric abonament: plan activ, status plată, perioadă curentă</li>
+      </ul>
+      <p>
+        Politica de confidențialitate Stripe:{" "}
+        <a
+          href="https://stripe.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          stripe.com/privacy
+        </a>
+      </p>
+
+      <h3>3.4. Date tehnice</h3>
       <ul>
         <li>Cookie-uri de sesiune (autentificare)</li>
         <li>Loguri tehnice, adrese IP (limitat, securitate)</li>
@@ -82,7 +109,15 @@ export default function PrivacyPage() {
         <li>Zoho / furnizor email (notificări email)</li>
         <li>SMSO (notificări SMS, planuri plătite / trial)</li>
         <li>Google (Calendar OAuth, dacă este conectat)</li>
-        <li>Stripe (plăți online, când vor fi activate)</li>
+        <li>Stripe (procesare plăți abonament, UE/global) —{" "}
+        <a
+          href="https://stripe.com/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          politica Stripe
+        </a>
+        </li>
       </ul>
       <p>
         Saloanele care folosesc Frizeo pot fi operatori independenți față de
@@ -94,7 +129,11 @@ export default function PrivacyPage() {
       <ul>
         <li>Cont activ: pe durata utilizării serviciului</li>
         <li>Programări: până la 24 luni după data programării (sau mai mult dacă legea impune)</li>
-        <li>Cont șters: date șterse sau anonimizate în 90 zile, exceptând obligații legale</li>
+        <li>
+          Date de facturare și documente fiscale: conform obligațiilor legale
+          (de regulă 10 ani de la emitere)
+        </li>
+        <li>Cont șters: date șterse sau anonimizate în 90 zile, exceptând obligații legale și arhiva fiscală</li>
       </ul>
 
       <h2>7. Drepturile tale</h2>

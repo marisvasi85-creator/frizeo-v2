@@ -8,7 +8,7 @@ export const LEGAL_COMPANY = {
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
   website: "https://www.frizeo.ro",
-  lastUpdated: "20 iunie 2026",
+  lastUpdated: "28 iunie 2026",
 };
 
 export const LEGAL_LINKS = {

@@ -49,10 +49,61 @@ export default function TermsPage() {
         (inclusiv SMS), gratuit. După trial, contul trece automat pe planul
         Free, dacă nu activezi un plan plătit.
       </p>
+
+      <h3>4.1. Plata abonamentului (Stripe)</h3>
       <p>
-        <strong>Plată:</strong> planurile Pro și Pro+ sunt cu abonament lunar.
-        Poți anula oricând din cont.
+        Planurile <strong>Pro</strong> și <strong>Pro+</strong> sunt cu
+        abonament <strong>lunar</strong>, plătit prin{" "}
+        <strong>Stripe</strong> (procesator de plăți). La activare ești
+        redirecționat în Stripe Checkout, unde completezi datele de facturare
+        (persoană fizică sau juridică, adresă, CUI dacă e cazul) și metoda de
+        plată. Frizeo nu stochează numărul complet al cardului.
       </p>
+      <ul>
+        <li>
+          <strong>Reînnoire automată:</strong> abonamentul se reînnoiește lunar
+          până la anulare
+        </li>
+        <li>
+          <strong>Upgrade:</strong> poți trece la un plan superior din secțiunea
+          Abonament (ex. Pro → Pro+); diferența de preț poate fi facturată
+          proporțional (proratare)
+        </li>
+        <li>
+          <strong>Downgrade:</strong> după ce ai avut un abonament plătit activ,
+          trecerea la un plan inferior (ex. Pro+ → Pro) nu este disponibilă
+          direct din platformă — contactează-ne la{" "}
+          <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>
+        </li>
+        <li>
+          <strong>Plată eșuată:</strong> dacă o plată lunară eșuează, statusul
+          abonamentului poate deveni „restanță”; vei fi notificat în cont și
+          poți finaliza plata prin linkul Stripe afișat acolo
+        </li>
+        <li>
+          <strong>Factură fiscală:</strong> după confirmarea plății, Frizeo
+          emite factura fiscală (prin SmartBill sau sistem echivalent), pe baza
+          datelor de facturare din cont
+        </li>
+        <li>
+          Prețurile afișate sunt în lei (RON); TVA se aplică conform legislației
+          în vigoare, dacă este cazul
+        </li>
+      </ul>
+
+      <h3>4.2. Anularea abonamentului plătit</h3>
+      <p>
+        Poți solicita anularea abonamentului plătit oricând, scriind la{" "}
+        <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>. Anularea
+        produce efect de obicei la sfârșitul perioadei curente de facturare,
+        conform regulilor Stripe și ale abonamentului tău. Până atunci, accesul
+        la funcțiile planului plătit rămâne activ dacă plata este în regulă.
+      </p>
+      <p>
+        Oprirea plății sau anularea checkout-ului în Stripe, înainte de
+        finalizare, nu activează abonamentul.
+      </p>
+
       <p>
         <strong>SMS:</strong> disponibil doar pe planuri plătite și în perioada
         de trial. Planul Free nu include SMS.
@@ -98,8 +149,14 @@ export default function TermsPage() {
 
       <h2>9. Reziliere</h2>
       <ul>
-        <li>Poți înceta utilizarea oricând</li>
-        <li>Putem suspenda contul la abuz sau neplată</li>
+        <li>Poți înceta utilizarea platformei oricând</li>
+        <li>
+          Abonamentul plătit se anulează la cerere, conform secțiunii 4.2
+        </li>
+        <li>
+          Putem suspenda sau restricționa contul la abuz, neplată prelungită sau
+          încălcarea termenilor
+        </li>
         <li>La ștergere, datele sunt tratate conform Politicii de confidențialitate</li>
       </ul>
 
