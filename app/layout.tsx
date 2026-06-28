@@ -2,10 +2,14 @@ import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import type { Viewport } from "next";
 import CookieBanner from "./components/CookieBanner";
+import { siteMetadata } from "@/lib/site/metadata";
+
+export const metadata = siteMetadata;
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#0B0B0C",
 };
 
 export default function RootLayout({
