@@ -172,6 +172,33 @@ useEffect(() => {
   loadBarbers();
 }
 
+  async function deleteInvitation(invite: {
+    id: string;
+    full_name: string;
+    email: string;
+  }) {
+    const ok = confirm(
+      `Ștergi invitația pentru ${invite.full_name} (${invite.email})?`
+    );
+
+    if (!ok) return;
+
+    const res = await fetch("/api/barbers/invitations/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ invitationId: invite.id }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || "Nu s-a putut șterge invitația");
+      return;
+    }
+
+    await loadBarbers();
+  }
+
   const slotsUsed = activeBarbers + pendingCount;
   const maxLabel =
     maxBarbers === null ? "∞" : String(maxBarbers);
@@ -405,26 +432,29 @@ onChange={(e) => {
   )}
 
   {invitations.map((invite) => (
-    <AdminCard key={invite.id} padding="sm">
-      <div className="font-medium">
-        {invite.full_name}
+    <AdminCard
+      key={invite.id}
+      padding="sm"
+      className="flex justify-between items-center gap-3"
+    >
+      <div>
+        <div className="font-medium">{invite.full_name}</div>
+
+        <div className="text-sm text-white/60">{invite.email}</div>
+
+        <div className="mt-2">
+          <span className="text-yellow-400 text-sm">⏳ În așteptare</span>
+        </div>
       </div>
 
-      <div className="text-sm text-white/60">
-        {invite.email}
-      </div>
-
-      <div className="mt-2">
-        {invite.accepted ? (
-          <span className="text-green-400 text-sm">
-            ✅ Acceptată
-          </span>
-        ) : (
-          <span className="text-yellow-400 text-sm">
-            ⏳ În așteptare
-          </span>
-        )}
-      </div>
+      <AdminButton
+        variant="danger"
+        size="sm"
+        onClick={() => deleteInvitation(invite)}
+        className="shrink-0"
+      >
+        Șterge
+      </AdminButton>
     </AdminCard>
   ))}
 </div>
