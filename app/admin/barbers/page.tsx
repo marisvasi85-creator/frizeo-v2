@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { canInviteBarber } from "@/lib/limits/checkBarberLimit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getAppUrl } from "@/lib/app/getAppUrl";
 import BarbersClient from "./BarbersClient";
 
 export default async function BarbersPage() {
@@ -91,6 +92,7 @@ export default async function BarbersPage() {
       maxBarbers={plan?.max_barbers ?? null}
       canInvite={inviteAllowed}
       tenantSlug={tenant?.slug ?? ""}
+      appUrl={getAppUrl()}
     />
   );
 }

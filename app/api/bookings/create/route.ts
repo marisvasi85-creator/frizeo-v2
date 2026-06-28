@@ -14,6 +14,7 @@ import {
   timesOverlap,
 } from "@/lib/schedule/time";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
+import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 
 export async function POST(req: Request) {
   try {
@@ -49,6 +50,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Slot indisponibil sau expirat" },
         { status: 400 }
+      );
+    }
+
+    const barberCheck = await requireActiveBarberForNewBooking(
+      booking.barber_id
+    );
+
+    if (!barberCheck.ok) {
+      return NextResponse.json(
+        { error: barberCheck.error },
+        { status: barberCheck.status }
       );
     }
     

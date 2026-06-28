@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { addDays, format } from "date-fns";
 import { jsDayToScheduleDay } from "@/lib/schedule/time";
@@ -17,6 +18,20 @@ export async function GET(req: Request) {
         availableDays: [],
         weeklySchedule: [],
         overrides: [],
+      });
+    }
+
+    const excludeBookingId = searchParams.get("excludeBookingId");
+    const barberCheck = await allowBarberScheduling(barberId, {
+      excludeBookingId,
+    });
+
+    if (!barberCheck.ok) {
+      return NextResponse.json({
+        availableDays: [],
+        weeklySchedule: [],
+        overrides: [],
+        error: barberCheck.error,
       });
     }
 

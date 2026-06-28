@@ -10,12 +10,12 @@ import AdminCard from "../../components/AdminCard";
 import { AdminInput, AdminSelect } from "../../components/AdminInput";
 
 export default function AddBookingClient({
-  barberId,
+  defaultBarberId,
   initialServices,
   role,
   barbers,
 }: {
-  barberId: string;
+  defaultBarberId: string;
   initialServices: any[];
   role: string | null;
   barbers: any[];
@@ -27,7 +27,7 @@ export default function AddBookingClient({
   const [services, setServices] =
   useState(initialServices);
   const [selectedBarberId, setSelectedBarberId] =
-  useState(barberId);
+  useState(defaultBarberId);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 

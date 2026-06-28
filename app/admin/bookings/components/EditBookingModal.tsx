@@ -84,7 +84,7 @@ export default function EditBookingModal({
       const to = localDateISO(future);
 
       const res = await fetch(
-        `/api/availability?barberId=${booking.barber_id}&from=${from}&to=${to}`
+        `/api/availability?barberId=${booking.barber_id}&from=${from}&to=${to}&excludeBookingId=${booking.id}`
       );
       const data = await res.json();
 

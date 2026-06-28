@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import {
@@ -19,6 +20,14 @@ export async function GET(req: Request) {
 
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
+  }
+
+  const barberCheck = await allowBarberScheduling(barberId, {
+    excludeBookingId,
+  });
+
+  if (!barberCheck.ok) {
+    return NextResponse.json({ slots: [], error: barberCheck.error });
   }
 
   const supabase = supabaseAdmin;

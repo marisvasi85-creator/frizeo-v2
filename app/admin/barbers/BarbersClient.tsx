@@ -26,6 +26,7 @@ export default function BarbersClient({
   maxBarbers,
   canInvite,
   tenantSlug,
+  appUrl,
 }: {
   currentPlan: string;
   activeBarbers: number;
@@ -33,6 +34,7 @@ export default function BarbersClient({
   maxBarbers: number | null;
   canInvite: boolean;
   tenantSlug: string;
+  appUrl: string;
 }) {  
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
@@ -43,9 +45,6 @@ export default function BarbersClient({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const appUrl =
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "http://localhost:3000";
   async function loadBarbers() {
   const [barbersRes, invitesRes] =
     await Promise.all([

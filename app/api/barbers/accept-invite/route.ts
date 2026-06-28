@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
+import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import {
   isValidPassword,
   PASSWORD_REQUIREMENTS_MESSAGE,
@@ -182,6 +183,13 @@ export async function POST(req: Request) {
   })
   .select()
   .single();
+
+    await ensureBarberSlug({
+      id: barber.id,
+      tenant_id: barber.tenant_id,
+      display_name: barber.display_name,
+      slug: barber.slug,
+    });
     await supabaseAdmin
   .from("barber_services")
   .insert([

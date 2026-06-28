@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import {
   addMinutesToTime,
@@ -20,6 +21,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const barberCheck = await requireActiveBarberForNewBooking(barber_id);
+
+    if (!barberCheck.ok) {
+      return NextResponse.json(
+        { error: barberCheck.error },
+        { status: barberCheck.status }
+      );
+    }
+
     const { data: service } = await supabase
       .from("barber_services")
       .select("duration")
@@ -35,18 +45,7 @@ export async function POST(req: Request) {
 
     const end_time = addMinutesToTime(start_time, service.duration);
 
-    const { data: barber } = await supabase
-      .from("barbers")
-      .select("tenant_id")
-      .eq("id", barber_id)
-      .single();
-
-    if (!barber) {
-      return NextResponse.json(
-        { error: "Barber invalid" },
-        { status: 400 }
-      );
-    }
+    const barber = barberCheck.barber;
 
     const { data: existing } = await supabase
       .from("bookings")

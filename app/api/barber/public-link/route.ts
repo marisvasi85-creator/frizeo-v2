@@ -4,10 +4,10 @@ import {
   publicBookingUrl,
   publicSalonUrl,
 } from "@/lib/booking/publicBookingPath";
+import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { slugify } from "@/lib/utils/slugify";
 
 export async function GET() {
   const barber = await getCurrentBarberInTenant();
@@ -26,22 +26,27 @@ export async function GET() {
     return NextResponse.json({ url: null });
   }
 
-  const tenantSlug = await ensureTenantSlug(tenant);
-  let barberSlug = barber.slug;
+  try {
+    const tenantSlug = await ensureTenantSlug(tenant);
+    const barberSlug = await ensureBarberSlug({
+      id: barber.id,
+      tenant_id: barber.tenant_id,
+      display_name: barber.display_name,
+      slug: barber.slug,
+    });
 
-  if (!barberSlug) {
-    barberSlug = slugify(barber.display_name || "frizer");
-    await supabaseAdmin
-      .from("barbers")
-      .update({ slug: barberSlug })
-      .eq("id", barber.id);
+    const appUrl = getAppUrl();
+
+    const url = barberSlug
+      ? publicBookingUrl(tenantSlug, barberSlug, appUrl)
+      : publicSalonUrl(tenantSlug, appUrl);
+
+    return NextResponse.json({ url });
+  } catch (error) {
+    console.error("barber/public-link:", error);
+    return NextResponse.json(
+      { url: null, error: "Nu s-a putut genera linkul" },
+      { status: 500 }
+    );
   }
-
-  const appUrl = getAppUrl();
-
-  const url = barberSlug
-    ? publicBookingUrl(tenantSlug, barberSlug, appUrl)
-    : publicSalonUrl(tenantSlug, appUrl);
-
-  return NextResponse.json({ url });
 }

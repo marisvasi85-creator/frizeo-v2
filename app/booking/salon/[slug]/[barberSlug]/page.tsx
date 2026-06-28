@@ -31,6 +31,22 @@ export default async function Page({
     return <div>Salon inexistent</div>;
   }
 
+  const { data: inactiveBarber } = await supabaseAdmin
+    .from("barbers")
+    .select("id, display_name")
+    .eq("tenant_id", salon.id)
+    .eq("slug", barberSlug)
+    .eq("active", false)
+    .maybeSingle();
+
+  if (inactiveBarber) {
+    return (
+      <div className="max-w-xl mx-auto p-6 text-center">
+        Frizer indisponibil momentan pentru programări online.
+      </div>
+    );
+  }
+
   const { data: barber } = await supabaseAdmin
   .from("barbers")
   .select(`
