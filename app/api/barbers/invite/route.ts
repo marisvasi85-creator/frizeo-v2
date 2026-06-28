@@ -2,20 +2,19 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getAppUrl } from "@/lib/app/getAppUrl";
+import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
+import { canInviteBarber } from "@/lib/limits/checkBarberLimit";
 
 import { sendEmail } from "@/lib/email/email";
 import { barberInvitationTemplate } from "@/lib/email/templates/barber-invitation";
 
 export async function POST(req: Request) {
   try {
-    const barber = await getCurrentBarberInTenant();
+    const auth = await requireTenantAccess(["owner", "manager"]);
 
-    if (!barber) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+    if (isAuthError(auth)) {
+      return auth;
     }
 
     const body = await req.json();
@@ -33,25 +32,38 @@ export async function POST(req: Request) {
       );
     }
 
-    // tenant
+    const tenantId = auth.tenantId;
+
     const { data: tenant } = await supabaseAdmin
       .from("tenants")
       .select("name")
-      .eq("id", barber.tenant_id)
+      .eq("id", tenantId)
       .single();
 
-    // token nou
-const token = crypto.randomUUID();
+    const token = crypto.randomUUID();
 
-// verificăm dacă există invitație activă
-const { data: existingInvite } =
-  await supabaseAdmin
-    .from("barber_invitations")
-    .select("id")
-    .eq("tenant_id", barber.tenant_id)
-    .eq("email", email)
-    .eq("accepted", false)
-    .maybeSingle();
+    const { data: existingInvite } =
+      await supabaseAdmin
+        .from("barber_invitations")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .eq("email", email)
+        .eq("accepted", false)
+        .maybeSingle();
+
+    if (!existingInvite) {
+      const allowed = await canInviteBarber(tenantId);
+
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error:
+              "Ai atins limita de frizeri pentru planul tău. Upgrade abonamentul pentru mai mulți frizeri.",
+          },
+          { status: 403 }
+        );
+      }
+    }
 
 if (existingInvite) {
   const { error } = await supabaseAdmin
@@ -75,7 +87,7 @@ if (existingInvite) {
   const { error } = await supabaseAdmin
     .from("barber_invitations")
     .insert({
-      tenant_id: barber.tenant_id,
+      tenant_id: tenantId,
       full_name,
       email,
       phone,
@@ -92,9 +104,7 @@ if (existingInvite) {
   }
 }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000";
+    const baseUrl = getAppUrl();
 
     const inviteUrl =
   `${baseUrl}/accept-invite/${token}`;

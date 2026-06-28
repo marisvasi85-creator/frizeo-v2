@@ -4,6 +4,7 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,20 @@ export async function POST(req: Request) {
 
     if (!barberOk) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (active) {
+      const allowed = await canCreateBarber(auth.tenantId);
+
+      if (!allowed) {
+        return NextResponse.json(
+          {
+            error:
+              "Ai atins limita de frizeri pentru planul tău. Upgrade abonamentul pentru mai mulți frizeri.",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const { error } = await auth.supabase

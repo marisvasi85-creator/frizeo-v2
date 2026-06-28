@@ -22,12 +22,16 @@ type Barber = {
 export default function BarbersClient({
   currentPlan,
   activeBarbers,
+  pendingInvites,
   maxBarbers,
+  canInvite,
   tenantSlug,
 }: {
   currentPlan: string;
   activeBarbers: number;
-  maxBarbers: number;
+  pendingInvites: number;
+  maxBarbers: number | null;
+  canInvite: boolean;
   tenantSlug: string;
 }) {  
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -133,6 +137,9 @@ useEffect(() => {
 
     if (res.ok) {
       loadBarbers();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Nu s-a putut actualiza frizerul.");
     }
   }
 
@@ -168,6 +175,11 @@ useEffect(() => {
   loadBarbers();
 }
 
+  const slotsUsed = activeBarbers + pendingInvites;
+  const maxLabel =
+    maxBarbers === null ? "∞" : String(maxBarbers);
+  const atLimit = maxBarbers !== null && slotsUsed >= maxBarbers;
+
   return (
     <div className="space-y-8">
 
@@ -190,10 +202,16 @@ useEffect(() => {
   </div>
 
   <div className="font-medium mt-1">
-    {activeBarbers} / {maxBarbers}
+    {slotsUsed} / {maxLabel}
   </div>
 
-  {activeBarbers >= maxBarbers && (
+  {pendingInvites > 0 && (
+    <div className="text-xs text-white/50 mt-1">
+      {activeBarbers} activi · {pendingInvites} invitații în așteptare
+    </div>
+  )}
+
+  {atLimit && (
   <AdminButton
     size="sm"
     href="/admin/billing"
@@ -215,6 +233,15 @@ useEffect(() => {
           Invită frizer
         </h2>
 
+        {!canInvite ? (
+          <p className="text-sm text-white/60">
+            Ai atins limita de frizeri pentru planul curent.
+            {maxBarbers !== null && maxBarbers <= 1
+              ? " Planul Pro permite un singur frizer (proprietarul salonului)."
+              : " Upgrade abonamentul pentru a invita mai mulți frizeri."}
+          </p>
+        ) : (
+          <>
         <AdminInput
           placeholder="Nume"
           value={name}
@@ -256,6 +283,8 @@ onChange={(e) => {
           <div className="text-sm text-white/70">
             {message}
           </div>
+        )}
+          </>
         )}
 
       </AdminCard>
