@@ -30,7 +30,7 @@ export async function POST() {
 
     if (error || !subscription?.stripe_subscription_id) {
       return NextResponse.json(
-        { error: "Nu există o factură deschisă." },
+        { error: "Nu există o plată restantă." },
         { status: 400 }
       );
     }
@@ -49,7 +49,7 @@ export async function POST() {
     const url = await getOpenInvoicePayUrl(stripeSub.id);
     if (!url) {
       return NextResponse.json(
-        { error: "Factura nu a putut fi deschisă." },
+        { error: "Plata nu a putut fi deschisă." },
         { status: 500 }
       );
     }

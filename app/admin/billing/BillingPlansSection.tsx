@@ -29,7 +29,8 @@ export default function BillingPlansSection({
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
-        Alegi planul → plătești în Stripe → revii aici cu planul activ.
+        Alegi planul → plătești cu cardul în Stripe → revii aici cu planul activ.
+        Factura fiscală se emite separat (FGO).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

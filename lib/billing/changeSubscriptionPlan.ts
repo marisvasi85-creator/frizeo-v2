@@ -39,7 +39,7 @@ function changePlanErrorMessage(
   err: InstanceType<typeof Stripe.errors.StripeError>
 ): string {
   if (err.code === "card_declined") {
-    return "Cardul a fost refuzat. Plătește factura restantă sau încearcă din nou.";
+    return "Cardul a fost refuzat. Finalizează plata restantă sau încearcă din nou.";
   }
 
   if (

@@ -15,7 +15,7 @@ export default function PayInvoiceButton() {
       const data = await res.json();
 
       if (!res.ok || !data.url) {
-        setError(data.error || "Factura nu a putut fi deschisă.");
+        setError(data.error || "Plata nu a putut fi deschisă.");
         return;
       }
 
@@ -35,7 +35,7 @@ export default function PayInvoiceButton() {
         disabled={loading}
         className="rounded bg-white text-black px-4 py-2 text-sm hover:bg-gray-200 transition disabled:opacity-60"
       >
-        {loading ? "Se deschide…" : "Plătește factura restantă"}
+        {loading ? "Se deschide…" : "Finalizează plata"}
       </button>
       {error && <p className="text-xs text-red-300">{error}</p>}
     </div>

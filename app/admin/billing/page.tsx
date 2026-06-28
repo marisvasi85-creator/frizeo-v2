@@ -5,7 +5,6 @@ import BillingPlansSection from "./BillingPlansSection";
 import PayInvoiceButton from "./PayInvoiceButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
-import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -31,13 +30,6 @@ async function syncAfterCheckout(sessionId: string, tenantId: string) {
       subscription,
       session.metadata?.tenant_id ?? tenantId
     );
-
-    const customerId =
-      typeof session.customer === "string" ? session.customer : null;
-
-    if (customerId) {
-      await syncTenantBillingFromStripeCustomer(tenantId, customerId);
-    }
   } catch (err) {
     console.error("billing syncAfterCheckout:", err);
   }
@@ -139,7 +131,7 @@ export default async function BillingPage({
 
       {isPastDue && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
-          <p>Ultima plată nu a reușit. Plătește factura ca să păstrezi planul activ.</p>
+          <p>Ultima plată nu a reușit. Finalizează plata ca să păstrezi planul activ.</p>
           <PayInvoiceButton />
         </div>
       )}
