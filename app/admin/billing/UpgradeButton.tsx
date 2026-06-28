@@ -56,7 +56,7 @@ export default function UpgradeButton({
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading
-          ? "Se procesează…"
+          ? "Se deschide Stripe…"
           : trialEarlyPurchase
             ? `Cumpără ${planName}`
             : `Alege ${planName}`}

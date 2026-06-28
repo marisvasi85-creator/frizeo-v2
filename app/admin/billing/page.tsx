@@ -2,15 +2,10 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import BillingPlansSection from "./BillingPlansSection";
-import BillingProfileForm from "./BillingProfileForm";
 import PayInvoiceButton from "./PayInvoiceButton";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
-import {
-  isBillingProfileComplete,
-  rowToBillingProfile,
-  type TenantBillingRow,
-} from "@/lib/billing/billingProfile";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
+import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -36,6 +31,13 @@ async function syncAfterCheckout(sessionId: string, tenantId: string) {
       subscription,
       session.metadata?.tenant_id ?? tenantId
     );
+
+    const customerId =
+      typeof session.customer === "string" ? session.customer : null;
+
+    if (customerId) {
+      await syncTenantBillingFromStripeCustomer(tenantId, customerId);
+    }
   } catch (err) {
     console.error("billing syncAfterCheckout:", err);
   }
@@ -117,19 +119,6 @@ export default async function BillingPage({
 
   const isPastDue = subscription?.status === "past_due";
 
-  const { data: tenantBilling } = await supabaseAdmin
-    .from("tenants")
-    .select(
-      "billing_type, billing_name, billing_cui, billing_reg_com, billing_address_line1, billing_city, billing_county, billing_postal_code, billing_country"
-    )
-    .eq("id", barber.tenant_id)
-    .single();
-
-  const billingProfile = rowToBillingProfile(
-    (tenantBilling as TenantBillingRow | null) ?? null
-  );
-  const billingComplete = isBillingProfileComplete(billingProfile);
-
   return (
     <div className="space-y-8">
       <AdminPageHeader title="Abonament" />
@@ -196,17 +185,11 @@ export default async function BillingPage({
         </div>
       </AdminCard>
 
-      <BillingProfileForm
-        initialProfile={billingProfile}
-        complete={billingComplete}
-      />
-
       <BillingPlansSection
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
         currentPlanSlug={currentPlan?.slug}
         isTrial={isTrial}
-        billingComplete={billingComplete}
       />
     </div>
   );
