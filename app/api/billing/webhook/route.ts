@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
+import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -63,6 +64,14 @@ export async function POST(req: Request) {
             subscription,
             session.metadata?.tenant_id
           );
+
+          const customerId =
+            typeof session.customer === "string" ? session.customer : null;
+          const tenantId = session.metadata?.tenant_id;
+
+          if (customerId && tenantId) {
+            await syncTenantBillingFromStripeCustomer(tenantId, customerId);
+          }
         }
         break;
       }
@@ -96,6 +105,16 @@ export async function POST(req: Request) {
             subscriptionId
           );
           await syncStripeSubscription(subscription);
+
+          const customerId =
+            typeof subscription.customer === "string"
+              ? subscription.customer
+              : null;
+          const tenantId = subscription.metadata?.tenant_id;
+
+          if (customerId && tenantId) {
+            await syncTenantBillingFromStripeCustomer(tenantId, customerId);
+          }
         }
         break;
       }

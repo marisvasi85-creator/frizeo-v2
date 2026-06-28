@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
-import { ensureStripeCustomerWithBilling } from "@/lib/billing/ensureStripeCustomerWithBilling";
 import {
   createBankTransferSubscription,
   createSubscriptionCheckout,
+  resolveStripeCustomer,
   retrieveActiveStripeSubscription,
   type PaymentMethodChoice,
 } from "@/lib/billing/stripeCheckout";
@@ -112,21 +112,6 @@ export async function POST(req: Request) {
       plan_slug: planSlug,
     };
 
-    const billingReady = await ensureStripeCustomerWithBilling({
-      tenantId: tenant.tenant_id,
-      tenantName: tenant.name,
-      email: user.email,
-    });
-
-    if (!billingReady.ok) {
-      return NextResponse.json(
-        { error: billingReady.error },
-        { status: billingReady.status }
-      );
-    }
-
-    const customerId = billingReady.customerId;
-
     const stripe = getStripe();
 
     const existingStripeSub = subscription.stripe_subscription_id
@@ -138,6 +123,42 @@ export async function POST(req: Request) {
       (existingStripeSub.status === "active" ||
         existingStripeSub.status === "trialing" ||
         existingStripeSub.status === "past_due");
+
+    const userEmail = user.email;
+    const tenantId = tenant.tenant_id;
+    const tenantName = tenant.name;
+
+    async function ensureCustomerId(): Promise<string | NextResponse> {
+      const { customerId, clearedStaleId } = await resolveStripeCustomer({
+        customerId: subscription.stripe_customer_id as string | null,
+        email: userEmail,
+        name: tenantName,
+        tenantId,
+      });
+
+      if (customerId !== subscription.stripe_customer_id || clearedStaleId) {
+        const { error: customerSaveError } = await supabaseAdmin
+          .from("subscriptions")
+          .update({
+            stripe_customer_id: customerId,
+            ...(clearedStaleId ? { stripe_subscription_id: null } : {}),
+          })
+          .eq("tenant_id", tenantId);
+
+        if (customerSaveError) {
+          console.error("stripe_customer_id save:", customerSaveError);
+          return NextResponse.json(
+            {
+              error:
+                "Nu s-a putut salva clientul Stripe. Verifică migrarea SQL din Supabase.",
+            },
+            { status: 500 }
+          );
+        }
+      }
+
+      return customerId;
+    }
 
     if (paymentMethod === "bank_transfer") {
       if (hasActiveStripeSub) {
@@ -161,6 +182,9 @@ export async function POST(req: Request) {
           .update({ stripe_subscription_id: null })
           .eq("tenant_id", tenant.tenant_id);
       }
+
+      const customerId = await ensureCustomerId();
+      if (customerId instanceof NextResponse) return customerId;
 
       const { subscription: bankSub, invoiceUrl } =
         await createBankTransferSubscription({
@@ -224,10 +248,13 @@ export async function POST(req: Request) {
       }
     }
 
+    const customerId = await ensureCustomerId();
+    if (customerId instanceof NextResponse) return customerId;
+
     const session = await createSubscriptionCheckout({
       stripePriceId,
       customerId,
-      customerEmail: user.email,
+      customerEmail: userEmail,
       successUrl,
       cancelUrl,
       metadata,

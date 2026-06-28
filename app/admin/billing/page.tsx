@@ -4,7 +4,7 @@ import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenan
 import BillingPlansSection from "./BillingPlansSection";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
-import { getTenantBillingProfile } from "@/lib/billing/getTenantBillingProfile";
+import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -33,6 +33,13 @@ async function syncAfterCheckout(
       subscription,
       session.metadata?.tenant_id ?? tenantId
     );
+
+    const customerId =
+      typeof session.customer === "string" ? session.customer : null;
+
+    if (customerId) {
+      await syncTenantBillingFromStripeCustomer(tenantId, customerId);
+    }
   } catch (err) {
     console.error("billing syncAfterCheckout:", err);
   }
@@ -117,8 +124,6 @@ const trialDaysLeft =
     Boolean(subscription?.stripe_subscription_id) &&
     (currentPlan?.slug === "free" || isTrial);
 
-  const billingProfile = await getTenantBillingProfile(barber.tenant_id);
-
   return (
     <div className="space-y-8">
 
@@ -126,7 +131,8 @@ const trialDaysLeft =
 
       {checkoutStatus === "success" && (
         <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
-          Plata a fost procesată. Planul tău se actualizează în câteva secunde.
+          Mulțumim! Plata a fost înregistrată. Planul tău este activ — poate dura
+          câteva secunde până apare mai sus.
         </div>
       )}
 
@@ -194,7 +200,6 @@ const trialDaysLeft =
       </AdminCard>
 
       <BillingPlansSection
-        initialProfile={billingProfile}
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
         isTrial={isTrial}

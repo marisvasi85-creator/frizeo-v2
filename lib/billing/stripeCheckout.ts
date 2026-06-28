@@ -36,12 +36,13 @@ export async function createSubscriptionCheckout(
       metadata: params.metadata,
     },
     locale: "ro",
-    billing_address_collection: "auto",
+    billing_address_collection: "required",
     tax_id_collection: { enabled: true },
     customer_update: {
       address: "auto",
       name: "auto",
     },
+    phone_number_collection: { enabled: false },
   };
 
   if (params.customerId) {
