@@ -72,7 +72,12 @@ export function getPlanTier(slug: string | null | undefined): number {
 
 export function isPlanDowngrade(
   currentSlug: string | null | undefined,
-  targetSlug: string | null | undefined
+  targetSlug: string | null | undefined,
+  options?: { isAppTrial?: boolean }
 ): boolean {
+  if (options?.isAppTrial) {
+    return false;
+  }
+
   return getPlanTier(targetSlug) < getPlanTier(currentSlug);
 }

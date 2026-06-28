@@ -39,6 +39,7 @@ export default function BillingPlansSection({
           const isPaidPlan = plan.slug === "pro" || plan.slug === "pro-plus";
           const canPurchaseDuringTrial = isTrial && isCurrent && isPaidPlan;
           const isLowerPlan =
+            !isTrial &&
             !isCurrent &&
             currentPlanSlug &&
             isPlanDowngrade(currentPlanSlug, plan.slug);

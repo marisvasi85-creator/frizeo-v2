@@ -104,7 +104,10 @@ export async function POST(req: Request) {
       subscription.plans as { slug?: string } | null
     )?.slug;
 
-    if (isPlanDowngrade(currentPlanSlug, planSlug)) {
+    const isAppTrial =
+      subscription.status === "trialing" && !subscription.stripe_subscription_id;
+
+    if (!isAppTrial && isPlanDowngrade(currentPlanSlug, planSlug)) {
       return NextResponse.json(
         { error: "Beneficiezi deja de un plan mai mare." },
         { status: 400 }
@@ -119,9 +122,6 @@ export async function POST(req: Request) {
       plan_id: targetPlan.id,
       plan_slug: planSlug,
     };
-
-    const isAppTrial =
-      subscription.status === "trialing" && !subscription.stripe_subscription_id;
 
     const existingStripeSub = subscription.stripe_subscription_id
       ? await retrieveActiveStripeSubscription(subscription.stripe_subscription_id)
