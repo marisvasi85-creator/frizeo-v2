@@ -1,5 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
@@ -10,13 +10,11 @@ export default async function NotificationsPage() {
 
   if (!barber) return null;
 
-  const supabase = await createSupabaseServerClient();
-
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from("notification_settings")
     .select("*")
     .eq("tenant_id", barber.tenant_id)
-    .single();
+    .maybeSingle();
 
   const plan = await getCurrentPlan(barber.tenant_id);
   const smsAllowed = planAllowsSms(plan);
