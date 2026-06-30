@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { getAnalyticsConfig } from "@/lib/analytics/config";
@@ -17,8 +17,11 @@ function AnalyticsInner() {
   const scriptTargets = useRef(0);
   const skipInitialPageView = useRef(true);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setConsent(hasAnalyticsConsent());
+  }, []);
+
+  useEffect(() => {
     return onConsentChange(() => setConsent(hasAnalyticsConsent()));
   }, []);
 

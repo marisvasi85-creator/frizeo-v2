@@ -1,4 +1,5 @@
 import LegalPageLayout from "@/app/components/LegalPageLayout";
+import CookiePreferencesButton from "@/app/components/CookiePreferencesButton";
 import { LEGAL_COMPANY } from "@/lib/legal/company";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
@@ -70,7 +71,11 @@ export default function CookiesPage() {
       <ul>
         <li>Poți șterge cookie-urile din setările browserului</li>
         <li>Poți bloca cookie-urile — dar nu vei putea folosi contul admin</li>
-        <li>Bannerul de pe site îți permite să accepți sau să folosești doar esențiale</li>
+        <li>
+          Poți reseta preferința din site cu butonul{" "}
+          <CookiePreferencesButton label="Preferințe cookies" /> — bannerul
+          reapare și poți alege din nou
+        </li>
       </ul>
 
       <h2>5. Cookie-uri terțe</h2>

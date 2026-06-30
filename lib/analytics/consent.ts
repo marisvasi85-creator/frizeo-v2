@@ -14,6 +14,11 @@ export function getConsentChoice(): ConsentChoice | null {
   return null;
 }
 
+export function clearConsentChoice() {
+  localStorage.removeItem(CONSENT_STORAGE_KEY);
+  notifyConsentChange();
+}
+
 export function notifyConsentChange() {
   window.dispatchEvent(new CustomEvent("frizeo-consent-change"));
 }

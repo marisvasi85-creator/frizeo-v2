@@ -4,6 +4,7 @@ import {
   LEGAL_COMPANY,
   LEGAL_LINKS,
 } from "@/lib/legal/company";
+import CookiePreferencesButton from "./CookiePreferencesButton";
 
 export default function Footer() {
   const companyLine = companyFooterLine();
@@ -62,6 +63,9 @@ export default function Footer() {
               <Link href="/cookies" className="hover:text-black">
                 Politica cookies
               </Link>
+            </li>
+            <li>
+              <CookiePreferencesButton />
             </li>
             <li>
               <a
