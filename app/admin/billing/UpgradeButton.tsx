@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import { trackInitiateCheckout } from "@/lib/analytics/track";
 
 type Props = {
   planId: string;
   planName: string;
+  planPrice?: number;
   trialEarlyPurchase?: boolean;
 };
 
 export default function UpgradeButton({
   planId,
   planName,
+  planPrice,
   trialEarlyPurchase = false,
 }: Props) {
   const [loading, setLoading] = useState(false);
@@ -19,6 +23,14 @@ export default function UpgradeButton({
   async function handleUpgrade() {
     setLoading(true);
     setError(null);
+
+    if (hasAnalyticsConsent()) {
+      trackInitiateCheckout({
+        planName,
+        value: planPrice,
+        currency: "RON",
+      });
+    }
 
     try {
       const res = await fetch("/api/billing/checkout", {

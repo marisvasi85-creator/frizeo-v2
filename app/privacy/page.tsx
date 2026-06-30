@@ -100,8 +100,8 @@ export default function PrivacyPage() {
           îmbunătățire serviciu
         </li>
         <li>
-          <strong>Consimțământ</strong> — acolo unde este cerut explicit (ex.
-          cookie-uri non-esențiale, dacă vor fi introduse)
+          <strong>Consimțământ</strong> — cookie-uri de marketing/analytics
+          (Meta Pixel, Google Analytics), doar dacă le accepți în banner
         </li>
         <li>
           <strong>Obligație legală</strong> — contabilitate, fiscalitate, când
@@ -116,7 +116,8 @@ export default function PrivacyPage() {
         <li>Vercel (hosting aplicație)</li>
         <li>Zoho / furnizor email (notificări email)</li>
         <li>SMSO (notificări SMS, planuri plătite / trial)</li>
-        <li>Google (Calendar OAuth, dacă este conectat)</li>
+        <li>Google (Calendar OAuth, dacă este conectat; Analytics 4, cu consimțământ)</li>
+        <li>Meta Platforms (Pixel conversii reclame, cu consimțământ)</li>
         <li>Stripe (procesare plăți abonament, UE/global) —{" "}
         <a
           href="https://stripe.com/privacy"

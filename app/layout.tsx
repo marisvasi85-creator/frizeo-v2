@@ -2,6 +2,7 @@ import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import type { Viewport } from "next";
 import CookieBanner from "./components/CookieBanner";
+import AnalyticsProvider from "./components/analytics/AnalyticsProvider";
 import { siteMetadata } from "@/lib/site/metadata";
 
 export const metadata = siteMetadata;
@@ -32,6 +33,7 @@ export default function RootLayout({
         />
 
         {children}
+        <AnalyticsProvider />
         <CookieBanner />
       </body>
     </html>

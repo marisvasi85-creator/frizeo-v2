@@ -40,11 +40,23 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h3>Cookie-uri ne-esențiale</h3>
+      <h3>Cookie-uri ne-esențiale (cu consimțământ)</h3>
       <p>
-        În prezent <strong>nu folosim</strong> cookie-uri de analytics (Google
-        Analytics, Meta Pixel etc.). Dacă le vom introduce, vom actualiza această
-        pagină și vom cere consimțământul tău.
+        Dacă accepți bannerul de cookies, putem folosi:
+      </p>
+      <ul>
+        <li>
+          <strong>Meta Pixel</strong> — măsurare conversii din reclame Facebook /
+          Instagram (Meta Platforms Ireland Ltd.)
+        </li>
+        <li>
+          <strong>Google Analytics 4</strong> — statistici anonime de trafic
+          (Google Ireland Ltd.)
+        </li>
+      </ul>
+      <p>
+        Aceste cookie-uri se activează <strong>doar după consimțământ</strong>.
+        Poți refuza cu „Doar esențiale” — site-ul funcționează normal fără ele.
       </p>
 
       <h2>3. Stocare locală (localStorage)</h2>

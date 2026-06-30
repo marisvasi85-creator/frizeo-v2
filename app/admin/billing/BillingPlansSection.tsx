@@ -140,6 +140,7 @@ export default function BillingPlansSection({
                   <UpgradeButton
                     planId={plan.id}
                     planName={plan.name}
+                    planPrice={plan.price}
                     trialEarlyPurchase={canPurchaseDuringTrial}
                   />
                 ) : null}

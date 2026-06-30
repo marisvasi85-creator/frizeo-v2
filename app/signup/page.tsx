@@ -8,6 +8,9 @@ import {
   isValidPassword,
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
+import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import { trackRegistrationOnce } from "@/lib/analytics/track";
+import SignupAnalytics from "@/app/components/analytics/SignupAnalytics";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -83,6 +86,10 @@ export default function SignupPage() {
         return;
       }
 
+      if (hasAnalyticsConsent()) {
+        trackRegistrationOnce();
+      }
+
       window.location.href = data.redirect;
     } catch {
       setError("Eroare server. Încearcă din nou.");
@@ -93,6 +100,7 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10">
+      <SignupAnalytics />
       <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="text-center">
           <h1 className="text-white text-2xl font-semibold">Frizeo</h1>

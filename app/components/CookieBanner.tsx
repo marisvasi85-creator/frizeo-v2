@@ -2,24 +2,28 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const STORAGE_KEY = "frizeo_cookie_consent";
+import {
+  CONSENT_STORAGE_KEY,
+  notifyConsentChange,
+} from "@/lib/analytics/consent";
 
 export default function CookieBanner() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (localStorage.getItem(CONSENT_STORAGE_KEY)) return;
     setVisible(true);
   }, []);
 
   function accept() {
-    localStorage.setItem(STORAGE_KEY, "accepted");
+    localStorage.setItem(CONSENT_STORAGE_KEY, "accepted");
+    notifyConsentChange();
     setVisible(false);
   }
 
   function decline() {
-    localStorage.setItem(STORAGE_KEY, "essential");
+    localStorage.setItem(CONSENT_STORAGE_KEY, "essential");
+    notifyConsentChange();
     setVisible(false);
   }
 
@@ -33,8 +37,8 @@ export default function CookieBanner() {
     >
       <div className="max-w-4xl mx-auto bg-[#161618] border border-white/10 text-white rounded-xl p-5 shadow-2xl flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1 text-sm text-white/80">
-          Folosim cookie-uri esențiale pentru autentificare și funcționarea
-          platformei.{" "}
+          Folosim cookie-uri esențiale pentru autentificare. Dacă accepți, putem
+          folosi și Meta Pixel / Google Analytics pentru statistici anonime.{" "}
           <Link href="/cookies" className="text-blue-400 underline">
             Politica cookies
           </Link>

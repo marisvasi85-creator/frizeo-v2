@@ -11,6 +11,7 @@ import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
+import BillingConversionTracker from "./BillingConversionTracker";
 
 async function syncAfterCheckout(sessionId: string, tenantId: string) {
   try {
@@ -121,6 +122,13 @@ export default async function BillingPage({
 
   return (
     <div className="space-y-8">
+      <BillingConversionTracker
+        checkoutStatus={checkoutStatus}
+        sessionId={sessionId}
+        planName={currentPlan?.name}
+        planPrice={currentPlan?.price}
+      />
+
       <AdminPageHeader title="Abonament" />
 
       {checkoutStatus === "success" && (
