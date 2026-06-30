@@ -15,6 +15,7 @@ function AnalyticsInner() {
   const [ready, setReady] = useState(false);
   const loadedCount = useRef(0);
   const scriptTargets = useRef(0);
+  const skipInitialPageView = useRef(true);
 
   useEffect(() => {
     setConsent(hasAnalyticsConsent());
@@ -23,6 +24,10 @@ function AnalyticsInner() {
 
   useEffect(() => {
     if (!consent || !ready) return;
+    if (skipInitialPageView.current) {
+      skipInitialPageView.current = false;
+      return;
+    }
     trackPageView(pathname, searchParams.toString());
   }, [pathname, searchParams, consent, ready]);
 
@@ -80,7 +85,18 @@ function AnalyticsInner() {
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              fbq('init', '${config.metaPixelId}');
+              (function () {
+                var params = new URLSearchParams(window.location.search);
+                var testCode = params.get('test_event_code') || ${JSON.stringify(config.metaTestEventCode)};
+                var pixelId = ${JSON.stringify(config.metaPixelId)};
+                if (testCode) {
+                  fbq('init', pixelId, {}, { test_event_code: testCode });
+                } else {
+                  fbq('init', pixelId);
+                }
+                fbq('track', 'PageView');
+                window.__frizeoMetaReady = true;
+              })();
             `}
           </Script>
           <noscript>
