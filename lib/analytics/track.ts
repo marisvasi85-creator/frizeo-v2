@@ -6,9 +6,14 @@ declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
     gtag?: (...args: unknown[]) => void;
+    ttq?: {
+      page?: () => void;
+      track?: (event: string, params?: EventParams) => void;
+    };
     dataLayer?: Record<string, unknown>[];
     __frizeoMetaReady?: boolean;
     __frizeoGaReady?: boolean;
+    __frizeoTikTokReady?: boolean;
   }
 }
 
@@ -25,6 +30,24 @@ function trackMeta(event: string, params?: EventParams) {
 function trackGa(event: string, params?: EventParams) {
   if (!window.gtag) return;
   window.gtag("event", event, params);
+}
+
+function trackTikTokPage() {
+  window.ttq?.page?.();
+}
+
+function trackTikTok(event: string, params?: EventParams) {
+  window.ttq?.track?.(event, params);
+}
+
+function tikTokContents(contentName: string) {
+  return [
+    {
+      content_id: contentName,
+      content_type: "product",
+      content_name: contentName,
+    },
+  ];
 }
 
 export function initGoogleAnalytics(measurementId: string) {
@@ -58,6 +81,10 @@ export function markAnalyticsReady() {
   if (config.gaMeasurementId) {
     initGoogleAnalytics(config.gaMeasurementId);
   }
+
+  if (config.tiktokPixelId) {
+    window.__frizeoTikTokReady = true;
+  }
 }
 
 export function trackPageView(pathname: string, search = "") {
@@ -73,6 +100,7 @@ export function trackPageView(pathname: string, search = "") {
 
   trackMeta("PageView");
   trackGa("page_view", { page_path: pagePath });
+  trackTikTokPage();
 }
 
 export function trackViewContent(contentName: string) {
@@ -80,12 +108,14 @@ export function trackViewContent(contentName: string) {
 
   trackMeta("ViewContent", params);
   trackGa("view_item", { item_name: contentName });
+  trackTikTok("ViewContent", { contents: tikTokContents(contentName) });
   pushDataLayer("view_content", params);
 }
 
 export function trackCompleteRegistration() {
   trackMeta("CompleteRegistration");
   trackGa("sign_up", { method: "email" });
+  trackTikTok("CompleteRegistration");
   pushDataLayer("complete_registration");
 }
 
@@ -112,6 +142,11 @@ export function trackInitiateCheckout(params: {
     value: payload.value,
     items: [{ item_name: params.planName }],
   });
+  trackTikTok("InitiateCheckout", {
+    contents: tikTokContents(params.planName),
+    value: payload.value,
+    currency: payload.currency,
+  });
   pushDataLayer("initiate_checkout", payload);
 }
 
@@ -132,6 +167,11 @@ export function trackSubscribe(params: {
     currency: payload.currency,
     value: payload.value,
     items: [{ item_name: params.planName }],
+  });
+  trackTikTok("CompletePayment", {
+    contents: tikTokContents(params.planName),
+    value: payload.value,
+    currency: payload.currency,
   });
   pushDataLayer("subscribe", payload);
 }

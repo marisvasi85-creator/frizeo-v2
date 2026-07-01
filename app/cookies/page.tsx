@@ -51,6 +51,10 @@ export default function CookiesPage() {
           Instagram (Meta Platforms Ireland Ltd.)
         </li>
         <li>
+          <strong>TikTok Pixel</strong> — măsurare conversii din reclame TikTok
+          (TikTok Technology Limited)
+        </li>
+        <li>
           <strong>Google Analytics 4</strong> — statistici anonime de trafic
           (Google Ireland Ltd.)
         </li>
