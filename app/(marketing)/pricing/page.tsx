@@ -1,8 +1,14 @@
-import Link from "next/link";
 import JsonLd from "@/app/components/JsonLd";
+import PricingAnalytics from "@/app/components/analytics/PricingAnalytics";
+import PricingPlanCta from "@/app/components/analytics/PricingPlanCta";
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
 import { breadcrumbJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
+
+function parsePlanPrice(price: string): number | undefined {
+  const match = price.match(/(\d+)/);
+  return match ? Number(match[1]) : undefined;
+}
 
 export const metadata = createPageMetadata({
   title: "Prețuri",
@@ -24,6 +30,7 @@ export default function PricingPage() {
           { name: "Prețuri", path: "/pricing" },
         ])}
       />
+      <PricingAnalytics />
     <main className="bg-white text-gray-900">
       <section className="px-6 py-20 max-w-5xl mx-auto text-center">
         <h1 className="text-4xl font-semibold mb-4">Prețuri simple</h1>
@@ -70,16 +77,18 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              <Link
+              <PricingPlanCta
                 href={plan.cta.href}
+                label={plan.cta.label}
+                planName={plan.name}
+                planPrice={parsePlanPrice(plan.price)}
+                trackSelection={plan.slug === "pro" || plan.slug === "pro-plus"}
                 className={`mt-8 block text-center py-3 rounded-xl font-medium transition ${
                   plan.highlighted
                     ? "bg-black text-white hover:bg-gray-800"
                     : "border border-gray-300 hover:bg-gray-50"
                 }`}
-              >
-                {plan.cta.label}
-              </Link>
+              />
             </div>
           ))}
         </div>

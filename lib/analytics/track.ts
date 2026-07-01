@@ -122,7 +122,33 @@ export function trackCompleteRegistration() {
 export function trackStartTrial() {
   trackMeta("StartTrial", { value: 0, currency: "RON", predicted_ltv: 0 });
   trackGa("start_trial");
+  trackTikTok("Subscribe", { value: 0, currency: "RON" });
   pushDataLayer("start_trial");
+}
+
+export function trackPlanSelected(params: {
+  planName: string;
+  value?: number;
+  currency?: string;
+}) {
+  const payload = {
+    content_name: params.planName,
+    value: params.value,
+    currency: params.currency ?? "RON",
+  };
+
+  trackMeta("AddToCart", payload);
+  trackGa("add_to_cart", {
+    currency: payload.currency,
+    value: payload.value,
+    items: [{ item_name: params.planName }],
+  });
+  trackTikTok("AddToCart", {
+    contents: tikTokContents(params.planName),
+    value: payload.value,
+    currency: payload.currency,
+  });
+  pushDataLayer("add_to_cart", payload);
 }
 
 export function trackInitiateCheckout(params: {
@@ -169,6 +195,11 @@ export function trackSubscribe(params: {
     items: [{ item_name: params.planName }],
   });
   trackTikTok("CompletePayment", {
+    contents: tikTokContents(params.planName),
+    value: payload.value,
+    currency: payload.currency,
+  });
+  trackTikTok("PlaceAnOrder", {
     contents: tikTokContents(params.planName),
     value: payload.value,
     currency: payload.currency,
