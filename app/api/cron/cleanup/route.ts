@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
 export async function GET(req: Request) {
@@ -11,12 +11,9 @@ export async function GET(req: Request) {
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
-
     const now = new Date().toISOString();
 
-    // 🔥 ȘTERGE DOAR HOLD-URI EXPIRATE
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("bookings")
       .delete()
       .eq("status", "pending")

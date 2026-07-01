@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
+import {
+  barberBelongsToTenant,
+  getCurrentBarberId,
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import {
@@ -20,6 +26,30 @@ export async function GET(req: Request) {
 
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
+  }
+
+  if (mode === "admin") {
+    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+    if (isAuthError(auth)) return auth;
+
+    const belongs = await barberBelongsToTenant(
+      supabaseAdmin,
+      barberId,
+      auth.tenantId,
+    );
+    if (!belongs) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (auth.role === "barber") {
+      const currentBarberId = await getCurrentBarberId(
+        auth.user.id,
+        auth.tenantId,
+      );
+      if (currentBarberId !== barberId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
   }
 
   const barberCheck = await allowBarberScheduling(barberId, {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { sendSms } from "@/lib/sms/sendSms";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
@@ -18,8 +18,6 @@ export async function GET(req: Request) {
   }
 
   try {
-    const supabase = await createSupabaseServerClient();
-
     const now = new Date();
     const in2h = new Date(
       now.getTime() + 2 * 60 * 60 * 1000
@@ -28,18 +26,14 @@ export async function GET(req: Request) {
     const today =
       now.toISOString().split("T")[0];
 
-    // 🔥 CLEANUP PENDING
-
-    await supabase
+    await supabaseAdmin
       .from("bookings")
       .delete()
       .eq("status", "pending")
       .lt("expires_at", now.toISOString());
 
-    // 🔥 BOOKINGS
-
     const { data: bookings, error } =
-      await supabase
+      await supabaseAdmin
         .from("bookings")
         .select(`
           id,
@@ -167,7 +161,7 @@ Te asteptam!`,
         // ANTI DUPLICATE
         // =========================
 
-        await supabase
+        await supabaseAdmin
           .from("bookings")
           .update({
             reminder_2h_sent: true,

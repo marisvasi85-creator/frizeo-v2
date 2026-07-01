@@ -1,6 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  barberBelongsToTenant,
+  getCurrentBarberId,
+  isAuthError,
+  requireTenantAccess,
+  type TenantAuthContext,
+} from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { toDBTime } from "@/lib/schedule/time";
+
+async function assertBarberScheduleAccess(
+  barberId: string,
+): Promise<TenantAuthContext | NextResponse> {
+  const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+  if (isAuthError(auth)) return auth;
+
+  const belongs = await barberBelongsToTenant(
+    supabaseAdmin,
+    barberId,
+    auth.tenantId,
+  );
+  if (!belongs) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (auth.role === "barber") {
+    const currentBarberId = await getCurrentBarberId(
+      auth.user.id,
+      auth.tenantId,
+    );
+    if (currentBarberId !== barberId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  return auth;
+}
 
 /* =========================
    GET override(s)
@@ -12,14 +48,17 @@ export async function GET(req: NextRequest) {
     const barberId = searchParams.get("barberId");
     const date = searchParams.get("date");
 
-    const supabase = await createSupabaseServerClient();
-
     if (!barberId) {
       return NextResponse.json(
         { error: "Missing barberId" },
         { status: 400 }
       );
     }
+
+    const access = await assertBarberScheduleAccess(barberId);
+    if (access instanceof NextResponse) return access;
+
+    const supabase = await createSupabaseServerClient();
 
     if (date) {
       const { data, error } = await supabase
@@ -87,6 +126,9 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const access = await assertBarberScheduleAccess(barber_id);
+    if (access instanceof NextResponse) return access;
 
     const closed = is_closed === true;
     const hasCustomHours = !closed && work_start && work_end;
@@ -200,14 +242,17 @@ export async function DELETE(req: NextRequest) {
     const barberId = searchParams.get("barberId");
     const date = searchParams.get("date");
 
-    const supabase = await createSupabaseServerClient();
-
     if (!barberId || !date) {
       return NextResponse.json(
         { error: "Missing barberId or date" },
         { status: 400 }
       );
     }
+
+    const access = await assertBarberScheduleAccess(barberId);
+    if (access instanceof NextResponse) return access;
+
+    const supabase = await createSupabaseServerClient();
 
     const { error } = await supabase
       .from("barber_day_overrides")
