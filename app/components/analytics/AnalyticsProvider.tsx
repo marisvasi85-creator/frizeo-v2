@@ -29,10 +29,14 @@ function AnalyticsInner() {
     if (!consent || !ready) return;
     if (skipInitialPageView.current) {
       skipInitialPageView.current = false;
+      // Meta PageView fires inline on script load; GA still needs the first hit.
+      if (config.gaMeasurementId) {
+        trackPageView(pathname, searchParams.toString(), { gaOnly: true });
+      }
       return;
     }
     trackPageView(pathname, searchParams.toString());
-  }, [pathname, searchParams, consent, ready]);
+  }, [pathname, searchParams, consent, ready, config.gaMeasurementId]);
 
   function onScriptLoaded() {
     loadedCount.current += 1;
