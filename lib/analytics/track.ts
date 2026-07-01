@@ -60,11 +60,7 @@ export function markAnalyticsReady() {
   }
 }
 
-export function trackPageView(
-  pathname: string,
-  search = "",
-  options?: { gaOnly?: boolean },
-) {
+export function trackPageView(pathname: string, search = "") {
   const config = getAnalyticsConfig();
   if (!config.isConfigured) return;
 
@@ -72,11 +68,6 @@ export function trackPageView(
 
   if (config.gtmId) {
     pushDataLayer("page_view", { page_path: pagePath });
-    return;
-  }
-
-  if (options?.gaOnly) {
-    trackGa("page_view", { page_path: pagePath });
     return;
   }
 

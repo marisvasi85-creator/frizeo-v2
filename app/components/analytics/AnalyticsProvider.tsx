@@ -29,14 +29,10 @@ function AnalyticsInner() {
     if (!consent || !ready) return;
     if (skipInitialPageView.current) {
       skipInitialPageView.current = false;
-      // Meta PageView fires inline on script load; GA still needs the first hit.
-      if (config.gaMeasurementId) {
-        trackPageView(pathname, searchParams.toString(), { gaOnly: true });
-      }
       return;
     }
     trackPageView(pathname, searchParams.toString());
-  }, [pathname, searchParams, consent, ready, config.gaMeasurementId]);
+  }, [pathname, searchParams, consent, ready]);
 
   function onScriptLoaded() {
     loadedCount.current += 1;
@@ -120,17 +116,23 @@ function AnalyticsInner() {
 
       {usesGa && (
         <>
-          <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${config.gaMeasurementId}`}
-            strategy="afterInteractive"
-          />
-          <Script id="ga-init" strategy="afterInteractive" onLoad={onScriptLoaded}>
+          <Script id="ga-init" strategy="afterInteractive">
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
+              gtag('config', ${JSON.stringify(config.gaMeasurementId)}, { send_page_view: false });
+              gtag('event', 'page_view', {
+                page_path: window.location.pathname + window.location.search,
+              });
+              window.__frizeoGaReady = true;
             `}
           </Script>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${config.gaMeasurementId}`}
+            strategy="afterInteractive"
+            onLoad={onScriptLoaded}
+          />
         </>
       )}
     </>
