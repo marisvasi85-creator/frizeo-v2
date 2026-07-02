@@ -4,6 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
+import {
+  addDaysToDateString,
+  getTodayInBookingTimezone,
+} from "@/lib/bookings/bookingTimezone";
 import { Slot } from "@/types/slots";
 
 function isValidPhone(phone: string) {
@@ -59,12 +63,8 @@ export default function BookingClient({
 
   useEffect(() => {
     const load = async () => {
-      const today = new Date();
-      const from = today.toISOString().slice(0, 10);
-
-      const future = new Date();
-      future.setDate(today.getDate() + 30);
-      const to = future.toISOString().slice(0, 10);
+      const from = getTodayInBookingTimezone();
+      const to = addDaysToDateString(from, 30);
 
       const res = await fetch(
         `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
@@ -84,8 +84,9 @@ export default function BookingClient({
     if (!date || !serviceId) return;
 
     const cacheKey = `${date}_${serviceId}`;
+    const isToday = date === getTodayInBookingTimezone();
 
-    if (slotsCache.current[cacheKey]) {
+    if (slotsCache.current[cacheKey] && !isToday) {
       setSlots(slotsCache.current[cacheKey]);
       return;
     }

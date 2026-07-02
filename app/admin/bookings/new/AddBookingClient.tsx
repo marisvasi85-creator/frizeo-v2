@@ -4,6 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
+import {
+  addDaysToDateString,
+  getTodayInBookingTimezone,
+} from "@/lib/bookings/bookingTimezone";
 import { Slot } from "@/types/slots";
 import AdminButton from "../../components/AdminButton";
 import AdminCard from "../../components/AdminCard";
@@ -47,13 +51,8 @@ export default function AddBookingClient({
 
   useEffect(() => {
     async function loadAvailability() {
-      const today = new Date();
-      const from = today.toISOString().slice(0, 10);
-
-      const future = new Date();
-      future.setDate(future.getDate() + 30);
-
-      const to = future.toISOString().slice(0, 10);
+      const from = getTodayInBookingTimezone();
+      const to = addDaysToDateString(from, 30);
 
       const res = await fetch(
   `/api/availability?barberId=${selectedBarberId}&from=${from}&to=${to}`

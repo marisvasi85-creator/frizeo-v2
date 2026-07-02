@@ -3,6 +3,9 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { addDays, format } from "date-fns";
+import {
+  getTodayInBookingTimezone,
+} from "@/lib/bookings/bookingTimezone";
 import { jsDayToScheduleDay } from "@/lib/schedule/time";
 
 export async function GET(req: Request) {
@@ -52,7 +55,7 @@ export async function GET(req: Request) {
 
     while (current <= end) {
       const dateStr = format(current, "yyyy-MM-dd");
-      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const todayStr = getTodayInBookingTimezone();
 
       if (dateStr < todayStr) {
         current = addDays(current, 1);

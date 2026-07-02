@@ -1,18 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { parseBookingDateTime } from "@/lib/bookings/bookingTimezone";
 
 export const DEFAULT_MIN_BOOKING_NOTICE_HOURS = 2;
+
+export { parseBookingDateTime } from "@/lib/bookings/bookingTimezone";
 
 export function clampMinNoticeHours(value: unknown): number {
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return DEFAULT_MIN_BOOKING_NOTICE_HOURS;
   return Math.max(0, Math.min(168, Math.round(num)));
-}
-
-export function parseBookingDateTime(date: string, startTime: string): Date {
-  const [y, m, d] = date.split("-").map(Number);
-  const normalized = startTime.slice(0, 5);
-  const [h, min] = normalized.split(":").map(Number);
-  return new Date(y, m - 1, d, h, min, 0, 0);
 }
 
 export function minNoticeErrorMessage(hours: number): string {

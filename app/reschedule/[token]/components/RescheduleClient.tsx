@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import SlotPicker from "@/app/components/SlotPicker";
 import Calendar from "@/app/components/Calendar";
 import RescheduleInfo from "./RescheduleInfo";
+import {
+  addDaysToDateString,
+  getTodayInBookingTimezone,
+} from "@/lib/bookings/bookingTimezone";
 import { Slot } from "@/types/slots";
 
 export default function RescheduleClient({ booking, token }: any) {
@@ -36,12 +40,8 @@ export default function RescheduleClient({ booking, token }: any) {
 
   useEffect(() => {
     const load = async () => {
-      const today = new Date();
-      const from = today.toISOString().slice(0, 10);
-
-      const future = new Date();
-      future.setDate(today.getDate() + 30);
-      const to = future.toISOString().slice(0, 10);
+      const from = getTodayInBookingTimezone();
+      const to = addDaysToDateString(from, 30);
 
       const res = await fetch(
         `/api/availability?barberId=${booking.barber_id}&from=${from}&to=${to}`
