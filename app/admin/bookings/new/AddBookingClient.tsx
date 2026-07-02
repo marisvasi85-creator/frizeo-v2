@@ -103,7 +103,7 @@ useEffect(() => {
       setLoadingSlots(true);
 
       const res = await fetch(
-  `/api/slots?barberId=${selectedBarberId}&date=${date}&serviceId=${serviceId}`
+  `/api/slots?barberId=${selectedBarberId}&date=${date}&serviceId=${serviceId}&mode=admin`
 );
 
 const data = await res.json();

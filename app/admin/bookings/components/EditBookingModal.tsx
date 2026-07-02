@@ -6,10 +6,11 @@ import AdminButton from "../../components/AdminButton";
 import { AdminInput } from "../../components/AdminInput";
 
 type ApiSlot = {
-  type: "free" | "booking" | "break";
+  type: "free" | "booking" | "break" | "unavailable";
   time?: string;
   start?: string;
   end?: string;
+  reason?: "past" | "notice";
   booking?: {
     id: string;
     client_name?: string;
@@ -337,6 +338,7 @@ export default function EditBookingModal({
 
                 const time = s.time || "";
                 const isFree = s.type === "free";
+                const isUnavailable = s.type === "unavailable";
                 const isSelected = selectedSlot === time;
                 const isCurrent =
                   date === originalDate && time === originalTime;
@@ -348,7 +350,9 @@ export default function EditBookingModal({
                     disabled={!isFree}
                     onClick={() => isFree && setSelectedSlot(time)}
                     className={`py-2 rounded-lg text-sm transition ${
-                      !isFree
+                      isUnavailable
+                        ? "bg-[#0F0F10]/80 border border-white/5 text-white/35 cursor-not-allowed"
+                        : !isFree
                         ? "bg-red-500/80 text-white cursor-not-allowed"
                         : isSelected
                           ? "bg-white text-black"
@@ -358,7 +362,12 @@ export default function EditBookingModal({
                     }`}
                   >
                     <div className="font-semibold">{time}</div>
-                    {!isFree && s.booking && (
+                    {isUnavailable && (
+                      <div className="text-xs opacity-80 truncate px-1">
+                        {s.reason === "past" ? "Trecut" : "Indisponibil"}
+                      </div>
+                    )}
+                    {!isFree && !isUnavailable && s.booking && (
                       <div className="text-xs opacity-80 truncate px-1">
                         {s.booking.client_name}
                       </div>

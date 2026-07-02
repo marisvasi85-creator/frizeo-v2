@@ -124,6 +124,29 @@ export default function SlotPicker({
               }
 
               // =========================
+              // ⚪ UNAVAILABLE (disabled)
+              // =========================
+              if (s.type === "unavailable") {
+                return (
+                  <button
+                    key={`unavailable-${s.time}`}
+                    type="button"
+                    disabled
+                    className={`p-3 rounded-xl border cursor-not-allowed opacity-60 ${
+                      isLight
+                        ? "bg-gray-100 text-gray-400 border-gray-200"
+                        : "bg-zinc-900 text-white/40 border-zinc-800"
+                    }`}
+                  >
+                    <div className="font-semibold">{s.time}</div>
+                    <div className="text-xs mt-0.5">
+                      {s.reason === "past" ? "Trecut" : "Indisponibil"}
+                    </div>
+                  </button>
+                );
+              }
+
+              // =========================
               // 🟢 FREE (CLICKABIL)
               // =========================
               return (

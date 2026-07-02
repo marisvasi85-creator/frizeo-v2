@@ -16,7 +16,7 @@ import {
 } from "@/lib/schedule/time";
 import {
   getBarberMinNoticeHours,
-  isSlotWithinLeadTime,
+  getSlotEligibility,
 } from "@/lib/bookings/bookingLeadTime";
 
 export async function GET(req: Request) {
@@ -181,16 +181,22 @@ export async function GET(req: Request) {
         }
 
         const slotTime = minutesToTime(t);
+        const eligibility = getSlotEligibility({
+          date: bookingDate,
+          startTime: slotTime,
+          minNoticeHours,
+          now,
+          bypassMinNotice,
+        });
 
-        if (
-          !isSlotWithinLeadTime(
-            bookingDate,
-            slotTime,
-            minNoticeHours,
-            now,
-            bypassMinNotice,
-          )
-        ) {
+        if (!eligibility.eligible) {
+          if (mode === "admin" && eligibility.reason === "past") {
+            arr.push({
+              type: "unavailable",
+              time: slotTime,
+              reason: eligibility.reason,
+            });
+          }
           continue;
         }
 
@@ -210,16 +216,15 @@ export async function GET(req: Request) {
       }
 
       const slotTime = minutesToTime(t);
+      const eligibility = getSlotEligibility({
+        date: bookingDate,
+        startTime: slotTime,
+        minNoticeHours,
+        now,
+        bypassMinNotice,
+      });
 
-      if (
-        !isSlotWithinLeadTime(
-          bookingDate,
-          slotTime,
-          minNoticeHours,
-          now,
-          bypassMinNotice,
-        )
-      ) {
+      if (!eligibility.eligible) {
         continue;
       }
 

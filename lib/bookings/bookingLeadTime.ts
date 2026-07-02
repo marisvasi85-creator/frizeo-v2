@@ -27,6 +27,38 @@ export function minNoticeErrorMessage(hours: number): string {
   return `Programările online trebuie făcute cu cel puțin ${hours} ore înainte.`;
 }
 
+export function getSlotEligibility({
+  date,
+  startTime,
+  minNoticeHours,
+  now = new Date(),
+  bypassMinNotice = false,
+}: {
+  date: string;
+  startTime: string;
+  minNoticeHours: number;
+  now?: Date;
+  bypassMinNotice?: boolean;
+}): { eligible: true } | { eligible: false; reason: "past" | "notice" } {
+  const slotStart = parseBookingDateTime(date, startTime);
+
+  if (slotStart.getTime() <= now.getTime()) {
+    return { eligible: false, reason: "past" };
+  }
+
+  if (!bypassMinNotice && minNoticeHours > 0) {
+    const earliest = new Date(
+      now.getTime() + minNoticeHours * 60 * 60 * 1000,
+    );
+
+    if (slotStart.getTime() < earliest.getTime()) {
+      return { eligible: false, reason: "notice" };
+    }
+  }
+
+  return { eligible: true };
+}
+
 export function validateBookingLeadTime({
   date,
   startTime,
@@ -69,13 +101,13 @@ export function isSlotWithinLeadTime(
   now = new Date(),
   bypassMinNotice = false,
 ): boolean {
-  return validateBookingLeadTime({
+  return getSlotEligibility({
     date,
     startTime,
     minNoticeHours,
     now,
     bypassMinNotice,
-  }).ok;
+  }).eligible;
 }
 
 export async function getBarberMinNoticeHours(
