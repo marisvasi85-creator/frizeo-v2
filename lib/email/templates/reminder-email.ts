@@ -1,13 +1,17 @@
 import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
+import { locationEmailHtml } from "@/lib/location/emailLocationHtml";
+import type { ResolvedLocation } from "@/lib/location/types";
 
 export function reminderEmailTemplate({
   time,
   cancelUrl,
   rescheduleUrl,
+  location,
 }: {
   time: string;
   cancelUrl: string;
   rescheduleUrl: string;
+  location?: ResolvedLocation | null;
 }) {
   const formattedTime = time.slice(0, 5);
 
@@ -21,6 +25,8 @@ export function reminderEmailTemplate({
       </p>
 
       <p>Te rugăm să ajungi cu câteva minute înainte.</p>
+
+      ${locationEmailHtml(location)}
 
       <p>Dacă nu mai poți ajunge, poți reprograma sau anula:</p>
 

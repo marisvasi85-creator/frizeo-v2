@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { revalidatePath } from "next/cache";
+import { locationFieldsFromFormData } from "@/lib/location/resolveLocation";
 import type { SaveFormState } from "../components/saveFormState";
 
 export async function updateSalon(
@@ -26,8 +27,8 @@ export async function updateSalon(
       .replace(/\s+/g, "-");
 
     const phone = (formData.get("phone") as string) || null;
-    const address = (formData.get("address") as string) || null;
     const description = (formData.get("description") as string) || null;
+    const location = locationFieldsFromFormData(formData);
 
     const { error } = await supabase
       .from("tenants")
@@ -35,8 +36,8 @@ export async function updateSalon(
         name,
         slug,
         phone,
-        address,
         description,
+        ...location,
       })
       .eq("id", barber.tenant_id);
 

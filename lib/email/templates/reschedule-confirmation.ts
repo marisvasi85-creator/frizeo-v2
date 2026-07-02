@@ -1,4 +1,6 @@
 import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
+import { locationEmailHtml } from "@/lib/location/emailLocationHtml";
+import type { ResolvedLocation } from "@/lib/location/types";
 
 type RescheduleConfirmationArgs = {
   barberName: string;
@@ -6,6 +8,7 @@ type RescheduleConfirmationArgs = {
   time: string;
   cancelUrl: string;
   rescheduleUrl: string;
+  location?: ResolvedLocation | null;
 };
 
 export function rescheduleConfirmationTemplate({
@@ -14,6 +17,7 @@ export function rescheduleConfirmationTemplate({
   time,
   cancelUrl,
   rescheduleUrl,
+  location,
 }: RescheduleConfirmationArgs) {
   const formattedTime = time.slice(0, 5);
 
@@ -32,6 +36,8 @@ export function rescheduleConfirmationTemplate({
         <p><strong>Data:</strong> ${date}</p>
         <p><strong>Ora:</strong> ${formattedTime}</p>
       </div>
+
+      ${locationEmailHtml(location)}
 
       <p>Poți modifica din nou sau anula programarea:</p>
 

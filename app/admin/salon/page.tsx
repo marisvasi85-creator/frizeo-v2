@@ -10,6 +10,7 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
+import LocationFormFields from "@/app/components/location/LocationFormFields";
 
 export default async function SalonPage() {
   const barber = await getCurrentBarberInTenant();
@@ -230,17 +231,15 @@ const { count: monthBookings } = await supabaseAdmin
   />
 </div>
 
-<div>
-  <label className="block text-sm text-white/60 mb-2">
-    Adresă
-  </label>
+<div className="space-y-3 border-t border-white/10 pt-5">
+  <div>
+    <h3 className="text-lg font-medium">Locație salon</h3>
+    <p className="text-sm text-white/50 mt-1">
+      Apare pe pagina publică de programări, cu link Google Maps / Waze și hartă.
+    </p>
+  </div>
 
-  <input
-    type="text"
-    name="address"
-    defaultValue={tenant?.address || ""}
-    className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-  />
+  <LocationFormFields defaults={tenant || {}} />
 </div>
 
 <div>

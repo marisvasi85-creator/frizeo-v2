@@ -10,6 +10,7 @@ import { getNotificationSettings } from "@/lib/notifications/getNotificationSett
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
+import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 
 export async function POST(req: Request) {
   try {
@@ -153,6 +154,11 @@ export async function POST(req: Request) {
     } catch (e) {
       console.error("BARBER ERROR:", e);
     }
+
+    const bookingLocation = await fetchResolvedBarberLocation(
+      oldBooking.barber_id,
+      oldBooking.tenant_id,
+    );
 
     if (barberEmail) {
       await sendEmail({
@@ -334,6 +340,7 @@ Serviciu: ${serviceName}`,
           time: new_start_time,
           cancelUrl,
           rescheduleUrl,
+          location: bookingLocation,
         });
 
         await sendEmail({

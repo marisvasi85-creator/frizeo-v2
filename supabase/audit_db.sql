@@ -13,11 +13,22 @@ WHERE n.nspname = 'public'
   )
 ORDER BY c.relname;
 
--- 2) Dangerous booking policies (should be empty or tenant-scoped only)
+-- 2) Booking policies (must NOT contain open public insert/update)
 SELECT tablename, policyname, cmd, roles::text
 FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'bookings'
 ORDER BY policyname;
+
+-- 2b) Red flag: public/anon write policies on bookings (should return 0 rows)
+SELECT policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'bookings'
+  AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
+  AND (
+    roles::text LIKE '%public%'
+    OR roles::text LIKE '%anon%'
+  );
 
 -- 3) Stripe columns on subscriptions
 SELECT column_name, data_type
@@ -43,7 +54,9 @@ WHERE table_schema = 'public'
   AND column_name IN ('work_start', 'work_end');
 
 -- 6) Plans seeded (Free, Pro, Pro+, Custom)
-SELECT slug, name, price_monthly FROM public.plans ORDER BY price_monthly NULLS LAST;
+SELECT slug, name, price, max_barbers, max_bookings_per_month
+FROM public.plans
+ORDER BY price NULLS LAST, slug;
 
 -- 7) barbers_public view exists
 SELECT viewname FROM pg_views

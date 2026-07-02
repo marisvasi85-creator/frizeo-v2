@@ -4,6 +4,8 @@ import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenan
 import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
+import BarberLocationSection from "@/app/components/location/BarberLocationSection";
+import { formatLocationAddress } from "@/lib/location/resolveLocation";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
@@ -56,6 +58,23 @@ export default async function ProfilePage({
     : null;
 
   const isSuccess = googleStatus === "connected";
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select(`
+      address,
+      location_address_line,
+      location_city,
+      location_county,
+      location_postal_code,
+      location_maps_url,
+      location_latitude,
+      location_longitude
+    `)
+    .eq("id", barber.tenant_id)
+    .single();
+
+  const salonPreview = tenant ? formatLocationAddress(tenant) : null;
 
   return (
     <div className="space-y-6">
@@ -179,6 +198,12 @@ export default async function ProfilePage({
             className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
           />
         </div>
+
+        <BarberLocationSection
+          useSalonLocation={barber.use_salon_location !== false}
+          salonPreview={salonPreview}
+          defaults={barber}
+        />
 
       </FormWithSaveFeedback>
     </div>

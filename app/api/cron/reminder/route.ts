@@ -8,6 +8,7 @@ import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { reminderEmailTemplate } from "@/lib/email/templates/reminder-email";
+import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 
 export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
@@ -38,6 +39,7 @@ export async function GET(req: Request) {
         .select(`
           id,
           tenant_id,
+          barber_id,
           client_email,
           client_phone,
           date,
@@ -102,6 +104,11 @@ export async function GET(req: Request) {
 
             const { cancelUrl, rescheduleUrl } = bookingClientUrls(tokens);
 
+            const bookingLocation = await fetchResolvedBarberLocation(
+              b.barber_id,
+              b.tenant_id,
+            );
+
             await sendEmail({
               to: b.client_email,
               subject: "Reminder programare",
@@ -109,6 +116,7 @@ export async function GET(req: Request) {
                 time: b.start_time,
                 cancelUrl,
                 rescheduleUrl,
+                location: bookingLocation,
               }),
             });
 

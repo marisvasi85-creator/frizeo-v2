@@ -1,8 +1,10 @@
 import BookingClient from "@/app/booking/[barberId]/components/BookingClient";
 import type { Metadata } from "next";
 import JsonLd from "@/app/components/JsonLd";
+import PublicLocationCard from "@/app/components/location/PublicLocationCard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { barberBookingJsonLd } from "@/lib/site/jsonLd";
+import { resolveBarberLocation, formatLocationAddress } from "@/lib/location/resolveLocation";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 async function getSalon(slug: string) {
@@ -15,7 +17,14 @@ async function getSalon(slug: string) {
       logo_url,
       phone,
       address,
-      description
+      description,
+      location_address_line,
+      location_city,
+      location_county,
+      location_postal_code,
+      location_maps_url,
+      location_latitude,
+      location_longitude
     `)
     .eq("slug", slug)
     .single();
@@ -31,7 +40,15 @@ async function getActiveBarber(tenantId: string, barberSlug: string) {
       display_name,
       avatar_url,
       bio,
-      instagram_url
+      instagram_url,
+      use_salon_location,
+      location_address_line,
+      location_city,
+      location_county,
+      location_postal_code,
+      location_maps_url,
+      location_latitude,
+      location_longitude
     `)
     .eq("tenant_id", tenantId)
     .eq("slug", barberSlug)
@@ -120,6 +137,7 @@ export default async function Page({
   }
 
   const barberName = barber.display_name || "Frizer";
+  const bookingLocation = resolveBarberLocation(salon, barber);
 
   return (
     <>
@@ -129,7 +147,7 @@ export default async function Page({
             name: salon.name,
             slug: salon.slug,
             phone: salon.phone,
-            address: salon.address,
+            address: formatLocationAddress(salon) || salon.address,
             description: salon.description,
             logoUrl: salon.logo_url,
           },
@@ -155,12 +173,14 @@ export default async function Page({
                 {salon.phone && (
                   <p className="text-gray-600 mt-2">📞 {salon.phone}</p>
                 )}
-
-                {salon.address && (
-                  <p className="text-gray-600">📍 {salon.address}</p>
-                )}
               </div>
             </div>
+
+            {bookingLocation && (
+              <div className="mt-6">
+                <PublicLocationCard location={bookingLocation} />
+              </div>
+            )}
 
             {salon.description && (
               <p className="mt-4 text-gray-700">{salon.description}</p>

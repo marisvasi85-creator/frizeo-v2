@@ -1,8 +1,10 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import JsonLd from "@/app/components/JsonLd";
+import PublicLocationCard from "@/app/components/location/PublicLocationCard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
+import { resolveLocation, formatLocationAddress } from "@/lib/location/resolveLocation";
 import { salonJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
@@ -16,7 +18,14 @@ async function getSalon(slug: string) {
       logo_url,
       phone,
       address,
-      description
+      description,
+      location_address_line,
+      location_city,
+      location_county,
+      location_postal_code,
+      location_maps_url,
+      location_latitude,
+      location_longitude
     `)
     .eq("slug", slug)
     .single();
@@ -75,6 +84,8 @@ export default async function SalonPage({
     );
   }
 
+  const salonLocation = resolveLocation(salon);
+
   const { data: barbers } = await supabaseAdmin
     .from("barbers")
     .select(`
@@ -97,7 +108,7 @@ export default async function SalonPage({
           name: salon.name,
           slug: salon.slug,
           phone: salon.phone,
-          address: salon.address,
+          address: formatLocationAddress(salon) || salon.address,
           description: salon.description,
           logoUrl: salon.logo_url,
         })}
@@ -118,8 +129,10 @@ export default async function SalonPage({
             <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
           )}
 
-          {salon.address && (
-            <p className="text-gray-600">📍 {salon.address}</p>
+          {salonLocation && (
+            <div className="mt-6 max-w-xl mx-auto text-left">
+              <PublicLocationCard location={salonLocation} />
+            </div>
           )}
 
           {salon.description && (

@@ -1,4 +1,6 @@
 import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
+import { locationEmailHtml } from "@/lib/location/emailLocationHtml";
+import type { ResolvedLocation } from "@/lib/location/types";
 
 export function clientConfirmationTemplate({
   clientName,
@@ -8,6 +10,7 @@ export function clientConfirmationTemplate({
   time,
   cancelUrl,
   rescheduleUrl,
+  location,
 }: {
   clientName: string;
   barberName: string;
@@ -16,6 +19,7 @@ export function clientConfirmationTemplate({
   time: string;
   cancelUrl: string;
   rescheduleUrl: string;
+  location?: ResolvedLocation | null;
 }) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
@@ -31,6 +35,8 @@ export function clientConfirmationTemplate({
         <p><strong>Data:</strong> ${date}</p>
         <p><strong>Ora:</strong> ${time}</p>
       </div>
+
+      ${locationEmailHtml(location)}
 
       <p>Dacă ai nevoie să modifici sau să anulezi programarea:</p>
 

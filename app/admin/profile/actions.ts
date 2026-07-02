@@ -3,6 +3,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { revalidatePath } from "next/cache";
+import { locationFieldsFromFormData } from "@/lib/location/resolveLocation";
 import type { SaveFormState } from "../components/saveFormState";
 
 export async function updateProfile(
@@ -43,6 +44,10 @@ export async function updateProfile(
       };
     }
 
+    const useSalonLocation =
+      (formData.get("use_salon_location") as string) === "true";
+    const location = locationFieldsFromFormData(formData);
+
     const { error } = await supabase
       .from("barbers")
       .update({
@@ -51,6 +56,18 @@ export async function updateProfile(
         slug,
         bio,
         instagram_url,
+        use_salon_location: useSalonLocation,
+        ...(useSalonLocation
+          ? {
+              location_address_line: null,
+              location_city: null,
+              location_county: null,
+              location_postal_code: null,
+              location_maps_url: null,
+              location_latitude: null,
+              location_longitude: null,
+            }
+          : location),
       })
       .eq("id", barber.id);
 

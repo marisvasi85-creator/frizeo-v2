@@ -16,6 +16,7 @@ import {
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
+import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 
 export async function POST(req: Request) {
   try {
@@ -196,6 +197,11 @@ if (!limit.allowed) {
       console.error("BARBER ERROR:", e);
     }
 
+    const bookingLocation = await fetchResolvedBarberLocation(
+      data.barber_id,
+      data.tenant_id,
+    );
+
     // =========================
     // 🔥 FORMAT
     // =========================
@@ -326,6 +332,7 @@ Serviciu: ${serviceName}`,
             time: formattedTime,
             cancelUrl,
             rescheduleUrl,
+            location: bookingLocation,
           }),
         });
       } catch (e) {
@@ -356,7 +363,7 @@ Programarea ta este confirmata.
 ${formattedDate}
 ${formattedTime}
 
-${serviceName}`,
+${serviceName}${bookingLocation?.formattedAddress ? `\n\n${bookingLocation.formattedAddress}` : ""}`,
   });
 
 } catch (e) {
