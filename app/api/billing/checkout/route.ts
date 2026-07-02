@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import {
-  isBillingProfileComplete,
-  rowToBillingProfile,
-  type TenantBillingRow,
-} from "@/lib/billing/billingProfile";
-import {
   createSubscriptionCheckout,
   resolveStripeCustomer,
 } from "@/lib/billing/stripeCheckout";
@@ -26,9 +21,6 @@ export const runtime = "nodejs";
 const CHECKOUT_PLANS: PlanSlug[] = [PLAN_SLUGS.PRO, PLAN_SLUGS.PRO_PLUS];
 
 const ACTIVE_STRIPE_STATUSES = new Set(["active", "trialing"]);
-
-const BILLING_COLUMNS =
-  "billing_type, billing_name, billing_cui, billing_reg_com, billing_address_line1, billing_city, billing_county, billing_postal_code, billing_country";
 
 export async function POST(req: Request) {
   try {
@@ -80,32 +72,6 @@ export async function POST(req: Request) {
     if (!CHECKOUT_PLANS.includes(planSlug)) {
       return NextResponse.json(
         { error: "Acest plan nu poate fi achiziționat online." },
-        { status: 400 }
-      );
-    }
-
-    const { data: tenantBilling, error: billingError } = await supabaseAdmin
-      .from("tenants")
-      .select(BILLING_COLUMNS)
-      .eq("id", tenant.tenant_id)
-      .single();
-
-    if (billingError || !tenantBilling) {
-      return NextResponse.json(
-        { error: "Nu s-au putut încărca datele de facturare." },
-        { status: 500 }
-      );
-    }
-
-    const billingProfile = rowToBillingProfile(tenantBilling as TenantBillingRow);
-
-    if (!isBillingProfileComplete(billingProfile)) {
-      return NextResponse.json(
-        {
-          error:
-            "Completează datele de facturare (persoană fizică sau firmă) înainte de plată.",
-          code: "billing_profile_required",
-        },
         { status: 400 }
       );
     }

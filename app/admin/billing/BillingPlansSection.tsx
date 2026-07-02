@@ -17,8 +17,6 @@ type Props = {
   currentPlanId: string | undefined;
   currentPlanSlug: string | undefined;
   isTrial: boolean;
-  selectedPlanId: string | null;
-  onSelectPlan: (plan: Plan) => void;
 };
 
 export default function BillingPlansSection({
@@ -26,15 +24,13 @@ export default function BillingPlansSection({
   currentPlanId,
   currentPlanSlug,
   isTrial,
-  selectedPlanId,
-  onSelectPlan,
 }: Props) {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
-        Alegi planul → completezi datele de facturare → plătești în Stripe →
-        primești factura fiscală pe email.
+        Alegi planul → completezi datele de facturare în Stripe → plătești.
+        Factura fiscală se emite pe baza datelor din Stripe (export pentru contabilitate).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -47,17 +43,14 @@ export default function BillingPlansSection({
             !isCurrent &&
             currentPlanSlug &&
             isPlanDowngrade(currentPlanSlug, plan.slug);
-          const isSelected = selectedPlanId === plan.id;
 
           return (
             <div
               key={plan.id}
               className={`rounded-xl border p-6 ${
-                isSelected
-                  ? "border-blue-400 bg-blue-500/10"
-                  : isCurrent
-                    ? "border-green-500 bg-green-500/10"
-                    : "border-white/10 bg-[#161618]"
+                isCurrent
+                  ? "border-green-500 bg-green-500/10"
+                  : "border-white/10 bg-[#161618]"
               }`}
             >
               <div className="flex justify-between items-center">
@@ -145,11 +138,10 @@ export default function BillingPlansSection({
                   </button>
                 ) : isPaidPlan ? (
                   <UpgradeButton
-                    plan={plan}
+                    planId={plan.id}
                     planName={plan.name}
-                    isSelected={isSelected}
+                    planPrice={plan.price}
                     trialEarlyPurchase={canPurchaseDuringTrial}
-                    onSelectPlan={onSelectPlan}
                   />
                 ) : null}
               </div>

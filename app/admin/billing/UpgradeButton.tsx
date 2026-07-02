@@ -1,44 +1,82 @@
 "use client";
 
-type Plan = {
-  id: string;
-  name: string;
-  slug: string;
-  price: number;
-  max_barbers: number | null;
-  max_bookings_per_month: number | null;
-};
+import { useState } from "react";
+import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import { trackInitiateCheckout } from "@/lib/analytics/track";
 
 type Props = {
+  planId: string;
   planName: string;
-  isSelected?: boolean;
+  planPrice?: number;
   trialEarlyPurchase?: boolean;
-  onSelectPlan: (plan: Plan) => void;
-  plan: Plan;
 };
 
 export default function UpgradeButton({
+  planId,
   planName,
-  isSelected = false,
+  planPrice,
   trialEarlyPurchase = false,
-  onSelectPlan,
-  plan,
 }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleUpgrade() {
+    setLoading(true);
+    setError(null);
+
+    if (hasAnalyticsConsent()) {
+      trackInitiateCheckout({
+        planName,
+        value: planPrice,
+        currency: "RON",
+      });
+    }
+
+    try {
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId }),
+      });
+
+      const data = await res.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+        return;
+      }
+
+      if (data.success) {
+        window.location.href = "/admin/billing?checkout=success&updated=1";
+        return;
+      }
+
+      setError(data.error || "Plata nu a putut fi inițiată.");
+    } catch {
+      setError("Eroare de rețea. Încearcă din nou.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <button
-      type="button"
-      onClick={() => onSelectPlan(plan)}
-      className={`w-full py-2 rounded transition ${
-        isSelected
-          ? "bg-white text-black ring-2 ring-blue-400"
-          : "bg-white text-black hover:bg-gray-200"
-      }`}
-    >
-      {isSelected
-        ? `Plan selectat — continuă mai jos`
-        : trialEarlyPurchase
-          ? `Cumpără ${planName}`
-          : `Alege ${planName}`}
-    </button>
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={handleUpgrade}
+        disabled={loading}
+        className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {loading
+          ? "Se deschide Stripe…"
+          : trialEarlyPurchase
+            ? `Cumpără ${planName}`
+            : `Alege ${planName}`}
+      </button>
+
+      {error && (
+        <p className="text-xs text-red-400 text-center">{error}</p>
+      )}
+    </div>
   );
 }

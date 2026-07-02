@@ -25,7 +25,7 @@ export default async function FiscalInvoicesList({
         <div>
           <h2 className="text-xl font-semibold">Facturi fiscale</h2>
           <p className="text-sm text-white/60 mt-1">
-            Emise automat via FGO după plata abonamentului Stripe.
+            Emise automat via FGO după plată (când FGO e configurat), pe baza datelor din Stripe.
           </p>
         </div>
 
