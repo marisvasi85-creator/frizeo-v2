@@ -4,12 +4,14 @@ export function barberNewBookingTemplate({
   serviceName,
   date,
   time,
+  notes,
 }: {
   clientName: string;
   phone: string;
   serviceName: string;
   date: string;
   time: string;
+  notes?: string | null;
 }) {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
@@ -24,6 +26,7 @@ export function barberNewBookingTemplate({
         <p><strong>Serviciu:</strong> ${serviceName}</p>
         <p><strong>Data:</strong> ${date}</p>
         <p><strong>Ora:</strong> ${time}</p>
+        ${notes ? `<p><strong>Mentiuni:</strong> ${notes}</p>` : ""}
       </div>
 
       <p>

@@ -17,6 +17,7 @@ import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
+import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 
 export async function POST(req: Request) {
   try {
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
       client_name,
       client_phone,
       client_email,
+      client_notes,
     } = body;
 
     if (!bookingId || !client_name || !client_phone) {
@@ -138,6 +140,8 @@ if (!limit.allowed) {
       }
     }
 
+    const notes = normalizeClientNotes(client_notes);
+
     // =========================
     // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE
     // =========================
@@ -148,6 +152,7 @@ if (!limit.allowed) {
         client_name,
         client_phone,
         client_email: client_email || null,
+        client_notes: notes,
       })
       .eq("id", bookingId)
       .select()
@@ -287,7 +292,7 @@ try {
   description:
 `Client: ${client_name}
 Telefon: ${client_phone}
-Serviciu: ${serviceName}`,
+Serviciu: ${serviceName}${notes ? `\nMentiuni: ${notes}` : ""}`,
 
   start: startDateTime,
   end: endDateTime,
@@ -333,6 +338,7 @@ Serviciu: ${serviceName}`,
             cancelUrl,
             rescheduleUrl,
             location: bookingLocation,
+            notes,
           }),
         });
       } catch (e) {
@@ -392,6 +398,7 @@ ${serviceName}${bookingLocation?.formattedAddress ? `\n\n${bookingLocation.forma
             serviceName,
             date: formattedDate,
             time: formattedTime,
+            notes,
           }),
         });
       } catch (e) {

@@ -21,6 +21,7 @@ export type BookingRow = {
   barber_id?: string;
   client_name: string;
   client_phone?: string;
+  client_notes?: string | null;
   status?: string;
   barber?: { display_name?: string } | null;
   barber_services?: {

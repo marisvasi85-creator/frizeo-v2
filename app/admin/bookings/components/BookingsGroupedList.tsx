@@ -52,6 +52,11 @@ function BookingCard({
               {booking.client_name}
             </div>
             <div className="text-sm text-white/60">{booking.client_phone}</div>
+            {booking.client_notes && (
+              <div className="text-xs text-white/50 mt-1 line-clamp-2">
+                📝 {booking.client_notes}
+              </div>
+            )}
             {booking.barber?.display_name && (
               <div className="text-xs text-blue-400 mt-1">
                 👤 {booking.barber.display_name}

@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
+import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 
 export async function POST(req: Request) {
   try {
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
       client_name,
       client_phone,
       client_email,
+      client_notes,
       barber_service_id,
       date,
       start_time,
@@ -97,6 +99,7 @@ export async function POST(req: Request) {
         client_name,
         client_phone,
         client_email: client_email ?? null,
+        client_notes: normalizeClientNotes(client_notes),
         barber_service_id,
         date,
         start_time,

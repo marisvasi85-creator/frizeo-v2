@@ -41,6 +41,7 @@ export default function AddBookingClient({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
 
@@ -187,6 +188,7 @@ setLoadingSlots(false);
             client_name: name,
             client_phone: phone,
             client_email: email || null,
+            client_notes: notes.trim() || null,
           }),
         }
       );
@@ -289,6 +291,14 @@ setLoadingSlots(false);
             onChange={(e) =>
               setEmail(e.target.value)
             }
+          />
+
+          <textarea
+            placeholder="Mentiuni (opțional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
           />
 
           <AdminButton

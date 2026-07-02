@@ -11,6 +11,7 @@ import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
+import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 
 export async function POST(req: Request) {
   try {
@@ -27,6 +28,7 @@ export async function POST(req: Request) {
       client_name,
       client_phone,
       client_email,
+      client_notes,
     } = body;
 
     if (!token || !new_date || !new_start_time || !new_end_time) {
@@ -99,6 +101,10 @@ export async function POST(req: Request) {
     const finalName = client_name ?? oldBooking.client_name;
     const finalPhone = client_phone ?? oldBooking.client_phone;
     const finalEmail = client_email ?? oldBooking.client_email;
+    const finalNotes =
+      client_notes !== undefined
+        ? normalizeClientNotes(client_notes)
+        : oldBooking.client_notes ?? null;
     const settings =
   await getNotificationSettings(
     oldBooking.tenant_id
@@ -131,6 +137,13 @@ export async function POST(req: Request) {
     { status: 400 }
   );
 }
+
+    if (newBooking?.id) {
+      await supabase
+        .from("bookings")
+        .update({ client_notes: finalNotes })
+        .eq("id", newBooking.id);
+    }
 
     // 🔥 EMAIL BARBER
     let barberEmail: string | null = null;
@@ -273,7 +286,7 @@ try {
           description:
 `Client: ${finalName}
 Telefon: ${finalPhone}
-Serviciu: ${serviceName}`,
+Serviciu: ${serviceName}${finalNotes ? `\nMentiuni: ${finalNotes}` : ""}`,
 
           start:
             `${newBooking.date}T${newBooking.start_time}`,

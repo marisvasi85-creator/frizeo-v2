@@ -8,52 +8,33 @@ import { resolveBarberLocation, formatLocationAddress } from "@/lib/location/res
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 async function getSalon(slug: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("tenants")
-    .select(`
-      id,
-      name,
-      slug,
-      logo_url,
-      phone,
-      address,
-      description,
-      location_address_line,
-      location_city,
-      location_county,
-      location_postal_code,
-      location_maps_url,
-      location_latitude,
-      location_longitude
-    `)
+    .select("*")
     .eq("slug", slug)
     .single();
+
+  if (error) {
+    console.error("GET SALON:", error);
+    return null;
+  }
 
   return data;
 }
 
 async function getActiveBarber(tenantId: string, barberSlug: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("barbers")
-    .select(`
-      id,
-      display_name,
-      avatar_url,
-      bio,
-      instagram_url,
-      use_salon_location,
-      location_address_line,
-      location_city,
-      location_county,
-      location_postal_code,
-      location_maps_url,
-      location_latitude,
-      location_longitude
-    `)
+    .select("*")
     .eq("tenant_id", tenantId)
     .eq("slug", barberSlug)
     .eq("active", true)
     .single();
+
+  if (error) {
+    console.error("GET BARBER:", error);
+    return null;
+  }
 
   return data;
 }

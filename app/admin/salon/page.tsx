@@ -11,6 +11,8 @@ import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 import LocationFormFields from "@/app/components/location/LocationFormFields";
+import LocationMigrationBanner from "../components/LocationMigrationBanner";
+import { hasLocationMigration } from "@/lib/location/hasLocationMigration";
 
 export default async function SalonPage() {
   const barber = await getCurrentBarberInTenant();
@@ -85,11 +87,14 @@ const { count: monthBookings } = await supabaseAdmin
   const salonUrl = publicSalonUrl(tenantSlug, getAppUrl());
 
   const plan = subscription?.plans as any;
+  const locationMigrationReady = await hasLocationMigration();
 
   return (
   <div className="space-y-6">
 
     <h1 className="text-2xl font-semibold">Salon</h1>
+
+    <LocationMigrationBanner ready={locationMigrationReady} />
 
     {/* INFO */}
     <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">

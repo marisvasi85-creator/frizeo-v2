@@ -9,26 +9,16 @@ import { salonJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 async function getSalon(slug: string) {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("tenants")
-    .select(`
-      id,
-      name,
-      slug,
-      logo_url,
-      phone,
-      address,
-      description,
-      location_address_line,
-      location_city,
-      location_county,
-      location_postal_code,
-      location_maps_url,
-      location_latitude,
-      location_longitude
-    `)
+    .select("*")
     .eq("slug", slug)
     .single();
+
+  if (error) {
+    console.error("GET SALON:", error);
+    return null;
+  }
 
   return data;
 }

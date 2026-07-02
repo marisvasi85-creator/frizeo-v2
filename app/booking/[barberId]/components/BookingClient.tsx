@@ -36,6 +36,7 @@ export default function BookingClient({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
 
@@ -182,6 +183,7 @@ export default function BookingClient({
           client_name: name.trim(),
           client_phone: phone.replace(/\s/g, ""),
           client_email: email.trim() || null,
+          client_notes: notes.trim() || null,
         }),
       });
 
@@ -307,6 +309,14 @@ export default function BookingClient({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full p-3 border rounded-xl"
+          />
+
+          <textarea
+            placeholder="Mentiuni (opțional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            className="w-full p-3 border rounded-xl resize-y min-h-[80px]"
           />
 
           {bookingError && (

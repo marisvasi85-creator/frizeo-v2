@@ -68,11 +68,11 @@ export function buildMapEmbedUrl(
   const lng = parseCoordinate(source.location_longitude);
 
   if (lat !== null && lng !== null) {
-    return `https://www.google.com/maps?q=${lat},${lng}&z=15&output=embed`;
+    return `https://maps.google.com/maps?q=${lat},${lng}&hl=ro&z=15&output=embed`;
   }
 
   if (formattedAddress) {
-    return `https://www.google.com/maps?q=${encodeURIComponent(formattedAddress)}&output=embed`;
+    return `https://maps.google.com/maps?q=${encodeURIComponent(formattedAddress)}&hl=ro&z=15&output=embed`;
   }
 
   return null;

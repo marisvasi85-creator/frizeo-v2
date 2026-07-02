@@ -23,6 +23,7 @@ type Booking = {
   client_name: string;
   client_phone: string;
   client_email?: string;
+  client_notes?: string | null;
   date: string;
   start_time: string;
   end_time: string;
@@ -56,6 +57,7 @@ export default function EditBookingModal({
   const [name, setName] = useState(booking.client_name);
   const [phone, setPhone] = useState(booking.client_phone || "");
   const [email, setEmail] = useState(booking.client_email || "");
+  const [notes, setNotes] = useState(booking.client_notes || "");
   const [date, setDate] = useState(booking.date);
   const [slots, setSlots] = useState<ApiSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(originalTime);
@@ -171,6 +173,7 @@ export default function EditBookingModal({
             client_name: name,
             client_phone: phone,
             client_email: email || null,
+            client_notes: notes.trim() || null,
             barber_service_id: booking.barber_service_id,
             date,
             start_time: startTime,
@@ -196,6 +199,7 @@ export default function EditBookingModal({
             client_name: name,
             client_phone: phone,
             client_email: email,
+            client_notes: notes.trim() || null,
           }),
         });
 
@@ -283,6 +287,14 @@ export default function EditBookingModal({
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <textarea
+          placeholder="Mentiuni (opțional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={3}
+          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
         />
 
         <div className="rounded-xl border border-white/10 bg-[#0F0F10] p-3 edit-booking-calendar">
