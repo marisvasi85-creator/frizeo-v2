@@ -5,6 +5,7 @@ import AdminButton from "../components/AdminButton";
 import { AdminInput, AdminLabel } from "../components/AdminInput";
 import AdminCard from "../components/AdminCard";
 import type { BillingType } from "@/lib/billing/billingProfile";
+import { startStripeCheckout } from "./startCheckout";
 
 type Profile = {
   type: BillingType | null;
@@ -18,15 +19,30 @@ type Profile = {
   country: string;
 };
 
+type SelectedPlan = {
+  id: string;
+  name: string;
+  price: number;
+};
+
 export default function BillingProfileForm({
+  selectedPlan,
   initialComplete,
+  billingComplete,
+  onBillingCompleteChange,
+  onClearPlan,
 }: {
+  selectedPlan: SelectedPlan;
   initialComplete: boolean;
+  billingComplete: boolean;
+  onBillingCompleteChange: (complete: boolean) => void;
+  onClearPlan: () => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [complete, setComplete] = useState(initialComplete);
+  const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [billingType, setBillingType] = useState<BillingType>("individual");
@@ -64,6 +80,7 @@ export default function BillingProfileForm({
     setSaving(true);
     setError(null);
     setSuccess(false);
+    setPayError(null);
 
     try {
       const res = await fetch("/api/billing/profile", {
@@ -89,7 +106,7 @@ export default function BillingProfileForm({
         return;
       }
 
-      setComplete(true);
+      onBillingCompleteChange(true);
       setSuccess(true);
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");
@@ -98,24 +115,70 @@ export default function BillingProfileForm({
     }
   }
 
+  async function handlePay() {
+    if (!billingComplete && !initialComplete) {
+      setPayError("Salvează datele de facturare înainte de plată.");
+      return;
+    }
+
+    setPaying(true);
+    setPayError(null);
+
+    try {
+      const result = await startStripeCheckout({
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        planPrice: selectedPlan.price,
+      });
+
+      if (!result.ok) {
+        setPayError(result.error);
+        return;
+      }
+
+      if ("url" in result && result.url) {
+        window.location.href = result.url;
+        return;
+      }
+
+      if ("success" in result && result.success) {
+        window.location.href = "/admin/billing?checkout=success&updated=1";
+      }
+    } catch {
+      setPayError("Eroare de rețea. Încearcă din nou.");
+    } finally {
+      setPaying(false);
+    }
+  }
+
   const isCompany = billingType === "company";
+  const canPay = billingComplete || initialComplete;
 
   return (
     <AdminCard>
       <div id="billing-profile-form" className="space-y-4">
-        <div>
-          <h2 className="text-xl font-semibold">Date facturare</h2>
-          <p className="text-sm text-white/60 mt-1">
-            Obligatorii înainte de plată. Folosim aceste date pentru factura fiscală
-            emisă după fiecare plată Stripe.
-          </p>
-        </div>
-
-        {!complete && !loading && (
-          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-yellow-200 text-sm">
-            Completează formularul de mai jos ca să poți achiziționa un plan.
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-blue-300">
+              Pas 2 · Date facturare
+            </p>
+            <h2 className="text-xl font-semibold mt-1">
+              Plan selectat: {selectedPlan.name}
+            </h2>
+            <p className="text-sm text-white/60 mt-1">
+              Completează datele pentru factura fiscală, apoi continuă la plată.
+              Factura va fi trimisă pe email după încasare.
+            </p>
           </div>
-        )}
+
+          <button
+            type="button"
+            onClick={onClearPlan}
+            className="text-sm text-white/50 hover:text-white/80"
+          >
+            Schimbă planul
+          </button>
+        </div>
 
         {loading ? (
           <p className="text-sm text-white/50">Se încarcă datele…</p>
@@ -233,9 +296,27 @@ export default function BillingProfileForm({
               </p>
             )}
 
-            <AdminButton type="submit" disabled={saving}>
-              {saving ? "Se salvează…" : "Salvează date facturare"}
-            </AdminButton>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <AdminButton type="submit" disabled={saving || paying}>
+                {saving ? "Se salvează…" : "Salvează date facturare"}
+              </AdminButton>
+
+              <AdminButton
+                type="button"
+                disabled={!canPay || paying || saving}
+                onClick={handlePay}
+              >
+                {paying ? "Se deschide Stripe…" : "Continuă la plată"}
+              </AdminButton>
+            </div>
+
+            {payError && <p className="text-sm text-red-400">{payError}</p>}
+
+            {!canPay && (
+              <p className="text-xs text-white/50">
+                Salvează datele de facturare pentru a continua la plată.
+              </p>
+            )}
           </form>
         )}
       </div>

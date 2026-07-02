@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import BillingPlansSection from "./BillingPlansSection";
+import BillingPurchaseFlow from "./BillingPurchaseFlow";
 import PayInvoiceButton from "./PayInvoiceButton";
-import { BillingProfileSection } from "./BillingProfileSection";
+import { BillingInvoicesSection } from "./BillingProfileSection";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
@@ -211,15 +211,15 @@ export default async function BillingPage({
         </div>
       </AdminCard>
 
-      <BillingProfileSection tenantId={barber.tenant_id} />
-
-      <BillingPlansSection
+      <BillingPurchaseFlow
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
         currentPlanSlug={currentPlan?.slug}
         isTrial={isTrial}
-        billingProfileComplete={billingProfileComplete}
+        initialBillingComplete={billingProfileComplete}
       />
+
+      <BillingInvoicesSection tenantId={barber.tenant_id} />
     </div>
   );
 }
