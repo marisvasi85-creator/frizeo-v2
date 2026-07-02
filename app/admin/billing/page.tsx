@@ -3,10 +3,16 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import BillingPlansSection from "./BillingPlansSection";
 import PayInvoiceButton from "./PayInvoiceButton";
+import { BillingProfileSection } from "./BillingProfileSection";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
+import {
+  isBillingProfileComplete,
+  rowToBillingProfile,
+  type TenantBillingRow,
+} from "@/lib/billing/billingProfile";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
@@ -120,6 +126,18 @@ export default async function BillingPage({
 
   const isPastDue = subscription?.status === "past_due";
 
+  const { data: tenantBilling } = await supabaseAdmin
+    .from("tenants")
+    .select(
+      "billing_type, billing_name, billing_cui, billing_reg_com, billing_address_line1, billing_city, billing_county, billing_country",
+    )
+    .eq("id", barber.tenant_id)
+    .single();
+
+  const billingProfileComplete = isBillingProfileComplete(
+    rowToBillingProfile((tenantBilling ?? null) as TenantBillingRow | null),
+  );
+
   return (
     <div className="space-y-8">
       <BillingConversionTracker
@@ -193,11 +211,14 @@ export default async function BillingPage({
         </div>
       </AdminCard>
 
+      <BillingProfileSection tenantId={barber.tenant_id} />
+
       <BillingPlansSection
         plans={plans ?? []}
         currentPlanId={currentPlan?.id}
         currentPlanSlug={currentPlan?.slug}
         isTrial={isTrial}
+        billingProfileComplete={billingProfileComplete}
       />
     </div>
   );

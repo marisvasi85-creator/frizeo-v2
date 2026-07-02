@@ -10,7 +10,7 @@ function taxIdTypeToBillingType(
   return null;
 }
 
-/** Salvează în DB datele PF/PJ colectate în Stripe Checkout (pentru SmartBill). */
+/** Salvează în DB datele PF/PJ colectate în Stripe Checkout (fallback). */
 export async function syncTenantBillingFromStripeCustomer(
   tenantId: string,
   customerId: string

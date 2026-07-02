@@ -17,6 +17,7 @@ type Props = {
   currentPlanId: string | undefined;
   currentPlanSlug: string | undefined;
   isTrial: boolean;
+  billingProfileComplete: boolean;
 };
 
 export default function BillingPlansSection({
@@ -24,13 +25,14 @@ export default function BillingPlansSection({
   currentPlanId,
   currentPlanSlug,
   isTrial,
+  billingProfileComplete,
 }: Props) {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
-        Alegi planul → în Stripe completezi datele de facturare (PF/PJ) și
-        cardul → revii aici cu planul activ. Factura fiscală: SmartBill.
+        Completezi datele de facturare (PF sau firmă) → alegi planul → plătești în Stripe →
+        primești factura fiscală.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -142,6 +144,7 @@ export default function BillingPlansSection({
                     planName={plan.name}
                     planPrice={plan.price}
                     trialEarlyPurchase={canPurchaseDuringTrial}
+                    billingProfileComplete={billingProfileComplete}
                   />
                 ) : null}
               </div>

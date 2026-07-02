@@ -91,6 +91,10 @@ export function validateBillingProfileInput(input: {
     return { ok: false, error: "Adresa și localitatea sunt obligatorii." };
   }
 
+  if (!county) {
+    return { ok: false, error: "Județul este obligatoriu pentru factura fiscală." };
+  }
+
   if (type === "company") {
     if (!cuiRaw) {
       return { ok: false, error: "CUI/CIF este obligatoriu pentru persoană juridică." };
@@ -117,18 +121,93 @@ export function validateBillingProfileInput(input: {
   };
 }
 
-export function isBillingProfileComplete(
+export function isIndividualBillingProfileReady(
   profile: TenantBillingProfile | null | undefined
 ): boolean {
-  if (!profile?.type || !profile.name || !profile.addressLine1 || !profile.city) {
+  if (!profile || profile.type !== "individual") {
     return false;
   }
 
-  if (profile.type === "company") {
-    return Boolean(profile.cui && isValidCui(profile.cui));
+  return Boolean(
+    profile.name &&
+      profile.addressLine1 &&
+      profile.city &&
+      profile.county &&
+      profile.country,
+  );
+}
+
+export function isCompanyBillingProfileReady(
+  profile: TenantBillingProfile | null | undefined
+): boolean {
+  if (!profile || profile.type !== "company") {
+    return false;
   }
 
-  return true;
+  return Boolean(
+    profile.name &&
+      profile.cui &&
+      isValidCui(profile.cui) &&
+      profile.addressLine1 &&
+      profile.city &&
+      profile.county &&
+      profile.country,
+  );
+}
+
+/** Profil PF sau PJ complet — obligatoriu înainte de checkout Stripe / FGO. */
+export function isBillingProfileComplete(
+  profile: TenantBillingProfile | null | undefined
+): boolean {
+  return (
+    isIndividualBillingProfileReady(profile) ||
+    isCompanyBillingProfileReady(profile)
+  );
+}
+
+export function validateIndividualBillingProfileInput(input: {
+  name?: string;
+  addressLine1?: string;
+  city?: string;
+  county?: string;
+  postalCode?: string;
+  country?: string;
+}):
+  | { ok: true; profile: TenantBillingProfile }
+  | { ok: false; error: string } {
+  const name = input.name?.trim() ?? "";
+  const addressLine1 = input.addressLine1?.trim() ?? "";
+  const city = input.city?.trim() ?? "";
+  const county = input.county?.trim() ?? "";
+  const postalCode = input.postalCode?.trim() ?? "";
+  const country = (input.country?.trim() || "RO").toUpperCase();
+
+  if (name.length < 2) {
+    return { ok: false, error: "Introdu numele complet pentru facturare." };
+  }
+
+  if (!addressLine1 || !city) {
+    return { ok: false, error: "Adresa și localitatea sunt obligatorii." };
+  }
+
+  if (!county) {
+    return { ok: false, error: "Județul este obligatoriu pentru factura fiscală." };
+  }
+
+  return {
+    ok: true,
+    profile: {
+      type: "individual",
+      name,
+      cui: null,
+      regCom: null,
+      addressLine1,
+      city,
+      county,
+      postalCode: postalCode || null,
+      country,
+    },
+  };
 }
 
 export function billingProfileToDbUpdate(profile: TenantBillingProfile) {

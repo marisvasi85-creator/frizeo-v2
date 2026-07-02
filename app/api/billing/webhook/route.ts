@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
+import { emitStripeSubscriptionInvoice } from "@/lib/fgo/emitStripeSubscriptionInvoice";
 import { getStripe } from "@/lib/stripe";
 
 export const runtime = "nodejs";
@@ -115,6 +116,10 @@ export async function POST(req: Request) {
 
           if (customerId && tenantId) {
             await syncTenantBillingFromStripeCustomer(tenantId, customerId);
+          }
+
+          if (tenantId) {
+            await emitStripeSubscriptionInvoice(invoice, tenantId);
           }
         }
         break;

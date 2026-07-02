@@ -9,6 +9,7 @@ type Props = {
   planName: string;
   planPrice?: number;
   trialEarlyPurchase?: boolean;
+  billingProfileComplete?: boolean;
 };
 
 export default function UpgradeButton({
@@ -16,11 +17,21 @@ export default function UpgradeButton({
   planName,
   planPrice,
   trialEarlyPurchase = false,
+  billingProfileComplete = true,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleUpgrade() {
+    if (!billingProfileComplete) {
+      setError("Completează datele de facturare mai sus înainte de plată.");
+      document.getElementById("billing-profile-form")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -64,14 +75,16 @@ export default function UpgradeButton({
       <button
         type="button"
         onClick={handleUpgrade}
-        disabled={loading}
+        disabled={loading || !billingProfileComplete}
         className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading
           ? "Se deschide Stripe…"
-          : trialEarlyPurchase
-            ? `Cumpără ${planName}`
-            : `Alege ${planName}`}
+          : !billingProfileComplete
+            ? "Completează date facturare"
+            : trialEarlyPurchase
+              ? `Cumpără ${planName}`
+              : `Alege ${planName}`}
       </button>
 
       {error && (
