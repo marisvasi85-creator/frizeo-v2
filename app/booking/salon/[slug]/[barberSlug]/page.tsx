@@ -157,12 +157,6 @@ export default async function Page({
               </div>
             </div>
 
-            {bookingLocation && (
-              <div className="mt-6">
-                <PublicLocationCard location={bookingLocation} />
-              </div>
-            )}
-
             {salon.description && (
               <p className="mt-4 text-gray-700">{salon.description}</p>
             )}
@@ -202,6 +196,12 @@ export default async function Page({
           </div>
 
           <BookingClient barberId={barber.id} barberName={barberName} />
+
+          {bookingLocation && (
+            <div className="mt-8 max-w-xl mx-auto">
+              <PublicLocationCard location={bookingLocation} />
+            </div>
+          )}
         </div>
       </div>
     </>

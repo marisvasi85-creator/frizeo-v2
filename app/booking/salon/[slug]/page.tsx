@@ -119,12 +119,6 @@ export default async function SalonPage({
             <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
           )}
 
-          {salonLocation && (
-            <div className="mt-6 max-w-xl mx-auto text-left">
-              <PublicLocationCard location={salonLocation} />
-            </div>
-          )}
-
           {salon.description && (
             <p className="text-gray-700 mt-4 max-w-2xl mx-auto">
               {salon.description}
@@ -192,6 +186,12 @@ export default async function SalonPage({
             ))}
           </div>
         </div>
+
+        {salonLocation && (
+          <div className="max-w-xl mx-auto">
+            <PublicLocationCard location={salonLocation} />
+          </div>
+        )}
       </div>
     </>
   );
