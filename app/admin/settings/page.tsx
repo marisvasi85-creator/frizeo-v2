@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
 import OverrideManager from "./components/OverrideManager";
+import BookingRulesForm from "./components/BookingRulesForm";
+import { DEFAULT_MIN_BOOKING_NOTICE_HOURS } from "@/lib/bookings/bookingLeadTime";
 
 export default async function SettingsPage() {
   const supabase = await createSupabaseServerClient();
@@ -16,8 +18,13 @@ export default async function SettingsPage() {
     .select("*")
     .eq("barber_id", barber.id);
 
+  const minBookingNoticeHours =
+    barber.min_booking_notice_hours ?? DEFAULT_MIN_BOOKING_NOTICE_HOURS;
+
   return (
     <div className="space-y-8">
+
+      <BookingRulesForm minBookingNoticeHours={minBookingNoticeHours} />
 
       <div>
         <h1 className="text-2xl font-semibold mb-4">

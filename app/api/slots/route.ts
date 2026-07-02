@@ -14,6 +14,10 @@ import {
   minutesToTime,
   timeToMinutes,
 } from "@/lib/schedule/time";
+import {
+  getBarberMinNoticeHours,
+  isSlotWithinLeadTime,
+} from "@/lib/bookings/bookingLeadTime";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -27,6 +31,8 @@ export async function GET(req: Request) {
   if (!barberId || !date) {
     return NextResponse.json({ slots: [] });
   }
+
+  const bookingDate = date;
 
   if (mode === "admin") {
     const auth = await requireTenantAccess(["owner", "manager", "barber"]);
@@ -66,10 +72,10 @@ export async function GET(req: Request) {
     .from("barber_day_overrides")
     .select("*")
     .eq("barber_id", barberId)
-    .eq("date", date)
+    .eq("date", bookingDate)
     .maybeSingle();
 
-  const day = jsDayToScheduleDay(date);
+  const day = jsDayToScheduleDay(bookingDate);
 
   const { data: schedule } = await supabase
     .from("barber_weekly_schedule")
@@ -127,12 +133,16 @@ export async function GET(req: Request) {
     .from("bookings")
     .select("*")
     .eq("barber_id", barberId)
-    .eq("date", date)
+    .eq("date", bookingDate)
     .in("status", ["confirmed", "pending"]);
 
   const activeBookings = getActiveBookings(bookings).filter(
     (b) => b.id !== excludeBookingId
   );
+
+  const minNoticeHours = await getBarberMinNoticeHours(supabase, barberId);
+  const bypassMinNotice = mode === "admin";
+  const now = new Date();
 
   function generateSlots(startMin: number, endMin: number) {
     const arr: any[] = [];
@@ -170,9 +180,23 @@ export async function GET(req: Request) {
           if (overlapsBreak) continue;
         }
 
+        const slotTime = minutesToTime(t);
+
+        if (
+          !isSlotWithinLeadTime(
+            bookingDate,
+            slotTime,
+            minNoticeHours,
+            now,
+            bypassMinNotice,
+          )
+        ) {
+          continue;
+        }
+
         arr.push({
           type: "free",
-          time: minutesToTime(t),
+          time: slotTime,
         });
 
         continue;
@@ -185,9 +209,23 @@ export async function GET(req: Request) {
         if (overlapsBreak) continue;
       }
 
+      const slotTime = minutesToTime(t);
+
+      if (
+        !isSlotWithinLeadTime(
+          bookingDate,
+          slotTime,
+          minNoticeHours,
+          now,
+          bypassMinNotice,
+        )
+      ) {
+        continue;
+      }
+
       arr.push({
         type: "free",
-        time: minutesToTime(t),
+        time: slotTime,
       });
     }
 

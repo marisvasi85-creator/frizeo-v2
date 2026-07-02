@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
+import {
+  barberBelongsToTenant,
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
 import { getActiveBookings } from "@/lib/schedule/bookings";
+import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
   addMinutesToTime,
   timesOverlap,
@@ -69,6 +75,33 @@ export async function POST(req: Request) {
         { error: "Slot ocupat" },
         { status: 400 }
       );
+    }
+
+    let bypassMinNotice = false;
+    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+
+    if (!isAuthError(auth)) {
+      const belongs = await barberBelongsToTenant(
+        supabase,
+        barber_id,
+        auth.tenantId,
+      );
+
+      if (belongs) {
+        bypassMinNotice = true;
+      }
+    }
+
+    const leadTime = await assertBookingLeadTimeForBarber(
+      supabase,
+      barber_id,
+      date,
+      start_time,
+      { bypassMinNotice },
+    );
+
+    if (!leadTime.ok) {
+      return NextResponse.json({ error: leadTime.error }, { status: 400 });
     }
 
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);

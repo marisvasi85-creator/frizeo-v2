@@ -9,6 +9,7 @@ import {
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 
 export async function POST(req: Request) {
   try {
@@ -91,6 +92,18 @@ export async function POST(req: Request) {
 
     if (overlap) {
       return NextResponse.json({ error: "Slot ocupat" }, { status: 400 });
+    }
+
+    const leadTime = await assertBookingLeadTimeForBarber(
+      supabaseAdmin,
+      booking?.barber_id ?? "",
+      date,
+      start_time,
+      { bypassMinNotice: true },
+    );
+
+    if (!leadTime.ok) {
+      return NextResponse.json({ error: leadTime.error }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin

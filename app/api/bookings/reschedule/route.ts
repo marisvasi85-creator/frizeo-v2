@@ -12,6 +12,12 @@ import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import {
+  barberBelongsToTenant,
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
+import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 
 export async function POST(req: Request) {
   try {
@@ -95,6 +101,33 @@ export async function POST(req: Request) {
         { error: "Serviciu invalid" },
         { status: 400 }
       );
+    }
+
+    let bypassMinNotice = false;
+    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+
+    if (!isAuthError(auth)) {
+      const belongs = await barberBelongsToTenant(
+        supabase,
+        oldBooking.barber_id,
+        auth.tenantId,
+      );
+
+      if (belongs) {
+        bypassMinNotice = true;
+      }
+    }
+
+    const leadTime = await assertBookingLeadTimeForBarber(
+      supabase,
+      oldBooking.barber_id,
+      new_date,
+      new_start_time,
+      { bypassMinNotice },
+    );
+
+    if (!leadTime.ok) {
+      return NextResponse.json({ error: leadTime.error }, { status: 400 });
     }
 
     // 🔥 FOLOSIM DATELE NOI SAU FALLBACK

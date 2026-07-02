@@ -18,6 +18,12 @@ import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBar
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import {
+  barberBelongsToTenant,
+  isAuthError,
+  requireTenantAccess,
+} from "@/lib/auth/requireTenantAccess";
+import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 
 export async function POST(req: Request) {
   try {
@@ -66,6 +72,33 @@ export async function POST(req: Request) {
         { error: barberCheck.error },
         { status: barberCheck.status }
       );
+    }
+
+    let bypassMinNotice = false;
+    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+
+    if (!isAuthError(auth)) {
+      const belongs = await barberBelongsToTenant(
+        supabase,
+        booking.barber_id,
+        auth.tenantId,
+      );
+
+      if (belongs) {
+        bypassMinNotice = true;
+      }
+    }
+
+    const leadTime = await assertBookingLeadTimeForBarber(
+      supabase,
+      booking.barber_id,
+      booking.date,
+      booking.start_time,
+      { bypassMinNotice },
+    );
+
+    if (!leadTime.ok) {
+      return NextResponse.json({ error: leadTime.error }, { status: 400 });
     }
     
     // =========================

@@ -52,6 +52,13 @@ export async function GET(req: Request) {
 
     while (current <= end) {
       const dateStr = format(current, "yyyy-MM-dd");
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+
+      if (dateStr < todayStr) {
+        current = addDays(current, 1);
+        continue;
+      }
+
       const day = jsDayToScheduleDay(dateStr);
 
       const schedule = weekly?.find((w) => w.day_of_week === day);

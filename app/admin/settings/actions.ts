@@ -2,7 +2,11 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { clampMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
+import type { SaveFormState } from "../components/saveFormState";
 
 function toDBTime(t: string | null) {
   if (!t) return null;
@@ -40,5 +44,53 @@ export async function saveWeeklySchedule(days: any[]) {
 
   if (error) {
     console.error("SAVE SCHEDULE ERROR:", error);
+  }
+}
+
+export async function saveBookingRules(
+  _prev: SaveFormState,
+  formData: FormData,
+): Promise<SaveFormState> {
+  try {
+    const barber = await getCurrentBarberInTenant();
+
+    if (!barber) {
+      return { success: false, error: "Nu ești autentificat." };
+    }
+
+    const minBookingNoticeHours = clampMinNoticeHours(
+      formData.get("min_booking_notice_hours"),
+    );
+
+    const { data, error } = await supabaseAdmin
+      .from("barbers")
+      .update({ min_booking_notice_hours: minBookingNoticeHours })
+      .eq("id", barber.id)
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("SAVE BOOKING RULES ERROR:", error);
+      return {
+        success: false,
+        error: "Nu s-au putut salva regulile de programare.",
+      };
+    }
+
+    if (!data) {
+      return {
+        success: false,
+        error: "Nu s-au putut salva regulile de programare.",
+      };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (err) {
+    console.error("SAVE BOOKING RULES ERROR:", err);
+    return {
+      success: false,
+      error: "Nu s-au putut salva regulile de programare.",
+    };
   }
 }
