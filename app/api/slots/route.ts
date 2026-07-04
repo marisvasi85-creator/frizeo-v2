@@ -18,6 +18,10 @@ import {
   getBarberMinNoticeHours,
   getSlotEligibility,
 } from "@/lib/bookings/bookingLeadTime";
+import {
+  getGoogleBusyIntervalsForDate,
+  slotOverlapsBusyIntervals,
+} from "@/lib/google/getGoogleBusyIntervals";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -144,6 +148,11 @@ export async function GET(req: Request) {
   const bypassMinNotice = mode === "admin";
   const now = new Date();
 
+  const googleBusyIntervals =
+    mode !== "admin"
+      ? await getGoogleBusyIntervalsForDate(supabase, barberId, bookingDate)
+      : [];
+
   function generateSlots(startMin: number, endMin: number) {
     const arr: any[] = [];
     const step = mode === "admin" ? 15 : duration;
@@ -216,6 +225,12 @@ export async function GET(req: Request) {
       }
 
       const slotTime = minutesToTime(t);
+
+      if (
+        slotOverlapsBusyIntervals(slotTime, minutesToTime(slotEnd), googleBusyIntervals)
+      ) {
+        continue;
+      }
       const eligibility = getSlotEligibility({
         date: bookingDate,
         startTime: slotTime,

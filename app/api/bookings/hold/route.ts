@@ -12,6 +12,10 @@ import {
   addMinutesToTime,
   timesOverlap,
 } from "@/lib/schedule/time";
+import {
+  getGoogleBusyIntervalsForDate,
+  slotOverlapsBusyIntervals,
+} from "@/lib/google/getGoogleBusyIntervals";
 
 export async function POST(req: Request) {
   try {
@@ -78,6 +82,7 @@ export async function POST(req: Request) {
     }
 
     let bypassMinNotice = false;
+    let bypassGoogleBusy = false;
     const auth = await requireTenantAccess(["owner", "manager", "barber"]);
 
     if (!isAuthError(auth)) {
@@ -89,6 +94,24 @@ export async function POST(req: Request) {
 
       if (belongs) {
         bypassMinNotice = true;
+        bypassGoogleBusy = true;
+      }
+    }
+
+    if (!bypassGoogleBusy) {
+      const googleBusyIntervals = await getGoogleBusyIntervalsForDate(
+        supabase,
+        barber_id,
+        date,
+      );
+
+      if (
+        slotOverlapsBusyIntervals(start_time, end_time, googleBusyIntervals)
+      ) {
+        return NextResponse.json(
+          { error: "Slot ocupat" },
+          { status: 400 }
+        );
       }
     }
 
