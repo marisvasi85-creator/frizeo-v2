@@ -4,6 +4,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 - Copiază `.env.example` în `.env.local` și completează variabilele.
 - **Testeri beta:** vezi [docs/BETA.md](./docs/BETA.md) (Google OAuth test users, Supabase, Vercel).
+- **Setup 100%:** vezi [docs/SETUP_COMPLET.md](./docs/SETUP_COMPLET.md) — checklist complet pentru producție beta.
 - Liste Gmail pentru Google Calendar: `config/google-test-users.txt` → `npm run beta:google-users`
 
 ## Getting Started
