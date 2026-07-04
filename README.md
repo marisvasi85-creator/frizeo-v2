@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Frizeo — setup
+
+- Copiază `.env.example` în `.env.local` și completează variabilele.
+- **Testeri beta:** vezi [docs/BETA.md](./docs/BETA.md) (Google OAuth test users, Supabase, Vercel).
+- Liste Gmail pentru Google Calendar: `config/google-test-users.txt` → `npm run beta:google-users`
+
 ## Getting Started
 
 First, run the development server:

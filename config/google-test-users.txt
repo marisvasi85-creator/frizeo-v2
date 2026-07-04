@@ -1,0 +1,8 @@
+# Gmail-uri ale testerilor beta — câte unul pe linie.
+# Aceste adrese trebuie adăugate în Google Cloud Console → OAuth consent screen → Test users.
+#
+# Exemplu:
+# sanrazvan8@gmail.com
+# prieten@gmail.com
+
+sanrazvan8@gmail.com

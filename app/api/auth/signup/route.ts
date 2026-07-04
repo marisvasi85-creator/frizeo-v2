@@ -9,6 +9,7 @@ import {
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
 import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
+import { getTrialDays } from "@/lib/billing/getTrialDays";
 import { PLAN_SLUGS } from "@/lib/billing/plans";
 
 export async function POST(req: Request) {
@@ -54,27 +55,21 @@ export async function POST(req: Request) {
       );
     }
 
-    const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
-      () =>
-        NextResponse.json({
-          success: true,
-          redirect: "/admin/dashboard",
-        })
-    );
+    const { data: createdUser, error: createError } =
+      await supabaseAdmin.auth.admin.createUser({
+        email: emailNorm,
+        password,
+        email_confirm: true,
+      });
 
-    const { data, error } = await supabase.auth.signUp({
-      email: emailNorm,
-      password,
-    });
-
-    if (error || !data.user) {
+    if (createError || !createdUser.user) {
       return NextResponse.json(
-        { error: mapAuthError(error?.message) },
+        { error: mapAuthError(createError?.message) },
         { status: 400 }
       );
     }
 
-    const userId = data.user.id;
+    const userId = createdUser.user.id;
 
     await supabaseAdmin.from("profiles").insert({
       id: userId,
@@ -136,7 +131,7 @@ export async function POST(req: Request) {
     });
     
 const trialEnds = new Date();
-trialEnds.setDate(trialEnds.getDate() + 15);
+trialEnds.setDate(trialEnds.getDate() + getTrialDays());
 
 const proPlusPlanId =
   (await getPlanIdBySlug(PLAN_SLUGS.PRO_PLUS)) ??
@@ -295,6 +290,26 @@ await supabaseAdmin
       break_enabled: false,
     },
   ]);
+
+    const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
+      () =>
+        NextResponse.json({
+          success: true,
+          redirect: "/admin/dashboard",
+        })
+    );
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailNorm,
+      password,
+    });
+
+    if (signInError) {
+      return NextResponse.json(
+        { error: mapAuthError(signInError.message) },
+        { status: 500 }
+      );
+    }
 
     return getResponse();
 

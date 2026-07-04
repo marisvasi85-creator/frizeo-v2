@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getAppUrl } from "@/lib/app/getAppUrl";
+import { getGoogleOAuthRedirectUri } from "@/lib/google/getOAuthRedirectUri";
 
 function redirectToProfile(
   appUrl: string,
@@ -16,7 +18,7 @@ function redirectToProfile(
 }
 
 export async function GET(req: NextRequest) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
   const code = req.nextUrl.searchParams.get("code");
   const oauthError = req.nextUrl.searchParams.get("error");
 
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
       code,
       client_id: process.env.GOOGLE_CLIENT_ID!,
       client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      redirect_uri: `${appUrl}/api/google/callback`,
+      redirect_uri: getGoogleOAuthRedirectUri(),
       grant_type: "authorization_code",
     }),
   });

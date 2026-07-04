@@ -122,13 +122,13 @@ export default async function ProfilePage({
             </p>
 
             <p className="text-xs text-white/40">
-              Dacă Google afișează „Acces blocat” sau „nu a finalizat
-              verificarea”, contul tău trebuie adăugat de echipa Frizeo. Scrie-ne
-              la{" "}
+              În perioada beta, Google permite conectarea doar pentru conturile
+              Gmail adăugate de echipa Frizeo. Dacă vezi „Acces blocat”, trimite
+              adresa ta Gmail la{" "}
               <a href="mailto:info@frizeo.ro" className="text-white/60 underline">
                 info@frizeo.ro
-              </a>{" "}
-              cu adresa Gmail pe care vrei să o conectezi.
+              </a>
+              .
             </p>
 
             <a

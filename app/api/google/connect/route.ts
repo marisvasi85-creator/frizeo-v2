@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { getGoogleOAuthRedirectUri } from "@/lib/google/getOAuthRedirectUri";
 
 export async function GET() {
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/google/callback`,
+    redirect_uri: getGoogleOAuthRedirectUri(),
     response_type: "code",
     access_type: "offline",
     prompt: "consent",
