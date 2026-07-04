@@ -201,6 +201,8 @@ Când vrei ca **orice** frizer să conecteze Google fără să îi adaugi manual
 
 Până atunci, adaugă fiecare Gmail în **Test users** (max 100).
 
+**Producție fără listă manuală:** vezi [GOOGLE_OAUTH_PRODUCTION.md](./GOOGLE_OAUTH_PRODUCTION.md)
+
 ---
 
 ## Adăugare testeri noi
