@@ -18,7 +18,8 @@ const GOOGLE_MESSAGES: Record<string, string> = {
   save_error:
     "Nu am putut salva conexiunea. Contactează suportul dacă problema persistă.",
   missing_code: "Conectarea a fost anulată sau linkul a expirat.",
-  access_denied: "Ai refuzat accesul la Google Calendar.",
+  access_denied:
+    "Conectarea la Google Calendar a fost refuzată sau contul tău nu este încă autorizat. Contactează suportul la info@frizeo.ro cu adresa de Gmail folosită.",
 };
 
 export default async function ProfilePage({
@@ -114,14 +115,25 @@ export default async function ProfilePage({
             </a>
           </div>
         ) : (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-3">
             <p className="text-white/60">
-              Programările confirmate pot apărea automat în Google Calendar.
+              Opțional — programările confirmate pot apărea automat în Google
+              Calendar. Frizeo funcționează normal și fără această conexiune.
+            </p>
+
+            <p className="text-xs text-white/40">
+              Dacă Google afișează „Acces blocat” sau „nu a finalizat
+              verificarea”, contul tău trebuie adăugat de echipa Frizeo. Scrie-ne
+              la{" "}
+              <a href="mailto:info@frizeo.ro" className="text-white/60 underline">
+                info@frizeo.ro
+              </a>{" "}
+              cu adresa Gmail pe care vrei să o conectezi.
             </p>
 
             <a
               href="/api/google/connect"
-              className="px-4 py-2 bg-white text-black rounded-lg font-medium text-center text-sm"
+              className="inline-block px-4 py-2 bg-white text-black rounded-lg font-medium text-center text-sm"
             >
               Conectează Google Calendar
             </a>
