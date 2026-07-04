@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import PasswordRequirements from "@/app/components/auth/PasswordRequirements";
 import {
@@ -13,36 +13,50 @@ import { trackRegistrationOnce } from "@/lib/analytics/track";
 import SignupAnalytics from "@/app/components/analytics/SignupAnalytics";
 
 export default function SignupPage() {
-  const [form, setForm] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-  });
-
+  const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  async function handleSignup() {
+  function getFormValues() {
+    const form = formRef.current;
+    if (!form) {
+      return {
+        fullName: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+      };
+    }
+
+    const data = new FormData(form);
+    return {
+      fullName: String(data.get("fullName") ?? "").trim(),
+      email: String(data.get("email") ?? "").trim(),
+      phone: String(data.get("phone") ?? "").trim(),
+      password: String(data.get("password") ?? ""),
+      confirmPassword: String(data.get("confirmPassword") ?? ""),
+    };
+  }
+
+  async function handleSignup(event?: React.FormEvent) {
+    event?.preventDefault();
     setError("");
 
-    const name = form.fullName.trim();
-    const email = form.email.trim();
-    const phone = form.phone.trim();
+    const form = getFormValues();
 
-    if (!name || name.length < 2) {
+    if (!form.fullName || form.fullName.length < 2) {
       setError("Introdu numele complet.");
       return;
     }
 
-    if (!isValidEmail(email)) {
+    if (!isValidEmail(form.email)) {
       setError("Email invalid.");
       return;
     }
 
-    if (!phone || phone.replace(/\D/g, "").length < 6) {
+    if (!form.phone || form.phone.replace(/\D/g, "").length < 6) {
       setError("Introdu un număr de telefon valid.");
       return;
     }
@@ -70,10 +84,11 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          fullName: name,
-          email,
-          phone,
+          fullName: form.fullName,
+          email: form.email,
+          phone: form.phone,
           password: form.password,
           acceptedTerms: true,
         }),
@@ -99,7 +114,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10">
+    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10 pb-32">
       <SignupAnalytics />
       <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="text-center">
@@ -113,91 +128,84 @@ export default function SignupPage() {
           </div>
         )}
 
-        <div className="space-y-3">
+        <form ref={formRef} onSubmit={handleSignup} className="space-y-3">
           <input
+            name="fullName"
             placeholder="Nume complet"
-            value={form.fullName}
+            autoComplete="name"
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
           />
 
           <input
+            name="email"
             type="email"
             autoComplete="email"
             placeholder="Email"
-            value={form.email}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
           />
 
           <input
+            name="phone"
             type="tel"
             autoComplete="tel"
             placeholder="Telefon"
-            value={form.phone}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
           />
 
           <input
+            name="password"
             type="password"
             autoComplete="new-password"
             placeholder="Parolă"
-            value={form.password}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
 
           <input
+            name="confirmPassword"
             type="password"
             autoComplete="new-password"
             placeholder="Confirmă parola"
-            value={form.confirmPassword}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
-            onChange={(e) =>
-              setForm({ ...form, confirmPassword: e.target.value })
-            }
           />
-        </div>
 
-        <PasswordRequirements password={form.password} />
+          <PasswordRequirementsField formRef={formRef} />
 
-        <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={acceptedTerms}
-            onChange={(e) => setAcceptedTerms(e.target.checked)}
-            className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
-          />
-          <span>
-            Accept{" "}
-            <Link
-              href="/terms"
-              target="_blank"
-              className="text-white underline hover:no-underline"
-            >
-              termenii și condițiile
-            </Link>{" "}
-            și{" "}
-            <Link
-              href="/privacy"
-              target="_blank"
-              className="text-white underline hover:no-underline"
-            >
-              politica de confidențialitate
-            </Link>
-            .
-          </span>
-        </label>
+          <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
+            />
+            <span>
+              Accept{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                className="text-white underline hover:no-underline"
+              >
+                termenii și condițiile
+              </Link>{" "}
+              și{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="text-white underline hover:no-underline"
+              >
+                politica de confidențialitate
+              </Link>
+              .
+            </span>
+          </label>
 
-        <button
-          type="button"
-          onClick={handleSignup}
-          disabled={loading}
-          className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
-        >
-          {loading ? "Se creează..." : "Creează cont"}
-        </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+          >
+            {loading ? "Se creează..." : "Creează cont"}
+          </button>
+        </form>
 
         <div className="text-center text-sm text-zinc-500">
           Ai deja cont?{" "}
@@ -206,6 +214,27 @@ export default function SignupPage() {
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+function PasswordRequirementsField({
+  formRef,
+}: {
+  formRef: React.RefObject<HTMLFormElement | null>;
+}) {
+  const [password, setPassword] = useState("");
+
+  return (
+    <div
+      onInput={() => {
+        const value = String(
+          new FormData(formRef.current ?? undefined).get("password") ?? ""
+        );
+        setPassword(value);
+      }}
+    >
+      <PasswordRequirements password={password} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import PasswordRequirements from "@/app/components/auth/PasswordRequirements";
 import {
@@ -10,15 +10,31 @@ import {
 
 export default function ResetPasswordPage() {
   const supabase = createSupabaseBrowserClient();
+  const formRef = useRef<HTMLFormElement>(null);
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordPreview, setPasswordPreview] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  async function updatePassword() {
+  function getFormValues() {
+    const form = formRef.current;
+    if (!form) {
+      return { password: "", confirmPassword: "" };
+    }
+
+    const data = new FormData(form);
+    return {
+      password: String(data.get("password") ?? ""),
+      confirmPassword: String(data.get("confirmPassword") ?? ""),
+    };
+  }
+
+  async function updatePassword(event: React.FormEvent) {
+    event.preventDefault();
     setError("");
     setSuccess("");
+
+    const { password, confirmPassword } = getFormValues();
 
     if (!isValidPassword(password)) {
       setError(PASSWORD_REQUIREMENTS_MESSAGE);
@@ -33,7 +49,10 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      setError(error.message || "Nu am putut schimba parola.");
+      setError(
+        error.message ||
+          "Nu am putut schimba parola. Linkul poate fi expirat — solicită unul nou."
+      );
       return;
     }
 
@@ -47,7 +66,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-black text-white px-4 py-10 pb-32">
       <div className="bg-zinc-900 p-6 rounded-xl space-y-4 w-full max-w-sm">
         <div>
           <h2 className="text-xl font-semibold">Setează parola nouă</h2>
@@ -68,38 +87,42 @@ export default function ResetPasswordPage() {
           </div>
         )}
 
-        <input
-          type="password"
-          placeholder="Parolă nouă"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded-lg"
-        />
-
-        <input
-          type="password"
-          placeholder="Confirmă parola"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          className="w-full bg-zinc-800 p-3 rounded-lg"
-        />
-
-        {confirmPassword && password !== confirmPassword && (
-          <p className="text-red-400 text-sm">Parolele nu coincid.</p>
-        )}
-
-        {confirmPassword && password === confirmPassword && (
-          <p className="text-green-400 text-sm">✓ Parolele coincid</p>
-        )}
-
-        <PasswordRequirements password={password} />
-
-        <button
-          onClick={updatePassword}
-          className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-gray-200 transition"
+        <form
+          ref={formRef}
+          onSubmit={updatePassword}
+          className="space-y-4"
+          onInput={() => {
+            const { password } = getFormValues();
+            setPasswordPreview(password);
+          }}
         >
-          Schimbă parola
-        </button>
+          <input
+            name="password"
+            type="password"
+            placeholder="Parolă nouă"
+            autoComplete="new-password"
+            className="w-full bg-zinc-800 p-3 rounded-lg"
+          />
+
+          <input
+            name="confirmPassword"
+            type="password"
+            placeholder="Confirmă parola"
+            autoComplete="new-password"
+            className="w-full bg-zinc-800 p-3 rounded-lg"
+          />
+
+          {passwordPreview && (
+            <PasswordRequirements password={passwordPreview} />
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-gray-200 transition"
+          >
+            Schimbă parola
+          </button>
+        </form>
       </div>
     </div>
   );

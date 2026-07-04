@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   isValidEmail,
-  isValidPassword,
   mapAuthError,
   normalizeEmail,
-  PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
 
 export async function POST(req: Request) {
@@ -24,7 +22,9 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = await createSupabaseServerClient();
+    const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
+      () => NextResponse.json({ success: true })
+    );
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: normalizeEmail(email),
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true });
+    return getResponse();
   } catch {
     return NextResponse.json(
       { error: "Eroare server. Încearcă din nou." },

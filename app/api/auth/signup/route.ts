@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   isValidEmail,
@@ -54,7 +54,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabase = await createSupabaseServerClient();
+    const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
+      () =>
+        NextResponse.json({
+          success: true,
+          redirect: "/admin/dashboard",
+        })
+    );
 
     const { data, error } = await supabase.auth.signUp({
       email: emailNorm,
@@ -290,11 +296,7 @@ await supabaseAdmin
     },
   ]);
 
-    // 🔥 REDIRECT FINAL
-    return NextResponse.json({
-      success: true,
-      redirect: "/admin/dashboard",
-    });
+    return getResponse();
 
   } catch (e: any) {
     return NextResponse.json(

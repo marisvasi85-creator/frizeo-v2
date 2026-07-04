@@ -1,17 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  isValidEmail,
-  PASSWORD_REQUIREMENTS_MESSAGE,
-} from "@/lib/auth/credentials";
+import { isValidEmail } from "@/lib/auth/credentials";
 
 export default function LoginPage() {
   const router = useRouter();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -25,9 +20,25 @@ export default function LoginPage() {
     setTimeout(() => setShake(false), 400);
   }
 
-  async function login() {
+  function getFormValues() {
+    const form = formRef.current;
+    if (!form) {
+      return { email: "", password: "" };
+    }
+
+    const data = new FormData(form);
+    return {
+      email: String(data.get("email") ?? "").trim(),
+      password: String(data.get("password") ?? ""),
+    };
+  }
+
+  async function login(event?: React.FormEvent) {
+    event?.preventDefault();
     setError("");
     setSuccess("");
+
+    const { email, password } = getFormValues();
 
     if (!isValidEmail(email)) {
       triggerError("Email invalid.");
@@ -45,6 +56,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -67,6 +79,8 @@ export default function LoginPage() {
     setError("");
     setSuccess("");
 
+    const { email } = getFormValues();
+
     if (!isValidEmail(email)) {
       triggerError("Introdu o adresă de email validă.");
       return;
@@ -75,6 +89,7 @@ export default function LoginPage() {
     const res = await fetch("/api/auth/reset-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ email }),
     });
 
@@ -91,7 +106,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4">
+    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10 pb-32">
       <div
         className={`w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6 ${
           shake ? "animate-shake" : ""
@@ -114,45 +129,41 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <form ref={formRef} onSubmit={login} className="space-y-4">
           <input
+            name="email"
             type="email"
             placeholder="Email"
             autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={`w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none ${
-              email && !isValidEmail(email)
-                ? "ring-2 ring-red-500"
-                : "focus:ring-2 focus:ring-white/20"
-            }`}
+            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
           />
 
           <input
+            name="password"
             type="password"
             placeholder="Parolă"
             autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && login()}
             className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
           />
 
           <div className="flex justify-end text-sm text-zinc-400">
-            <button type="button" onClick={forgotPassword} className="hover:underline">
+            <button
+              type="button"
+              onClick={forgotPassword}
+              className="hover:underline"
+            >
               Ai uitat parola?
             </button>
           </div>
 
           <button
-            type="button"
-            onClick={login}
+            type="submit"
             disabled={loading}
             className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
           >
             {loading ? "Se autentifică..." : "Autentificare"}
           </button>
-        </div>
+        </form>
 
         <div className="text-center text-sm text-zinc-500">
           Nu ai cont?{" "}

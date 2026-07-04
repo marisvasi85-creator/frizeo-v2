@@ -2,18 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   CONSENT_STORAGE_KEY,
   notifyConsentChange,
 } from "@/lib/analytics/consent";
 
+const AUTH_PATHS = ["/login", "/signup", "/reset-password", "/accept-invite"];
+
 export default function CookieBanner() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
 
+  const isAuthPage = AUTH_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+
   useEffect(() => {
+    if (isAuthPage) return;
     if (localStorage.getItem(CONSENT_STORAGE_KEY)) return;
     setVisible(true);
-  }, []);
+  }, [isAuthPage]);
 
   function accept() {
     localStorage.setItem(CONSENT_STORAGE_KEY, "accepted");
@@ -27,7 +36,7 @@ export default function CookieBanner() {
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!visible || isAuthPage) return null;
 
   return (
     <div
