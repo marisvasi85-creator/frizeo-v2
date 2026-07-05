@@ -15,7 +15,7 @@ Ghid pentru ca **sanrazvan8@gmail.com** (și alți testeri) să folosească apli
 | 2 | Google: test user + Calendar API | 3 min | Tu |
 | 3 | Vercel: variabile de mediu | 10 min | Tu |
 | 4 | Supabase: URL-uri auth | 2 min | Tu |
-| 5 | Vercel: `CRON_SECRET` + redeploy | 2 min | Tu |
+| 5 | Vercel: `CRON_SECRET` + cron extern | 5 min | Tu |
 | 6 | Test end-to-end cu Razvan | 15 min | Tester |
 
 ---
@@ -113,17 +113,23 @@ Fără SMS: restul funcționează; doar SMS-urile lipsesc.
 
 ### Cron (reminder-e automate, curățare)
 
+Planul Vercel Free **nu** suportă cron-uri frecvente — folosim un **serviciu cron extern** (ex. [cron-job.org](https://cron-job.org)).
+
 | Variabilă | Notă |
 |-----------|------|
-| `CRON_SECRET` | String random 32+ caractere |
+| `CRON_SECRET` | String random 32+ caractere — setat în Vercel |
 
-După setare, redeploy. `vercel.json` din repo programează:
+După setare în Vercel, creează 3 job-uri HTTP GET (înlocuiește `SECRET`):
 
-- `/api/cron/reminder` — la 15 min (reminder 2h înainte)
-- `/api/cron/cleanup` — la fiecare oră
-- `/api/cron/trial-cleanup` — zilnic 03:00 UTC
+| Job | URL | Program |
+|-----|-----|---------|
+| Reminder | `https://www.frizeo.ro/api/cron/reminder?secret=SECRET` | La 15 min (`*/15 * * * *`) |
+| Cleanup | `https://www.frizeo.ro/api/cron/cleanup?secret=SECRET` | La fiecare oră (`0 * * * *`) |
+| Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup?secret=SECRET` | Zilnic 03:00 UTC (`0 3 * * *`) |
 
-Vercel trimite automat `Authorization: Bearer {CRON_SECRET}`.
+Alternativ, header `Authorization: Bearer SECRET` (fără `?secret=`).
+
+Endpoint-urile răspund `401` dacă `CRON_SECRET` lipsește sau e greșit.
 
 ### Stripe (upgrade plan plătit — opțional la beta)
 

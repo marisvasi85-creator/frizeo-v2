@@ -137,7 +137,7 @@ Nu — Frizeo folosește email/parolă (Supabase). OAuth Google e doar pentru Ca
 - [ ] Google: Calendar API enabled
 - [ ] Google: OAuth app **Published** + **verified** pentru `calendar`
 - [ ] Email SMTP + SMSO (opțional dar recomandat)
-- [ ] `CRON_SECRET` + cron-uri active
+- [ ] `CRON_SECRET` + job-uri cron externe (reminder, cleanup, trial)
 - [ ] Stripe live keys (când lansezi plăți reale)
 
 Ghid tehnic detaliat: [SETUP_COMPLET.md](./SETUP_COMPLET.md)

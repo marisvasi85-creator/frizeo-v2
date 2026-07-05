@@ -89,7 +89,7 @@ Google permite maxim **100 de test users**. Pentru acces public fără listă, t
 | Email | `EMAIL_*` | Confirmări, reminder-e |
 | SMS | `SMSO_API_KEY` | SMS în trial |
 | Stripe | `STRIPE_*` | Upgrade plan plătit |
-| Cron | `CRON_SECRET` + Vercel Cron | Reminder-e automate, expirare trial |
+| Cron | `CRON_SECRET` + cron extern (ex. cron-job.org) | Reminder-e automate, expirare trial |
 
 ---
 
