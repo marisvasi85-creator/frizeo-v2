@@ -1,49 +1,79 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { clampMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
+import { toDBTime } from "@/lib/schedule/time";
 import type { SaveFormState } from "../components/saveFormState";
 
-function toDBTime(t: string | null) {
-  if (!t) return null;
-  return t.length === 5 ? t + ":00" : t;
-}
+type ScheduleDay = {
+  day_of_week: number;
+  is_working: boolean;
+  work_start: string | null;
+  work_end: string | null;
+  break_enabled: boolean;
+  break_start: string | null;
+  break_end: string | null;
+};
 
-export async function saveWeeklySchedule(days: any[]) {
-  const supabase = await createSupabaseServerClient();
-  const barber = await getCurrentBarberInTenant();
+export async function saveWeeklySchedule(
+  days: ScheduleDay[]
+): Promise<SaveFormState> {
+  try {
+    const barber = await getCurrentBarberInTenant();
 
-  if (!barber) {
-    redirect("/login");
-  }
+    if (!barber) {
+      return { success: false, error: "Nu ești autentificat." };
+    }
 
-  await supabase
-    .from("barber_weekly_schedule")
-    .delete()
-    .eq("barber_id", barber.id);
+    const { error: deleteError } = await supabaseAdmin
+      .from("barber_weekly_schedule")
+      .delete()
+      .eq("barber_id", barber.id);
 
-  const rows = days.map((d) => ({
-    barber_id: barber.id,
-    tenant_id: barber.tenant_id,
-    day_of_week: d.day_of_week,
-    is_working: d.is_working,
-    work_start: toDBTime(d.work_start),
-    work_end: toDBTime(d.work_end),
-    break_enabled: !!d.break_enabled,
-    break_start: d.break_enabled ? toDBTime(d.break_start) : null,
-    break_end: d.break_enabled ? toDBTime(d.break_end) : null,
-  }));
+    if (deleteError) {
+      console.error("SAVE SCHEDULE DELETE ERROR:", deleteError);
+      return {
+        success: false,
+        error: "Nu s-a putut salva programul de lucru.",
+      };
+    }
 
-  const { error } = await supabase
-    .from("barber_weekly_schedule")
-    .insert(rows);
+    const rows = days.map((d) => ({
+      barber_id: barber.id,
+      tenant_id: barber.tenant_id,
+      day_of_week: d.day_of_week,
+      is_working: d.is_working,
+      work_start: d.is_working ? toDBTime(d.work_start) : null,
+      work_end: d.is_working ? toDBTime(d.work_end) : null,
+      break_enabled: d.is_working && !!d.break_enabled,
+      break_start:
+        d.is_working && d.break_enabled ? toDBTime(d.break_start) : null,
+      break_end:
+        d.is_working && d.break_enabled ? toDBTime(d.break_end) : null,
+    }));
 
-  if (error) {
-    console.error("SAVE SCHEDULE ERROR:", error);
+    const { error: insertError } = await supabaseAdmin
+      .from("barber_weekly_schedule")
+      .insert(rows);
+
+    if (insertError) {
+      console.error("SAVE SCHEDULE INSERT ERROR:", insertError);
+      return {
+        success: false,
+        error: "Nu s-a putut salva programul de lucru.",
+      };
+    }
+
+    revalidatePath("/admin/settings");
+    return { success: true };
+  } catch (err) {
+    console.error("SAVE SCHEDULE ERROR:", err);
+    return {
+      success: false,
+      error: "Nu s-a putut salva programul de lucru.",
+    };
   }
 }
 

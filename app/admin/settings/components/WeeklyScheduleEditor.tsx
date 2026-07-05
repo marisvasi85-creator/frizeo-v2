@@ -28,26 +28,42 @@ const DAYS = [
   { id: 7, label: "Duminică" },
 ];
 
+function normTime(t: string | null | undefined) {
+  if (!t) return null;
+  return t.slice(0, 5);
+}
+
+function normalizeDay(existing: Day): Day {
+  return {
+    ...existing,
+    work_start: normTime(existing.work_start),
+    work_end: normTime(existing.work_end),
+    break_start: normTime(existing.break_start),
+    break_end: normTime(existing.break_end),
+  };
+}
+
 export default function WeeklyScheduleEditor({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
   const [days, setDays] = useState<Day[]>(
     DAYS.map((d) => {
       const existing = initialData.find(
         (x) => x.day_of_week === d.id
       );
 
-      return (
-        existing || {
-          day_of_week: d.id,
-          is_working: false,
-          work_start: "09:00",
-          work_end: "18:00",
-          break_enabled: false,
-          break_start: "13:00",
-          break_end: "14:00",
-        }
-      );
+      return existing
+        ? normalizeDay(existing)
+        : {
+            day_of_week: d.id,
+            is_working: false,
+            work_start: "09:00",
+            work_end: "18:00",
+            break_enabled: false,
+            break_start: "13:00",
+            break_end: "14:00",
+          };
     })
   );
 
@@ -118,12 +134,19 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     }
 
     setLoading(true);
-setSaved(false);
+    setSaved(false);
+    setError("");
 
-await saveWeeklySchedule(days);
+    const result = await saveWeeklySchedule(days);
 
-setSaved(true);
-setLoading(false);
+    if (!result.success) {
+      setError(result.error || "Nu s-a putut salva programul.");
+      setLoading(false);
+      return;
+    }
+
+    setSaved(true);
+    setLoading(false);
   }
 
   return (
@@ -241,7 +264,11 @@ setLoading(false);
       {/* SAVE */}
       <div className="flex justify-end items-center gap-3">
 
-  {saved && (
+  {error && (
+    <div className="text-red-400 text-sm">{error}</div>
+  )}
+
+  {saved && !error && (
     <div className="text-green-400 text-sm">
       Program salvat ✔
     </div>
