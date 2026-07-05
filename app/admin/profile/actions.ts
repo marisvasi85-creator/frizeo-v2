@@ -1,6 +1,5 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
@@ -26,8 +25,6 @@ export async function updateProfile(
   formData: FormData
 ): Promise<SaveFormState> {
   try {
-    const supabase = await createSupabaseServerClient();
-
     const barber = await getCurrentBarberInTenant();
 
     if (!barber) {
@@ -44,7 +41,7 @@ export async function updateProfile(
       .toLowerCase()
       .replace(/\s+/g, "-");
 
-    const { data: existingSlug } = await supabase
+    const { data: existingSlug } = await supabaseAdmin
       .from("barbers")
       .select("id")
       .eq("tenant_id", barber.tenant_id)

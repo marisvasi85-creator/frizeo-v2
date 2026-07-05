@@ -175,15 +175,21 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     const ok = confirm("Ștergi această zi specială?");
     if (!ok) return;
 
+    setError("");
+
     const res = await fetch(
       `/api/barber-overrides?barberId=${barberId}&date=${targetDate}`,
       { method: "DELETE" }
     );
 
-    if (res.ok) {
-      if (date === targetDate) resetForm();
-      loadOverrides();
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error || "Nu s-a putut șterge");
+      return;
     }
+
+    if (date === targetDate) resetForm();
+    await loadOverrides();
   }
 
   return (

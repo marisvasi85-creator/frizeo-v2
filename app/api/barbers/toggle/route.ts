@@ -4,6 +4,7 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
 
 export async function POST(req: Request) {
@@ -22,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const barberOk = await barberBelongsToTenant(
-      auth.supabase,
+      supabaseAdmin,
       barberId,
       auth.tenantId
     );
@@ -45,10 +46,11 @@ export async function POST(req: Request) {
       }
     }
 
-    const { error } = await auth.supabase
+    const { error } = await supabaseAdmin
       .from("barbers")
       .update({ active })
-      .eq("id", barberId);
+      .eq("id", barberId)
+      .eq("tenant_id", auth.tenantId);
 
     if (error) {
       console.error(error);

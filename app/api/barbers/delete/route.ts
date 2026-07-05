@@ -4,6 +4,7 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
     }
 
     const barberOk = await barberBelongsToTenant(
-      auth.supabase,
+      supabaseAdmin,
       barberId,
       auth.tenantId
     );
@@ -29,10 +30,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { data: barber } = await auth.supabase
+    const { data: barber } = await supabaseAdmin
       .from("barbers")
       .select("id, user_id")
       .eq("id", barberId)
+      .eq("tenant_id", auth.tenantId)
       .single();
 
     if (!barber) {
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
     }
 
     if (barber.user_id) {
-      const { data: tenantUser } = await auth.supabase
+      const { data: tenantUser } = await supabaseAdmin
         .from("tenant_users")
         .select("role")
         .eq("tenant_id", auth.tenantId)
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const { count } = await auth.supabase
+    const { count } = await supabaseAdmin
       .from("bookings")
       .select("*", { count: "exact", head: true })
       .eq("barber_id", barberId);
@@ -67,30 +69,33 @@ export async function POST(req: Request) {
       );
     }
 
-    await auth.supabase
-      .from("barber_weekly_schedule")
-      .delete()
-      .eq("barber_id", barberId);
+    const cascadeTables = [
+      "barber_weekly_schedule",
+      "barber_day_overrides",
+      "barber_settings",
+      "barber_services",
+    ] as const;
 
-    await auth.supabase
-      .from("barber_day_overrides")
-      .delete()
-      .eq("barber_id", barberId);
+    for (const table of cascadeTables) {
+      const { error: cascadeError } = await supabaseAdmin
+        .from(table)
+        .delete()
+        .eq("barber_id", barberId);
 
-    await auth.supabase
-      .from("barber_settings")
-      .delete()
-      .eq("barber_id", barberId);
+      if (cascadeError) {
+        console.error(`DELETE BARBER ${table} ERROR:`, cascadeError);
+        return NextResponse.json(
+          { error: "Nu s-a putut șterge frizerul" },
+          { status: 500 }
+        );
+      }
+    }
 
-    await auth.supabase
-      .from("barber_services")
-      .delete()
-      .eq("barber_id", barberId);
-
-    const { error } = await auth.supabase
+    const { error } = await supabaseAdmin
       .from("barbers")
       .delete()
-      .eq("id", barberId);
+      .eq("id", barberId)
+      .eq("tenant_id", auth.tenantId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

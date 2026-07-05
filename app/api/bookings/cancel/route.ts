@@ -128,12 +128,20 @@ export async function POST(req: NextRequest) {
       console.error("GOOGLE DELETE ERROR:", e);
     }
 
-    await supabaseAdmin
+    const { error: cancelError } = await supabaseAdmin
       .from("bookings")
       .update({
         status: "cancelled",
       })
       .eq("id", booking.id);
+
+    if (cancelError) {
+      console.error("CANCEL BOOKING ERROR:", cancelError);
+      return NextResponse.json(
+        { error: "Nu s-a putut anula programarea" },
+        { status: 500 }
+      );
+    }
 
     if (
       booking.client_email &&

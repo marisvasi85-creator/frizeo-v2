@@ -173,9 +173,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const supabase = await createSupabaseServerClient();
-
-    const { data: barber, error: barberError } = await supabase
+    const { data: barber, error: barberError } = await supabaseAdmin
       .from("barbers")
       .select("tenant_id")
       .eq("id", barber_id)
@@ -188,9 +186,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (barber.tenant_id !== access.tenantId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const payload = {
       barber_id,
-      tenant_id: barber.tenant_id,
+      tenant_id: access.tenantId,
       date,
       is_closed: closed,
       work_start: closed || !hasCustomHours ? null : toDBTime(work_start),
@@ -208,7 +210,7 @@ export async function POST(req: NextRequest) {
         closed || !hasCustomHours ? null : slot_duration ?? null,
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("barber_day_overrides")
       .upsert(payload, {
         onConflict: "barber_id,date",
@@ -252,9 +254,7 @@ export async function DELETE(req: NextRequest) {
     const access = await assertBarberScheduleAccess(barberId);
     if (access instanceof NextResponse) return access;
 
-    const supabase = await createSupabaseServerClient();
-
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("barber_day_overrides")
       .delete()
       .eq("barber_id", barberId)

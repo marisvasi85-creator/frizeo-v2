@@ -4,6 +4,7 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const ALLOWED_DURATIONS = [15, 30, 45, 60, 75, 90, 120];
 
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
     }
 
     const barberOk = await barberBelongsToTenant(
-      auth.supabase,
+      supabaseAdmin,
       barber_id,
       auth.tenantId
     );
@@ -46,7 +47,7 @@ export async function POST(req: Request) {
     }
 
     if (auth.role === "barber") {
-      const { data: ownBarber } = await auth.supabase
+      const { data: ownBarber } = await supabaseAdmin
         .from("barbers")
         .select("id")
         .eq("user_id", auth.user.id)
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const { data, error } = await auth.supabase
+    const { data, error } = await supabaseAdmin
       .from("barber_services")
       .insert({
         barber_id,
