@@ -36,6 +36,12 @@ export default function PrivacyPage() {
         își gestionează programările online. Clienții finali se programează
         prin link-uri publice generate de salon.
       </p>
+      <p>
+        Serviciul este destinat în principal pieței din{" "}
+        <strong>România</strong>: interfața și suportul sunt în limba română,
+        prețurile sunt exprimate în lei (RON), iar programările și notificările
+        folosesc fusul orar <strong>Europe/Bucharest</strong>.
+      </p>
 
       <h2>3. Ce date prelucrăm</h2>
       <h3>3.1. Conturi salon (clienți B2B)</h3>
@@ -82,11 +88,58 @@ export default function PrivacyPage() {
         </a>
       </p>
 
-      <h3>3.4. Date tehnice</h3>
+      <h3>3.4. Google Calendar (opțional, inițiat de frizer)</h3>
+      <p>
+        Dacă un frizer alege să conecteze Google Calendar din Profil, Frizeo
+        solicită acces OAuth la Google Calendar și la adresa de email Google
+        conectată. Conectarea este <strong>opțională</strong> și necesită
+        acțiune explicită a frizerului.
+      </p>
+      <p>
+        Scope-uri solicitate:{" "}
+        <code>https://www.googleapis.com/auth/calendar</code> și{" "}
+        <code>https://www.googleapis.com/auth/userinfo.email</code>.
+      </p>
+      <p>Folosim aceste date exclusiv pentru:</p>
+      <ul>
+        <li>crearea unui eveniment în calendar la confirmarea unei programări;</li>
+        <li>ștergerea sau actualizarea evenimentului la anulare/reprogramare;</li>
+        <li>
+          citirea intervalelor ocupate (free/busy) pentru a ascunde sloturile
+          deja blocate în Google Calendar pe pagina publică de programări;
+        </li>
+        <li>afișarea adresei Gmail conectate în profilul frizerului.</li>
+      </ul>
+      <p>
+        <strong>Nu</strong> vindem date Google, nu le folosim pentru publicitate
+        și nu le transferăm către brokeri de date. Respectăm{" "}
+        <a
+          href="https://developers.google.com/terms/api-services-user-data-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Google API Services User Data Policy
+        </a>
+        . Detalii:{" "}
+        <a href="/google-calendar-data">Utilizarea datelor Google Calendar</a>.
+      </p>
+      <p>
+        Token-urile OAuth sunt stocate securizat și asociate contului frizerului.
+        Frizerul poate revoca accesul din{" "}
+        <a
+          href="https://myaccount.google.com/permissions"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          contul Google → Permisiuni
+        </a>
+        .
+      </p>
+
+      <h3>3.5. Date tehnice</h3>
       <ul>
         <li>Cookie-uri de sesiune (autentificare)</li>
         <li>Loguri tehnice, adrese IP (limitat, securitate)</li>
-        <li>Integrare Google Calendar (dacă este activată de frizer)</li>
       </ul>
 
       <h2>4. Temeiuri legale (GDPR)</h2>

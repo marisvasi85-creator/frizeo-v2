@@ -6,7 +6,7 @@ export const SITE_NAME = "Frizeo";
 export const SITE_URL = new URL(LEGAL_COMPANY.website);
 
 export const SITE_DESCRIPTION =
-  "Programări online pentru frizerii și saloane. Link personal, calendar, confirmări și reminder-e automate prin email și SMS.";
+  "Programări online pentru frizerii și saloane din România. Link personal, calendar, confirmări și reminder-e automate prin email și SMS.";
 
 export const SITE_TAGLINE =
   "Programări online pentru frizerii și saloane";
@@ -20,8 +20,8 @@ export const siteMetadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: [
-    "programări online frizerie",
-    "programări salon",
+    "programări online frizerie România",
+    "programări salon România",
     "calendar frizerie",
     "barbershop programări",
     "Frizeo",

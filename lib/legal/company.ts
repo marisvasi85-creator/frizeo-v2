@@ -8,7 +8,7 @@ export const LEGAL_COMPANY = {
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
   website: "https://www.frizeo.ro",
-  lastUpdated: "28 iunie 2026",
+  lastUpdated: "5 iulie 2026",
 };
 
 export const LEGAL_LINKS = {
@@ -40,7 +40,7 @@ export type PricingPlan = {
 };
 
 export const LEGAL_PRICING = {
-  trialDays: 15,
+  trialDays: 60,
   plans: [
     {
       slug: "free",
@@ -67,7 +67,7 @@ export const LEGAL_PRICING = {
       bookings: "Programări nelimitate",
       sms: true,
       highlighted: true,
-      cta: { label: "Începe trial 15 zile", href: "/signup" },
+      cta: { label: "Începe trial 60 zile", href: "/signup" },
       features: [
         "Tot din Free",
         "SMS confirmare și reminder",
@@ -83,7 +83,7 @@ export const LEGAL_PRICING = {
       barbers: "Până la 3 frizeri",
       bookings: "Programări nelimitate",
       sms: true,
-      cta: { label: "Începe trial 15 zile", href: "/signup" },
+      cta: { label: "Începe trial 60 zile", href: "/signup" },
       features: [
         "Tot din Pro",
         "Echipă până la 3 frizeri",

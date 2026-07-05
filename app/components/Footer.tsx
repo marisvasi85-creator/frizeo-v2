@@ -60,6 +60,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/google-calendar-data" className="hover:text-black">
+                Date Google Calendar
+              </Link>
+            </li>
+            <li>
               <Link href="/cookies" className="hover:text-black">
                 Politica cookies
               </Link>

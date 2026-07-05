@@ -32,6 +32,21 @@ export default function TermsPage() {
         link public, notificări email/SMS (conform planului), gestionare
         frizeri, program de lucru și zile speciale.
       </p>
+      <p>
+        Platforma este destinată în principal frizeriilor, barbershop-urilor și
+        saloanelor din <strong>România</strong>, precum și clienților finali
+        care se programează la aceste unități. Documentația contractuală este în
+        limba română; prețurile sunt în lei (RON).
+      </p>
+
+      <h3>2.1. Google Calendar (opțional)</h3>
+      <p>
+        Frizerul poate conecta opțional Google Calendar pentru sincronizarea
+        programărilor. Utilizarea datelor Google este descrisă în{" "}
+        <a href="/google-calendar-data">Utilizarea datelor Google Calendar</a>{" "}
+        și în Politica de confidențialitate. Conectarea necesită acțiune
+        explicită din Profil; Frizeo funcționează și fără această integrare.
+      </p>
 
       <h2>3. Cont și eligibilitate</h2>
       <ul>

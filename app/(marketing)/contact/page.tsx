@@ -29,7 +29,7 @@ export default function ContactPage() {
         <h1 className="text-4xl font-semibold mb-4">Contact</h1>
         <p className="text-gray-600 mb-10">
           Suntem aici pentru întrebări despre platformă, planuri sau contul
-          tău.
+          tău. Frizeo este destinat frizeriilor și saloanelor din România.
         </p>
 
         <div className="space-y-6">

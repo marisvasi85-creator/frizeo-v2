@@ -82,11 +82,15 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h2>5. Cookie-uri terțe</h2>
+      <h2>5. Cookie-uri terțe — Google OAuth</h2>
       <p>
-        La conectarea Google Calendar, ești redirecționat către Google, care
-        poate seta propriile cookie-uri conform politicii Google.
+        La conectarea Google Calendar (opțional, din contul admin), ești
+        redirecționat către Google, care poate seta propriile cookie-uri conform
+        politicii Google. Frizeo accesează Calendar doar conform{" "}
+        <a href="/google-calendar-data">Utilizarea datelor Google Calendar</a>.
       </p>
+
+      <h2>6. Cookie-uri terțe — Stripe</h2>
       <p>
         La activarea unui plan plătit, ești redirecționat către{" "}
         <strong>Stripe Checkout</strong> (stripe.com). Stripe poate seta
@@ -102,7 +106,7 @@ export default function CookiesPage() {
         .
       </p>
 
-      <h2>6. Contact</h2>
+      <h2>7. Contact</h2>
       <p>
         Întrebări:{" "}
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>

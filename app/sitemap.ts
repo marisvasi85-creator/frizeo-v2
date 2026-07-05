@@ -12,6 +12,7 @@ const publicPaths: Array<{
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
   { path: "/barbers", changeFrequency: "daily", priority: 0.7 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/google-calendar-data", changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
   { path: "/cookies", changeFrequency: "yearly", priority: 0.3 },
 ];

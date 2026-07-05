@@ -5,6 +5,7 @@ import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 import BarberLocationSection from "@/app/components/location/BarberLocationSection";
+import GoogleCalendarConnectDisclosure from "./GoogleCalendarConnectDisclosure";
 import { formatLocationAddress } from "@/lib/location/resolveLocation";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
@@ -113,23 +114,30 @@ export default async function ProfilePage({
             >
               Reconectează
             </a>
+            <p className="text-xs text-white/40 sm:w-full">
+              Revocă accesul din{" "}
+              <a
+                href="https://myaccount.google.com/permissions"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                contul Google
+              </a>
+              .{" "}
+              <a href="/google-calendar-data" className="underline">
+                Detalii prelucrare date
+              </a>
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <p className="text-white/60">
               Opțional — programările confirmate pot apărea automat în Google
               Calendar. Frizeo funcționează normal și fără această conexiune.
             </p>
 
-            <p className="text-xs text-white/40">
-              În perioada beta, Google permite conectarea doar pentru conturile
-              Gmail adăugate de echipa Frizeo. Dacă vezi „Acces blocat”, trimite
-              adresa ta Gmail la{" "}
-              <a href="mailto:info@frizeo.ro" className="text-white/60 underline">
-                info@frizeo.ro
-              </a>
-              .
-            </p>
+            <GoogleCalendarConnectDisclosure />
 
             <a
               href="/api/google/connect"

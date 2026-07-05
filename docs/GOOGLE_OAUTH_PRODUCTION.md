@@ -47,6 +47,7 @@ Google tratează scope-ul `calendar` ca **sensibil**. Cât timp aplicația e în
    - **App logo** (logo Frizeo)
    - **Application home page:** `https://www.frizeo.ro`
    - **Privacy policy:** `https://www.frizeo.ro/privacy`
+   - **Google Calendar data use:** `https://www.frizeo.ro/google-calendar-data`
    - **Terms of service:** `https://www.frizeo.ro/terms`
 4. **Scopes:** păstrează doar ce folosești (minim necesar):
    - `.../auth/calendar` — sincronizare programări
@@ -66,6 +67,8 @@ Google tratează scope-ul `calendar` ca **sensibil**. Cât timp aplicația e în
    - **Explicație scop:** „Aplicație de programări pentru frizerii; Calendar sync pentru a bloca sloturile ocupate și a crea evenimente la confirmare”
    - **Link privacy policy** live
 4. Trimite cererea și răspunde la emailurile Google (1–4 săptămâni tipic)
+
+**Texte gata de copy-paste:** [GOOGLE_VERIFICATION_SUBMIT.md](./GOOGLE_VERIFICATION_SUBMIT.md)
 
 După aprobare: **orice frizer** cu cont Google poate conecta Calendarul fără să îl adaugi tu.
 
