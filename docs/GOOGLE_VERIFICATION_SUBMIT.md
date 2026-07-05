@@ -24,34 +24,27 @@ Pagini publice relevante (verifică că se încarcă fără login):
 
 ---
 
-## Scope justification (copy-paste EN)
+## Scope justification (copy-paste EN, max ~1000 chars each)
 
 ### `https://www.googleapis.com/auth/calendar`
 
 ```
-Frizeo is a barbershop appointment scheduling SaaS operated from Romania,
-primarily for barbershops and salons in Romania (Romanian UI, RON pricing,
-Europe/Bucharest timezone). We use the Google Calendar scope only after the
-barber explicitly connects Google Calendar from their Profile.
+Frizeo is a booking SaaS for barbershops in Romania. Google Calendar is optional; barbers connect it from Profile.
 
-We use this scope to: (1) create a calendar event when a client booking is
-confirmed, (2) delete or update the event when a booking is cancelled or
-rescheduled, and (3) read free/busy information to hide time slots already
-occupied in the barber's Google Calendar on the public booking page.
+Uses: (1) create events when bookings are confirmed, (2) delete/update on cancel or reschedule, (3) read free/busy to hide occupied slots on the public booking page and prevent double-booking.
 
-A narrower scope such as calendar.events alone would not allow reading busy
-times from external calendar entries, which is required to prevent
-double-bookings. We do not sell Google user data or use Calendar data for
-advertising. See https://www.frizeo.ro/google-calendar-data
+We do not sell Google data or use Calendar for ads. Narrower scopes cannot read external busy times. https://www.frizeo.ro/google-calendar-data
 ```
+
+*(~480 caractere)*
 
 ### `https://www.googleapis.com/auth/userinfo.email`
 
 ```
-We use this scope to display which Google account is connected on the
-barber's profile page and to store the linked google_email for account
-management. No other Google profile data is requested.
+Display the connected Google email on the barber profile and store it for account management. No other Google profile data is requested.
 ```
+
+*(~130 caractere)*
 
 ---
 
