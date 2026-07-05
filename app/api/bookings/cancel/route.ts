@@ -9,7 +9,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
@@ -83,43 +83,15 @@ export async function POST(req: NextRequest) {
 
     try {
       if (booking.google_event_id) {
-        const { data: googleAccount } = await supabaseAdmin
-          .from("barber_google_accounts")
-          .select("*")
-          .eq("barber_id", booking.barber_id)
-          .single();
+        const tokens = await getAccessTokenForBarber(
+          supabaseAdmin,
+          booking.barber_id,
+        );
 
-        if (googleAccount?.access_token) {
-          let accessToken = googleAccount.access_token;
-
-          const expiresAt = new Date(googleAccount.expires_at);
-
-          const shouldRefresh =
-            expiresAt.getTime() < Date.now() + 5 * 60 * 1000;
-
-          if (shouldRefresh && googleAccount.refresh_token) {
-            const refreshed = await refreshAccessToken(
-              googleAccount.refresh_token
-            );
-
-            if (refreshed?.access_token) {
-              accessToken = refreshed.access_token;
-
-              await supabaseAdmin
-                .from("barber_google_accounts")
-                .update({
-                  access_token: refreshed.access_token,
-                  expires_at: new Date(
-                    Date.now() + refreshed.expires_in * 1000
-                  ).toISOString(),
-                })
-                .eq("barber_id", booking.barber_id);
-            }
-          }
-
+        if (tokens) {
           await deleteGoogleEvent({
-            accessToken,
-            calendarId: googleAccount.calendar_id || "primary",
+            accessToken: tokens.accessToken,
+            calendarId: tokens.calendarId,
             eventId: booking.google_event_id,
           });
         }

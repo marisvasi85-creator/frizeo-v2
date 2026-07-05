@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { getGoogleOAuthRedirectUri } from "@/lib/google/getOAuthRedirectUri";
+import { backfillBarberCalendarEvents } from "@/lib/google/syncBookingEvent";
 
 function redirectToProfile(
   appUrl: string,
@@ -117,6 +118,12 @@ export async function GET(req: NextRequest) {
 
   if (barberUpdateError) {
     console.error("GOOGLE BARBER UPDATE ERROR:", barberUpdateError);
+  }
+
+  try {
+    await backfillBarberCalendarEvents(supabaseAdmin, barber.id);
+  } catch (backfillError) {
+    console.error("GOOGLE BACKFILL ERROR:", backfillError);
   }
 
   return redirectToProfile(appUrl, { google: "connected" });

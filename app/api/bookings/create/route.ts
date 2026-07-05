@@ -4,8 +4,7 @@ import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
-import { createGoogleEvent } from "@/lib/google/createEvent";
-import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
@@ -253,102 +252,14 @@ if (!limit.allowed) {
 // =========================
 
 try {
-
-  const { data: googleAccount } = await supabase
-    .from("barber_google_accounts")
-    .select("*")
-    .eq("barber_id", data.barber_id)
-    .single();
-
-  if (googleAccount?.access_token) {
-
-  let accessToken =
-    googleAccount.access_token;
-
-  const expiresAt = new Date(
-    googleAccount.expires_at
-  );
-
-  const now = new Date();
-
-  const shouldRefresh =
-    expiresAt.getTime() <
-    now.getTime() + 5 * 60 * 1000;
-
-  if (
-    shouldRefresh &&
-    googleAccount.refresh_token
-  ) {
-
-    const refreshed =
-      await refreshAccessToken(
-        googleAccount.refresh_token
-      );
-
-    if (refreshed?.access_token) {
-
-      accessToken =
-        refreshed.access_token;
-
-      await supabase
-        .from("barber_google_accounts")
-        .update({
-          access_token:
-            refreshed.access_token,
-
-          expires_at: new Date(
-            Date.now() +
-              refreshed.expires_in * 1000
-          ).toISOString(),
-        })
-        .eq(
-          "barber_id",
-          data.barber_id
-        );
-    }
-  }
-
-  const startDateTime =
-    `${data.date}T${data.start_time}`;
-
-    const endDateTime =
-      `${data.date}T${data.end_time}`;
-
-    const event = await createGoogleEvent({
-  accessToken: accessToken,
-  calendarId:
-    googleAccount.calendar_id || "primary",
-
-  title:
-    `${client_name} | ${client_phone} | ${serviceName}`,
-
-  description:
-`Client: ${client_name}
-Telefon: ${client_phone}
-Serviciu: ${serviceName}${notes ? `\nMentiuni: ${notes}` : ""}`,
-
-  start: startDateTime,
-  end: endDateTime,
-});
-
-    if (event?.id) {
-
-      await supabase
-        .from("bookings")
-        .update({
-          google_event_id: event.id,
-        })
-        .eq("id", data.id);
-    }
-  }
-
+  await syncBookingToGoogleCalendar(supabase, data, {
+    clientName: client_name,
+    clientPhone: client_phone,
+    serviceName,
+    notes,
+  });
 } catch (e) {
-
-  console.error(
-    "GOOGLE CALENDAR ERROR:",
-    e
-  );
-
+  console.error("GOOGLE CALENDAR ERROR:", e);
 }
 
     // =========================

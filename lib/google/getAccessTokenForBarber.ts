@@ -17,29 +17,32 @@ export async function getAccessTokenForBarber(
 
   let accessToken = googleAccount.access_token;
 
-  if (googleAccount.expires_at && googleAccount.refresh_token) {
-    const expiresAt = new Date(googleAccount.expires_at);
-    const shouldRefresh = expiresAt.getTime() < Date.now() + 5 * 60 * 1000;
+  const expiresAt = googleAccount.expires_at
+    ? new Date(googleAccount.expires_at).getTime()
+    : 0;
+  const shouldRefresh =
+    !!googleAccount.refresh_token &&
+    (!accessToken || expiresAt < Date.now() + 5 * 60 * 1000);
 
-    if (shouldRefresh) {
-      const refreshed = await refreshAccessToken(googleAccount.refresh_token);
+  if (shouldRefresh) {
+    const refreshed = await refreshAccessToken(googleAccount.refresh_token!);
 
-      if (!refreshed?.access_token) {
-        return null;
-      }
-
-      accessToken = refreshed.access_token;
-
-      await supabase
-        .from("barber_google_accounts")
-        .update({
-          access_token: refreshed.access_token,
-          expires_at: new Date(
-            Date.now() + refreshed.expires_in * 1000,
-          ).toISOString(),
-        })
-        .eq("barber_id", barberId);
+    if (!refreshed?.access_token) {
+      console.error("GOOGLE REFRESH ERROR: no access_token for barber", barberId);
+      return null;
     }
+
+    accessToken = refreshed.access_token;
+
+    await supabase
+      .from("barber_google_accounts")
+      .update({
+        access_token: refreshed.access_token,
+        expires_at: new Date(
+          Date.now() + refreshed.expires_in * 1000,
+        ).toISOString(),
+      })
+      .eq("barber_id", barberId);
   }
 
   if (!accessToken) {

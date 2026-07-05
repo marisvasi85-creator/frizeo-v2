@@ -6,6 +6,7 @@ import AvatarUpload from "./AvatarUpload";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 import BarberLocationSection from "@/app/components/location/BarberLocationSection";
 import GoogleCalendarConnectDisclosure from "./GoogleCalendarConnectDisclosure";
+import GoogleCalendarSyncButton from "./GoogleCalendarSyncButton";
 import { formatLocationAddress } from "@/lib/location/resolveLocation";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
@@ -109,6 +110,8 @@ export default async function ProfilePage({
                 </p>
               )}
             </div>
+
+            <GoogleCalendarSyncButton />
 
             <div className="flex flex-col sm:flex-row gap-2">
               <a

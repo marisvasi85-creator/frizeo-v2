@@ -3,8 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
 import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { createGoogleEvent } from "@/lib/google/createEvent";
-import { refreshAccessToken } from "@/lib/google/refreshAccessToken";
+import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
+import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
@@ -217,141 +217,40 @@ export async function POST(req: Request) {
 
     // 🔥 GOOGLE CALENDAR RESCHEDULE
 
-try {
-
-  if (oldBooking.google_event_id) {
-
-    const { data: googleAccount } =
-      await supabase
-        .from("barber_google_accounts")
-        .select("*")
-        .eq("barber_id", oldBooking.barber_id)
+    try {
+      const { data: service } = await supabase
+        .from("barber_services")
+        .select("display_name,name")
+        .eq("id", newBooking.barber_service_id)
         .single();
 
-    if (googleAccount?.access_token) {
+      const serviceName =
+        service?.display_name || service?.name || "Serviciu";
 
-      let accessToken =
-        googleAccount.access_token;
+      if (oldBooking.google_event_id) {
+        const tokens = await getAccessTokenForBarber(
+          supabase,
+          oldBooking.barber_id,
+        );
 
-      const expiresAt = new Date(
-        googleAccount.expires_at
-      );
-
-      const shouldRefresh =
-        expiresAt.getTime() <
-        Date.now() + 5 * 60 * 1000;
-
-      if (
-        shouldRefresh &&
-        googleAccount.refresh_token
-      ) {
-
-        const refreshed =
-          await refreshAccessToken(
-            googleAccount.refresh_token
-          );
-
-        if (refreshed?.access_token) {
-
-          accessToken =
-            refreshed.access_token;
-
-          await supabase
-            .from("barber_google_accounts")
-            .update({
-              access_token:
-                refreshed.access_token,
-
-              expires_at: new Date(
-                Date.now() +
-                  refreshed.expires_in *
-                    1000
-              ).toISOString(),
-            })
-            .eq(
-              "barber_id",
-              oldBooking.barber_id
-            );
+        if (tokens) {
+          await deleteGoogleEvent({
+            accessToken: tokens.accessToken,
+            calendarId: tokens.calendarId,
+            eventId: oldBooking.google_event_id,
+          });
         }
       }
 
-      // DELETE EVENT VECHI
-
-      await deleteGoogleEvent({
-        accessToken,
-        calendarId:
-          googleAccount.calendar_id ||
-          "primary",
-        eventId:
-          oldBooking.google_event_id,
+      await syncBookingToGoogleCalendar(supabase, newBooking, {
+        clientName: finalName,
+        clientPhone: finalPhone,
+        serviceName,
+        notes: finalNotes,
       });
-
-      // SERVICE
-
-      const { data: service } =
-        await supabase
-          .from("barber_services")
-          .select("display_name,name")
-          .eq(
-            "id",
-            newBooking.barber_service_id
-          )
-          .single();
-
-      const serviceName =
-        service?.display_name ||
-        service?.name ||
-        "Serviciu";
-
-      // CREATE EVENT NOU
-
-      const event =
-        await createGoogleEvent({
-          accessToken,
-
-          calendarId:
-            googleAccount.calendar_id ||
-            "primary",
-
-          title:
-            `${finalName} | ${finalPhone} | ${serviceName}`,
-
-          description:
-`Client: ${finalName}
-Telefon: ${finalPhone}
-Serviciu: ${serviceName}${finalNotes ? `\nMentiuni: ${finalNotes}` : ""}`,
-
-          start:
-            `${newBooking.date}T${newBooking.start_time}`,
-
-          end:
-            `${newBooking.date}T${newBooking.end_time}`,
-        });
-
-      if (event?.id) {
-
-        await supabase
-          .from("bookings")
-          .update({
-            google_event_id:
-              event.id,
-          })
-          .eq(
-            "id",
-            newBooking.id
-          );
-      }
+    } catch (e) {
+      console.error("GOOGLE RESCHEDULE ERROR:", e);
     }
-  }
-
-} catch (e) {
-
-  console.error(
-    "GOOGLE RESCHEDULE ERROR:",
-    e
-  );
-
-}
 
     // 🔥 ANULEAZĂ VECHIUL BOOKING
     await supabase
