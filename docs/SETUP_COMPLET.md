@@ -40,11 +40,18 @@ Fără acest PR, login-ul pe mobil și signup-ul instant pot să nu funcționeze
 
 ### 2b. Adaugă test user (fix pentru „Acces blocat”)
 
-1. **APIs & Services** → **OAuth consent screen**  
-2. Verifică **Publishing status**: *Testing* e OK pentru beta  
-3. Scroll la **Test users** → **+ Add users**  
-4. Adaugă exact: **`sanrazvan8@gmail.com`**  
-5. **Save**
+Google a mutat setările în **Google Auth Platform** (nu mai există meniul vechi „OAuth consent screen”).
+
+1. În meniul stâng: **Google Auth Platform** (sau **APIs & Services** → **Google Auth Platform**)
+2. Click pe tab-ul **Audience** (al treilea — după Overview și Branding)
+3. Verifică **Publishing status**: *Testing*
+4. Scroll la secțiunea **Test users** → **+ Add users**
+5. Adaugă: **`sanrazvan8@gmail.com`**
+6. **Save**
+
+Dacă nu vezi secțiunea **Test users**:
+- Verifică că **User type** este **External** (nu Internal)
+- Verifică că ai scope **Google Calendar** în **Data access** (altfel Google poate să nu afișeze lista)
 
 ### 2c. Redirect URI OAuth
 

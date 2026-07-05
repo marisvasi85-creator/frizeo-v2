@@ -42,15 +42,15 @@ Cât timp aplicația OAuth este în modul **Testing** pe Google Cloud, **doar ad
 
 ### Pași în Google Cloud Console
 
-1. Deschide [Google Cloud Console](https://console.cloud.google.com/) → proiectul Frizeo.
-2. **APIs & Services** → **OAuth consent screen**.
-3. La **Test users** → **Add users** → adaugă fiecare Gmail al testerilor.
-4. **APIs & Services** → **Credentials** → clientul OAuth 2.0 (Web).
-5. La **Authorized redirect URIs**, asigură-te că există:
+1. Deschide [Google Cloud Console](https://console.cloud.google.com/) → proiectul **Frizeo**
+2. Meniu stânga: **Google Auth Platform**
+3. Tab **Audience** → **Test users** → **+ Add users** → adaugă Gmail-urile testerilor
+4. Tab **Clients** → clientul **Frizeo Web** → **Authorized redirect URIs**:
    ```
    https://www.frizeo.ro/api/google/callback
    ```
-6. Dacă testezi pe preview Vercel, adaugă și:
+5. Tab **Data access** → confirmă scope **Google Calendar API** (sensibil — necesită test users sau verificare)
+6. Dacă testezi pe preview Vercel, adaugă și redirect URI:
    ```
    https://<branch>-<team>.vercel.app/api/google/callback
    ```

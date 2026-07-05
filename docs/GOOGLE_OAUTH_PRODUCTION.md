@@ -39,8 +39,8 @@ Google tratează scope-ul `calendar` ca **sensibil**. Cât timp aplicația e în
 
 ### Pas 1: Pregătire în Google Cloud
 
-1. [Google Cloud Console](https://console.cloud.google.com/) → proiectul Frizeo
-2. **APIs & Services → OAuth consent screen**
+1. [Google Cloud Console](https://console.cloud.google.com/) → proiectul **Frizeo**
+2. **Google Auth Platform** → tab **Branding**
 3. Completează:
    - **App name:** Frizeo
    - **User support email:** info@frizeo.ro
@@ -59,7 +59,7 @@ Google tratează scope-ul `calendar` ca **sensibil**. Cât timp aplicația e în
 
 ### Pas 2: Verificare Google (obligatoriu pentru Calendar în Production)
 
-1. În **OAuth consent screen** → **Publish App** (treci din Testing în **In production**)
+1. În **Google Auth Platform** → tab **Verification centre** → **Publish App**
 2. Google deschide cererea de **verification** pentru scope-uri sensibile
 3. Pregătește:
    - **Video demo** (2–5 min): login Frizeo → Profil → Conectează Google Calendar → programare → eveniment în Calendar

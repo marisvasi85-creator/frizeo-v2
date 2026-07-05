@@ -24,7 +24,7 @@ if (emails.length === 0) {
 }
 
 console.log("=== Google OAuth — Test users de adăugat manual ===\n");
-console.log("Google Cloud Console → APIs & Services → OAuth consent screen → Test users\n");
+console.log("Google Cloud Console → Google Auth Platform → Audience → Test users\n");
 emails.forEach((email, i) => {
   console.log(`  ${i + 1}. ${email}`);
 });
