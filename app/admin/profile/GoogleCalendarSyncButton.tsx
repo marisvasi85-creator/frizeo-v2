@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import AdminButton from "../../components/AdminButton";
+import AdminButton from "../components/AdminButton";
 
 export default function GoogleCalendarSyncButton() {
   const [loading, setLoading] = useState(false);
