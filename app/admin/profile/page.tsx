@@ -10,6 +10,7 @@ import { formatLocationAddress } from "@/lib/location/resolveLocation";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
+  disconnected: "Google Calendar a fost deconectat. Poți reconecta oricând din Profil.",
   token_error:
     "Nu am putut obține accesul de la Google. Verifică credențialele OAuth în Vercel.",
   no_barber:
@@ -59,7 +60,8 @@ export default async function ProfilePage({
       `Eroare la conectare (${googleStatus}).`
     : null;
 
-  const isSuccess = googleStatus === "connected";
+  const isSuccess =
+    googleStatus === "connected" || googleStatus === "disconnected";
 
   const { data: tenant } = await supabase
     .from("tenants")
@@ -98,7 +100,7 @@ export default async function ProfilePage({
         <h2 className="text-lg font-semibold mb-4">Google Calendar</h2>
 
         {isConnected ? (
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-4">
             <div>
               <p className="text-green-400">Calendar conectat</p>
               {googleAccount?.google_email && (
@@ -108,14 +110,26 @@ export default async function ProfilePage({
               )}
             </div>
 
-            <a
-              href="/api/google/connect"
-              className="px-4 py-2 bg-white/10 rounded-lg text-center text-sm"
-            >
-              Reconectează
-            </a>
-            <p className="text-xs text-white/40 sm:w-full">
-              Revocă accesul din{" "}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <a
+                href="/api/google/connect"
+                className="px-4 py-2 bg-white/10 rounded-lg text-center text-sm"
+              >
+                Reconectează
+              </a>
+
+              <form action="/api/google/disconnect" method="post">
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-center text-sm border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                >
+                  Deconectează Calendar
+                </button>
+              </form>
+            </div>
+
+            <p className="text-xs text-white/40">
+              Poți revoca accesul și din{" "}
               <a
                 href="https://myaccount.google.com/permissions"
                 target="_blank"

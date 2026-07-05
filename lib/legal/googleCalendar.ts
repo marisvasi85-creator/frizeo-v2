@@ -41,7 +41,7 @@ export const GOOGLE_CALENDAR_USAGE_RO = {
   storage:
     "Token-urile OAuth (access și refresh) și adresa Gmail conectată sunt stocate securizat în baza de date Frizeo, asociate contului frizerului. Sunt șterse când frizerul revocă accesul sau șterge contul.",
   revoke:
-    "Poți revoca accesul oricând din contul Google: myaccount.google.com/permissions — aplicația „Frizeo”. Poți și reconecta din Profil → Google Calendar.",
+    "Poți deconecta Calendar din Profil → Deconectează Calendar, sau revoca accesul din contul Google: myaccount.google.com/permissions — aplicația „Frizeo”.",
 } as const;
 
 /** English summary for Google OAuth reviewers (public page). */

@@ -60,6 +60,7 @@ Minimum de arătat (consent screen în **English**):
 6. Accept → connected message
 7. Public booking → confirmed appointment
 8. Event appears in Google Calendar
+9. (Optional) Profil → Deconectează Calendar — shows user can revoke in-app
 
 YouTube: **Unlisted**. Include Client ID visible in Google Cloud if possible.
 
