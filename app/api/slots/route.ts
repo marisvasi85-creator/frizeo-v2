@@ -20,8 +20,8 @@ import {
 } from "@/lib/bookings/bookingLeadTime";
 import {
   getGoogleBusyIntervalsForDate,
-  slotOverlapsBusyIntervals,
 } from "@/lib/google/getGoogleBusyIntervals";
+import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -153,9 +153,26 @@ export async function GET(req: Request) {
       ? await getGoogleBusyIntervalsForDate(supabase, barberId, bookingDate)
       : [];
 
-  function generateSlots(startMin: number, endMin: number) {
+  if (mode !== "admin") {
+    const freeSlots = generatePublicFreeSlots({
+      date: bookingDate,
+      resolved,
+      duration,
+      bookings: activeBookings,
+      googleBusyIntervals,
+      minNoticeHours,
+      now,
+      excludeBookingId,
+    });
+
+    return NextResponse.json({
+      slots: freeSlots.map((time) => ({ type: "free", time })),
+    });
+  }
+
+  function generateAdminSlots(startMin: number, endMin: number) {
     const arr: any[] = [];
-    const step = mode === "admin" ? 15 : duration;
+    const step = 15;
 
     for (let t = startMin; t + duration <= endMin; t += step) {
       const slotStart = t;
@@ -167,57 +184,19 @@ export async function GET(req: Request) {
         return slotStart < bEnd && slotEnd > bStart;
       });
 
-      if (mode === "admin") {
-        if (booking) {
-          const isStart =
-            timeToMinutes(booking.start_time) === slotStart;
+      if (booking) {
+        const isStart = timeToMinutes(booking.start_time) === slotStart;
 
-          if (isStart) {
-            arr.push({
-              type: "booking",
-              time: booking.start_time.slice(0, 5),
-              end: booking.end_time.slice(0, 5),
-              booking,
-            });
-          }
-          continue;
+        if (isStart) {
+          arr.push({
+            type: "booking",
+            time: booking.start_time.slice(0, 5),
+            end: booking.end_time.slice(0, 5),
+            booking,
+          });
         }
-
-        if (breakStart !== null && breakEnd !== null) {
-          const overlapsBreak =
-            slotStart < breakEnd && slotEnd > breakStart;
-          if (overlapsBreak) continue;
-        }
-
-        const slotTime = minutesToTime(t);
-        const eligibility = getSlotEligibility({
-          date: bookingDate,
-          startTime: slotTime,
-          minNoticeHours,
-          now,
-          bypassMinNotice,
-        });
-
-        if (!eligibility.eligible) {
-          if (mode === "admin" && eligibility.reason === "past") {
-            arr.push({
-              type: "unavailable",
-              time: slotTime,
-              reason: eligibility.reason,
-            });
-          }
-          continue;
-        }
-
-        arr.push({
-          type: "free",
-          time: slotTime,
-        });
-
         continue;
       }
-
-      if (booking) continue;
 
       if (breakStart !== null && breakEnd !== null) {
         const overlapsBreak = slotStart < breakEnd && slotEnd > breakStart;
@@ -225,12 +204,6 @@ export async function GET(req: Request) {
       }
 
       const slotTime = minutesToTime(t);
-
-      if (
-        slotOverlapsBusyIntervals(slotTime, minutesToTime(slotEnd), googleBusyIntervals)
-      ) {
-        continue;
-      }
       const eligibility = getSlotEligibility({
         date: bookingDate,
         startTime: slotTime,
@@ -240,6 +213,13 @@ export async function GET(req: Request) {
       });
 
       if (!eligibility.eligible) {
+        if (eligibility.reason === "past") {
+          arr.push({
+            type: "unavailable",
+            time: slotTime,
+            reason: eligibility.reason,
+          });
+        }
         continue;
       }
 
@@ -255,21 +235,16 @@ export async function GET(req: Request) {
   let finalSlots: any[] = [];
 
   if (breakStart === null || breakEnd === null) {
-    finalSlots = generateSlots(start, end);
-  } else if (mode === "admin") {
+    finalSlots = generateAdminSlots(start, end);
+  } else {
     finalSlots = [
-      ...generateSlots(start, breakStart),
+      ...generateAdminSlots(start, breakStart),
       {
         type: "break",
         start: minutesToTime(breakStart),
         end: minutesToTime(breakEnd),
       },
-      ...generateSlots(breakEnd, end),
-    ];
-  } else {
-    finalSlots = [
-      ...generateSlots(start, breakStart),
-      ...generateSlots(breakEnd, end),
+      ...generateAdminSlots(breakEnd, end),
     ];
   }
 

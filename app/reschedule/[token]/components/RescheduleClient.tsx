@@ -24,6 +24,7 @@ export default function RescheduleClient({ booking, token }: any) {
   const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   const slotsRef = useRef<HTMLDivElement>(null);
 
@@ -40,28 +41,51 @@ export default function RescheduleClient({ booking, token }: any) {
 
   useEffect(() => {
     const load = async () => {
+      setLoadingAvailability(true);
+
       const from = getTodayInBookingTimezone();
       const to = addDaysToDateString(from, 30);
 
-      const res = await fetch(
-        `/api/availability?barberId=${booking.barber_id}&from=${from}&to=${to}`
-      );
+      const params = new URLSearchParams({
+        barberId: booking.barber_id,
+        from,
+        to,
+        serviceId: booking.barber_service_id,
+        excludeBookingId: booking.id,
+      });
 
+      const res = await fetch(`/api/availability?${params.toString()}`);
       const data = await res.json();
 
       setAvailableDays(data.availableDays || []);
       setWeeklySchedule(data.weeklySchedule || []);
       setOverrides(data.overrides || []);
+      setLoadingAvailability(false);
     };
 
     load();
-  }, [booking.barber_id]);
+  }, [booking.barber_id, booking.barber_service_id, booking.id]);
+
+  useEffect(() => {
+    if (loadingAvailability) return;
+
+    if (availableDays.length === 0) {
+      setDate(null);
+      setSelectedSlot(null);
+      return;
+    }
+
+    if (date && !availableDays.includes(date)) {
+      setDate(availableDays[0]);
+      setSelectedSlot(null);
+    }
+  }, [availableDays, loadingAvailability, date]);
 
   useEffect(() => {
     if (!date) return;
 
     fetch(
-      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&mode=public`
+      `/api/slots?barberId=${booking.barber_id}&date=${date}&serviceId=${booking.barber_service_id}&mode=public&excludeBookingId=${booking.id}`,
     )
       .then((r) => r.json())
       .then((data) => {
@@ -137,16 +161,27 @@ export default function RescheduleClient({ booking, token }: any) {
           <RescheduleInfo booking={booking} />
 
           <div className="border rounded-2xl p-4 shadow-sm">
-            <Calendar
-              value={date}
-              onChange={(d: string) => {
-                setDate(d);
-                setSelectedSlot(null);
-              }}
-              weeklySchedule={weeklySchedule}
-              overrides={overrides}
-              availableDays={availableDays}
-            />
+            {loadingAvailability ? (
+              <p className="text-sm text-gray-400 text-center py-8">
+                Se încarcă zilele disponibile...
+              </p>
+            ) : availableDays.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">
+                Nu mai sunt locuri disponibile în următoarele 30 de zile.
+              </p>
+            ) : (
+              <Calendar
+                value={date}
+                onChange={(d: string) => {
+                  setDate(d);
+                  setSelectedSlot(null);
+                }}
+                weeklySchedule={weeklySchedule}
+                overrides={overrides}
+                availableDays={availableDays}
+                enforceAvailableDays
+              />
+            )}
           </div>
         </div>
 
@@ -159,7 +194,7 @@ export default function RescheduleClient({ booking, token }: any) {
 
             {slots.length === 0 ? (
               <p className="text-gray-400 text-sm">
-                Nu există sloturi disponibile
+                Nu mai sunt locuri disponibile în această zi. Alege altă dată.
               </p>
             ) : (
               <SlotPicker

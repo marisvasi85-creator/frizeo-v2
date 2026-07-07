@@ -3,10 +3,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { addDays, format } from "date-fns";
-import {
-  getTodayInBookingTimezone,
-} from "@/lib/bookings/bookingTimezone";
+import { getTodayInBookingTimezone } from "@/lib/bookings/bookingTimezone";
 import { jsDayToScheduleDay } from "@/lib/schedule/time";
+import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
+import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
+import { getGoogleBusyIntervalsByDate } from "@/lib/google/getGoogleBusyIntervals";
 
 export async function GET(req: Request) {
   try {
@@ -15,6 +16,8 @@ export async function GET(req: Request) {
     const barberId = searchParams.get("barberId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const serviceId = searchParams.get("serviceId");
+    const excludeBookingId = searchParams.get("excludeBookingId");
 
     if (!barberId || !from || !to) {
       return NextResponse.json({
@@ -24,7 +27,6 @@ export async function GET(req: Request) {
       });
     }
 
-    const excludeBookingId = searchParams.get("excludeBookingId");
     const barberCheck = await allowBarberScheduling(barberId, {
       excludeBookingId,
     });
@@ -48,6 +50,56 @@ export async function GET(req: Request) {
       .select("*")
       .eq("barber_id", barberId);
 
+    let duration: number | null = null;
+
+    if (serviceId) {
+      const { data: service } = await supabaseAdmin
+        .from("barber_services")
+        .select("duration")
+        .eq("id", serviceId)
+        .maybeSingle();
+
+      if (!service) {
+        return NextResponse.json({
+          availableDays: [],
+          weeklySchedule: weekly ?? [],
+          overrides: overrides ?? [],
+        });
+      }
+
+      duration = service.duration;
+    }
+
+    let bookingsByDate: Record<string, any[]> = {};
+    let googleBusyByDate: Record<string, any[]> = {};
+    let minNoticeHours = 0;
+    const now = new Date();
+
+    if (serviceId && duration) {
+      const { data: bookings } = await supabaseAdmin
+        .from("bookings")
+        .select("id, date, start_time, end_time, status, expires_at")
+        .eq("barber_id", barberId)
+        .gte("date", from)
+        .lte("date", to)
+        .in("status", ["confirmed", "pending"]);
+
+      for (const booking of bookings ?? []) {
+        if (!bookingsByDate[booking.date]) {
+          bookingsByDate[booking.date] = [];
+        }
+        bookingsByDate[booking.date].push(booking);
+      }
+
+      minNoticeHours = await getBarberMinNoticeHours(supabaseAdmin, barberId);
+      googleBusyByDate = await getGoogleBusyIntervalsByDate(
+        supabaseAdmin,
+        barberId,
+        from,
+        to,
+      );
+    }
+
     const availableDays: string[] = [];
 
     let current = new Date(from + "T00:00:00");
@@ -68,7 +120,27 @@ export async function GET(req: Request) {
       const override = overrides?.find((o) => o.date === dateStr);
       const resolved = resolveDaySchedule(schedule, override);
 
-      if (resolved.isWorking) {
+      if (!resolved.isWorking) {
+        current = addDays(current, 1);
+        continue;
+      }
+
+      if (serviceId && duration) {
+        const freeSlots = generatePublicFreeSlots({
+          date: dateStr,
+          resolved,
+          duration,
+          bookings: bookingsByDate[dateStr] ?? [],
+          googleBusyIntervals: googleBusyByDate[dateStr] ?? [],
+          minNoticeHours,
+          now,
+          excludeBookingId,
+        });
+
+        if (freeSlots.length > 0) {
+          availableDays.push(dateStr);
+        }
+      } else {
         availableDays.push(dateStr);
       }
 

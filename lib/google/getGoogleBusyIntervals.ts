@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   BOOKING_TIMEZONE,
+  addDaysToDateString,
   zonedDateTimeToUtcMs,
 } from "@/lib/bookings/bookingTimezone";
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
@@ -80,6 +81,44 @@ export async function getGoogleBusyIntervalsForDate(
   return busyBlocks
     .map((block) => busyBlockToInterval(block.start, block.end, date))
     .filter((interval): interval is BusyInterval => interval !== null);
+}
+
+export async function getGoogleBusyIntervalsByDate(
+  supabase: SupabaseClient,
+  barberId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<Record<string, BusyInterval[]>> {
+  const auth = await getAccessTokenForBarber(supabase, barberId);
+  if (!auth) {
+    return {};
+  }
+
+  const timeMin = new Date(
+    zonedDateTimeToUtcMs(fromDate, "00:00"),
+  ).toISOString();
+  const timeMax = new Date(
+    zonedDateTimeToUtcMs(toDate, "23:59") + 59 * 1000,
+  ).toISOString();
+
+  const busyBlocks = await queryFreeBusy({
+    accessToken: auth.accessToken,
+    calendarId: auth.calendarId,
+    timeMin,
+    timeMax,
+  });
+
+  const byDate: Record<string, BusyInterval[]> = {};
+  let current = fromDate;
+
+  while (current <= toDate) {
+    byDate[current] = busyBlocks
+      .map((block) => busyBlockToInterval(block.start, block.end, current))
+      .filter((interval): interval is BusyInterval => interval !== null);
+    current = addDaysToDateString(current, 1);
+  }
+
+  return byDate;
 }
 
 export function slotOverlapsBusyIntervals(

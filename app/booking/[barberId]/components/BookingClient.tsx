@@ -33,6 +33,7 @@ export default function BookingClient({
   const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [servicesError, setServicesError] = useState("");
@@ -45,7 +46,7 @@ export default function BookingClient({
   const [bookingError, setBookingError] = useState("");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
-  const servicesRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
 
@@ -62,23 +63,43 @@ export default function BookingClient({
   }, [barberId]);
 
   useEffect(() => {
+    if (!serviceId) {
+      setAvailableDays([]);
+      setWeeklySchedule([]);
+      setOverrides([]);
+      return;
+    }
+
     const load = async () => {
+      setLoadingAvailability(true);
+
       const from = getTodayInBookingTimezone();
       const to = addDaysToDateString(from, 30);
 
-      const res = await fetch(
-        `/api/availability?barberId=${barberId}&from=${from}&to=${to}`
-      );
+      try {
+        const res = await fetch(
+          `/api/availability?barberId=${barberId}&from=${from}&to=${to}&serviceId=${serviceId}`,
+        );
+        const data = await res.json();
 
-      const data = await res.json();
-
-      setAvailableDays(data.availableDays || []);
-      setWeeklySchedule(data.weeklySchedule || []);
-      setOverrides(data.overrides || []);
+        setAvailableDays(data.availableDays || []);
+        setWeeklySchedule(data.weeklySchedule || []);
+        setOverrides(data.overrides || []);
+      } finally {
+        setLoadingAvailability(false);
+      }
     };
 
     load();
-  }, [barberId]);
+  }, [barberId, serviceId]);
+
+  useEffect(() => {
+    if (date && availableDays.length > 0 && !availableDays.includes(date)) {
+      setDate(null);
+      setSelectedSlot(null);
+      setSlots([]);
+    }
+  }, [availableDays, date]);
 
   useEffect(() => {
     if (!date || !serviceId) return;
@@ -94,7 +115,7 @@ export default function BookingClient({
     setLoadingSlots(true);
 
     fetch(
-      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}&mode=public`
+      `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}&mode=public`,
     )
       .then((r) => r.json())
       .then((d) => {
@@ -212,41 +233,28 @@ export default function BookingClient({
         </p>
       </div>
 
-      <Calendar
-        value={date}
-        onChange={(value: string) => {
-          setDate(value);
-          setTimeout(() => {
-            servicesRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "center",
-            });
-          }, 200);
-        }}
-        weeklySchedule={weeklySchedule}
-        overrides={overrides}
-        availableDays={availableDays}
-      />
-
       {servicesError && (
         <p className="text-red-600 text-sm text-center">{servicesError}</p>
       )}
 
-      {date && services.length > 0 && (
-        <div ref={servicesRef} className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">Alege serviciul</p>
+      {services.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-sm text-gray-500 font-medium">1. Alege serviciul</p>
           {services.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => {
                 setServiceId(s.id);
+                setDate(null);
+                setSelectedSlot(null);
+                setSlots([]);
                 setTimeout(() => {
-                  slotsRef.current?.scrollIntoView({
+                  calendarRef.current?.scrollIntoView({
                     behavior: "smooth",
                     block: "center",
                   });
-                }, 300);
+                }, 200);
               }}
               className={`w-full p-4 rounded-xl border transition ${
                 serviceId === s.id
@@ -260,8 +268,47 @@ export default function BookingClient({
         </div>
       )}
 
-      {serviceId && (loadingSlots || slots.length > 0) && (
-        <div ref={slotsRef}>
+      {serviceId && (
+        <div ref={calendarRef} className="space-y-3">
+          <p className="text-sm text-gray-500 font-medium">2. Alege data</p>
+          {loadingAvailability ? (
+            <p className="text-sm text-gray-400 text-center">
+              Se încarcă zilele disponibile...
+            </p>
+          ) : availableDays.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center">
+              Nu mai sunt locuri disponibile în următoarele 30 de zile pentru
+              acest serviciu.
+            </p>
+          ) : (
+            <>
+              <Calendar
+                value={date}
+                onChange={(value: string) => {
+                  setDate(value);
+                  setTimeout(() => {
+                    slotsRef.current?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "center",
+                    });
+                  }, 200);
+                }}
+                weeklySchedule={weeklySchedule}
+                overrides={overrides}
+                availableDays={availableDays}
+                enforceAvailableDays
+              />
+              <p className="text-xs text-gray-400 text-center">
+                Zilele verzi au locuri libere pentru serviciul selectat.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
+      {serviceId && date && (loadingSlots || slots.length > 0) && (
+        <div ref={slotsRef} className="space-y-3">
+          <p className="text-sm text-gray-500 font-medium">3. Alege ora</p>
           <SlotPicker
             variant="light"
             slots={slots}
@@ -280,15 +327,15 @@ export default function BookingClient({
         </div>
       )}
 
-      {serviceId && !loadingSlots && slots.length === 0 && date && (
+      {serviceId && date && !loadingSlots && slots.length === 0 && (
         <p className="text-gray-500 text-sm text-center">
-          Nu există ore disponibile în această zi.
+          Nu mai sunt locuri disponibile în această zi. Alege altă dată.
         </p>
       )}
 
       {selectedSlot && (
         <div ref={formRef} className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">Datele tale</p>
+          <p className="text-sm text-gray-500 font-medium">4. Datele tale</p>
 
           <input
             placeholder="Nume complet"

@@ -24,6 +24,7 @@ export default function Calendar({
   overrides = [],
   availableDays = [],
   allowDates = [],
+  enforceAvailableDays = false,
 }: any) {
   return (
     <div className="flex justify-center mb-6">
@@ -52,6 +53,14 @@ export default function Calendar({
           const iso = toLocalISO(date);
 
           if (allowDates.includes(iso)) return false;
+
+          if (
+            enforceAvailableDays &&
+            availableDays.length > 0 &&
+            !availableDays.includes(iso)
+          ) {
+            return true;
+          }
 
           const schedule = weeklySchedule.find(
             (s: any) => s.day_of_week === day
