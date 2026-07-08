@@ -172,7 +172,7 @@ export async function GET(req: Request) {
 
   function generateAdminSlots(startMin: number, endMin: number) {
     const arr: any[] = [];
-    const step = 15;
+    const step = duration;
 
     for (let t = startMin; t + duration <= endMin; t += step) {
       const slotStart = t;

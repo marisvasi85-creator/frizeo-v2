@@ -6,6 +6,7 @@ import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
 import VacationNotice from "@/app/components/VacationNotice";
 import type { VacationPeriod } from "@/lib/schedule/vacationPeriods";
+import { SELECT_SERVICE_FIRST_MESSAGE } from "@/lib/bookings/bookingMessages";
 import {
   addDaysToDateString,
   getTodayInBookingTimezone,
@@ -37,6 +38,7 @@ export default function BookingClient({
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [vacationPeriods, setVacationPeriods] = useState<VacationPeriod[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
+  const [serviceFirstError, setServiceFirstError] = useState("");
 
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [servicesError, setServicesError] = useState("");
@@ -66,24 +68,23 @@ export default function BookingClient({
   }, [barberId]);
 
   useEffect(() => {
-    if (!serviceId) {
-      setAvailableDays([]);
-      setWeeklySchedule([]);
-      setOverrides([]);
-      setVacationPeriods([]);
-      return;
-    }
-
     const load = async () => {
       setLoadingAvailability(true);
 
       const from = getTodayInBookingTimezone();
       const to = addDaysToDateString(from, 30);
+      const params = new URLSearchParams({
+        barberId,
+        from,
+        to,
+      });
+
+      if (serviceId) {
+        params.set("serviceId", serviceId);
+      }
 
       try {
-        const res = await fetch(
-          `/api/availability?barberId=${barberId}&from=${from}&to=${to}&serviceId=${serviceId}`,
-        );
+        const res = await fetch(`/api/availability?${params.toString()}`);
         const data = await res.json();
 
         setAvailableDays(data.availableDays || []);
@@ -99,12 +100,14 @@ export default function BookingClient({
   }, [barberId, serviceId]);
 
   useEffect(() => {
-    if (date && availableDays.length > 0 && !availableDays.includes(date)) {
+    if (!serviceId || !date) return;
+
+    if (availableDays.length > 0 && !availableDays.includes(date)) {
       setDate(null);
       setSelectedSlot(null);
       setSlots([]);
     }
-  }, [availableDays, date]);
+  }, [availableDays, date, serviceId]);
 
   useEffect(() => {
     if (!date || !serviceId) return;
@@ -152,6 +155,38 @@ export default function BookingClient({
       })
       .finally(() => setLoadingSlots(false));
   }, [date, serviceId, barberId]);
+
+  function handleDateChange(value: string) {
+    if (!serviceId) {
+      setServiceFirstError(SELECT_SERVICE_FIRST_MESSAGE);
+      return;
+    }
+
+    setServiceFirstError("");
+    setDate(value);
+
+    setTimeout(() => {
+      slotsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 200);
+  }
+
+  function handleServiceSelect(id: string) {
+    setServiceId(id);
+    setServiceFirstError("");
+    setDate(null);
+    setSelectedSlot(null);
+    setSlots([]);
+
+    setTimeout(() => {
+      calendarRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 200);
+  }
 
   const createBooking = async () => {
     setBookingError("");
@@ -249,18 +284,7 @@ export default function BookingClient({
             <button
               key={s.id}
               type="button"
-              onClick={() => {
-                setServiceId(s.id);
-                setDate(null);
-                setSelectedSlot(null);
-                setSlots([]);
-                setTimeout(() => {
-                  calendarRef.current?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "center",
-                  });
-                }, 200);
-              }}
+              onClick={() => handleServiceSelect(s.id)}
               className={`w-full p-4 rounded-xl border transition ${
                 serviceId === s.id
                   ? "bg-black text-white"
@@ -273,14 +297,19 @@ export default function BookingClient({
         </div>
       )}
 
-      {serviceId && (
+      {services.length > 0 && (
         <div ref={calendarRef} className="space-y-3">
           <p className="text-sm text-gray-500 font-medium">2. Alege data</p>
+
+          {serviceFirstError && (
+            <p className="text-red-600 text-sm text-center">{serviceFirstError}</p>
+          )}
+
           {loadingAvailability ? (
             <p className="text-sm text-gray-400 text-center">
               Se încarcă zilele disponibile...
             </p>
-          ) : availableDays.length === 0 ? (
+          ) : serviceId && availableDays.length === 0 ? (
             <div className="space-y-3">
               {vacationPeriods.length > 0 && (
                 <VacationNotice periods={vacationPeriods} />
@@ -293,28 +322,22 @@ export default function BookingClient({
             </div>
           ) : (
             <>
-              {vacationPeriods.length > 0 && (
+              {serviceId && vacationPeriods.length > 0 && (
                 <VacationNotice periods={vacationPeriods} />
               )}
               <Calendar
                 value={date}
-                onChange={(value: string) => {
-                  setDate(value);
-                  setTimeout(() => {
-                    slotsRef.current?.scrollIntoView({
-                      behavior: "smooth",
-                      block: "center",
-                    });
-                  }, 200);
-                }}
+                onChange={handleDateChange}
                 weeklySchedule={weeklySchedule}
                 overrides={overrides}
-                availableDays={availableDays}
-                enforceAvailableDays
+                availableDays={serviceId ? availableDays : []}
+                enforceAvailableDays={!!serviceId}
               />
-              <p className="text-xs text-gray-400 text-center">
-                Zilele verzi au locuri libere pentru serviciul selectat.
-              </p>
+              {serviceId && (
+                <p className="text-xs text-gray-400 text-center">
+                  Zilele verzi au locuri libere pentru serviciul selectat.
+                </p>
+              )}
             </>
           )}
         </div>
