@@ -56,9 +56,11 @@ export default function BookingLinkCard() {
             <AdminButton
               size="sm"
               onClick={copyLink}
+              saved={copied}
+              savedLabel="Copiat!"
               className="flex-1"
             >
-              {copied ? "Copiat!" : "Copiază"}
+              Copiază
             </AdminButton>
 
             <AdminButton

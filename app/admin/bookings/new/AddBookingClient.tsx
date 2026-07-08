@@ -10,6 +10,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { Slot } from "@/types/slots";
 import AdminButton from "../../components/AdminButton";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
 import AdminCard from "../../components/AdminCard";
 import { AdminInput, AdminSelect } from "../../components/AdminInput";
 
@@ -41,6 +42,7 @@ export default function AddBookingClient({
 
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { saved, markSaved, clearSaved } = useSavedFeedback();
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -139,6 +141,7 @@ setLoadingSlots(false);
 
     try {
       setSaving(true);
+      clearSaved();
 
       const service = services.find(
         (s) => s.id === serviceId
@@ -199,11 +202,12 @@ setLoadingSlots(false);
         );
       }
 
-      router.push("/admin/bookings");
+      markSaved();
+      setSaving(false);
+      window.setTimeout(() => router.push("/admin/bookings"), 700);
 
     } catch (err: any) {
       alert(err.message || "Eroare");
-    } finally {
       setSaving(false);
     }
   }
@@ -302,9 +306,11 @@ setLoadingSlots(false);
 
           <AdminButton
             onClick={createBooking}
-            disabled={saving}
+            disabled={saving || saved}
             loading={saving}
             loadingLabel="Se creează..."
+            saved={saved}
+            savedLabel="Creat ✔"
             fullWidth
           >
             Creează programare

@@ -13,6 +13,7 @@ import {
 import AdminButton from "../../components/AdminButton";
 import AdminCard from "../../components/AdminCard";
 import EmptyState from "../../components/EmptyState";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
 
 function toLocalDateString(date: Date) {
   const y = date.getFullYear();
@@ -71,6 +72,10 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
   const [vacationEnd, setVacationEnd] = useState<Date | null>(null);
   const [vacationLoading, setVacationLoading] = useState(false);
   const [vacationError, setVacationError] = useState("");
+  const { saved: vacationSaved, markSaved: markVacationSaved, clearSaved: clearVacationSaved } =
+    useSavedFeedback();
+  const { saved: daySaved, markSaved: markDaySaved, clearSaved: clearDaySaved } =
+    useSavedFeedback();
 
   const vacationPeriods = useMemo(
     () => groupVacationPeriods(overrides),
@@ -163,6 +168,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
 
     setVacationLoading(true);
     setVacationError("");
+    clearVacationSaved();
 
     const res = await fetch("/api/barber-overrides/vacation", {
       method: "POST",
@@ -184,6 +190,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
 
     resetVacationForm();
     await loadOverrides();
+    markVacationSaved();
     setVacationLoading(false);
   }
 
@@ -216,6 +223,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
 
     setLoading(true);
     setError("");
+    clearDaySaved();
 
     const payload =
       mode === "closed"
@@ -251,6 +259,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
 
     resetForm();
     await loadOverrides();
+    markDaySaved();
     setLoading(false);
   }
 
@@ -324,9 +333,11 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
         <div className="flex flex-wrap gap-2">
           <AdminButton
             onClick={saveVacation}
-            disabled={!vacationStart || !vacationEnd || vacationLoading}
+            disabled={!vacationStart || !vacationEnd || vacationLoading || vacationSaved}
             loading={vacationLoading}
             loadingLabel="Se salvează..."
+            saved={vacationSaved}
+            savedLabel="Salvat ✔"
           >
             Salvează concediu
           </AdminButton>
@@ -454,9 +465,11 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
         <div className="flex flex-wrap gap-2">
           <AdminButton
             onClick={saveOverride}
-            disabled={!date || loading}
+            disabled={!date || loading || daySaved}
             loading={loading}
             loadingLabel="Se salvează..."
+            saved={daySaved}
+            savedLabel="Salvat ✔"
           >
             Salvează zi specială
           </AdminButton>

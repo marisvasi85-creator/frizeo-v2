@@ -7,6 +7,7 @@ import {
 } from "@/lib/booking/publicBookingPath";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
+import { useSavedFeedback } from "../components/useSavedFeedback";
 import EmptyState from "../components/EmptyState";
 import { AdminInput } from "../components/AdminInput";
 
@@ -45,6 +46,8 @@ export default function BarbersClient({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const { saved: inviteSaved, markSaved: markInviteSaved, clearSaved: clearInviteSaved } =
+    useSavedFeedback();
   async function loadBarbers() {
   const [barbersRes, invitesRes] =
     await Promise.all([
@@ -72,6 +75,7 @@ useEffect(() => {
 
   setLoading(true);
   setMessage("");
+  clearInviteSaved();
 
   try {
     const res = await fetch(
@@ -100,8 +104,9 @@ useEffect(() => {
       setEmail("");
       setPhone("");
 
+      markInviteSaved();
       setMessage(
-        "✓ Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului."
+        "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului.",
       );
 
       await loadBarbers();
@@ -292,14 +297,14 @@ onChange={(e) => {
 
         <AdminButton
   onClick={addBarber}
-  disabled={loading || message.startsWith("✓")}
+  disabled={loading || inviteSaved}
   loading={loading}
   loadingLabel="Se trimite..."
+  saved={inviteSaved}
+  savedLabel="Trimis ✔"
   size="sm"
 >
-  {message.startsWith("✓")
-    ? "Invitație trimisă ✓"
-    : "Trimite invitația"}
+  Trimite invitația
 </AdminButton>
 
         {message && (

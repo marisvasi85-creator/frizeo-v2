@@ -14,6 +14,8 @@ type SharedProps = {
   fullWidth?: boolean;
   loading?: boolean;
   loadingLabel?: string;
+  saved?: boolean;
+  savedLabel?: string;
   className?: string;
   children: React.ReactNode;
 };
@@ -62,14 +64,19 @@ export default function AdminButton(props: AdminButtonProps) {
     fullWidth,
     loading,
     loadingLabel = "Se procesează...",
+    saved = false,
+    savedLabel = "Salvat ✔",
     href,
     className,
     children,
     ...rest
   } = props;
 
-  const classes = buttonClasses({ variant, size, fullWidth, className });
-  const content = loading ? loadingLabel : children;
+  const classes = cn(
+    buttonClasses({ variant, size, fullWidth, className }),
+    saved && "bg-green-500 text-black hover:bg-green-500 font-medium",
+  );
+  const content = loading ? loadingLabel : saved ? savedLabel : children;
 
   if (href) {
     const { href: _href, ...linkProps } = rest as AdminButtonAsLink;
@@ -95,7 +102,7 @@ export default function AdminButton(props: AdminButtonProps) {
     <button
       type={type}
       className={classes}
-      disabled={disabled || loading}
+      disabled={disabled || loading || saved}
       {...buttonProps}
     >
       {content}

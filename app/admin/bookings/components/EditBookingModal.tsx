@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Calendar from "@/app/components/Calendar";
 import AdminButton from "../../components/AdminButton";
 import { AdminInput } from "../../components/AdminInput";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
 
 type ApiSlot = {
   type: "free" | "booking" | "break" | "unavailable";
@@ -69,6 +70,13 @@ export default function EditBookingModal({
   const [cancelling, setCancelling] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [error, setError] = useState("");
+  const { saved: saveSuccess, markSaved: markSaveSuccess, clearSaved: clearSaveSuccess } =
+    useSavedFeedback();
+  const {
+    saved: cancelSuccess,
+    markSaved: markCancelSuccess,
+    clearSaved: clearCancelSuccess,
+  } = useSavedFeedback();
   const slotsRef = useRef<HTMLDivElement>(null);
 
   const serviceName =
@@ -158,6 +166,7 @@ export default function EditBookingModal({
 
     setLoading(true);
     setError("");
+    clearSaveSuccess();
 
     const duration = booking.barber_services?.duration || 30;
     const endTime = addMinutes(startTime, duration);
@@ -213,8 +222,12 @@ export default function EditBookingModal({
         }
       }
 
-      onSaved();
-      onClose();
+      markSaveSuccess();
+      setLoading(false);
+      window.setTimeout(() => {
+        onSaved();
+        onClose();
+      }, 700);
     } catch {
       setError("Eroare server. Încearcă din nou.");
       setLoading(false);
@@ -230,6 +243,7 @@ export default function EditBookingModal({
 
     setCancelling(true);
     setError("");
+    clearCancelSuccess();
 
     const res = await fetch("/api/bookings/cancel", {
       method: "POST",
@@ -245,8 +259,12 @@ export default function EditBookingModal({
       return;
     }
 
-    onCancelled?.();
-    onClose();
+    markCancelSuccess();
+    setCancelling(false);
+    window.setTimeout(() => {
+      onCancelled?.();
+      onClose();
+    }, 700);
   }
 
   return (
@@ -393,9 +411,11 @@ export default function EditBookingModal({
           <AdminButton
             fullWidth
             onClick={handleSave}
-            disabled={!canSave || loading || cancelling}
+            disabled={!canSave || loading || cancelling || saveSuccess}
             loading={loading}
             loadingLabel="Se salvează..."
+            saved={saveSuccess}
+            savedLabel="Salvat ✔"
             className="py-3"
           >
             Salvează
@@ -406,9 +426,11 @@ export default function EditBookingModal({
           variant="danger"
           fullWidth
           onClick={handleCancelBooking}
-          disabled={loading || cancelling}
+          disabled={loading || cancelling || cancelSuccess}
           loading={cancelling}
           loadingLabel="Se anulează..."
+          saved={cancelSuccess}
+          savedLabel="Anulat ✔"
           className="py-3"
         >
           Anulează programarea

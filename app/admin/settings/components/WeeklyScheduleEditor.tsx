@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { saveWeeklySchedule } from "../actions";
 import AdminButton from "../../components/AdminButton";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
 
 type Day = {
   day_of_week: number;
@@ -45,7 +46,7 @@ function normalizeDay(existing: Day): Day {
 
 export default function WeeklyScheduleEditor({ initialData }: Props) {
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { saved, markSaved, clearSaved } = useSavedFeedback();
   const [error, setError] = useState("");
   const [days, setDays] = useState<Day[]>(
     DAYS.map((d) => {
@@ -134,7 +135,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     }
 
     setLoading(true);
-    setSaved(false);
+    clearSaved();
     setError("");
 
     const result = await saveWeeklySchedule(days);
@@ -145,7 +146,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
       return;
     }
 
-    setSaved(true);
+    markSaved();
     setLoading(false);
   }
 
@@ -268,17 +269,13 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
     <div className="text-red-400 text-sm">{error}</div>
   )}
 
-  {saved && !error && (
-    <div className="text-green-400 text-sm">
-      Program salvat ✔
-    </div>
-  )}
-
   <AdminButton
     onClick={handleSave}
-    disabled={loading}
+    disabled={loading || saved}
     loading={loading}
     loadingLabel="Se salvează..."
+    saved={saved}
+    savedLabel="Salvat ✔"
     size="sm"
   >
     Salvează

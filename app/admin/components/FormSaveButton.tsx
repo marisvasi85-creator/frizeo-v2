@@ -22,20 +22,18 @@ export default function FormSaveButton({
     if (!saved) return;
 
     setShowSaved(true);
-    const timer = setTimeout(() => setShowSaved(false), 3000);
+    const timer = setTimeout(() => setShowSaved(false), 2500);
     return () => clearTimeout(timer);
   }, [saved]);
 
   return (
-    <div className="flex justify-end items-center gap-3">
-      {showSaved && (
-        <span className="text-green-400 text-sm">{savedLabel}</span>
-      )}
-
+    <div className="flex justify-end">
       <AdminButton
         type="submit"
         loading={pending}
         loadingLabel="Se salvează..."
+        saved={showSaved}
+        savedLabel={savedLabel}
         className="px-5 py-3"
       >
         {label}

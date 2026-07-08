@@ -2,16 +2,19 @@
 
 import { useState } from "react";
 import AdminButton from "../components/AdminButton";
+import { useSavedFeedback } from "../components/useSavedFeedback";
 
 export default function GoogleCalendarSyncButton() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const { saved, markSaved, clearSaved } = useSavedFeedback();
 
   async function syncBookings() {
     setLoading(true);
     setMessage("");
     setIsError(false);
+    clearSaved();
 
     try {
       const res = await fetch("/api/google/sync-bookings", { method: "POST" });
@@ -38,6 +41,7 @@ export default function GoogleCalendarSyncButton() {
         return;
       }
 
+      markSaved();
       setMessage(
         `${data.synced} programări au fost adăugate în Google Calendar.`,
       );
@@ -56,6 +60,9 @@ export default function GoogleCalendarSyncButton() {
         onClick={syncBookings}
         loading={loading}
         loadingLabel="Se sincronizează..."
+        saved={saved}
+        savedLabel="Sincronizat ✔"
+        disabled={saved}
       >
         Sincronizează programările existente
       </AdminButton>

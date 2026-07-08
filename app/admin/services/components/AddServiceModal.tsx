@@ -4,6 +4,7 @@ import { useState } from "react";
 import AdminModal from "../../components/AdminModal";
 import AdminButton from "../../components/AdminButton";
 import { AdminInput, AdminSelect } from "../../components/AdminInput";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
 
 export default function AddServiceModal({
   barberId,
@@ -17,6 +18,7 @@ export default function AddServiceModal({
     service?.duration?.toString() || ""
   );
   const [loading, setLoading] = useState(false);
+  const { saved, markSaved, clearSaved } = useSavedFeedback();
 
   async function handleSubmit() {
     if (!name || !duration) {
@@ -25,6 +27,7 @@ export default function AddServiceModal({
     }
 
     setLoading(true);
+    clearSaved();
 
     const url = service ? "/api/services/update" : "/api/services/create";
 
@@ -51,7 +54,9 @@ export default function AddServiceModal({
       return;
     }
 
-    onCreated(data);
+    markSaved();
+    setLoading(false);
+    window.setTimeout(() => onCreated(data), 700);
   }
 
   return (
@@ -100,7 +105,10 @@ export default function AddServiceModal({
           fullWidth
           loading={loading}
           loadingLabel="Se salvează..."
+          saved={saved}
+          savedLabel="Salvat ✔"
           onClick={handleSubmit}
+          disabled={saved}
           className="py-3"
         >
           Salvează
