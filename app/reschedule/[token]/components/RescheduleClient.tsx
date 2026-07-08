@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import SlotPicker from "@/app/components/SlotPicker";
 import Calendar from "@/app/components/Calendar";
+import VacationNotice from "@/app/components/VacationNotice";
+import type { VacationPeriod } from "@/lib/schedule/vacationPeriods";
 import RescheduleInfo from "./RescheduleInfo";
 import {
   addDaysToDateString,
@@ -24,6 +26,7 @@ export default function RescheduleClient({ booking, token }: any) {
   const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [vacationPeriods, setVacationPeriods] = useState<VacationPeriod[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   const slotsRef = useRef<HTMLDivElement>(null);
@@ -60,6 +63,7 @@ export default function RescheduleClient({ booking, token }: any) {
       setAvailableDays(data.availableDays || []);
       setWeeklySchedule(data.weeklySchedule || []);
       setOverrides(data.overrides || []);
+      setVacationPeriods(data.vacationPeriods || []);
       setLoadingAvailability(false);
     };
 
@@ -167,10 +171,16 @@ export default function RescheduleClient({ booking, token }: any) {
               </p>
             ) : availableDays.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-8">
-                Nu mai sunt locuri disponibile în următoarele 30 de zile.
+                {vacationPeriods.length > 0
+                  ? "Nu sunt date disponibile (concediu sau program complet)."
+                  : "Nu mai sunt locuri disponibile în următoarele 30 de zile."}
               </p>
             ) : (
-              <Calendar
+              <>
+                {vacationPeriods.length > 0 && (
+                  <VacationNotice periods={vacationPeriods} className="mb-4" />
+                )}
+                <Calendar
                 value={date}
                 onChange={(d: string) => {
                   setDate(d);
@@ -181,6 +191,7 @@ export default function RescheduleClient({ booking, token }: any) {
                 availableDays={availableDays}
                 enforceAvailableDays
               />
+              </>
             )}
           </div>
         </div>

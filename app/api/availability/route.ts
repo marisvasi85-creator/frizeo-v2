@@ -8,6 +8,7 @@ import { jsDayToScheduleDay } from "@/lib/schedule/time";
 import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
 import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
 import { getGoogleBusyIntervalsByDate } from "@/lib/google/getGoogleBusyIntervals";
+import { groupVacationPeriods } from "@/lib/schedule/vacationPeriods";
 
 export async function GET(req: Request) {
   try {
@@ -24,6 +25,7 @@ export async function GET(req: Request) {
         availableDays: [],
         weeklySchedule: [],
         overrides: [],
+        vacationPeriods: [],
       });
     }
 
@@ -36,6 +38,7 @@ export async function GET(req: Request) {
         availableDays: [],
         weeklySchedule: [],
         overrides: [],
+        vacationPeriods: [],
         error: barberCheck.error,
       });
     }
@@ -147,10 +150,21 @@ export async function GET(req: Request) {
       current = addDays(current, 1);
     }
 
+    const vacationPeriods = groupVacationPeriods(
+      (overrides ?? []).filter(
+        (o) =>
+          o.is_closed &&
+          o.vacation_period_id &&
+          o.date >= from &&
+          o.date <= to,
+      ),
+    );
+
     return NextResponse.json({
       availableDays,
       weeklySchedule: weekly ?? [],
       overrides: overrides ?? [],
+      vacationPeriods,
     });
   } catch (err) {
     console.error("AVAILABILITY ERROR:", err);
@@ -158,6 +172,7 @@ export async function GET(req: Request) {
       availableDays: [],
       weeklySchedule: [],
       overrides: [],
+      vacationPeriods: [],
     });
   }
 }

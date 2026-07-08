@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Calendar from "@/app/components/Calendar";
 import SlotPicker from "@/app/components/SlotPicker";
+import VacationNotice from "@/app/components/VacationNotice";
+import type { VacationPeriod } from "@/lib/schedule/vacationPeriods";
 import {
   addDaysToDateString,
   getTodayInBookingTimezone,
@@ -33,6 +35,7 @@ export default function BookingClient({
   const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
   const [overrides, setOverrides] = useState<any[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
+  const [vacationPeriods, setVacationPeriods] = useState<VacationPeriod[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
 
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -67,6 +70,7 @@ export default function BookingClient({
       setAvailableDays([]);
       setWeeklySchedule([]);
       setOverrides([]);
+      setVacationPeriods([]);
       return;
     }
 
@@ -85,6 +89,7 @@ export default function BookingClient({
         setAvailableDays(data.availableDays || []);
         setWeeklySchedule(data.weeklySchedule || []);
         setOverrides(data.overrides || []);
+        setVacationPeriods(data.vacationPeriods || []);
       } finally {
         setLoadingAvailability(false);
       }
@@ -276,12 +281,21 @@ export default function BookingClient({
               Se încarcă zilele disponibile...
             </p>
           ) : availableDays.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center">
-              Nu mai sunt locuri disponibile în următoarele 30 de zile pentru
-              acest serviciu.
-            </p>
+            <div className="space-y-3">
+              {vacationPeriods.length > 0 && (
+                <VacationNotice periods={vacationPeriods} />
+              )}
+              <p className="text-sm text-gray-500 text-center">
+                {vacationPeriods.length > 0
+                  ? "Nu sunt locuri disponibile în următoarele 30 de zile (concediu sau program complet)."
+                  : "Nu mai sunt locuri disponibile în următoarele 30 de zile pentru acest serviciu."}
+              </p>
+            </div>
           ) : (
             <>
+              {vacationPeriods.length > 0 && (
+                <VacationNotice periods={vacationPeriods} />
+              )}
               <Calendar
                 value={date}
                 onChange={(value: string) => {

@@ -9,6 +9,7 @@ export type Override = {
   break_start: string | null;
   break_end: string | null;
   slot_duration?: number | null;
+  vacation_period_id?: string | null;
 };
 
 export type OverrideMode = "closed" | "custom";

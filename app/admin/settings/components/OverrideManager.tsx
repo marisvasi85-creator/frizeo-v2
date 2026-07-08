@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { CalendarDays } from "lucide-react";
 import type { Override, OverrideMode } from "@/types/override";
+import {
+  formatVacationPeriodRO,
+  groupVacationPeriods,
+} from "@/lib/schedule/vacationPeriods";
 import AdminButton from "../../components/AdminButton";
 import AdminCard from "../../components/AdminCard";
 import EmptyState from "../../components/EmptyState";
@@ -28,7 +32,7 @@ function normTime(t: string | null | undefined) {
 
 function describeOverride(item: Override) {
   if (item.is_closed) {
-    return { label: "Zi liberă", detail: "Salon închis", tone: "text-red-400" };
+    return { label: "Zi liberă", detail: "Închis", tone: "text-red-400" };
   }
 
   const start = normTime(item.work_start);
@@ -62,6 +66,24 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
   const [error, setError] = useState("");
   const [overrides, setOverrides] = useState<Override[]>([]);
 
+  const [vacationStart, setVacationStart] = useState<Date | null>(null);
+  const [vacationEnd, setVacationEnd] = useState<Date | null>(null);
+  const [vacationLoading, setVacationLoading] = useState(false);
+  const [vacationError, setVacationError] = useState("");
+
+  const vacationPeriods = useMemo(
+    () => groupVacationPeriods(overrides),
+    [overrides],
+  );
+
+  const singleOverrides = useMemo(
+    () =>
+      overrides
+        .filter((item) => !item.vacation_period_id)
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    [overrides],
+  );
+
   async function loadOverrides() {
     const res = await fetch(`/api/barber-overrides?barberId=${barberId}`);
     const data = await res.json();
@@ -82,6 +104,12 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     setBreakStart("13:00");
     setBreakEnd("14:00");
     setError("");
+  }
+
+  function resetVacationForm() {
+    setVacationStart(null);
+    setVacationEnd(null);
+    setVacationError("");
   }
 
   function loadIntoForm(item: Override) {
@@ -122,6 +150,58 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     }
 
     return null;
+  }
+
+  async function saveVacation() {
+    if (!vacationStart || !vacationEnd) {
+      setVacationError("Selectează perioada de concediu (de la – până la).");
+      return;
+    }
+
+    setVacationLoading(true);
+    setVacationError("");
+
+    const res = await fetch("/api/barber-overrides/vacation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        barber_id: barberId,
+        date_from: toLocalDateString(vacationStart),
+        date_to: toLocalDateString(vacationEnd),
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setVacationError(data.error || "Nu s-a putut salva concediul.");
+      setVacationLoading(false);
+      return;
+    }
+
+    resetVacationForm();
+    await loadOverrides();
+    setVacationLoading(false);
+  }
+
+  async function deleteVacation(periodId: string) {
+    const ok = confirm("Ștergi întreaga perioadă de concediu?");
+    if (!ok) return;
+
+    setVacationError("");
+
+    const res = await fetch(
+      `/api/barber-overrides/vacation?barberId=${barberId}&vacationPeriodId=${periodId}`,
+      { method: "DELETE" },
+    );
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setVacationError(data.error || "Nu s-a putut șterge concediul.");
+      return;
+    }
+
+    await loadOverrides();
   }
 
   async function saveOverride() {
@@ -179,7 +259,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
 
     const res = await fetch(
       `/api/barber-overrides?barberId=${barberId}&date=${targetDate}`,
-      { method: "DELETE" }
+      { method: "DELETE" },
     );
 
     if (!res.ok) {
@@ -192,16 +272,78 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     await loadOverrides();
   }
 
+  const hasAnyEntries = vacationPeriods.length > 0 || singleOverrides.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">Zile speciale</h2>
         <p className="text-sm text-white/60 mt-1">
-          Concedii, sărbători sau program diferit față de cel săptămânal.
+          Concedii pe perioadă, zile libere sau program diferit față de cel
+          săptămânal.
         </p>
       </div>
 
       <AdminCard padding="sm" className="space-y-4">
+        <div>
+          <h3 className="font-medium">Concediu</h3>
+          <p className="text-sm text-white/50 mt-1">
+            Toate zilele din perioadă vor fi închise. Clienții vor vedea
+            „Concediu” la programare.
+          </p>
+        </div>
+
+        <div className="relative w-full">
+          <DatePicker
+            selectsRange
+            startDate={vacationStart}
+            endDate={vacationEnd}
+            onChange={(dates) => {
+              const [start, end] = dates as [Date | null, Date | null];
+              setVacationStart(start);
+              setVacationEnd(end ?? null);
+            }}
+            dateFormat="dd.MM.yyyy"
+            placeholderText="De la – Până la"
+            minDate={new Date()}
+            className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+          />
+          <CalendarDays
+            size={18}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+          />
+        </div>
+
+        {vacationError && (
+          <p className="text-sm text-red-400">{vacationError}</p>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          <AdminButton
+            onClick={saveVacation}
+            disabled={!vacationStart || !vacationEnd || vacationLoading}
+            loading={vacationLoading}
+            loadingLabel="Se salvează..."
+          >
+            Salvează concediu
+          </AdminButton>
+
+          {(vacationStart || vacationEnd) && (
+            <AdminButton variant="secondary" onClick={resetVacationForm}>
+              Anulează
+            </AdminButton>
+          )}
+        </div>
+      </AdminCard>
+
+      <AdminCard padding="sm" className="space-y-4">
+        <div>
+          <h3 className="font-medium">O singură zi</h3>
+          <p className="text-sm text-white/50 mt-1">
+            Pentru o zi liberă sau program special (nu concediu pe perioadă).
+          </p>
+        </div>
+
         <div className="relative w-full">
           <DatePicker
             selected={selectedDate}
@@ -317,10 +459,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
           </AdminButton>
 
           {date && (
-            <AdminButton
-              variant="secondary"
-              onClick={resetForm}
-            >
+            <AdminButton variant="secondary" onClick={resetForm}>
               Anulează
             </AdminButton>
           )}
@@ -328,50 +467,74 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
       </AdminCard>
 
       <div className="space-y-3">
-        {overrides.length === 0 && (
+        {!hasAnyEntries && (
           <EmptyState className="py-8 text-sm">
-            Nu există zile speciale.
+            Nu există concedii sau zile speciale.
           </EmptyState>
         )}
 
-        {overrides
-          .sort((a, b) => a.date.localeCompare(b.date))
-          .map((item) => {
-            const info = describeOverride(item);
+        {vacationPeriods.map((period) => (
+          <AdminCard
+            key={period.id}
+            padding="sm"
+            className="flex justify-between items-start gap-4"
+          >
+            <div>
+              <div className="font-medium">
+                {formatVacationPeriodRO(period)}
+              </div>
+              <div className="text-sm text-blue-300">Concediu</div>
+              <div className="text-sm text-white/60 mt-1">
+                {period.dayCount} {period.dayCount === 1 ? "zi" : "zile"} ·
+                închis
+              </div>
+            </div>
 
-            return (
-              <AdminCard
-                key={item.id ?? item.date}
-                padding="sm"
-                className="flex justify-between items-start gap-4"
-              >
-                <div>
-                  <div className="font-medium">{formatDateRO(item.date)}</div>
-                  <div className={`text-sm ${info.tone}`}>{info.label}</div>
-                  {info.detail && (
-                    <div className="text-sm text-white/60 mt-1">
-                      {info.detail}
-                    </div>
-                  )}
-                </div>
+            <button
+              onClick={() => deleteVacation(period.id)}
+              className="text-red-400 hover:text-red-300 text-sm shrink-0"
+            >
+              Șterge
+            </button>
+          </AdminCard>
+        ))}
 
-                <div className="flex gap-3 shrink-0">
-                  <button
-                    onClick={() => loadIntoForm(item)}
-                    className="text-white/70 hover:text-white text-sm"
-                  >
-                    Editează
-                  </button>
-                  <button
-                    onClick={() => deleteOverride(item.date)}
-                    className="text-red-400 hover:text-red-300 text-sm"
-                  >
-                    Șterge
-                  </button>
-                </div>
-              </AdminCard>
-            );
-          })}
+        {singleOverrides.map((item) => {
+          const info = describeOverride(item);
+
+          return (
+            <AdminCard
+              key={item.id ?? item.date}
+              padding="sm"
+              className="flex justify-between items-start gap-4"
+            >
+              <div>
+                <div className="font-medium">{formatDateRO(item.date)}</div>
+                <div className={`text-sm ${info.tone}`}>{info.label}</div>
+                {info.detail && (
+                  <div className="text-sm text-white/60 mt-1">
+                    {info.detail}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 shrink-0">
+                <button
+                  onClick={() => loadIntoForm(item)}
+                  className="text-white/70 hover:text-white text-sm"
+                >
+                  Editează
+                </button>
+                <button
+                  onClick={() => deleteOverride(item.date)}
+                  className="text-red-400 hover:text-red-300 text-sm"
+                >
+                  Șterge
+                </button>
+              </div>
+            </AdminCard>
+          );
+        })}
       </div>
     </div>
   );

@@ -208,6 +208,7 @@ export async function POST(req: NextRequest) {
           : toDBTime(break_end),
       slot_duration:
         closed || !hasCustomHours ? null : slot_duration ?? null,
+      vacation_period_id: null,
     };
 
     const { data, error } = await supabaseAdmin
