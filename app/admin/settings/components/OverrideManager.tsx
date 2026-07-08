@@ -8,6 +8,7 @@ import type { Override, OverrideMode } from "@/types/override";
 import {
   formatVacationPeriodRO,
   groupVacationPeriods,
+  vacationPeriodCoversDate,
 } from "@/lib/schedule/vacationPeriods";
 import AdminButton from "../../components/AdminButton";
 import AdminCard from "../../components/AdminCard";
@@ -76,13 +77,15 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     [overrides],
   );
 
-  const singleOverrides = useMemo(
-    () =>
-      overrides
-        .filter((item) => !item.vacation_period_id)
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [overrides],
-  );
+  const singleOverrides = useMemo(() => {
+    return overrides
+      .filter(
+        (item) =>
+          !item.vacation_period_id &&
+          !vacationPeriodCoversDate(vacationPeriods, item.date),
+      )
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [overrides, vacationPeriods]);
 
   async function loadOverrides() {
     const res = await fetch(`/api/barber-overrides?barberId=${barberId}`);

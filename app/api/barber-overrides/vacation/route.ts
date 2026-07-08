@@ -12,8 +12,27 @@ import {
   groupVacationPeriods,
 } from "@/lib/schedule/vacationPeriods";
 import { getTodayInBookingTimezone } from "@/lib/bookings/bookingTimezone";
+import {
+  barberOverridesSupportVacationPeriodId,
+  isMissingVacationPeriodColumnError,
+  parseRangeVacationPeriodId,
+} from "@/lib/supabase/barberOverrideSchema";
 
 const MAX_VACATION_DAYS = 90;
+
+type VacationRow = {
+  barber_id: string;
+  tenant_id: string;
+  date: string;
+  is_closed: boolean;
+  work_start: null;
+  work_end: null;
+  break_enabled: boolean;
+  break_start: null;
+  break_end: null;
+  slot_duration: null;
+  vacation_period_id?: string;
+};
 
 async function assertBarberScheduleAccess(barberId: string) {
   const auth = await requireTenantAccess(["owner", "manager", "barber"]);
@@ -39,6 +58,48 @@ async function assertBarberScheduleAccess(barberId: string) {
   }
 
   return auth;
+}
+
+function buildVacationRows(
+  dates: string[],
+  barberId: string,
+  tenantId: string,
+  vacationPeriodId?: string,
+): VacationRow[] {
+  return dates.map((date) => ({
+    barber_id: barberId,
+    tenant_id: tenantId,
+    date,
+    is_closed: true,
+    work_start: null,
+    work_end: null,
+    break_enabled: false,
+    break_start: null,
+    break_end: null,
+    slot_duration: null,
+    ...(vacationPeriodId ? { vacation_period_id: vacationPeriodId } : {}),
+  }));
+}
+
+async function upsertVacationRows(rows: VacationRow[]) {
+  const firstAttempt = await supabaseAdmin
+    .from("barber_day_overrides")
+    .upsert(rows, { onConflict: "barber_id,date" });
+
+  if (!firstAttempt.error) {
+    return null;
+  }
+
+  if (isMissingVacationPeriodColumnError(firstAttempt.error.message)) {
+    const fallbackRows = rows.map(({ vacation_period_id: _id, ...row }) => row);
+    const secondAttempt = await supabaseAdmin
+      .from("barber_day_overrides")
+      .upsert(fallbackRows, { onConflict: "barber_id,date" });
+
+    return secondAttempt.error;
+  }
+
+  return firstAttempt.error;
 }
 
 export async function POST(req: NextRequest) {
@@ -97,30 +158,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const vacationPeriodId = randomUUID();
+    const supportsPeriodId = await barberOverridesSupportVacationPeriodId(
+      supabaseAdmin,
+    );
+    const vacationPeriodId = supportsPeriodId ? randomUUID() : undefined;
 
-    const rows = dates.map((date) => ({
+    const rows = buildVacationRows(
+      dates,
       barber_id,
-      tenant_id: access.tenantId,
-      date,
-      is_closed: true,
-      work_start: null,
-      work_end: null,
-      break_enabled: false,
-      break_start: null,
-      break_end: null,
-      slot_duration: null,
-      vacation_period_id: vacationPeriodId,
-    }));
+      access.tenantId,
+      vacationPeriodId,
+    );
 
-    const { error } = await supabaseAdmin
-      .from("barber_day_overrides")
-      .upsert(rows, { onConflict: "barber_id,date" });
+    const error = await upsertVacationRows(rows);
 
     if (error) {
       console.error("VACATION UPSERT ERROR:", error);
+
+      if (isMissingVacationPeriodColumnError(error.message)) {
+        return NextResponse.json(
+          {
+            error:
+              "Baza de date nu e actualizată. Rulează migrarea vacation_period_id în Supabase SQL Editor.",
+          },
+          { status: 500 },
+        );
+      }
+
       return NextResponse.json(
-        { error: "Nu s-a putut salva concediul." },
+        { error: error.message || "Nu s-a putut salva concediul." },
         { status: 500 },
       );
     }
@@ -128,7 +194,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       vacationPeriod: {
-        id: vacationPeriodId,
+        id: vacationPeriodId ?? `range:${date_from}:${date_to}`,
         from: date_from,
         to: date_to,
         dayCount: dates.length,
@@ -156,11 +222,19 @@ export async function DELETE(req: NextRequest) {
     const access = await assertBarberScheduleAccess(barberId);
     if (access instanceof NextResponse) return access;
 
-    const { error } = await supabaseAdmin
+    const range = parseRangeVacationPeriodId(vacationPeriodId);
+
+    const query = supabaseAdmin
       .from("barber_day_overrides")
       .delete()
-      .eq("barber_id", barberId)
-      .eq("vacation_period_id", vacationPeriodId);
+      .eq("barber_id", barberId);
+
+    const { error } = range
+      ? await query
+          .gte("date", range.from)
+          .lte("date", range.to)
+          .eq("is_closed", true)
+      : await query.eq("vacation_period_id", vacationPeriodId);
 
     if (error) {
       console.error("VACATION DELETE ERROR:", error);
@@ -195,10 +269,28 @@ export async function GET(req: NextRequest) {
       .from("barber_day_overrides")
       .select("date, is_closed, vacation_period_id")
       .eq("barber_id", barberId)
-      .not("vacation_period_id", "is", null)
+      .eq("is_closed", true)
       .gte("date", today);
 
     if (error) {
+      if (isMissingVacationPeriodColumnError(error.message)) {
+        const { data: fallbackData } = await supabaseAdmin
+          .from("barber_day_overrides")
+          .select("date, is_closed")
+          .eq("barber_id", barberId)
+          .eq("is_closed", true)
+          .gte("date", today);
+
+        return NextResponse.json({
+          vacationPeriods: groupVacationPeriods(
+            (fallbackData ?? []).map((row) => ({
+              ...row,
+              vacation_period_id: null,
+            })),
+          ),
+        });
+      }
+
       return NextResponse.json({ vacationPeriods: [] });
     }
 

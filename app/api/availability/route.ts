@@ -152,11 +152,7 @@ export async function GET(req: Request) {
 
     const vacationPeriods = groupVacationPeriods(
       (overrides ?? []).filter(
-        (o) =>
-          o.is_closed &&
-          o.vacation_period_id &&
-          o.date >= from &&
-          o.date <= to,
+        (o) => o.is_closed && o.date >= from && o.date <= to,
       ),
     );
 

@@ -1,4 +1,5 @@
 import { addDaysToDateString } from "@/lib/bookings/bookingTimezone";
+import { vacationPeriodIdFromRange } from "@/lib/supabase/barberOverrideSchema";
 
 export type VacationPeriod = {
   id: string;
@@ -27,6 +28,56 @@ export function enumerateDateRange(from: string, to: string): string[] {
   return dates;
 }
 
+function groupConsecutiveClosedVacations(
+  overrides: OverrideRow[],
+): VacationPeriod[] {
+  const closedDates = [
+    ...new Set(
+      overrides
+        .filter((row) => row.is_closed && !row.vacation_period_id)
+        .map((row) => row.date),
+    ),
+  ].sort();
+
+  if (closedDates.length < 2) return [];
+
+  const periods: VacationPeriod[] = [];
+  let runStart = closedDates[0];
+  let previous = closedDates[0];
+
+  for (let i = 1; i < closedDates.length; i++) {
+    const current = closedDates[i];
+    const expectedNext = addDaysToDateString(previous, 1);
+
+    if (current !== expectedNext) {
+      const dayCount = enumerateDateRange(runStart, previous).length;
+      if (dayCount >= 2) {
+        periods.push({
+          id: vacationPeriodIdFromRange(runStart, previous),
+          from: runStart,
+          to: previous,
+          dayCount,
+        });
+      }
+      runStart = current;
+    }
+
+    previous = current;
+  }
+
+  const dayCount = enumerateDateRange(runStart, previous).length;
+  if (dayCount >= 2) {
+    periods.push({
+      id: vacationPeriodIdFromRange(runStart, previous),
+      from: runStart,
+      to: previous,
+      dayCount,
+    });
+  }
+
+  return periods;
+}
+
 export function groupVacationPeriods(
   overrides: OverrideRow[],
 ): VacationPeriod[] {
@@ -52,7 +103,26 @@ export function groupVacationPeriods(
     });
   }
 
+  const consecutive = groupConsecutiveClosedVacations(overrides);
+
+  for (const period of consecutive) {
+    const overlaps = periods.some(
+      (existing) =>
+        existing.from <= period.to && existing.to >= period.from,
+    );
+    if (!overlaps) {
+      periods.push(period);
+    }
+  }
+
   return periods.sort((a, b) => a.from.localeCompare(b.from));
+}
+
+export function vacationPeriodCoversDate(
+  periods: VacationPeriod[],
+  date: string,
+): boolean {
+  return periods.some((period) => date >= period.from && date <= period.to);
 }
 
 export function formatVacationPeriodRO(period: VacationPeriod): string {
@@ -61,7 +131,10 @@ export function formatVacationPeriodRO(period: VacationPeriod): string {
     return new Date(y, m - 1, d).toLocaleDateString("ro-RO", {
       day: "numeric",
       month: "short",
-      year: period.from.slice(0, 4) !== period.to.slice(0, 4) ? "numeric" : undefined,
+      year:
+        period.from.slice(0, 4) !== period.to.slice(0, 4)
+          ? "numeric"
+          : undefined,
     });
   };
 
