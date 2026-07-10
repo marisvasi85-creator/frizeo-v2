@@ -20,6 +20,8 @@ const ownerItems = [
 
   { href: "/admin/salon", label: "Salon", icon: "🏪" },
 
+  { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
+
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];
 
@@ -35,6 +37,8 @@ const barberItems = [
   { href: "/admin/profile", label: "Profil", icon: "👤" },
 
   { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
+
+  { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
 ];
 
 

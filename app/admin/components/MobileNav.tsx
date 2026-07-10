@@ -40,6 +40,11 @@ const ownerMoreItems = [
     label: "Salon",
   },
   {
+    href: "/admin/marketing-ai",
+    icon: "✨",
+    label: "Marketing AI",
+  },
+  {
     href: "/admin/billing",
     icon: "💎",
     label: "Abonament",
@@ -56,6 +61,11 @@ const barberMoreItems = [
     href: "/admin/settings",
     icon: "🗓️",
     label: "Program de lucru",
+  },
+  {
+    href: "/admin/marketing-ai",
+    icon: "✨",
+    label: "Marketing AI",
   },
 ];
 
