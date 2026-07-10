@@ -1,16 +1,16 @@
-import OpenAI from "openai";
 import type {
   GenerateMarketingInput,
   GenerateMarketingResult,
   MarketingContext,
 } from "./types";
 import { buildMarketingPrompt } from "./prompts";
+import {
+  getMarketingAIProvider,
+  getMarketingAIProviderConfig,
+  isMarketingAIConfigured,
+} from "./providers";
 
-function getOpenAIClient() {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  return new OpenAI({ apiKey });
-}
+export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
 function parseModelJson(raw: string): GenerateMarketingResult {
   const cleaned = raw
@@ -42,18 +42,17 @@ export async function generateMarketingContent(
   context: MarketingContext,
   input: GenerateMarketingInput,
 ): Promise<GenerateMarketingResult> {
-  const client = getOpenAIClient();
-  if (!client) {
+  const provider = getMarketingAIProvider();
+  if (!provider.isConfigured()) {
     throw new Error(
-      "Marketing AI nu este configurat. Adaugă OPENAI_API_KEY în environment.",
+      "Marketing AI nu este configurat. Verifică variabilele de environment pentru provider.",
     );
   }
 
+  const { temperature } = getMarketingAIProviderConfig();
   const prompt = buildMarketingPrompt(context, input);
 
-  const completion = await client.chat.completions.create({
-    model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-    temperature: 0.8,
+  const raw = await provider.complete({
     messages: [
       {
         role: "system",
@@ -62,17 +61,9 @@ export async function generateMarketingContent(
       },
       { role: "user", content: prompt },
     ],
-    response_format: { type: "json_object" },
+    jsonMode: true,
+    temperature,
   });
 
-  const message = completion.choices[0]?.message?.content;
-  if (!message) {
-    throw new Error("Nu am primit răspuns de la AI");
-  }
-
-  return parseModelJson(message);
-}
-
-export function isMarketingAIConfigured() {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return parseModelJson(raw);
 }

@@ -44,12 +44,16 @@ export default function MarketingAIClient({
   services,
   defaultBarberId,
   configured,
+  provider,
+  model,
 }: {
   role: string | null;
   barbers: BarberOption[];
   services: ServiceOption[];
   defaultBarberId: string;
   configured: boolean;
+  provider: string;
+  model: string;
 }) {
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
   const [barberServices, setBarberServices] = useState(services);
@@ -104,7 +108,7 @@ export default function MarketingAIClient({
     setCopied(false);
 
     if (!configured) {
-      setError("Marketing AI nu este configurat pe server (lipsește OPENAI_API_KEY).");
+      setError("Marketing AI nu este configurat pe server. Verifică variabilele de environment.");
       return;
     }
 
@@ -153,10 +157,18 @@ export default function MarketingAIClient({
       {!configured && (
         <AdminCard className="border-amber-500/30 bg-amber-500/10">
           <p className="text-amber-100 text-sm">
-            Marketing AI necesită <code className="text-amber-50">OPENAI_API_KEY</code> în
-            environment-ul Vercel (staging). Fără cheie, butoanele nu vor genera conținut.
+            Marketing AI necesită configurare în Vercel (staging). Setează providerul și cheia
+            API — de ex. <code className="text-amber-50">MARKETING_AI_PROVIDER=openai</code>,{" "}
+            <code className="text-amber-50">MARKETING_AI_MODEL=gpt-4o-mini</code>,{" "}
+            <code className="text-amber-50">OPENAI_API_KEY=...</code>
           </p>
         </AdminCard>
+      )}
+
+      {configured && (
+        <p className="text-xs text-white/40">
+          Model activ: {provider} / {model} (schimbabil din environment, fără deploy nou de cod)
+        </p>
       )}
 
       <AdminCard className="space-y-4">
