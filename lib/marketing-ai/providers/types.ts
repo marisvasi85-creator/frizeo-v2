@@ -1,9 +1,10 @@
-export type MarketingAIProviderId = "openai";
+export type MarketingAIProviderId = "openai" | "gemini" | "template";
 
 export type MarketingAIProviderConfig = {
   provider: MarketingAIProviderId;
   model: string;
   temperature: number;
+  isFreeTier: boolean;
 };
 
 export type MarketingAIMessage = {

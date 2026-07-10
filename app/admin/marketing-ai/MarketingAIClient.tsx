@@ -46,6 +46,8 @@ export default function MarketingAIClient({
   configured,
   provider,
   model,
+  modeLabel,
+  isFreeTier,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -54,6 +56,8 @@ export default function MarketingAIClient({
   configured: boolean;
   provider: string;
   model: string;
+  modeLabel: string;
+  isFreeTier: boolean;
 }) {
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
   const [barberServices, setBarberServices] = useState(services);
@@ -157,18 +161,37 @@ export default function MarketingAIClient({
       {!configured && (
         <AdminCard className="border-amber-500/30 bg-amber-500/10">
           <p className="text-amber-100 text-sm">
-            Marketing AI necesită configurare în Vercel (staging). Setează providerul și cheia
-            API — de ex. <code className="text-amber-50">MARKETING_AI_PROVIDER=openai</code>,{" "}
-            <code className="text-amber-50">MARKETING_AI_MODEL=gpt-4o-mini</code>,{" "}
-            <code className="text-amber-50">OPENAI_API_KEY=...</code>
+            Marketing AI nu este configurat. Setează un provider în Vercel sau lasă implicit{" "}
+            <code className="text-amber-50">template</code> pentru testare gratuită.
           </p>
         </AdminCard>
       )}
 
       {configured && (
-        <p className="text-xs text-white/40">
-          Model activ: {provider} / {model} (schimbabil din environment, fără deploy nou de cod)
-        </p>
+        <AdminCard
+          className={
+            isFreeTier
+              ? "border-emerald-500/30 bg-emerald-500/10"
+              : "border-white/10"
+          }
+        >
+          <p className="text-sm text-white/80">
+            <span className="font-medium">{modeLabel}</span>
+            {" · "}
+            {provider} / {model}
+          </p>
+          {provider === "template" && (
+            <p className="text-xs text-white/50 mt-2">
+              Mod demo — texte generate din șabloane, fără cost API. Pentru AI real gratuit,
+              adaugă <code className="text-white/70">GEMINI_API_KEY</code> din Google AI Studio.
+            </p>
+          )}
+          {provider === "gemini" && (
+            <p className="text-xs text-white/50 mt-2">
+              Google Gemini Free Tier — ~1.500 generări/zi, fără card (cheie din aistudio.google.com).
+            </p>
+          )}
+        </AdminCard>
       )}
 
       <AdminCard className="space-y-4">
@@ -245,6 +268,12 @@ export default function MarketingAIClient({
 
       {result && (
         <AdminCard className="space-y-4">
+          {provider === "template" && (
+            <p className="text-xs text-emerald-300/90">
+              Text demo (gratuit) — bun pentru testare. Pentru variante mai creative, folosește
+              Gemini Free.
+            </p>
+          )}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">{result.title}</h2>

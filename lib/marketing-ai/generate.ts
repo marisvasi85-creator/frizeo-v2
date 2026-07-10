@@ -9,6 +9,7 @@ import {
   getMarketingAIProviderConfig,
   isMarketingAIConfigured,
 } from "./providers";
+import { generateTemplateContent } from "./providers/template";
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
@@ -42,6 +43,12 @@ export async function generateMarketingContent(
   context: MarketingContext,
   input: GenerateMarketingInput,
 ): Promise<GenerateMarketingResult> {
+  const config = getMarketingAIProviderConfig();
+
+  if (config.provider === "template") {
+    return generateTemplateContent(context, input);
+  }
+
   const provider = getMarketingAIProvider();
   if (!provider.isConfigured()) {
     throw new Error(
@@ -49,7 +56,6 @@ export async function generateMarketingContent(
     );
   }
 
-  const { temperature } = getMarketingAIProviderConfig();
   const prompt = buildMarketingPrompt(context, input);
 
   const raw = await provider.complete({
@@ -62,7 +68,7 @@ export async function generateMarketingContent(
       { role: "user", content: prompt },
     ],
     jsonMode: true,
-    temperature,
+    temperature: config.temperature,
   });
 
   return parseModelJson(raw);
