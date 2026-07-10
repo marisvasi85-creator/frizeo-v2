@@ -5,6 +5,7 @@ import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-a
 import { getMarketingAIUsageStatus } from "@/lib/marketing-ai/usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import MarketingAIClient from "./MarketingAIClient";
+import type { SocialLinks } from "@/lib/social/normalizeSocialUrl";
 
 export default async function MarketingAIPage() {
   const barber = await getCurrentBarberInTenant();
@@ -40,6 +41,12 @@ export default async function MarketingAIPage() {
   const aiStatus = getMarketingAIStatus();
   const usage = await getMarketingAIUsageStatus(barber.tenant_id);
 
+  const initialSocialLinks: SocialLinks = {
+    instagram: barber.instagram_url ?? null,
+    facebook: (barber as { facebook_url?: string | null }).facebook_url ?? null,
+    tiktok: (barber as { tiktok_url?: string | null }).tiktok_url ?? null,
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,6 +68,7 @@ export default async function MarketingAIPage() {
         isFreeTier={aiStatus.isFreeTier}
         diagnostics={aiStatus.diagnostics}
         usage={usage}
+        initialSocialLinks={initialSocialLinks}
       />
     </div>
   );

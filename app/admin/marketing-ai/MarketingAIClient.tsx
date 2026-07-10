@@ -64,6 +64,7 @@ export default function MarketingAIClient({
   isFreeTier,
   diagnostics,
   usage: initialUsage,
+  initialSocialLinks,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -80,6 +81,7 @@ export default function MarketingAIClient({
     explicitProvider: string | null;
   };
   usage: UsageStatus;
+  initialSocialLinks: SocialLinks;
 }) {
   const [usage, setUsage] = useState(initialUsage);
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
@@ -92,11 +94,7 @@ export default function MarketingAIClient({
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [branding, setBranding] = useState<BrandedCardBranding | null>(null);
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
-    instagram: null,
-    facebook: null,
-    tiktok: null,
-  });
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
 
   async function loadBranding(barberId: string): Promise<BrandedCardBranding | null> {
     const res = await fetch(`/api/marketing-ai/branding?barberId=${barberId}`);
@@ -223,6 +221,8 @@ export default function MarketingAIClient({
 
   return (
     <div className="space-y-6 max-w-3xl">
+      <SocialLinksBar links={socialLinks} />
+
       {!configured && (
         <AdminCard className="border-amber-500/30 bg-amber-500/10">
           <p className="text-amber-100 text-sm">
@@ -312,8 +312,6 @@ export default function MarketingAIClient({
           )}
         </AdminCard>
       )}
-
-      <SocialLinksBar links={socialLinks} />
 
       <AdminCard className="space-y-4">
         <p className="text-white/60 text-sm">
