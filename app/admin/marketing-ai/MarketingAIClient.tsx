@@ -249,11 +249,6 @@ export default function MarketingAIClient({
             </p>
           )}
 
-          {!usage.migrationReady && usage.countsTowardLimit && (
-            <p className="text-xs text-amber-300 mt-2">
-              Limitele zilnice se activează după migrarea DB marketing_ai_generations.
-            </p>
-          )}
           {provider === "template" && (
             <p className="text-xs text-white/50 mt-2">
               Mod demo — texte generate din șabloane, fără cost API. Pentru AI real gratuit,

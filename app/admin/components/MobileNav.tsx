@@ -15,7 +15,7 @@ const barberMainItems = [
   { href: "/admin/dashboard", icon: "🏠", label: "Dashboard" },
   { href: "/admin/bookings", icon: "📋", label: "Programări" },
   { href: "/admin/services", icon: "✂️", label: "Servicii" },
-  { href: "/admin/notifications", icon: "🔔", label: "Notificări" },
+  { href: "/admin/marketing-ai", icon: "✨", label: "Marketing AI" },
 ];
 
 const ownerMoreItems = [
@@ -53,6 +53,11 @@ const ownerMoreItems = [
 
 const barberMoreItems = [
   {
+    href: "/admin/notifications",
+    icon: "🔔",
+    label: "Notificări",
+  },
+  {
     href: "/admin/profile",
     icon: "👤",
     label: "Profil",
@@ -61,11 +66,6 @@ const barberMoreItems = [
     href: "/admin/settings",
     icon: "🗓️",
     label: "Program de lucru",
-  },
-  {
-    href: "/admin/marketing-ai",
-    icon: "✨",
-    label: "Marketing AI",
   },
 ];
 
