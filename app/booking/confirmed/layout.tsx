@@ -1,4 +1,5 @@
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
+import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 
 export const metadata = noIndexMetadata;
 
@@ -7,5 +8,10 @@ export default function BookingConfirmedLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return (
+    <>
+      {children}
+      <InstallAppPrompt variant="booking" />
+    </>
+  );
 }

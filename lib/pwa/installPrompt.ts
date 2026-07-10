@@ -1,5 +1,3 @@
-export const INSTALL_PROMPT_SNOOZE_KEY = "frizeo-install-prompt-snooze";
-
 const SNOOZE_MS = 14 * 24 * 60 * 60 * 1000;
 
 export type InstallPlatform =
@@ -7,6 +5,10 @@ export type InstallPlatform =
   | "android-installable"
   | "android-manual"
   | "unsupported";
+
+function snoozeStorageKey(scope: string): string {
+  return `frizeo-install-prompt-snooze:${scope}`;
+}
 
 export function isStandaloneMode(): boolean {
   if (typeof window === "undefined") return false;
@@ -41,15 +43,15 @@ export function detectInstallPlatform(): InstallPlatform {
   return "unsupported";
 }
 
-export function isInstallPromptSnoozed(): boolean {
+export function isInstallPromptSnoozed(scope: string): boolean {
   if (typeof window === "undefined") return true;
 
-  const raw = localStorage.getItem(INSTALL_PROMPT_SNOOZE_KEY);
+  const raw = localStorage.getItem(snoozeStorageKey(scope));
   if (!raw) return false;
 
   const snoozedUntil = Number(raw);
   if (!Number.isFinite(snoozedUntil)) {
-    localStorage.removeItem(INSTALL_PROMPT_SNOOZE_KEY);
+    localStorage.removeItem(snoozeStorageKey(scope));
     return false;
   }
 
@@ -57,13 +59,13 @@ export function isInstallPromptSnoozed(): boolean {
     return true;
   }
 
-  localStorage.removeItem(INSTALL_PROMPT_SNOOZE_KEY);
+  localStorage.removeItem(snoozeStorageKey(scope));
   return false;
 }
 
-export function snoozeInstallPrompt(): void {
+export function snoozeInstallPrompt(scope: string): void {
   localStorage.setItem(
-    INSTALL_PROMPT_SNOOZE_KEY,
+    snoozeStorageKey(scope),
     String(Date.now() + SNOOZE_MS)
   );
 }

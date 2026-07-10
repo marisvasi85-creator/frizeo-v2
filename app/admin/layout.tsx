@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
-import InstallAppPrompt from "./components/InstallAppPrompt";
+import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
 
@@ -35,7 +35,7 @@ export default async function AdminLayout({
     </main>
 
     <MobileNav role={role} />
-    <InstallAppPrompt />
+    <InstallAppPrompt variant="admin" />
 
   </div>
 );}
