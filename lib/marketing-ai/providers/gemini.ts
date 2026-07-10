@@ -13,11 +13,11 @@ type GeminiResponse = {
   error?: { message?: string; status?: string };
 };
 
-/** Modele cu free tier activ în 2026 — în ordinea preferinței. */
+/** Modele free tier pentru conturi noi (2026) — în ordinea preferinței. */
 export const GEMINI_FREE_TIER_MODELS = [
-  "gemini-2.5-flash-lite",
+  "gemini-3.1-flash-lite",
   "gemini-2.5-flash",
-  "gemini-2.0-flash-lite",
+  "gemini-3.5-flash",
 ] as const;
 
 export function isGeminiQuotaError(message: string): boolean {
@@ -30,13 +30,34 @@ export function isGeminiQuotaError(message: string): boolean {
   );
 }
 
+export function isGeminiModelUnavailableError(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("no longer available") ||
+    lower.includes("not found") ||
+    lower.includes("does not exist") ||
+    lower.includes("is not supported") ||
+    lower.includes("invalid model")
+  );
+}
+
+export function isGeminiRetryableError(message: string): boolean {
+  return isGeminiQuotaError(message) || isGeminiModelUnavailableError(message);
+}
+
 export function formatGeminiError(message: string): string {
+  if (isGeminiModelUnavailableError(message)) {
+    return (
+      "Modelul Gemini configurat nu e disponibil pentru contul tău. " +
+      "Setează MARKETING_AI_MODEL=gemini-3.1-flash-lite în Vercel și redeploy."
+    );
+  }
+
   if (isGeminiQuotaError(message)) {
     if (message.includes("limit: 0")) {
       return (
-        "Cheia Gemini nu are cotă free tier pentru acest model. " +
-        "Creează o cheie nouă în Google AI Studio (fără billing activ) sau setează " +
-        "MARKETING_AI_MODEL=gemini-2.5-flash-lite în Vercel."
+        "Cheia Gemini nu are cotă free tier. Creează o cheie nouă în Google AI Studio " +
+        "(Free tier, fără billing) sau folosește MARKETING_AI_MODEL=gemini-3.1-flash-lite."
       );
     }
     return "Ai depășit limita gratuită Gemini. Încearcă din nou peste câteva minute.";
@@ -114,7 +135,7 @@ export function createGeminiProvider(model: string): MarketingAIProvider {
             error instanceof Error ? error.message : "Eroare Gemini API";
           lastError = message;
 
-          if (!isGeminiQuotaError(message)) {
+          if (!isGeminiRetryableError(message)) {
             throw new Error(formatGeminiError(message));
           }
         }

@@ -2,7 +2,7 @@ import type { MarketingAIProviderConfig, MarketingAIProviderId } from "./types";
 
 const DEFAULT_MODELS: Record<MarketingAIProviderId, string> = {
   openai: "gpt-4o-mini",
-  gemini: "gemini-2.5-flash-lite",
+  gemini: "gemini-3.1-flash-lite",
   template: "built-in",
 };
 

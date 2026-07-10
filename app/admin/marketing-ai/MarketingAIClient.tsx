@@ -213,8 +213,7 @@ export default function MarketingAIClient({
           )}
           {provider === "gemini" && (
             <p className="text-xs text-white/50 mt-2">
-              Google Gemini Free Tier — model recomandat: gemini-2.5-flash-lite (~1.500
-              generări/zi, fără card).
+              Google Gemini Free Tier — model recomandat: gemini-3.1-flash-lite.
             </p>
           )}
         </AdminCard>

@@ -10,7 +10,7 @@ import {
   isMarketingAIConfigured,
 } from "./providers";
 import { generateTemplateContent } from "./providers/template";
-import { isGeminiQuotaError } from "./providers/gemini";
+import { isGeminiRetryableError } from "./providers/gemini";
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
@@ -77,14 +77,14 @@ export async function generateMarketingContent(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Eroare la generare";
 
-    if (config.provider === "gemini" && isGeminiQuotaError(message)) {
+    if (config.provider === "gemini" && isGeminiRetryableError(message)) {
       const fallback = generateTemplateContent(context, input);
       return {
         ...fallback,
         usedTemplateFallback: true,
         fallbackWarning:
-          "Gemini nu are cotă disponibilă acum — am folosit text demo. " +
-          "Setează MARKETING_AI_MODEL=gemini-2.5-flash-lite sau creează o cheie nouă în AI Studio (fără billing).",
+          "Gemini indisponibil momentan — am folosit text demo. " +
+          "Setează MARKETING_AI_MODEL=gemini-3.1-flash-lite în Vercel.",
       };
     }
 
