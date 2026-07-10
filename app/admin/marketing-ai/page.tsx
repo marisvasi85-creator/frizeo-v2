@@ -57,6 +57,7 @@ export default async function MarketingAIPage() {
         model={aiStatus.model}
         modeLabel={aiStatus.modeLabel}
         isFreeTier={aiStatus.isFreeTier}
+        diagnostics={aiStatus.diagnostics}
       />
     </div>
   );

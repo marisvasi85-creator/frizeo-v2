@@ -26,6 +26,12 @@ export function getMarketingAIStatus() {
   const config = getMarketingAIProviderConfig();
   const provider = getMarketingAIProvider();
 
+  const geminiKeySet = Boolean(
+    process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim(),
+  );
+  const openaiKeySet = Boolean(process.env.OPENAI_API_KEY?.trim());
+  const explicitProvider = process.env.MARKETING_AI_PROVIDER?.trim() || null;
+
   const modeLabel =
     config.provider === "template"
       ? "Demo gratuit (template)"
@@ -39,6 +45,11 @@ export function getMarketingAIStatus() {
     configured: provider.isConfigured(),
     isFreeTier: config.isFreeTier,
     modeLabel,
+    diagnostics: {
+      geminiKeySet,
+      openaiKeySet,
+      explicitProvider,
+    },
   };
 }
 

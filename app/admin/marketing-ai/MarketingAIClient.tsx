@@ -48,6 +48,7 @@ export default function MarketingAIClient({
   model,
   modeLabel,
   isFreeTier,
+  diagnostics,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -58,6 +59,11 @@ export default function MarketingAIClient({
   model: string;
   modeLabel: string;
   isFreeTier: boolean;
+  diagnostics: {
+    geminiKeySet: boolean;
+    openaiKeySet: boolean;
+    explicitProvider: string | null;
+  };
 }) {
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
   const [barberServices, setBarberServices] = useState(services);
@@ -184,6 +190,20 @@ export default function MarketingAIClient({
             <p className="text-xs text-white/50 mt-2">
               Mod demo — texte generate din șabloane, fără cost API. Pentru AI real gratuit,
               adaugă <code className="text-white/70">GEMINI_API_KEY</code> din Google AI Studio.
+            </p>
+          )}
+          {provider === "template" && diagnostics.geminiKeySet && (
+            <p className="text-xs text-amber-300 mt-2">
+              Cheia Gemini e detectată, dar providerul activ e încă template. Setează{" "}
+              <code className="text-amber-100">MARKETING_AI_PROVIDER=gemini</code> în Vercel și
+              fă redeploy.
+            </p>
+          )}
+          {provider === "template" && !diagnostics.geminiKeySet && (
+            <p className="text-xs text-amber-300 mt-2">
+              Cheia nu e încă vizibilă pe server. Verifică în Vercel: env pentru{" "}
+              <strong>Preview</strong> (staging), nume exact <code>GEMINI_API_KEY</code>, apoi
+              Redeploy.
             </p>
           )}
           {provider === "gemini" && (
