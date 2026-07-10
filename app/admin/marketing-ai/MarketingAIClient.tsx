@@ -5,6 +5,8 @@ import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
 import { AdminSelect } from "../components/AdminInput";
 import type { MarketingContentType } from "@/lib/marketing-ai/types";
+import type { BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
+import BrandedCardButton from "./BrandedCardButton";
 
 type ServiceOption = {
   id: string;
@@ -87,6 +89,22 @@ export default function MarketingAIClient({
   const [warning, setWarning] = useState("");
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [branding, setBranding] = useState<BrandedCardBranding | null>(null);
+
+  async function loadBranding(barberId: string): Promise<BrandedCardBranding | null> {
+    const res = await fetch(`/api/marketing-ai/branding?barberId=${barberId}`);
+    const data = await res.json();
+    if (!res.ok) return null;
+
+    const next: BrandedCardBranding = {
+      salonName: data.salonName,
+      barberName: data.barberName,
+      logoUrl: data.logoUrl,
+      bookingUrl: data.bookingUrl,
+    };
+    setBranding(next);
+    return next;
+  }
 
   useEffect(() => {
     if (selectedBarberId === defaultBarberId) {
@@ -118,6 +136,10 @@ export default function MarketingAIClient({
       cancelled = true;
     };
   }, [selectedBarberId, defaultBarberId, services]);
+
+  useEffect(() => {
+    loadBranding(selectedBarberId).catch(() => setBranding(null));
+  }, [selectedBarberId]);
 
   const fullText = useMemo(() => {
     if (!result) return "";
@@ -378,6 +400,12 @@ export default function MarketingAIClient({
               </p>
             </div>
           )}
+
+          <BrandedCardButton
+            result={result}
+            branding={branding}
+            onBrandingNeeded={() => loadBranding(selectedBarberId)}
+          />
         </AdminCard>
       )}
     </div>
