@@ -9,6 +9,11 @@ import {
 } from "@/lib/location/hasLocationMigration";
 import { locationFieldsFromFormData } from "@/lib/location/resolveLocation";
 import type { SaveFormState } from "../components/saveFormState";
+import {
+  hasSocialLinksMigration,
+  socialLinksMigrationMessage,
+} from "@/lib/social/hasSocialLinksMigration";
+import { normalizeSocialUrl } from "@/lib/social/normalizeSocialUrl";
 
 function isMissingLocationColumnError(message?: string) {
   return (
@@ -34,7 +39,35 @@ export async function updateProfile(
     const display_name = formData.get("display_name") as string;
     const phone = formData.get("phone") as string;
     const bio = (formData.get("bio") as string) || null;
-    const instagram_url = (formData.get("instagram_url") as string) || null;
+    const instagramRaw = (formData.get("instagram_url") as string) || "";
+    const facebookRaw = (formData.get("facebook_url") as string) || "";
+    const tiktokRaw = (formData.get("tiktok_url") as string) || "";
+
+    const instagram = normalizeSocialUrl("instagram", instagramRaw);
+    if (instagram.error) {
+      return { success: false, error: `Instagram: ${instagram.error}` };
+    }
+
+    const socialReady = await hasSocialLinksMigration();
+    let facebook_url: string | null = null;
+    let tiktok_url: string | null = null;
+
+    if (socialReady) {
+      const facebook = normalizeSocialUrl("facebook", facebookRaw);
+      if (facebook.error) {
+        return { success: false, error: `Facebook: ${facebook.error}` };
+      }
+
+      const tiktok = normalizeSocialUrl("tiktok", tiktokRaw);
+      if (tiktok.error) {
+        return { success: false, error: `TikTok: ${tiktok.error}` };
+      }
+
+      facebook_url = facebook.url;
+      tiktok_url = tiktok.url;
+    }
+
+    const instagram_url = instagram.url;
 
     const slug = (formData.get("slug") as string)
       .trim()
@@ -69,6 +102,10 @@ export async function updateProfile(
       instagram_url,
     };
 
+    if (socialReady) {
+      Object.assign(updatePayload, { facebook_url, tiktok_url });
+    }
+
     if (locationReady) {
       Object.assign(updatePayload, {
         use_salon_location: useSalonLocation,
@@ -98,6 +135,16 @@ export async function updateProfile(
         return {
           success: false,
           error: locationMigrationErrorMessage(),
+        };
+      }
+
+      if (
+        error.message?.includes("facebook_url") ||
+        error.message?.includes("tiktok_url")
+      ) {
+        return {
+          success: false,
+          error: socialLinksMigrationMessage(),
         };
       }
 

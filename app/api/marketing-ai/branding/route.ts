@@ -41,6 +41,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Date indisponibile" }, { status: 404 });
   }
 
+  const { data: barber } = await supabaseAdmin
+    .from("barbers")
+    .select("instagram_url, facebook_url, tiktok_url")
+    .eq("id", barberId)
+    .eq("tenant_id", auth.tenantId)
+    .maybeSingle();
+
   const { data: tenant } = await supabaseAdmin
     .from("tenants")
     .select("logo_url")
@@ -52,5 +59,10 @@ export async function GET(req: Request) {
     barberName: context.barberName,
     logoUrl: tenant?.logo_url ?? null,
     bookingUrl: context.bookingUrl,
+    socialLinks: {
+      instagram: barber?.instagram_url ?? null,
+      facebook: barber?.facebook_url ?? null,
+      tiktok: barber?.tiktok_url ?? null,
+    },
   });
 }

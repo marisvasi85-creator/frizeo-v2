@@ -212,13 +212,46 @@ export default async function ProfilePage({
         </div>
 
         <div>
+          <label className="block text-sm text-white/60 mb-2">
+            Rețele sociale
+          </label>
+          <p className="text-xs text-white/40 mb-3">
+            Linkurile apar în Marketing AI și pe pagina ta publică de programări.
+          </p>
+        </div>
+
+        <div>
           <label className="block text-sm text-white/60 mb-2">Instagram</label>
 
           <input
-            type="text"
+            type="url"
             name="instagram_url"
             defaultValue={barber.instagram_url || ""}
             placeholder="https://instagram.com/..."
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-white/60 mb-2">Facebook</label>
+
+          <input
+            type="url"
+            name="facebook_url"
+            defaultValue={barber.facebook_url || ""}
+            placeholder="https://facebook.com/..."
+            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-white/60 mb-2">TikTok</label>
+
+          <input
+            type="url"
+            name="tiktok_url"
+            defaultValue={barber.tiktok_url || ""}
+            placeholder="https://tiktok.com/@..."
             className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
           />
         </div>

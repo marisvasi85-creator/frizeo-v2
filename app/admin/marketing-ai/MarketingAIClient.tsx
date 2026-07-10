@@ -7,6 +7,8 @@ import { AdminSelect } from "../components/AdminInput";
 import type { MarketingContentType } from "@/lib/marketing-ai/types";
 import type { BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
 import BrandedCardButton from "./BrandedCardButton";
+import SocialLinksBar from "./SocialLinksBar";
+import type { SocialLinks } from "@/lib/social/normalizeSocialUrl";
 
 type ServiceOption = {
   id: string;
@@ -90,11 +92,22 @@ export default function MarketingAIClient({
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [branding, setBranding] = useState<BrandedCardBranding | null>(null);
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>({
+    instagram: null,
+    facebook: null,
+    tiktok: null,
+  });
 
   async function loadBranding(barberId: string): Promise<BrandedCardBranding | null> {
     const res = await fetch(`/api/marketing-ai/branding?barberId=${barberId}`);
     const data = await res.json();
     if (!res.ok) return null;
+
+    setSocialLinks({
+      instagram: data.socialLinks?.instagram ?? null,
+      facebook: data.socialLinks?.facebook ?? null,
+      tiktok: data.socialLinks?.tiktok ?? null,
+    });
 
     const next: BrandedCardBranding = {
       salonName: data.salonName,
@@ -299,6 +312,8 @@ export default function MarketingAIClient({
           )}
         </AdminCard>
       )}
+
+      <SocialLinksBar links={socialLinks} />
 
       <AdminCard className="space-y-4">
         <p className="text-white/60 text-sm">

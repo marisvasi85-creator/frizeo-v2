@@ -186,9 +186,29 @@ export default async function Page({
                     href={barber.instagram_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 text-sm"
+                    className="text-blue-600 text-sm block"
                   >
                     Instagram
+                  </a>
+                )}
+                {barber.facebook_url && (
+                  <a
+                    href={barber.facebook_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 text-sm block"
+                  >
+                    Facebook
+                  </a>
+                )}
+                {barber.tiktok_url && (
+                  <a
+                    href={barber.tiktok_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 text-sm block"
+                  >
+                    TikTok
                   </a>
                 )}
               </div>

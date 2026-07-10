@@ -17,7 +17,7 @@ export async function buildMarketingContext(
 
   const { data: barber } = await supabaseAdmin
     .from("barbers")
-    .select("id, tenant_id, display_name, bio, instagram_url, slug")
+    .select("id, tenant_id, display_name, bio, instagram_url, facebook_url, tiktok_url, slug")
     .eq("id", barberId)
     .eq("tenant_id", tenantId)
     .maybeSingle();
