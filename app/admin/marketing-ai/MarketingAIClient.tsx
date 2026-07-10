@@ -233,19 +233,42 @@ export default function MarketingAIClient({
             {provider} / {model}
           </p>
 
-          {!usage.unlimited && usage.limit !== null && (
-            <p className="text-xs text-white/60 mt-2">
-              Generări AI azi:{" "}
-              <span className="text-white font-medium">
+          {usage.countsTowardLimit && usage.limit !== null && (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    usage.remaining === 0 ? "bg-red-400" : "bg-emerald-400"
+                  }`}
+                  style={{
+                    width: `${Math.min(100, (usage.used / usage.limit) * 100)}%`,
+                  }}
+                />
+              </div>
+              <p className="text-sm text-white font-medium whitespace-nowrap">
                 {usage.used}/{usage.limit}
-              </span>{" "}
-              (plan {usage.planLabel}) — se resetează la miezul nopții
+              </p>
+            </div>
+          )}
+
+          {usage.countsTowardLimit && usage.limit !== null && (
+            <p className="text-xs text-white/60 mt-2">
+              Generări AI azi — plan {usage.planLabel}
+              {usage.remaining !== null && usage.remaining > 0 && (
+                <> · <span className="text-white/80">{usage.remaining} rămase</span></>
+              )}
+              {usage.remaining === 0 && (
+                <> · <span className="text-red-300">limită atinsă</span></>
+              )}
+              {" "}— reset la miezul nopții
             </p>
           )}
 
-          {usage.unlimited && usage.countsTowardLimit && (
+          {usage.countsTowardLimit && usage.unlimited && (
             <p className="text-xs text-white/60 mt-2">
-              Generări AI nelimitate (plan {usage.planLabel})
+              Generări AI azi:{" "}
+              <span className="text-white font-medium">{usage.used}</span> (nelimitat, plan{" "}
+              {usage.planLabel})
             </p>
           )}
 

@@ -44,14 +44,24 @@ export async function getMarketingAIUsageStatus(
   const migrationReady = await hasMarketingAIUsageTable();
 
   const countsTowardLimit = providerConfig.provider !== "template";
-  const unlimited =
-    !countsTowardLimit || limitConfig.daily === null || !migrationReady;
+  const unlimited = !countsTowardLimit || limitConfig.daily === null;
 
   if (unlimited) {
+    let used = 0;
+    if (migrationReady && countsTowardLimit) {
+      const today = getTodayInBookingTimezone();
+      const { count } = await supabaseAdmin
+        .from("marketing_ai_generations")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("usage_date", today);
+      used = count ?? 0;
+    }
+
     return {
-      used: 0,
-      limit: limitConfig.daily,
-      remaining: limitConfig.daily,
+      used,
+      limit: null,
+      remaining: null,
       planLabel: limitConfig.label,
       unlimited: true,
       countsTowardLimit,
@@ -59,14 +69,17 @@ export async function getMarketingAIUsageStatus(
     };
   }
 
-  const today = getTodayInBookingTimezone();
-  const { count } = await supabaseAdmin
-    .from("marketing_ai_generations")
-    .select("*", { count: "exact", head: true })
-    .eq("tenant_id", tenantId)
-    .eq("usage_date", today);
+  let used = 0;
+  if (migrationReady) {
+    const today = getTodayInBookingTimezone();
+    const { count } = await supabaseAdmin
+      .from("marketing_ai_generations")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("usage_date", today);
+    used = count ?? 0;
+  }
 
-  const used = count ?? 0;
   const limit = limitConfig.daily!;
   const remaining = Math.max(0, limit - used);
 
