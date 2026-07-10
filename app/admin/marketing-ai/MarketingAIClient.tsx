@@ -71,6 +71,7 @@ export default function MarketingAIClient({
   const [extraNotes, setExtraNotes] = useState("");
   const [loadingType, setLoadingType] = useState<MarketingContentType | null>(null);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const [result, setResult] = useState<GeneratedResult | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -115,6 +116,7 @@ export default function MarketingAIClient({
 
   async function handleGenerate(type: MarketingContentType, needsService?: boolean) {
     setError("");
+    setWarning("");
     setCopied(false);
 
     if (!configured) {
@@ -147,6 +149,9 @@ export default function MarketingAIClient({
       }
 
       setResult(data.result);
+      if (data.warning) {
+        setWarning(data.warning);
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare la generare");
       setResult(null);
@@ -208,7 +213,8 @@ export default function MarketingAIClient({
           )}
           {provider === "gemini" && (
             <p className="text-xs text-white/50 mt-2">
-              Google Gemini Free Tier — ~1.500 generări/zi, fără card (cheie din aistudio.google.com).
+              Google Gemini Free Tier — model recomandat: gemini-2.5-flash-lite (~1.500
+              generări/zi, fără card).
             </p>
           )}
         </AdminCard>
@@ -283,6 +289,10 @@ export default function MarketingAIClient({
           </AdminButton>
         ))}
       </div>
+
+      {warning && (
+        <p className="text-amber-300 text-sm">{warning}</p>
+      )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 

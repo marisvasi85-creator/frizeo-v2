@@ -84,13 +84,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await generateMarketingContent(context, {
+    const generated = await generateMarketingContent(context, {
       contentType,
       serviceId: body.serviceId,
       extraNotes: body.extraNotes,
     });
 
-    return NextResponse.json({ result });
+    const { usedTemplateFallback, fallbackWarning, ...result } = generated;
+
+    return NextResponse.json({
+      result,
+      warning: fallbackWarning,
+      usedTemplateFallback: usedTemplateFallback ?? false,
+    });
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Eroare la generare";

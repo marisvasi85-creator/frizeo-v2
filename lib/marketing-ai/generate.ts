@@ -10,6 +10,7 @@ import {
   isMarketingAIConfigured,
 } from "./providers";
 import { generateTemplateContent } from "./providers/template";
+import { isGeminiQuotaError } from "./providers/gemini";
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
@@ -42,7 +43,7 @@ function parseModelJson(raw: string): GenerateMarketingResult {
 export async function generateMarketingContent(
   context: MarketingContext,
   input: GenerateMarketingInput,
-): Promise<GenerateMarketingResult> {
+): Promise<GenerateMarketingResult & { usedTemplateFallback?: boolean; fallbackWarning?: string }> {
   const config = getMarketingAIProviderConfig();
 
   if (config.provider === "template") {
@@ -58,18 +59,35 @@ export async function generateMarketingContent(
 
   const prompt = buildMarketingPrompt(context, input);
 
-  const raw = await provider.complete({
-    messages: [
-      {
-        role: "system",
-        content:
-          "Ești un expert în marketing pentru frizerii din România. Răspunzi doar cu JSON valid.",
-      },
-      { role: "user", content: prompt },
-    ],
-    jsonMode: true,
-    temperature: config.temperature,
-  });
+  try {
+    const raw = await provider.complete({
+      messages: [
+        {
+          role: "system",
+          content:
+            "Ești un expert în marketing pentru frizerii din România. Răspunzi doar cu JSON valid.",
+        },
+        { role: "user", content: prompt },
+      ],
+      jsonMode: true,
+      temperature: config.temperature,
+    });
 
-  return parseModelJson(raw);
+    return parseModelJson(raw);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Eroare la generare";
+
+    if (config.provider === "gemini" && isGeminiQuotaError(message)) {
+      const fallback = generateTemplateContent(context, input);
+      return {
+        ...fallback,
+        usedTemplateFallback: true,
+        fallbackWarning:
+          "Gemini nu are cotă disponibilă acum — am folosit text demo. " +
+          "Setează MARKETING_AI_MODEL=gemini-2.5-flash-lite sau creează o cheie nouă în AI Studio (fără billing).",
+      };
+    }
+
+    throw error;
+  }
 }
