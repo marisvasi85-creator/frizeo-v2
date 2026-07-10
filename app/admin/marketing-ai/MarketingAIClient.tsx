@@ -38,6 +38,16 @@ const ACTIONS: Array<{
   { type: "birthday_offer", label: "Generează ofertă de aniversare", icon: "🎂" },
 ];
 
+type UsageStatus = {
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  planLabel: string;
+  unlimited: boolean;
+  countsTowardLimit: boolean;
+  migrationReady: boolean;
+};
+
 export default function MarketingAIClient({
   role,
   barbers,
@@ -49,6 +59,7 @@ export default function MarketingAIClient({
   modeLabel,
   isFreeTier,
   diagnostics,
+  usage: initialUsage,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -64,7 +75,9 @@ export default function MarketingAIClient({
     openaiKeySet: boolean;
     explicitProvider: string | null;
   };
+  usage: UsageStatus;
 }) {
+  const [usage, setUsage] = useState(initialUsage);
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
   const [barberServices, setBarberServices] = useState(services);
   const [selectedServiceId, setSelectedServiceId] = useState("");
@@ -145,12 +158,18 @@ export default function MarketingAIClient({
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.usage) {
+          setUsage(data.usage);
+        }
         throw new Error(data.error || "Nu am putut genera conținutul");
       }
 
       setResult(data.result);
       if (data.warning) {
         setWarning(data.warning);
+      }
+      if (data.usage) {
+        setUsage(data.usage);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare la generare");
@@ -191,6 +210,28 @@ export default function MarketingAIClient({
             {" · "}
             {provider} / {model}
           </p>
+
+          {!usage.unlimited && usage.limit !== null && (
+            <p className="text-xs text-white/60 mt-2">
+              Generări AI azi:{" "}
+              <span className="text-white font-medium">
+                {usage.used}/{usage.limit}
+              </span>{" "}
+              (plan {usage.planLabel}) — se resetează la miezul nopții
+            </p>
+          )}
+
+          {usage.unlimited && usage.countsTowardLimit && (
+            <p className="text-xs text-white/60 mt-2">
+              Generări AI nelimitate (plan {usage.planLabel})
+            </p>
+          )}
+
+          {!usage.migrationReady && usage.countsTowardLimit && (
+            <p className="text-xs text-amber-300 mt-2">
+              Limitele zilnice se activează după migrarea DB marketing_ai_generations.
+            </p>
+          )}
           {provider === "template" && (
             <p className="text-xs text-white/50 mt-2">
               Mod demo — texte generate din șabloane, fără cost API. Pentru AI real gratuit,
@@ -280,6 +321,11 @@ export default function MarketingAIClient({
             fullWidth
             loading={loadingType === action.type}
             loadingLabel="Se generează..."
+            disabled={
+              !usage.unlimited &&
+              usage.remaining !== null &&
+              usage.remaining <= 0
+            }
             onClick={() => handleGenerate(action.type, action.needsService)}
             className="justify-start gap-3 text-left"
           >

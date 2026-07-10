@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-ai/generate";
+import { getMarketingAIUsageStatus } from "@/lib/marketing-ai/usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import MarketingAIClient from "./MarketingAIClient";
 
@@ -37,6 +38,7 @@ export default async function MarketingAIPage() {
   }));
 
   const aiStatus = getMarketingAIStatus();
+  const usage = await getMarketingAIUsageStatus(barber.tenant_id);
 
   return (
     <div className="space-y-6">
@@ -58,6 +60,7 @@ export default async function MarketingAIPage() {
         modeLabel={aiStatus.modeLabel}
         isFreeTier={aiStatus.isFreeTier}
         diagnostics={aiStatus.diagnostics}
+        usage={usage}
       />
     </div>
   );

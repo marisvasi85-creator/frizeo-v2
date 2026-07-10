@@ -7,6 +7,12 @@ import {
 } from "@/lib/auth/requireTenantAccess";
 import { buildMarketingContext } from "@/lib/marketing-ai/buildContext";
 import { generateMarketingContent } from "@/lib/marketing-ai/generate";
+import { getMarketingAIProviderConfig } from "@/lib/marketing-ai/providers/config";
+import {
+  checkMarketingAILimit,
+  getMarketingAIUsageStatus,
+  recordMarketingAIUsage,
+} from "@/lib/marketing-ai/usage";
 import {
   MARKETING_CONTENT_TYPES,
   type MarketingContentType,
@@ -84,6 +90,14 @@ export async function POST(req: Request) {
   }
 
   try {
+    const limitCheck = await checkMarketingAILimit(auth.tenantId);
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        { error: limitCheck.reason, usage: limitCheck.usage },
+        { status: 429 },
+      );
+    }
+
     const generated = await generateMarketingContent(context, {
       contentType,
       serviceId: body.serviceId,
@@ -91,11 +105,23 @@ export async function POST(req: Request) {
     });
 
     const { usedTemplateFallback, fallbackWarning, ...result } = generated;
+    const providerConfig = getMarketingAIProviderConfig();
+
+    await recordMarketingAIUsage({
+      tenantId: auth.tenantId,
+      barberId,
+      contentType,
+      provider: usedTemplateFallback ? "template-fallback" : providerConfig.provider,
+      countsTowardLimit: providerConfig.provider !== "template",
+    });
+
+    const usage = await getMarketingAIUsageStatus(auth.tenantId);
 
     return NextResponse.json({
       result,
       warning: fallbackWarning,
       usedTemplateFallback: usedTemplateFallback ?? false,
+      usage,
     });
   } catch (error: unknown) {
     const message =
