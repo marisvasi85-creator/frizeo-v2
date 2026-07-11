@@ -9,6 +9,11 @@ import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { reminderEmailTemplate } from "@/lib/email/templates/reminder-email";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
+import {
+  addDaysToDateString,
+  getTodayInBookingTimezone,
+  parseBookingDateTime,
+} from "@/lib/bookings/bookingTimezone";
 
 export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
@@ -20,12 +25,10 @@ export async function GET(req: Request) {
 
   try {
     const now = new Date();
-    const in2h = new Date(
-      now.getTime() + 2 * 60 * 60 * 1000
-    );
+    const in2h = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    const today =
-      now.toISOString().split("T")[0];
+    const today = getTodayInBookingTimezone(now);
+    const tomorrow = addDaysToDateString(today, 1);
 
     await supabaseAdmin
       .from("bookings")
@@ -50,7 +53,7 @@ export async function GET(req: Request) {
         `)
         .eq("status", "confirmed")
         .eq("reminder_2h_sent", false)
-        .eq("date", today);
+        .in("date", [today, tomorrow]);
 
     if (error) {
       console.error(
@@ -72,10 +75,7 @@ export async function GET(req: Request) {
 
     for (const b of bookings || []) {
 
-      const bookingTime =
-        new Date(
-          `${b.date}T${b.start_time}`
-        );
+      const bookingTime = parseBookingDateTime(b.date, b.start_time);
 
       if (
         bookingTime > now &&
@@ -98,27 +98,30 @@ export async function GET(req: Request) {
           try {
             const tokens = await ensureBookingClientTokens(b.id);
 
-            if (!tokens?.cancel_token || !tokens?.reschedule_token) {
-              continue;
+            if (tokens?.cancel_token && tokens?.reschedule_token) {
+              const { cancelUrl, rescheduleUrl } = bookingClientUrls(tokens);
+
+              const bookingLocation = await fetchResolvedBarberLocation(
+                b.barber_id,
+                b.tenant_id,
+              );
+
+              await sendEmail({
+                to: b.client_email,
+                subject: "Reminder programare",
+                html: reminderEmailTemplate({
+                  time: b.start_time,
+                  cancelUrl,
+                  rescheduleUrl,
+                  location: bookingLocation,
+                }),
+              });
+            } else {
+              console.error(
+                "REMINDER EMAIL ERROR: missing tokens for booking",
+                b.id,
+              );
             }
-
-            const { cancelUrl, rescheduleUrl } = bookingClientUrls(tokens);
-
-            const bookingLocation = await fetchResolvedBarberLocation(
-              b.barber_id,
-              b.tenant_id,
-            );
-
-            await sendEmail({
-              to: b.client_email,
-              subject: "Reminder programare",
-              html: reminderEmailTemplate({
-                time: b.start_time,
-                cancelUrl,
-                rescheduleUrl,
-                location: bookingLocation,
-              }),
-            });
 
           } catch (e) {
 
