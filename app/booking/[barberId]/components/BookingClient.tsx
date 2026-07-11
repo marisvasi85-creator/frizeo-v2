@@ -12,6 +12,10 @@ import {
   getTodayInBookingTimezone,
 } from "@/lib/bookings/bookingTimezone";
 import { Slot } from "@/types/slots";
+import {
+  loadSavedClientDetails,
+  saveSavedClientDetails,
+} from "@/lib/bookings/savedClientDetails";
 
 function isValidPhone(phone: string) {
   return /^(\+40|0)[0-9]{9}$/.test(phone.replace(/\s/g, ""));
@@ -54,6 +58,15 @@ export default function BookingClient({
   const calendarRef = useRef<HTMLDivElement>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const saved = loadSavedClientDetails();
+    if (saved) {
+      setName(saved.name);
+      setPhone(saved.phone);
+      setEmail(saved.email);
+    }
+  }, []);
 
   useEffect(() => {
     fetch(`/api/services?barberId=${barberId}`)
@@ -256,6 +269,12 @@ export default function BookingClient({
         return;
       }
 
+      saveSavedClientDetails({
+        name: name.trim(),
+        phone: phone.replace(/\s/g, ""),
+        email: email.trim(),
+      });
+
       router.push(`/booking/confirmed/${createData.bookingId}`);
     } catch {
       setBookingError("Eroare de conexiune. Încearcă din nou.");
@@ -378,13 +397,16 @@ export default function BookingClient({
             placeholder="Nume complet"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
             className="w-full p-3 border rounded-xl"
           />
 
           <input
             placeholder="Telefon (07xxxxxxxx)"
+            type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
+            autoComplete="tel"
             className="w-full p-3 border rounded-xl"
           />
 
@@ -393,6 +415,7 @@ export default function BookingClient({
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
             className="w-full p-3 border rounded-xl"
           />
 
