@@ -1,4 +1,4 @@
-import Footer from "@/app/components/Footer";
+import BookingFooter from "@/app/components/BookingFooter";
 
 export default function BookingLayout({
   children,
@@ -9,7 +9,7 @@ export default function BookingLayout({
     <div className="bg-white min-h-screen">
       {children}
 
-      <Footer />
+      <BookingFooter />
     </div>
   );
 }
