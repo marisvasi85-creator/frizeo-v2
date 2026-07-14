@@ -37,7 +37,8 @@ export default function BookingLinkCard() {
       <p className="text-sm text-white/60 mb-2">Linkul tău de programări</p>
 
       <p className="text-xs text-white/40 mb-3">
-        Trimite acest link clienților pentru programări online.
+        Acest link permanent nu se schimbă când îți actualizezi numele sau
+        datele salonului. Îl poți trimite clienților o singură dată.
       </p>
 
       {loading ? (

@@ -69,26 +69,6 @@ export async function updateProfile(
 
     const instagram_url = instagram.url;
 
-    const slug = (formData.get("slug") as string)
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-
-    const { data: existingSlug } = await supabaseAdmin
-      .from("barbers")
-      .select("id")
-      .eq("tenant_id", barber.tenant_id)
-      .eq("slug", slug)
-      .neq("id", barber.id)
-      .maybeSingle();
-
-    if (existingSlug) {
-      return {
-        success: false,
-        error: "Acest slug este deja folosit de alt frizer.",
-      };
-    }
-
     const locationReady = await hasLocationMigration();
     const useSalonLocation =
       (formData.get("use_salon_location") as string) === "true";
@@ -97,7 +77,6 @@ export async function updateProfile(
     const updatePayload: Record<string, unknown> = {
       display_name,
       phone,
-      slug,
       bio,
       instagram_url,
     };
@@ -157,6 +136,7 @@ export async function updateProfile(
     }
 
     revalidatePath("/admin/profile");
+    revalidatePath(`/booking/${barber.id}`);
     return { success: true };
   } catch (err) {
     console.error("UPDATE PROFILE:", err);

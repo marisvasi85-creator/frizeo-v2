@@ -198,17 +198,17 @@ export default async function ProfilePage({
 
         <div>
           <label className="block text-sm text-white/60 mb-2">
-            Slug booking
+            Link programări
           </label>
 
-          <input
-            type="text"
-            name="slug"
-            defaultValue={barber.slug || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
-          />
+          <p className="text-xs text-white/40">
+            Linkul permanent nu se schimbă când îți actualizezi numele. Îl poți
+            trimite clienților fără griji.
+          </p>
 
-          <p className="text-xs text-white/40 mt-2">Exemplu: ion-popescu</p>
+          <p className="mt-2 text-sm text-white/50 font-mono break-all">
+            /booking/{barber.id}
+          </p>
         </div>
 
         <div>

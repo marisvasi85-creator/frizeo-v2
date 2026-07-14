@@ -3,6 +3,7 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import {
   publicBookingUrl,
   publicSalonUrl,
+  stableBookingUrl,
 } from "@/lib/booking/publicBookingPath";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
@@ -36,12 +37,16 @@ export async function GET() {
     });
 
     const appUrl = getAppUrl();
-
-    const url = barberSlug
+    const stableUrl = stableBookingUrl(barber.id, appUrl);
+    const prettyUrl = barberSlug
       ? publicBookingUrl(tenantSlug, barberSlug, appUrl)
       : publicSalonUrl(tenantSlug, appUrl);
 
-    return NextResponse.json({ url });
+    return NextResponse.json({
+      url: stableUrl,
+      stableUrl,
+      prettyUrl,
+    });
   } catch (error) {
     console.error("barber/public-link:", error);
     return NextResponse.json(

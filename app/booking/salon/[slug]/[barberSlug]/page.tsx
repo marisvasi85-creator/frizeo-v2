@@ -1,43 +1,13 @@
-import BookingClient from "@/app/booking/[barberId]/components/BookingClient";
 import type { Metadata } from "next";
-import JsonLd from "@/app/components/JsonLd";
-import PublicLocationCard from "@/app/components/location/PublicLocationCard";
+import { permanentRedirect } from "next/navigation";
+import BarberBookingView from "@/app/booking/_components/BarberBookingView";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { barberBookingJsonLd } from "@/lib/site/jsonLd";
-import { resolveBarberLocation, formatLocationAddress } from "@/lib/location/resolveLocation";
+import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
-
-async function getSalon(slug: string) {
-  const { data, error } = await supabaseAdmin
-    .from("tenants")
-    .select("*")
-    .eq("slug", slug)
-    .single();
-
-  if (error) {
-    console.error("GET SALON:", error);
-    return null;
-  }
-
-  return data;
-}
-
-async function getActiveBarber(tenantId: string, barberSlug: string) {
-  const { data, error } = await supabaseAdmin
-    .from("barbers")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .eq("slug", barberSlug)
-    .eq("active", true)
-    .single();
-
-  if (error) {
-    console.error("GET BARBER:", error);
-    return null;
-  }
-
-  return data;
-}
+import {
+  resolveBarberBySlug,
+  resolveTenantBySlug,
+} from "@/lib/slugs/slugRedirects";
 
 export async function generateMetadata({
   params,
@@ -48,9 +18,9 @@ export async function generateMetadata({
   }>;
 }): Promise<Metadata> {
   const { slug, barberSlug } = await params;
-  const salon = await getSalon(slug);
+  const resolvedTenant = await resolveTenantBySlug(slug);
 
-  if (!salon) {
+  if (!resolvedTenant) {
     return createPageMetadata({
       title: "Salon inexistent",
       description: "Pagina salonului nu a fost găsită.",
@@ -59,9 +29,12 @@ export async function generateMetadata({
     });
   }
 
-  const barber = await getActiveBarber(salon.id, barberSlug);
+  const resolvedBarber = await resolveBarberBySlug(
+    resolvedTenant.tenant.id,
+    barberSlug
+  );
 
-  if (!barber) {
+  if (!resolvedBarber) {
     return createPageMetadata({
       title: "Frizer indisponibil",
       description: `${barberSlug} nu este disponibil pentru programări online.`,
@@ -70,13 +43,17 @@ export async function generateMetadata({
     });
   }
 
-  const barberName = barber.display_name || "Frizer";
+  const barberName = String(resolvedBarber.barber.display_name || "Frizer");
+  const canonicalPath = publicBookingPath(
+    resolvedTenant.canonicalSlug,
+    resolvedBarber.canonicalSlug
+  );
 
   return createPageMetadata({
     title: `Programare online — ${barberName}`,
-    description: `Programează-te la ${barberName}, ${salon.name}. Alege serviciul, data și ora disponibilă.`,
-    path: `/booking/salon/${slug}/${barberSlug}`,
-    keywords: [barberName, salon.name, "programare frizer online"],
+    description: `Programează-te la ${barberName}, ${resolvedTenant.tenant.name}. Alege serviciul, data și ora disponibilă.`,
+    path: canonicalPath,
+    keywords: [barberName, String(resolvedTenant.tenant.name), "programare frizer online"],
   });
 }
 
@@ -89,16 +66,16 @@ export default async function Page({
   }>;
 }) {
   const { slug, barberSlug } = await params;
-  const salon = await getSalon(slug);
+  const resolvedTenant = await resolveTenantBySlug(slug);
 
-  if (!salon) {
+  if (!resolvedTenant) {
     return <div>Salon inexistent</div>;
   }
 
   const { data: inactiveBarber } = await supabaseAdmin
     .from("barbers")
     .select("id, display_name")
-    .eq("tenant_id", salon.id)
+    .eq("tenant_id", resolvedTenant.tenant.id)
     .eq("slug", barberSlug)
     .eq("active", false)
     .maybeSingle();
@@ -111,119 +88,29 @@ export default async function Page({
     );
   }
 
-  const barber = await getActiveBarber(salon.id, barberSlug);
+  const resolvedBarber = await resolveBarberBySlug(
+    resolvedTenant.tenant.id,
+    barberSlug
+  );
 
-  if (!barber) {
+  if (!resolvedBarber) {
     return <div>Frizer inexistent</div>;
   }
 
-  const barberName = barber.display_name || "Frizer";
-  const bookingLocation = resolveBarberLocation(salon, barber);
+  if (resolvedTenant.redirected || resolvedBarber.redirected) {
+    permanentRedirect(
+      publicBookingPath(
+        resolvedTenant.canonicalSlug,
+        resolvedBarber.canonicalSlug
+      )
+    );
+  }
 
   return (
-    <>
-      <JsonLd
-        data={barberBookingJsonLd({
-          salon: {
-            name: salon.name,
-            slug: salon.slug,
-            phone: salon.phone,
-            address: formatLocationAddress(salon) || salon.address,
-            description: salon.description,
-            logoUrl: salon.logo_url,
-          },
-          barberName,
-          barberSlug,
-        })}
-      />
-      <div className="bg-white min-h-screen">
-        <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="bg-white border rounded-2xl p-6 mb-6">
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-              {salon.logo_url && (
-                <img
-                  src={salon.logo_url}
-                  alt={`Logo ${salon.name}`}
-                  className="w-24 h-24 rounded-2xl object-cover"
-                />
-              )}
-
-              <div>
-                <h1 className="text-3xl font-bold">{salon.name}</h1>
-
-                {salon.phone && (
-                  <p className="text-gray-600 mt-2">📞 {salon.phone}</p>
-                )}
-              </div>
-            </div>
-
-            {salon.description && (
-              <p className="mt-4 text-gray-700">{salon.description}</p>
-            )}
-          </div>
-
-          <div className="bg-white border rounded-2xl p-6 mb-8">
-            <div className="flex items-center gap-4">
-              {barber.avatar_url ? (
-                <img
-                  src={barber.avatar_url}
-                  alt={`${barberName} — ${salon.name}`}
-                  className="w-20 h-20 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-gray-200" />
-              )}
-
-              <div>
-                <h2 className="text-xl font-semibold">{barberName}</h2>
-
-                {barber.bio && (
-                  <p className="text-gray-600">{barber.bio}</p>
-                )}
-
-                {barber.instagram_url && (
-                  <a
-                    href={barber.instagram_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
-                  >
-                    Instagram
-                  </a>
-                )}
-                {barber.facebook_url && (
-                  <a
-                    href={barber.facebook_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
-                  >
-                    Facebook
-                  </a>
-                )}
-                {barber.tiktok_url && (
-                  <a
-                    href={barber.tiktok_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
-                  >
-                    TikTok
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <BookingClient barberId={barber.id} barberName={barberName} />
-
-          {bookingLocation && (
-            <div className="mt-8 max-w-xl mx-auto">
-              <PublicLocationCard location={bookingLocation} />
-            </div>
-          )}
-        </div>
-      </div>
-    </>
+    <BarberBookingView
+      salon={resolvedTenant.tenant}
+      barber={resolvedBarber.barber}
+      barberSlug={resolvedBarber.canonicalSlug}
+    />
   );
 }

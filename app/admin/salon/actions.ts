@@ -42,11 +42,6 @@ export async function updateSalon(
 
     const name = formData.get("name") as string;
 
-    const slug = (formData.get("slug") as string)
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "-");
-
     const phone = (formData.get("phone") as string) || null;
     const description = (formData.get("description") as string) || null;
     const locationReady = await hasLocationMigration();
@@ -60,7 +55,6 @@ export async function updateSalon(
       .from("tenants")
       .update({
         name,
-        slug,
         phone,
         description,
         ...location,
@@ -86,7 +80,17 @@ export async function updateSalon(
     }
 
     revalidatePath("/admin/salon");
-    revalidatePath(`/booking/salon/${slug}`);
+
+    const { data: tenant } = await supabaseAdmin
+      .from("tenants")
+      .select("slug")
+      .eq("id", barber.tenant_id)
+      .single();
+
+    if (tenant?.slug) {
+      revalidatePath(`/booking/salon/${tenant.slug}`);
+    }
+
     return { success: true };
   } catch (err) {
     console.error("UPDATE SALON:", err);

@@ -1,6 +1,6 @@
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
-import { publicBookingUrl } from "@/lib/booking/publicBookingPath";
+import { stableBookingUrl } from "@/lib/booking/publicBookingPath";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { MarketingContext } from "./types";
@@ -32,8 +32,8 @@ export async function buildMarketingContext(
     .order("sort_order", { ascending: true });
 
   const tenantSlug = await ensureTenantSlug(tenant);
-  const barberSlug = await ensureBarberSlug(barber);
-  const bookingUrl = publicBookingUrl(tenantSlug, barberSlug, getAppUrl());
+  await ensureBarberSlug(barber);
+  const bookingUrl = stableBookingUrl(barber.id, getAppUrl());
 
   return {
     salonName: tenant.name,

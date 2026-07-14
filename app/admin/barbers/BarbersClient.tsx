@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import {
   publicBookingPath,
   publicBookingUrl,
+  stableBookingPath,
+  stableBookingUrl,
 } from "@/lib/booking/publicBookingPath";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
@@ -339,17 +341,27 @@ onChange={(e) => {
     {publicBookingPath(tenantSlug, barber.slug)}
   </div>
 )}
-{barber.slug && tenantSlug && (() => {
+{tenantSlug && (() => {
   const slug = barber.slug;
-  const bookingPath = publicBookingPath(tenantSlug, slug);
-  const bookingUrl = publicBookingUrl(tenantSlug, slug, appUrl);
+  const stablePath = stableBookingPath(barber.id);
+  const stableUrl = stableBookingUrl(barber.id, appUrl);
+  const bookingPath = slug ? publicBookingPath(tenantSlug, slug) : stablePath;
+  const bookingUrl = slug
+    ? publicBookingUrl(tenantSlug, slug, appUrl)
+    : stableUrl;
 
   return (
   <div className="mt-2 space-y-2">
 
     <div className="text-xs text-white/40 break-all">
-  {bookingUrl}
-</div>
+      Permanent: {stableUrl}
+    </div>
+
+    {slug && (
+      <div className="text-xs text-white/30 break-all">
+        Scurt: {bookingUrl}
+      </div>
+    )}
 
     <div className="flex gap-2">
 
@@ -357,7 +369,7 @@ onChange={(e) => {
         variant="secondary"
         size="sm"
         onClick={() =>
-          navigator.clipboard.writeText(bookingUrl)
+          navigator.clipboard.writeText(stableUrl)
         }
         className="text-xs px-2 py-1"
       >

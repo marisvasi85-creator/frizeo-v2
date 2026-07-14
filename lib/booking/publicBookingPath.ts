@@ -1,3 +1,13 @@
+export function stableBookingPath(barberId: string) {
+  return `/booking/${barberId}`;
+}
+
+export function stableBookingUrl(barberId: string, appUrl?: string) {
+  const base = appUrl || "http://localhost:3000";
+
+  return `${base.replace(/\/$/, "")}${stableBookingPath(barberId)}`;
+}
+
 export function publicBookingPath(
   tenantSlug: string,
   barberSlug: string

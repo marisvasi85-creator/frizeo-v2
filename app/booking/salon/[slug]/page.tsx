@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 import JsonLd from "@/app/components/JsonLd";
 import PublicLocationCard from "@/app/components/location/PublicLocationCard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -7,21 +8,7 @@ import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 import { resolveLocation, formatLocationAddress } from "@/lib/location/resolveLocation";
 import { salonJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
-
-async function getSalon(slug: string) {
-  const { data, error } = await supabaseAdmin
-    .from("tenants")
-    .select("*")
-    .eq("slug", slug)
-    .single();
-
-  if (error) {
-    console.error("GET SALON:", error);
-    return null;
-  }
-
-  return data;
-}
+import { resolveTenantBySlug } from "@/lib/slugs/slugRedirects";
 
 export async function generateMetadata({
   params,
@@ -29,9 +16,9 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const salon = await getSalon(slug);
+  const resolved = await resolveTenantBySlug(slug);
 
-  if (!salon) {
+  if (!resolved) {
     return createPageMetadata({
       title: "Salon inexistent",
       description: "Pagina salonului nu a fost găsită.",
@@ -40,15 +27,16 @@ export async function generateMetadata({
     });
   }
 
+  const salon = resolved.tenant;
   const description =
-    salon.description?.trim().slice(0, 160) ||
+    (typeof salon.description === "string" ? salon.description.trim().slice(0, 160) : "") ||
     `Programează-te online la ${salon.name}. Alege frizerul și ora disponibilă.`;
 
   return createPageMetadata({
-    title: salon.name,
+    title: String(salon.name),
     description,
-    path: `/booking/salon/${slug}`,
-    keywords: [salon.name, "programări online frizerie", "salon"],
+    path: `/booking/salon/${resolved.canonicalSlug}`,
+    keywords: [String(salon.name), "programări online frizerie", "salon"],
   });
 }
 
@@ -58,21 +46,27 @@ export default async function SalonPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const salon = await getSalon(slug);
+  const resolved = await resolveTenantBySlug(slug);
 
-  const { data: gallery } = await supabaseAdmin
-    .from("salon_gallery")
-    .select("*")
-    .eq("tenant_id", salon?.id ?? "")
-    .order("created_at");
-
-  if (!salon) {
+  if (!resolved) {
     return (
       <div className="max-w-xl mx-auto p-6">
         Salon inexistent.
       </div>
     );
   }
+
+  if (resolved.redirected) {
+    permanentRedirect(`/booking/salon/${resolved.canonicalSlug}`);
+  }
+
+  const salon = resolved.tenant;
+
+  const { data: gallery } = await supabaseAdmin
+    .from("salon_gallery")
+    .select("*")
+    .eq("tenant_id", salon.id)
+    .order("created_at");
 
   const salonLocation = resolveLocation(salon);
 
@@ -95,17 +89,17 @@ export default async function SalonPage({
     <>
       <JsonLd
         data={salonJsonLd({
-          name: salon.name,
+          name: String(salon.name),
           slug: salon.slug,
-          phone: salon.phone,
-          address: formatLocationAddress(salon) || salon.address,
-          description: salon.description,
-          logoUrl: salon.logo_url,
+          phone: typeof salon.phone === "string" ? salon.phone : null,
+          address: formatLocationAddress(salon) || (typeof salon.address === "string" ? salon.address : null),
+          description: typeof salon.description === "string" ? salon.description : null,
+          logoUrl: typeof salon.logo_url === "string" ? salon.logo_url : null,
         })}
       />
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">
-          {salon.logo_url && (
+          {typeof salon.logo_url === "string" && salon.logo_url && (
             <img
               src={salon.logo_url}
               alt={`Logo ${salon.name}`}
@@ -113,13 +107,13 @@ export default async function SalonPage({
             />
           )}
 
-          <h1 className="text-3xl font-bold">{salon.name}</h1>
+          <h1 className="text-3xl font-bold">{String(salon.name)}</h1>
 
-          {salon.phone && (
+          {typeof salon.phone === "string" && salon.phone && (
             <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
           )}
 
-          {salon.description && (
+          {typeof salon.description === "string" && salon.description && (
             <p className="text-gray-700 mt-4 max-w-2xl mx-auto">
               {salon.description}
             </p>
@@ -150,7 +144,7 @@ export default async function SalonPage({
             {barbers?.map((barber) => (
               <Link
                 key={barber.id}
-                href={publicBookingPath(slug, barber.slug)}
+                href={publicBookingPath(salon.slug, barber.slug)}
                 className="block border rounded-2xl p-5 hover:shadow-md transition bg-white"
               >
                 <div className="flex items-center gap-4">

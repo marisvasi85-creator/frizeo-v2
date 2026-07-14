@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { publicBookingPath } from "@/lib/booking/publicBookingPath";
+import { stableBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 export const metadata = createPageMetadata({
@@ -38,11 +38,7 @@ export default async function BarbersPage() {
       ) : (
         <div className="grid gap-4">
           {barbers.map((b) => {
-            const tenantSlug = (b.tenant as { slug?: string } | null)?.slug;
-            const href =
-              tenantSlug && b.slug
-                ? publicBookingPath(tenantSlug, b.slug)
-                : `/booking/${b.id}`;
+            const href = stableBookingPath(b.id);
 
             return (
               <Link
