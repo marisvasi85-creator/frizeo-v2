@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import AddToHomeScreenPrompt from "@/app/components/pwa/AddToHomeScreenPrompt";
 import RegisterServiceWorker from "@/app/components/pwa/RegisterServiceWorker";
@@ -45,12 +46,20 @@ export default function InstallAppPrompt({
   const snoozeScope = resolveSnoozeScope(variant, pathname);
   const enabled =
     variant === "admin" ? true : isAllowedPwaStartPath(pathname);
+  const [showPrompt, setShowPrompt] = useState(false);
 
   usePwaManifest({
     startPath: enabled ? startPath : null,
     variant,
     label,
   });
+
+  useEffect(() => {
+    if (!enabled) return;
+    // Defer install prompt so it doesn't compete with first paint.
+    const id = window.setTimeout(() => setShowPrompt(true), 4000);
+    return () => window.clearTimeout(id);
+  }, [enabled]);
 
   if (!enabled) {
     return null;
@@ -59,7 +68,9 @@ export default function InstallAppPrompt({
   return (
     <>
       <RegisterServiceWorker />
-      <AddToHomeScreenPrompt variant={variant} snoozeScope={snoozeScope} />
+      {showPrompt && (
+        <AddToHomeScreenPrompt variant={variant} snoozeScope={snoozeScope} />
+      )}
     </>
   );
 }
