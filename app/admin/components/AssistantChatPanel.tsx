@@ -10,15 +10,15 @@ export type AssistantChatMessage = {
 };
 
 const DEFAULT_SUGGESTIONS = [
-  "Ce programări am azi?",
+  "Ce am azi?",
+  "Cine e următorul client?",
+  "Închide mâine (zi liberă)",
   "Ce programări am mâine?",
   "Adaugă un serviciu de 60 de minute",
-  "Care sunt cele mai populare servicii?",
-  "Ce plan Frizeo am?",
 ];
 
 export function buildWelcomeMessage(displayName: string): string {
-  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți arăt programările și serviciile, să adaug un serviciu sau să mut/anulez o programare (cu confirmare). Prețul e opțional. Nu calculez încasări.`;
+  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să adaug servicii, sau să setez zi liberă / concediu (cu confirmare). Prețul e opțional. Nu calculez încasări.`;
 }
 
 type AssistantChatPanelProps = {
