@@ -205,7 +205,11 @@ export async function createVacationTool(
 
   let upsertError = firstAttempt.error;
   if (upsertError && isMissingVacationPeriodColumnError(upsertError.message)) {
-    const fallbackRows = rows.map(({ vacation_period_id: _id, ...row }) => row);
+    const fallbackRows = rows.map((row) => {
+      const { vacation_period_id, ...rest } = row;
+      void vacation_period_id;
+      return rest;
+    });
     const secondAttempt = await supabaseAdmin
       .from("barber_day_overrides")
       .upsert(fallbackRows, { onConflict: "barber_id,date" });
