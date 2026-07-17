@@ -22,6 +22,8 @@ const ownerItems = [
 
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
 
+  { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
+
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];
 
@@ -39,19 +41,22 @@ const barberItems = [
   { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
 
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
+
+  { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
 ];
 
 
 export default function Sidebar({
   role,
+  assistantEnabled = false,
 }: {
   role: string | null;
+  assistantEnabled?: boolean;
 }) {
   const pathname = usePathname();
-  const navItems =
-  role === "owner"
-    ? ownerItems
-    : barberItems;
+  const navItems = (role === "owner" ? ownerItems : barberItems).filter(
+    (item) => assistantEnabled || item.href !== "/admin/assistant",
+  );
   return (
     <aside className="hidden md:flex w-64 border-r border-white/10 p-6 flex-col justify-between">
 
