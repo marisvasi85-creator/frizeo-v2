@@ -1,14 +1,10 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export async function getCurrentBarberInTenant() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export const getCurrentBarberInTenant = cache(async () => {
+  const user = await getAuthUser();
   if (!user) return null;
 
   const tenant = await getActiveTenant();
@@ -38,4 +34,4 @@ export async function getCurrentBarberInTenant() {
   });
 
   return fallback;
-}
+});

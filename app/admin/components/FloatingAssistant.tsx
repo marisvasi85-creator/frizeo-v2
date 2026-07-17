@@ -1,8 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import AssistantChatPanel from "./AssistantChatPanel";
+
+const AssistantChatPanel = dynamic(() => import("./AssistantChatPanel"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center text-sm text-white/50 p-6">
+      Se încarcă Assistant…
+    </div>
+  ),
+});
 
 type FloatingAssistantProps = {
   configured: boolean;
@@ -15,6 +24,7 @@ export default function FloatingAssistant({
 }: FloatingAssistantProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [hasOpened, setHasOpened] = useState(false);
   const hideOnPage = pathname.startsWith("/admin/assistant");
 
   useEffect(() => {
@@ -29,6 +39,11 @@ export default function FloatingAssistant({
   }, [open]);
 
   if (hideOnPage) return null;
+
+  function openAssistant() {
+    setHasOpened(true);
+    setOpen(true);
+  }
 
   return (
     <>
@@ -68,20 +83,22 @@ export default function FloatingAssistant({
             </button>
           </div>
 
-          <AssistantChatPanel
-            configured={configured}
-            displayName={displayName}
-            compact
-            className="flex-1"
-          />
+          {/* Load chat JS only after the FAB is opened at least once. */}
+          {hasOpened && (
+            <AssistantChatPanel
+              configured={configured}
+              displayName={displayName}
+              compact
+              className="flex-1"
+            />
+          )}
         </div>
       </div>
 
-      {/* When open, hide the FAB — close via header ✕ so it never covers Trimite. */}
       {!open && (
         <button
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={openAssistant}
           aria-label="Deschide Frizeo Assistant"
           className="fixed z-[90] right-3 md:right-6 bottom-20 md:bottom-6 h-14 w-14 rounded-full shadow-lg shadow-black/40 transition flex items-center justify-center text-2xl bg-white text-black hover:scale-105"
         >
