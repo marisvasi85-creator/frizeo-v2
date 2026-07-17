@@ -1,8 +1,11 @@
 import type { AssistantToolDefinition } from "../types";
+import { cancelBookingTool } from "./cancelBooking";
+import { createServiceTool } from "./createService";
 import { listBookingsTool } from "./listBookings";
 import { listServicesTool } from "./listServices";
 import { popularServicesTool } from "./popularServices";
 import { subscriptionStatusTool } from "./subscriptionStatus";
+import { updateBookingTool } from "./updateBooking";
 
 export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
@@ -84,6 +87,90 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
       properties: {},
     },
     execute: subscriptionStatusTool,
+  },
+  {
+    name: "create_service",
+    description:
+      "Adaugă un serviciu nou. Prețul este opțional. IMPORTANT: prima dată apelează fără confirmed (sau confirmed=false) ca să propui acțiunea; doar după ce utilizatorul confirmă, apelează din nou cu confirmed=true.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Numele serviciului (ex: Tuns clasic).",
+        },
+        duration_minutes: {
+          type: "number",
+          description: "Durata în minute. Valori tipice: 15,30,45,60,75,90,120.",
+        },
+        price_ron: {
+          type: "number",
+          description: "Preț opțional în lei. Poate lipsi.",
+        },
+        barber_id: {
+          type: "string",
+          description: "Frizerul (owner/manager). Pentru barber se folosește profilul curent.",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a utilizatorului.",
+        },
+      },
+      required: ["name", "duration_minutes"],
+    },
+    execute: createServiceTool,
+  },
+  {
+    name: "update_booking",
+    description:
+      "Mută o programare pe altă dată/oră. Folosește list_bookings ca să afli booking_id. IMPORTANT: cere confirmare — confirmed=true doar după ce utilizatorul acceptă.",
+    parameters: {
+      type: "object",
+      properties: {
+        booking_id: {
+          type: "string",
+          description: "ID-ul programării.",
+        },
+        date: {
+          type: "string",
+          description: "Noua dată YYYY-MM-DD.",
+        },
+        start_time: {
+          type: "string",
+          description: "Noua oră HH:MM.",
+        },
+        barber_service_id: {
+          type: "string",
+          description: "Opțional: schimbă și serviciul.",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+      required: ["booking_id", "date", "start_time"],
+    },
+    execute: updateBookingTool,
+  },
+  {
+    name: "cancel_booking",
+    description:
+      "Anulează o programare. Folosește list_bookings ca să afli booking_id. IMPORTANT: confirmed=true doar după confirmarea utilizatorului.",
+    parameters: {
+      type: "object",
+      properties: {
+        booking_id: {
+          type: "string",
+          description: "ID-ul programării.",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+      required: ["booking_id"],
+    },
+    execute: cancelBookingTool,
   },
 ];
 
