@@ -16,6 +16,8 @@ function AnalyticsInner() {
   const loadedCount = useRef(0);
   const scriptTargets = useRef(0);
   const skipInitialPageView = useRef(true);
+  const isAdminRoute =
+    pathname === "/admin" || pathname.startsWith("/admin/");
 
   useLayoutEffect(() => {
     setConsent(hasAnalyticsConsent());
@@ -26,13 +28,13 @@ function AnalyticsInner() {
   }, []);
 
   useEffect(() => {
-    if (!consent || !ready) return;
+    if (isAdminRoute || !consent || !ready) return;
     if (skipInitialPageView.current) {
       skipInitialPageView.current = false;
       return;
     }
     trackPageView(pathname, searchParams.toString());
-  }, [pathname, searchParams, consent, ready]);
+  }, [pathname, searchParams, consent, ready, isAdminRoute]);
 
   function onScriptLoaded() {
     loadedCount.current += 1;
@@ -42,7 +44,7 @@ function AnalyticsInner() {
     setReady(true);
   }
 
-  if (!consent || !config.isConfigured) return null;
+  if (isAdminRoute || !consent || !config.isConfigured) return null;
 
   if (config.gtmId) {
     scriptTargets.current = 1;

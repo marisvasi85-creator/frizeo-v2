@@ -1,6 +1,7 @@
 import BookingClient from "@/app/booking/[barberId]/components/BookingClient";
 import JsonLd from "@/app/components/JsonLd";
 import PublicLocationCard from "@/app/components/location/PublicLocationCard";
+import Image from "next/image";
 import { barberBookingJsonLd } from "@/lib/site/jsonLd";
 import {
   resolveBarberLocation,
@@ -62,10 +63,13 @@ export default function BarberBookingView({
           <div className="bg-white border rounded-2xl p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-6 items-center">
               {salon.logo_url && (
-                <img
+                <Image
                   src={salon.logo_url}
                   alt={`Logo ${salon.name}`}
+                  width={96}
+                  height={96}
                   className="w-24 h-24 rounded-2xl object-cover"
+                  priority
                 />
               )}
 
@@ -86,9 +90,11 @@ export default function BarberBookingView({
           <div className="bg-white border rounded-2xl p-6 mb-8">
             <div className="flex items-center gap-4">
               {barber.avatar_url ? (
-                <img
+                <Image
                   src={barber.avatar_url}
                   alt={`${barberName} — ${String(salon.name || "Salon")}`}
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-full object-cover"
                 />
               ) : (

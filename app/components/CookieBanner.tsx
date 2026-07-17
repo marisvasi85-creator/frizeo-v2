@@ -17,12 +17,14 @@ export default function CookieBanner() {
   const isAuthPage = AUTH_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
+  const isAdminPage =
+    pathname === "/admin" || pathname.startsWith("/admin/");
 
   useEffect(() => {
-    if (isAuthPage) return;
+    if (isAuthPage || isAdminPage) return;
     if (localStorage.getItem(CONSENT_STORAGE_KEY)) return;
     setVisible(true);
-  }, [isAuthPage]);
+  }, [isAuthPage, isAdminPage]);
 
   function accept() {
     localStorage.setItem(CONSENT_STORAGE_KEY, "accepted");
@@ -36,7 +38,7 @@ export default function CookieBanner() {
     setVisible(false);
   }
 
-  if (!visible || isAuthPage) return null;
+  if (!visible || isAuthPage || isAdminPage) return null;
 
   return (
     <div
