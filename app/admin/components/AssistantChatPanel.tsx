@@ -50,19 +50,20 @@ export default function AssistantChatPanel({
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const baseInputRef = useRef("");
 
-  const appendFinalTranscript = useCallback((text: string) => {
-    setInput((prev) => {
-      const next = prev.trim() ? `${prev.trim()} ${text}` : text;
-      baseInputRef.current = next;
-      return next;
-    });
-    setInterim("");
-  }, []);
+  const handleTranscript = useCallback(
+    ({ committed, interim: live }: { committed: string; interim: string }) => {
+      const base = baseInputRef.current.trim();
+      const dictated = committed.trim();
+      const next = [base, dictated].filter(Boolean).join(" ");
+      setInput(next);
+      setInterim(live);
+    },
+    [],
+  );
 
   const dictation = useSpeechDictation({
     lang: "ro-RO",
-    onFinalTranscript: appendFinalTranscript,
-    onInterimTranscript: setInterim,
+    onTranscript: handleTranscript,
   });
 
   useEffect(() => {
@@ -74,6 +75,12 @@ export default function AssistantChatPanel({
       setInterim("");
     }
   }, [dictation.listening]);
+
+  function composeCurrentText() {
+    const live = interim.trim();
+    if (!live) return input;
+    return `${input.trim()}${input.trim() ? " " : ""}${live}`;
+  }
 
   async function sendMessage(raw: string) {
     const content = raw.trim();
@@ -140,10 +147,7 @@ export default function AssistantChatPanel({
     }
   }
 
-  const displayValue =
-    dictation.listening && interim
-      ? `${input}${input.trim() ? " " : ""}${interim}`
-      : input;
+  const displayValue = composeCurrentText();
 
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
@@ -200,7 +204,7 @@ export default function AssistantChatPanel({
         {dictation.listening && (
           <div className="text-[11px] text-red-300 flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
-            Ascult… apeasă din nou pe microfon ca să oprești
+            Ascult… oprește-se singur după ce termini, sau apasă microfonul
           </div>
         )}
 
@@ -208,11 +212,7 @@ export default function AssistantChatPanel({
           className="flex gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            void sendMessage(
-              dictation.listening && interim
-                ? `${input}${input.trim() ? " " : ""}${interim}`
-                : input,
-            );
+            void sendMessage(composeCurrentText());
           }}
         >
           <input
@@ -238,6 +238,7 @@ export default function AssistantChatPanel({
                 dictation.clearError();
                 if (!dictation.listening) {
                   baseInputRef.current = input;
+                  setInterim("");
                 }
                 dictation.toggle();
               }}
@@ -259,11 +260,7 @@ export default function AssistantChatPanel({
 
           <button
             type="submit"
-            disabled={
-              loading ||
-              !configured ||
-              !(dictation.listening && interim ? interim : input).trim()
-            }
+            disabled={loading || !configured || !composeCurrentText().trim()}
             className="rounded-xl bg-white text-black px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0"
           >
             Trimite

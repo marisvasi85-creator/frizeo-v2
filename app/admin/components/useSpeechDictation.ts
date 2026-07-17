@@ -24,6 +24,7 @@ type SpeechRecognitionEventLike = {
   resultIndex: number;
   results: ArrayLike<{
     isFinal: boolean;
+    length: number;
     0: { transcript: string };
   }>;
 };
@@ -47,16 +48,21 @@ function subscribeSpeechSupport() {
   return () => {};
 }
 
+export type DictationTranscriptUpdate = {
+  /** Full final text for the current recognition session (not a delta). */
+  committed: string;
+  /** Live partial text still being recognized. */
+  interim: string;
+};
+
 type UseSpeechDictationOptions = {
   lang?: string;
-  onFinalTranscript: (text: string) => void;
-  onInterimTranscript?: (text: string) => void;
+  onTranscript: (update: DictationTranscriptUpdate) => void;
 };
 
 export function useSpeechDictation({
   lang = "ro-RO",
-  onFinalTranscript,
-  onInterimTranscript,
+  onTranscript,
 }: UseSpeechDictationOptions) {
   const supported = useSyncExternalStore(
     subscribeSpeechSupport,
@@ -67,13 +73,12 @@ export function useSpeechDictation({
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
-  const onFinalRef = useRef(onFinalTranscript);
-  const onInterimRef = useRef(onInterimTranscript);
+  const onTranscriptRef = useRef(onTranscript);
+  const sessionCommittedRef = useRef("");
 
   useEffect(() => {
-    onFinalRef.current = onFinalTranscript;
-    onInterimRef.current = onInterimTranscript;
-  }, [onFinalTranscript, onInterimTranscript]);
+    onTranscriptRef.current = onTranscript;
+  }, [onTranscript]);
 
   const stop = useCallback(() => {
     shouldListenRef.current = false;
@@ -102,33 +107,35 @@ export function useSpeechDictation({
     stop();
     setError(null);
     shouldListenRef.current = true;
+    sessionCommittedRef.current = "";
 
     const recognition = new Ctor();
     recognition.lang = lang;
-    recognition.continuous = true;
+    // One utterance at a time is more stable on mobile Chrome and avoids
+    // duplicated growing finals from continuous restarts.
+    recognition.continuous = false;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-      let finalChunk = "";
-      let interimChunk = "";
+      let committed = "";
+      let interim = "";
 
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      // Rebuild from the full results list — never append deltas.
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
         const transcript = result[0]?.transcript ?? "";
         if (result.isFinal) {
-          finalChunk += transcript;
+          committed += transcript;
         } else {
-          interimChunk += transcript;
+          interim += transcript;
         }
       }
 
-      if (interimChunk) {
-        onInterimRef.current?.(interimChunk.trim());
-      }
+      committed = committed.replace(/\s+/g, " ").trim();
+      interim = interim.replace(/\s+/g, " ").trim();
+      sessionCommittedRef.current = committed;
 
-      if (finalChunk.trim()) {
-        onFinalRef.current(finalChunk.trim());
-      }
+      onTranscriptRef.current({ committed, interim });
     };
 
     recognition.onerror = (event) => {
@@ -148,14 +155,14 @@ export function useSpeechDictation({
     };
 
     recognition.onend = () => {
-      if (shouldListenRef.current) {
-        try {
-          recognition.start();
-          return;
-        } catch {
-          shouldListenRef.current = false;
-        }
+      // Flush any remaining interim as committed when recognition ends.
+      if (sessionCommittedRef.current) {
+        onTranscriptRef.current({
+          committed: sessionCommittedRef.current,
+          interim: "",
+        });
       }
+      shouldListenRef.current = false;
       setListening(false);
     };
 
