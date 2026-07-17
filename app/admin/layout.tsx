@@ -2,9 +2,14 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
+import FloatingAssistant from "./components/FloatingAssistant";
 import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
-import { isFrizeoAssistantEnabled } from "@/lib/assistant/config";
+import {
+  isAssistantLlmConfigured,
+  isFrizeoAssistantEnabled,
+} from "@/lib/assistant/config";
+import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
 
 export const metadata = noIndexMetadata;
@@ -17,6 +22,7 @@ export default async function AdminLayout({
   const supabase = await createSupabaseServerClient();
   const role = await getCurrentRole();
   const assistantEnabled = isFrizeoAssistantEnabled();
+  const barber = assistantEnabled ? await getCurrentBarberInTenant() : null;
 
   const {
     data: { user },
@@ -36,6 +42,12 @@ export default async function AdminLayout({
       </main>
 
       <MobileNav role={role} assistantEnabled={assistantEnabled} />
+      {assistantEnabled && (
+        <FloatingAssistant
+          configured={isAssistantLlmConfigured()}
+          displayName={barber?.display_name || ""}
+        />
+      )}
       <InstallAppPrompt variant="admin" />
     </div>
   );
