@@ -45,6 +45,11 @@ const ownerMoreItems = [
     label: "Marketing AI",
   },
   {
+    href: "/admin/assistant",
+    icon: "🤖",
+    label: "Assistant",
+  },
+  {
     href: "/admin/billing",
     icon: "💎",
     label: "Abonament",
@@ -67,12 +72,19 @@ const barberMoreItems = [
     icon: "🗓️",
     label: "Program de lucru",
   },
+  {
+    href: "/admin/assistant",
+    icon: "🤖",
+    label: "Assistant",
+  },
 ];
 
 export default function MobileNav({
   role,
+  assistantEnabled = false,
 }: {
   role: string | null;
+  assistantEnabled?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -84,10 +96,9 @@ export default function MobileNav({
       ? ownerMainItems
       : barberMainItems;
 
-  const moreItems =
-    role === "owner"
-      ? ownerMoreItems
-      : barberMoreItems;
+  const moreItems = (
+    role === "owner" ? ownerMoreItems : barberMoreItems
+  ).filter((item) => assistantEnabled || item.href !== "/admin/assistant");
 
   return (
     <>

@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
 import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { isFrizeoAssistantEnabled } from "@/lib/assistant/config";
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
 
 export const metadata = noIndexMetadata;
@@ -15,6 +16,7 @@ export default async function AdminLayout({
 }) {
   const supabase = await createSupabaseServerClient();
   const role = await getCurrentRole();
+  const assistantEnabled = isFrizeoAssistantEnabled();
 
   const {
     data: { user },
@@ -26,16 +28,15 @@ export default async function AdminLayout({
   }
 
   return (
-  <div className="flex min-h-screen bg-[#0B0B0C] text-white">
+    <div className="flex min-h-screen bg-[#0B0B0C] text-white">
+      <Sidebar role={role} assistantEnabled={assistantEnabled} />
 
-    <Sidebar role={role} />
+      <main className="flex-1 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
+        {children}
+      </main>
 
-    <main className="flex-1 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
-      {children}
-    </main>
-
-    <MobileNav role={role} />
-    <InstallAppPrompt variant="admin" />
-
-  </div>
-);}
+      <MobileNav role={role} assistantEnabled={assistantEnabled} />
+      <InstallAppPrompt variant="admin" />
+    </div>
+  );
+}
