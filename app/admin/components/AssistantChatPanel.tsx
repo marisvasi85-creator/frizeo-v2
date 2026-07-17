@@ -2,12 +2,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSpeechDictation } from "./useSpeechDictation";
+import {
+  buildWelcomeMessage,
+  clearAssistantChat,
+  loadAssistantChat,
+  saveAssistantChat,
+  type AssistantChatMessage,
+} from "./assistantChatStorage";
 
-export type AssistantChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-};
+export type { AssistantChatMessage };
+export { buildWelcomeMessage };
 
 const DEFAULT_SUGGESTIONS = [
   "Ce am azi?",
@@ -16,10 +20,6 @@ const DEFAULT_SUGGESTIONS = [
   "Ce programări am mâine?",
   "Adaugă un serviciu de 60 de minute",
 ];
-
-export function buildWelcomeMessage(displayName: string): string {
-  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să adaug servicii, sau să setez zi liberă / concediu (cu confirmare). Prețul e opțional. Nu calculez încasări.`;
-}
 
 type AssistantChatPanelProps = {
   configured: boolean;
@@ -36,19 +36,26 @@ export default function AssistantChatPanel({
   suggestions = DEFAULT_SUGGESTIONS,
   className = "",
 }: AssistantChatPanelProps) {
-  const [messages, setMessages] = useState<AssistantChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: buildWelcomeMessage(displayName),
-    },
-  ]);
-  const [input, setInput] = useState("");
+  const [boot] = useState(() => loadAssistantChat(displayName));
+  const [messages, setMessages] = useState<AssistantChatMessage[]>(
+    () => boot.messages,
+  );
+  const [input, setInput] = useState(() => boot.input);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interim, setInterim] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
-  const baseInputRef = useRef("");
+  const baseInputRef = useRef(boot.input);
+  const hydratedRef = useRef(false);
+
+  useEffect(() => {
+    hydratedRef.current = true;
+  }, []);
+
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    saveAssistantChat(messages, input);
+  }, [messages, input]);
 
   const handleTranscript = useCallback(
     ({ committed, interim: live }: { committed: string; interim: string }) => {
@@ -80,6 +87,21 @@ export default function AssistantChatPanel({
     const live = interim.trim();
     if (!live) return input;
     return `${input.trim()}${input.trim() ? " " : ""}${live}`;
+  }
+
+  function resetConversation() {
+    if (dictation.listening) dictation.stop();
+    clearAssistantChat();
+    const welcome: AssistantChatMessage = {
+      id: "welcome",
+      role: "assistant",
+      content: buildWelcomeMessage(displayName),
+    };
+    setMessages([welcome]);
+    setInput("");
+    baseInputRef.current = "";
+    setInterim("");
+    setError(null);
   }
 
   async function sendMessage(raw: string) {
@@ -148,6 +170,7 @@ export default function AssistantChatPanel({
   }
 
   const displayValue = composeCurrentText();
+  const canClear = messages.some((m) => m.id !== "welcome");
 
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
@@ -185,20 +208,33 @@ export default function AssistantChatPanel({
       </div>
 
       <div className="border-t border-white/10 p-3 space-y-2.5">
-        <div className="flex flex-wrap gap-1.5">
-          {suggestions
-            .slice(0, compact ? 3 : suggestions.length)
-            .map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                disabled={loading || !configured}
-                onClick={() => sendMessage(suggestion)}
-                className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/70 hover:bg-white/5 disabled:opacity-40"
-              >
-                {suggestion}
-              </button>
-            ))}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-1.5 min-w-0">
+            {suggestions
+              .slice(0, compact ? 3 : suggestions.length)
+              .map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  disabled={loading || !configured}
+                  onClick={() => sendMessage(suggestion)}
+                  className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/70 hover:bg-white/5 disabled:opacity-40"
+                >
+                  {suggestion}
+                </button>
+              ))}
+          </div>
+
+          {canClear && (
+            <button
+              type="button"
+              onClick={resetConversation}
+              className="shrink-0 text-[11px] text-white/40 hover:text-white/70 px-1"
+              title="Șterge conversația"
+            >
+              Șterge
+            </button>
+          )}
         </div>
 
         {dictation.listening && (
