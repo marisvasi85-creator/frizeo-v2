@@ -62,18 +62,17 @@ export default async function SalonPage({
   }
 
   const salon = resolved.tenant;
-
-  const { data: gallery } = await supabaseAdmin
-    .from("salon_gallery")
-    .select("*")
-    .eq("tenant_id", salon.id)
-    .order("created_at");
-
   const salonLocation = resolveLocation(salon);
 
-  const { data: barbers } = await supabaseAdmin
-    .from("barbers")
-    .select(`
+  const [{ data: gallery }, { data: barbers }] = await Promise.all([
+    supabaseAdmin
+      .from("salon_gallery")
+      .select("*")
+      .eq("tenant_id", salon.id)
+      .order("created_at"),
+    supabaseAdmin
+      .from("barbers")
+      .select(`
       id,
       display_name,
       slug,
@@ -82,9 +81,10 @@ export default async function SalonPage({
       bio,
       instagram_url
     `)
-    .eq("tenant_id", salon.id)
-    .eq("active", true)
-    .order("display_name");
+      .eq("tenant_id", salon.id)
+      .eq("active", true)
+      .order("display_name"),
+  ]);
 
   return (
     <>

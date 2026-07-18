@@ -69,7 +69,9 @@ export default function BookingClient({
   }, []);
 
   useEffect(() => {
-    fetch(`/api/services?barberId=${barberId}`)
+    const ac = new AbortController();
+
+    fetch(`/api/services?barberId=${barberId}`, { signal: ac.signal })
       .then((r) => r.json())
       .then((d) => {
         if (!d.services?.length) {
@@ -77,10 +79,17 @@ export default function BookingClient({
         }
         setServices(d.services || []);
       })
-      .catch(() => setServicesError("Nu am putut încărca serviciile."));
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        setServicesError("Nu am putut încărca serviciile.");
+      });
+
+    return () => ac.abort();
   }, [barberId]);
 
   useEffect(() => {
+    const ac = new AbortController();
+
     const load = async () => {
       setLoadingAvailability(true);
 
@@ -97,19 +106,26 @@ export default function BookingClient({
       }
 
       try {
-        const res = await fetch(`/api/availability?${params.toString()}`);
+        const res = await fetch(`/api/availability?${params.toString()}`, {
+          signal: ac.signal,
+        });
         const data = await res.json();
 
         setAvailableDays(data.availableDays || []);
         setWeeklySchedule(data.weeklySchedule || []);
         setOverrides(data.overrides || []);
         setVacationPeriods(data.vacationPeriods || []);
+      } catch (err) {
+        if ((err as { name?: string })?.name === "AbortError") return;
       } finally {
-        setLoadingAvailability(false);
+        if (!ac.signal.aborted) {
+          setLoadingAvailability(false);
+        }
       }
     };
 
     load();
+    return () => ac.abort();
   }, [barberId, serviceId]);
 
   useEffect(() => {
@@ -133,13 +149,17 @@ export default function BookingClient({
       return;
     }
 
+    const ac = new AbortController();
     setLoadingSlots(true);
 
     fetch(
       `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}&mode=public`,
+      { signal: ac.signal },
     )
       .then((r) => r.json())
       .then((d) => {
+        if (ac.signal.aborted) return;
+
         const fixed: Slot[] = (d.slots || [])
           .map((s: any) => {
             if (s.type === "booking") {
@@ -166,7 +186,16 @@ export default function BookingClient({
         setSlots(fixed);
         setSelectedSlot(null);
       })
-      .finally(() => setLoadingSlots(false));
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+      })
+      .finally(() => {
+        if (!ac.signal.aborted) {
+          setLoadingSlots(false);
+        }
+      });
+
+    return () => ac.abort();
   }, [date, serviceId, barberId]);
 
   function handleDateChange(value: string) {

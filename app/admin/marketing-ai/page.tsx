@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
-import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-ai/generate";
 import { getMarketingAIUsageStatus } from "@/lib/marketing-ai/usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -8,43 +7,45 @@ import MarketingAIClient from "./MarketingAIClient";
 import type { SocialLinks } from "@/lib/social/normalizeSocialUrl";
 
 export default async function MarketingAIPage() {
-  const barber = await getCurrentBarberInTenant();
-  if (!barber) redirect("/login");
+  const session = await getAdminSession();
+  if (!session?.barber) redirect("/login");
 
-  const role = await getCurrentRole();
+  const barber = session.barber;
+  const role = session.role;
 
-  const { data: barbers } = await supabaseAdmin
-    .from("barbers")
-    .select("id, display_name")
-    .eq("tenant_id", barber.tenant_id)
-    .eq("active", true)
-    .order("display_name");
+  const [barbersRes, servicesRes, usage] = await Promise.all([
+    supabaseAdmin
+      .from("barbers")
+      .select("id, display_name")
+      .eq("tenant_id", barber.tenant_id)
+      .eq("active", true)
+      .order("display_name"),
+    supabaseAdmin
+      .from("barber_services")
+      .select("id, display_name, name, duration")
+      .eq("barber_id", barber.id)
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    getMarketingAIUsageStatus(barber.tenant_id),
+  ]);
 
-  const { data: services } = await supabaseAdmin
-    .from("barber_services")
-    .select("id, display_name, name, duration")
-    .eq("barber_id", barber.id)
-    .eq("active", true)
-    .order("sort_order", { ascending: true });
-
-  const barberOptions = (barbers || []).map((item) => ({
+  const barberOptions = (barbersRes.data || []).map((item) => ({
     id: item.id,
     name: item.display_name || "Frizer",
   }));
 
-  const serviceOptions = (services || []).map((service) => ({
+  const serviceOptions = (servicesRes.data || []).map((service) => ({
     id: service.id,
     name: service.display_name || service.name,
     duration: service.duration,
   }));
 
   const aiStatus = getMarketingAIStatus();
-  const usage = await getMarketingAIUsageStatus(barber.tenant_id);
 
   const initialSocialLinks: SocialLinks = {
-    instagram: barber.instagram_url ?? null,
-    facebook: (barber as { facebook_url?: string | null }).facebook_url ?? null,
-    tiktok: (barber as { tiktok_url?: string | null }).tiktok_url ?? null,
+    instagram: (barber.instagram_url as string | null | undefined) ?? null,
+    facebook: (barber.facebook_url as string | null | undefined) ?? null,
+    tiktok: (barber.tiktok_url as string | null | undefined) ?? null,
   };
 
   return (
@@ -52,7 +53,8 @@ export default async function MarketingAIPage() {
       <div>
         <h1 className="text-2xl font-semibold">Marketing AI</h1>
         <p className="text-white/60 mt-1">
-          Generează postări, reel-uri și promoții în câteva secunde — fără să stai să scrii.
+          Generează postări, reel-uri și promoții în câteva secunde — fără să
+          stai să scrii.
         </p>
       </div>
 
