@@ -25,7 +25,9 @@ async function ownerEmailsForTenant(tenantId: string): Promise<string[]> {
   return emails;
 }
 
-function draftMessage(input: {
+export { ownerEmailsForTenant };
+
+export function buildTrialFollowupDraft(input: {
   salonName: string;
   trialEndsAt: string | null;
   planName: string | null;
@@ -110,7 +112,7 @@ export async function trialFollowupsTool(
         addDaysToDateString(today, 3),
     };
     if (includeDrafts) {
-      item.message_draft = draftMessage({
+      item.message_draft = buildTrialFollowupDraft({
         salonName,
         trialEndsAt: row.trial_ends_at,
         planName: plan?.name || null,
@@ -125,7 +127,7 @@ export async function trialFollowupsTool(
     ok: true,
     summary: `${followups.length} trial-uri de follow-up în ${days} zile (${urgent} urgente ≤3 zile). Include email owner${
       includeDrafts ? " + draft mesaj" : ""
-    }.`,
+    }. Pentru trimitere reală folosește send_trial_followup.`,
     data: { days, followups, urgent_count: urgent },
   };
 }

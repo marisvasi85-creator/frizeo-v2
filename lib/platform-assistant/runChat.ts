@@ -45,6 +45,8 @@ const WRITE_TOOLS = new Set([
   "set_tenant_plan",
   "extend_trial",
   "add_tenant_note",
+  "send_trial_followup",
+  "delete_tenant",
 ]);
 
 /**

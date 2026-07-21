@@ -1,10 +1,12 @@
 import type { PlatformToolDefinition } from "../types";
 import { billingWatchlistTool } from "./billingWatchlist";
 import { dailyBriefingTool } from "./dailyBriefing";
+import { deleteTenantTool } from "./deleteTenant";
 import { extendTrialTool } from "./extendTrial";
 import { healthCheckTool } from "./healthCheck";
 import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
+import { sendTrialFollowupTool } from "./sendTrialFollowup";
 import { setTenantPlanTool } from "./setTenantPlan";
 import { tenantDetailTool } from "./tenantDetail";
 import { addTenantNoteTool, listTenantNotesTool } from "./tenantNotes";
@@ -159,7 +161,7 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
   {
     name: "trial_followups",
     description:
-      "După briefing: listă follow-up trial — email owner + draft mesaj (opțional). Pentru „pe cine sun / scriu azi”, „follow-up trial”, „mesaje trial”.",
+      "Listează follow-up trial (email owner + draft). NU trimite email. Pentru trimitere reală folosește send_trial_followup.",
     parameters: {
       type: "object",
       properties: {
@@ -174,6 +176,33 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: trialFollowupsTool,
+  },
+  {
+    name: "send_trial_followup",
+    description:
+      "DOAR CREATOR: trimite email REAL de follow-up trial (SMTP). Poți ținti un salon (name/slug) sau toate din fereastră (days). IMPORTANT: prima dată fără confirmed; după „da”, confirmed=true.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon (opțional)." },
+        slug: { type: "string", description: "Slug salon (opțional)." },
+        tenant_id: { type: "string", description: "ID tenant (opțional)." },
+        days: {
+          type: "number",
+          description:
+            "Dacă nu specifici salon: fereastră trial (implicit 7).",
+        },
+        body: {
+          type: "string",
+          description: "Mesaj custom (altfel draft standard).",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea creatorului.",
+        },
+      },
+    },
+    execute: sendTrialFollowupTool,
   },
   {
     name: "set_tenant_plan",
@@ -243,6 +272,38 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: extendTrialTool,
+  },
+  {
+    name: "delete_tenant",
+    description:
+      "DOAR CREATOR: șterge DEFINITIV un salon (DB + storage + opțional Auth users fără alte saloane + cancel Stripe). PERICULOS. IMPORTANT: 1) fără confirmed 2) după confirmare: confirmed=true + confirm_slug exact slug-ul salonului.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon." },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        confirm_slug: {
+          type: "string",
+          description:
+            "Obligatoriu la confirmed=true: trebuie să coincidă cu slug-ul salonului.",
+        },
+        cancel_stripe: {
+          type: "boolean",
+          description: "Implicit true: anulează stripe_subscription_id dacă există.",
+        },
+        delete_auth_users: {
+          type: "boolean",
+          description:
+            "Implicit true: șterge Auth users care nu mai aparțin altui salon (nu șterge creatorul Frizeo).",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a creatorului.",
+        },
+      },
+    },
+    execute: deleteTenantTool,
   },
 ];
 

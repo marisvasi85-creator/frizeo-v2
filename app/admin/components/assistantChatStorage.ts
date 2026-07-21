@@ -33,7 +33,7 @@ export function buildWelcomeMessage(displayName: string): string {
 }
 
 export function buildPlatformWelcomeMessage(): string {
-  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPoți cere briefing, health check, follow-up trial, note interne pe un salon, sau — cu confirmare — plan / prelungire trial. Nu încasează bani în Stripe.`;
+  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPoți cere briefing, health, follow-up pe email (cu confirmare), note, plan/trial, sau ștergere salon (confirmare + slug). Nu încasează bani în Stripe.`;
 }
 
 export function loadAssistantChat(
