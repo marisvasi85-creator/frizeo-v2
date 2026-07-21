@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasSlugRedirectsMigration } from "./hasSlugRedirectsMigration";
 import type { BarberLocationFields, LocationFields } from "@/lib/location/types";
@@ -94,68 +95,70 @@ async function findBarberRedirect(
   return barber as BarberRow;
 }
 
-export async function resolveTenantBySlug(
-  slug: string
-): Promise<ResolvedTenantSlug | null> {
-  const { data: direct } = await supabaseAdmin
-    .from("tenants")
-    .select("*")
-    .eq("slug", slug)
-    .maybeSingle();
+export const resolveTenantBySlug = cache(
+  async (slug: string): Promise<ResolvedTenantSlug | null> => {
+    const { data: direct } = await supabaseAdmin
+      .from("tenants")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
 
-  if (direct) {
+    if (direct) {
+      return {
+        tenant: direct as TenantRow,
+        canonicalSlug: direct.slug,
+        redirected: false,
+      };
+    }
+
+    const redirectedTenant = await findTenantRedirect(slug);
+
+    if (!redirectedTenant) {
+      return null;
+    }
+
     return {
-      tenant: direct as TenantRow,
-      canonicalSlug: direct.slug,
-      redirected: false,
+      tenant: redirectedTenant,
+      canonicalSlug: redirectedTenant.slug,
+      redirected: true,
     };
-  }
+  },
+);
 
-  const redirectedTenant = await findTenantRedirect(slug);
+export const resolveBarberBySlug = cache(
+  async (
+    tenantId: string,
+    barberSlug: string,
+  ): Promise<ResolvedBarberSlug | null> => {
+    const { data: direct } = await supabaseAdmin
+      .from("barbers")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .eq("slug", barberSlug)
+      .eq("active", true)
+      .maybeSingle();
 
-  if (!redirectedTenant) {
-    return null;
-  }
+    if (direct) {
+      return {
+        barber: direct as BarberRow,
+        canonicalSlug: direct.slug,
+        redirected: false,
+      };
+    }
 
-  return {
-    tenant: redirectedTenant,
-    canonicalSlug: redirectedTenant.slug,
-    redirected: true,
-  };
-}
+    const redirectedBarber = await findBarberRedirect(tenantId, barberSlug);
 
-export async function resolveBarberBySlug(
-  tenantId: string,
-  barberSlug: string
-): Promise<ResolvedBarberSlug | null> {
-  const { data: direct } = await supabaseAdmin
-    .from("barbers")
-    .select("*")
-    .eq("tenant_id", tenantId)
-    .eq("slug", barberSlug)
-    .eq("active", true)
-    .maybeSingle();
+    if (!redirectedBarber) {
+      return null;
+    }
 
-  if (direct) {
     return {
-      barber: direct as BarberRow,
-      canonicalSlug: direct.slug,
-      redirected: false,
+      barber: redirectedBarber,
+      canonicalSlug: redirectedBarber.slug,
+      redirected: true,
     };
-  }
-
-  const redirectedBarber = await findBarberRedirect(tenantId, barberSlug);
-
-  if (!redirectedBarber) {
-    return null;
-  }
-
-  return {
-    barber: redirectedBarber,
-    canonicalSlug: redirectedBarber.slug,
-    redirected: true,
-  };
-}
+  },
+);
 
 export async function recordSlugRedirect(input: {
   entityType: "tenant" | "barber";

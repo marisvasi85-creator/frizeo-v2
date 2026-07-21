@@ -1,4 +1,4 @@
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
@@ -6,17 +6,21 @@ import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { planAllowsSms } from "@/lib/billing/plans";
 
 export default async function NotificationsPage() {
-  const barber = await getCurrentBarberInTenant();
+  const session = await getAdminSession();
+  if (!session?.barber) return null;
 
-  if (!barber) return null;
+  const tenantId = session.barber.tenant_id;
 
-  const { data } = await supabaseAdmin
-    .from("notification_settings")
-    .select("*")
-    .eq("tenant_id", barber.tenant_id)
-    .maybeSingle();
+  const [settingsRes, plan] = await Promise.all([
+    supabaseAdmin
+      .from("notification_settings")
+      .select("*")
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+    getCurrentPlan(tenantId),
+  ]);
 
-  const plan = await getCurrentPlan(barber.tenant_id);
+  const data = settingsRes.data;
   const smsAllowed = planAllowsSms(plan);
 
   return (

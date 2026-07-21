@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import BarberBookingView from "@/app/booking/_components/BarberBookingView";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { stableBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
-async function getBarberWithSalon(barberId: string) {
+const getBarberWithSalon = cache(async (barberId: string) => {
   const { data: barber, error } = await supabaseAdmin
     .from("barbers")
-    .select(`
+    .select(
+      `
       *,
       tenant:tenants (*)
-    `)
+    `,
+    )
     .eq("id", barberId)
     .eq("active", true)
     .maybeSingle();
@@ -32,7 +35,7 @@ async function getBarberWithSalon(barberId: string) {
       slug: string;
     },
   };
-}
+});
 
 export async function generateMetadata({
   params,

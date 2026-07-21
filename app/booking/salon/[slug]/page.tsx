@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import JsonLd from "@/app/components/JsonLd";
@@ -61,18 +62,17 @@ export default async function SalonPage({
   }
 
   const salon = resolved.tenant;
-
-  const { data: gallery } = await supabaseAdmin
-    .from("salon_gallery")
-    .select("*")
-    .eq("tenant_id", salon.id)
-    .order("created_at");
-
   const salonLocation = resolveLocation(salon);
 
-  const { data: barbers } = await supabaseAdmin
-    .from("barbers")
-    .select(`
+  const [{ data: gallery }, { data: barbers }] = await Promise.all([
+    supabaseAdmin
+      .from("salon_gallery")
+      .select("*")
+      .eq("tenant_id", salon.id)
+      .order("created_at"),
+    supabaseAdmin
+      .from("barbers")
+      .select(`
       id,
       display_name,
       slug,
@@ -81,9 +81,10 @@ export default async function SalonPage({
       bio,
       instagram_url
     `)
-    .eq("tenant_id", salon.id)
-    .eq("active", true)
-    .order("display_name");
+      .eq("tenant_id", salon.id)
+      .eq("active", true)
+      .order("display_name"),
+  ]);
 
   return (
     <>
@@ -100,10 +101,13 @@ export default async function SalonPage({
       <div className="max-w-4xl mx-auto p-6 space-y-8">
         <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">
           {typeof salon.logo_url === "string" && salon.logo_url && (
-            <img
+            <Image
               src={salon.logo_url}
               alt={`Logo ${salon.name}`}
+              width={96}
+              height={96}
               className="w-24 h-24 rounded-2xl object-cover mx-auto mb-4"
+              priority
             />
           )}
 
@@ -125,12 +129,15 @@ export default async function SalonPage({
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {gallery.map((img) => (
-                  <img
-                    key={img.id}
-                    src={img.image_url}
-                    alt={`Galerie ${salon.name}`}
-                    className="w-full h-48 object-cover rounded-xl border"
-                  />
+                  <div key={img.id} className="relative w-full h-48">
+                    <Image
+                      src={img.image_url}
+                      alt={`Galerie ${salon.name}`}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover rounded-xl border"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -149,9 +156,11 @@ export default async function SalonPage({
               >
                 <div className="flex items-center gap-4">
                   {barber.avatar_url ? (
-                    <img
+                    <Image
                       src={barber.avatar_url}
                       alt={`${barber.display_name} — ${salon.name}`}
+                      width={80}
+                      height={80}
                       className="w-20 h-20 rounded-full object-cover"
                     />
                   ) : (

@@ -1,41 +1,12 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { cache } from "react";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 
-export async function getCurrentBarberInTenant() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
-  const tenant = await getActiveTenant();
-
-  if (tenant) {
-    const { data } = await supabaseAdmin
-      .from("barbers")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("tenant_id", tenant.tenant_id)
-      .maybeSingle();
-
-    if (data) return data;
-  }
-
-  const { data: fallback } = await supabaseAdmin
-    .from("barbers")
-    .select("*")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!fallback) return null;
-
-  await supabaseAdmin.from("user_active_tenant").upsert({
-    user_id: user.id,
-    tenant_id: fallback.tenant_id,
-  });
-
-  return fallback;
-}
+/**
+ * Current user's barber row in the active tenant.
+ * Deduped with getAdminSession() per request.
+ */
+export const getCurrentBarberInTenant = cache(async () => {
+  const session = await getAdminSession();
+  // Preserve the loose barber shape used across admin/API callers.
+  return (session?.barber as Record<string, any> | null) ?? null;
+});

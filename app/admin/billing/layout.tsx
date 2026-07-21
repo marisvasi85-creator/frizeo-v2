@@ -1,14 +1,14 @@
 import { redirect } from "next/navigation";
-import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 
 export default async function BillingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const role = await getCurrentRole();
+  const session = await getAdminSession();
 
-  if (role !== "owner") {
+  if (session?.role !== "owner") {
     redirect("/admin/dashboard");
   }
 

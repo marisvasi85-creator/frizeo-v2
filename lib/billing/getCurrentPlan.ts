@@ -1,19 +1,17 @@
+import { cache } from "react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export async function getCurrentPlan(
-  tenantId: string
-) {
-  const supabase = supabaseAdmin;
-
-  const { data: subscription } =
-    await supabase
-      .from("subscriptions")
-      .select(`
+export const getCurrentPlan = cache(async (tenantId: string) => {
+  const { data: subscription } = await supabaseAdmin
+    .from("subscriptions")
+    .select(
+      `
         *,
         plans (*)
-      `)
-      .eq("tenant_id", tenantId)
-      .single();
+      `,
+    )
+    .eq("tenant_id", tenantId)
+    .single();
 
   if (!subscription) {
     return null;
@@ -21,10 +19,7 @@ export async function getCurrentPlan(
 
   return {
     ...subscription.plans,
-    trial_ends_at:
-      subscription.trial_ends_at,
-
-    status:
-      subscription.status,
+    trial_ends_at: subscription.trial_ends_at,
+    status: subscription.status,
   };
-}
+});

@@ -38,10 +38,12 @@ export type MarketingAIUsageStatus = {
 export async function getMarketingAIUsageStatus(
   tenantId: string,
 ): Promise<MarketingAIUsageStatus> {
-  const plan = await getCurrentPlan(tenantId);
+  const [plan, migrationReady] = await Promise.all([
+    getCurrentPlan(tenantId),
+    hasMarketingAIUsageTable(),
+  ]);
   const limitConfig = getMarketingAILimitForPlan(plan);
   const providerConfig = getMarketingAIProviderConfig();
-  const migrationReady = await hasMarketingAIUsageTable();
 
   const countsTowardLimit = providerConfig.provider !== "template";
   const unlimited = !countsTowardLimit || limitConfig.daily === null;

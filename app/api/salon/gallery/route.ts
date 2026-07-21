@@ -57,17 +57,24 @@ export async function POST(req: Request) {
       .from("salon-gallery")
       .getPublicUrl(path);
 
-    await supabaseAdmin
+    const { data: inserted, error: insertError } = await supabaseAdmin
       .from("salon_gallery")
       .insert({
-        tenant_id:
-          barber.tenant_id,
+        tenant_id: barber.tenant_id,
         image_url: publicUrl,
-      });
+      })
+      .select("id, image_url, created_at")
+      .single();
+
+    if (insertError) {
+      throw insertError;
+    }
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      id: inserted.id,
+      url: inserted.image_url ?? publicUrl,
+      created_at: inserted.created_at,
     });
   } catch (e: any) {
     return NextResponse.json(

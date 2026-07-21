@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
@@ -32,26 +33,41 @@ export default async function ProfilePage({
 }) {
   const supabase = await createSupabaseServerClient();
   const { google: googleStatus } = await searchParams;
+  const [session, barber] = await Promise.all([
+    getAdminSession(),
+    getCurrentBarberInTenant(),
+  ]);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!session?.user || !barber) {
     redirect("/login");
   }
 
-  const barber = await getCurrentBarberInTenant();
+  const [googleAccountRes, tenantRes] = await Promise.all([
+    supabase
+      .from("barber_google_accounts")
+      .select("google_email, refresh_token")
+      .eq("barber_id", barber.id)
+      .maybeSingle(),
+    supabase
+      .from("tenants")
+      .select(
+        `
+      address,
+      location_address_line,
+      location_city,
+      location_county,
+      location_postal_code,
+      location_maps_url,
+      location_latitude,
+      location_longitude
+    `,
+      )
+      .eq("id", barber.tenant_id)
+      .single(),
+  ]);
 
-  if (!barber) {
-    redirect("/login");
-  }
-
-  const { data: googleAccount } = await supabase
-    .from("barber_google_accounts")
-    .select("google_email, refresh_token")
-    .eq("barber_id", barber.id)
-    .maybeSingle();
+  const googleAccount = googleAccountRes.data;
+  const tenant = tenantRes.data;
 
   const isConnected =
     !!googleAccount?.refresh_token || !!barber.google_calendar_connected;
@@ -63,21 +79,6 @@ export default async function ProfilePage({
 
   const isSuccess =
     googleStatus === "connected" || googleStatus === "disconnected";
-
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select(`
-      address,
-      location_address_line,
-      location_city,
-      location_county,
-      location_postal_code,
-      location_maps_url,
-      location_latitude,
-      location_longitude
-    `)
-    .eq("id", barber.tenant_id)
-    .single();
 
   const salonPreview = tenant ? formatLocationAddress(tenant) : null;
 

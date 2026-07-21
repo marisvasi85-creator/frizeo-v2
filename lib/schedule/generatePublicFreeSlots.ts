@@ -22,6 +22,8 @@ export function generatePublicFreeSlots({
   minNoticeHours,
   now = new Date(),
   excludeBookingId,
+  bypassMinNotice = false,
+  ignoreGoogleBusy = false,
 }: {
   date: string;
   resolved: ResolvedDaySchedule;
@@ -31,6 +33,8 @@ export function generatePublicFreeSlots({
   minNoticeHours: number;
   now?: Date;
   excludeBookingId?: string | null;
+  bypassMinNotice?: boolean;
+  ignoreGoogleBusy?: boolean;
 }): string[] {
   if (!resolved.isWorking || !resolved.workStart || !resolved.workEnd) {
     return [];
@@ -76,6 +80,7 @@ export function generatePublicFreeSlots({
       const slotEndTime = minutesToTime(slotEnd);
 
       if (
+        !ignoreGoogleBusy &&
         slotOverlapsBusyIntervals(slotTime, slotEndTime, googleBusyIntervals)
       ) {
         continue;
@@ -86,7 +91,7 @@ export function generatePublicFreeSlots({
         startTime: slotTime,
         minNoticeHours,
         now,
-        bypassMinNotice: false,
+        bypassMinNotice,
       });
 
       if (!eligibility.eligible) continue;

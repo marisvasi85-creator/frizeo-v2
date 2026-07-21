@@ -1,3 +1,5 @@
+import { cache } from "react";
+import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -7,14 +9,11 @@ const ROLE_PRIORITY: Record<string, number> = {
   barber: 2,
 };
 
-export async function getActiveTenant() {
-  const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+export const getActiveTenant = cache(async () => {
+  const user = await getAuthUser();
   if (!user) return null;
+
+  const supabase = await createSupabaseServerClient();
 
   let tenantId: string | null = null;
 
@@ -34,7 +33,7 @@ export async function getActiveTenant() {
 
     const preferred = [...(memberships ?? [])].sort(
       (a, b) =>
-        (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99)
+        (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99),
     )[0];
 
     tenantId = preferred?.tenant_id ?? null;
@@ -71,4 +70,4 @@ export async function getActiveTenant() {
     tenant_id: tenant.id,
     name: tenant.name,
   };
-}
+});

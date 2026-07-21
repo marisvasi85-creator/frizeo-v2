@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   publicBookingPath,
   publicBookingUrl,
@@ -30,6 +30,8 @@ export default function BarbersClient({
   canInvite,
   tenantSlug,
   appUrl,
+  initialBarbers = [],
+  initialInvitations = [],
 }: {
   currentPlan: string;
   activeBarbers: number;
@@ -38,9 +40,11 @@ export default function BarbersClient({
   canInvite: boolean;
   tenantSlug: string;
   appUrl: string;
-}) {  
-  const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [invitations, setInvitations] = useState<any[]>([]);
+  initialBarbers?: Barber[];
+  initialInvitations?: any[];
+}) {
+  const [barbers, setBarbers] = useState<Barber[]>(initialBarbers);
+  const [invitations, setInvitations] = useState<any[]>(initialInvitations);
   const [pendingCount, setPendingCount] = useState(pendingInvites);
 
   const [name, setName] = useState("");
@@ -50,27 +54,20 @@ export default function BarbersClient({
   const [message, setMessage] = useState("");
   const { saved: inviteSaved, markSaved: markInviteSaved, clearSaved: clearInviteSaved } =
     useSavedFeedback();
+
   async function loadBarbers() {
-  const [barbersRes, invitesRes] =
-    await Promise.all([
+    const [barbersRes, invitesRes] = await Promise.all([
       fetch("/api/barbers"),
       fetch("/api/barbers/invitations"),
     ]);
 
-  const barbersData =
-    await barbersRes.json();
+    const barbersData = await barbersRes.json();
+    const invitesData = await invitesRes.json();
 
-  const invitesData =
-    await invitesRes.json();
-  
-
-  setBarbers(barbersData.barbers || []);
-  setInvitations(invitesData.invitations || []);
-  setPendingCount(invitesData.invitations?.length ?? 0);
-}
-useEffect(() => {
-  loadBarbers();
-}, []);
+    setBarbers(barbersData.barbers || []);
+    setInvitations(invitesData.invitations || []);
+    setPendingCount(invitesData.invitations?.length ?? 0);
+  }
 
   async function addBarber() {
   if (!name.trim() || !email.trim()) return;
