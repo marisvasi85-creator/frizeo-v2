@@ -1,6 +1,8 @@
 import type { AssistantToolDefinition } from "../types";
 import { cancelBookingTool } from "./cancelBooking";
+import { createBookingTool } from "./createBooking";
 import { createServiceTool } from "./createService";
+import { findSlotsTool } from "./findSlots";
 import { listBookingsTool } from "./listBookings";
 import { listServicesTool } from "./listServices";
 import {
@@ -123,6 +125,99 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
       properties: {},
     },
     execute: subscriptionStatusTool,
+  },
+  {
+    name: "find_slots",
+    description:
+      "Găsește ore libere pentru un serviciu pe o dată. Folosește înainte de create_booking sau update_booking când utilizatorul întreabă „ce ore am libere”.",
+    parameters: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "Data YYYY-MM-DD.",
+        },
+        when: {
+          type: "string",
+          enum: ["today", "tomorrow"],
+          description: "Scurtătură dacă nu trimiți date.",
+        },
+        service_id: {
+          type: "string",
+          description: "ID serviciu (din list_services).",
+        },
+        service_name: {
+          type: "string",
+          description: "Nume serviciu dacă nu ai service_id (ex: Tuns).",
+        },
+        barber_id: {
+          type: "string",
+          description: "Frizer (owner/manager). Implicit profilul curent.",
+        },
+        limit: {
+          type: "number",
+          description: "Câte ore să returnezi (implicit 12, max 40).",
+        },
+      },
+    },
+    execute: findSlotsTool,
+  },
+  {
+    name: "create_booking",
+    description:
+      "Creează o programare nouă (admin). IMPORTANT: prima dată fără confirmed; după confirmare, cu confirmed=true. Ideal: find_slots sau list_services înainte.",
+    parameters: {
+      type: "object",
+      properties: {
+        client_name: {
+          type: "string",
+          description: "Numele clientului.",
+        },
+        client_phone: {
+          type: "string",
+          description: "Telefon RO: 07XXXXXXXX sau +40XXXXXXXXX.",
+        },
+        client_email: {
+          type: "string",
+          description: "Email opțional (pentru confirmare).",
+        },
+        client_notes: {
+          type: "string",
+          description: "Notă opțională.",
+        },
+        date: {
+          type: "string",
+          description: "Data YYYY-MM-DD.",
+        },
+        when: {
+          type: "string",
+          enum: ["today", "tomorrow"],
+          description: "Scurtătură dacă nu trimiți date.",
+        },
+        start_time: {
+          type: "string",
+          description: "Ora HH:MM.",
+        },
+        service_id: {
+          type: "string",
+          description: "ID serviciu.",
+        },
+        service_name: {
+          type: "string",
+          description: "Nume serviciu dacă nu ai service_id.",
+        },
+        barber_id: {
+          type: "string",
+          description: "Frizer (owner/manager).",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a utilizatorului.",
+        },
+      },
+      required: ["client_name", "client_phone", "start_time"],
+    },
+    execute: createBookingTool,
   },
   {
     name: "create_service",
