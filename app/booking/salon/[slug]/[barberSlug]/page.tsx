@@ -72,28 +72,25 @@ export default async function Page({
     return <div>Salon inexistent</div>;
   }
 
-  const { data: inactiveBarber } = await supabaseAdmin
-    .from("barbers")
-    .select("id, display_name")
-    .eq("tenant_id", resolvedTenant.tenant.id)
-    .eq("slug", barberSlug)
-    .eq("active", false)
-    .maybeSingle();
-
-  if (inactiveBarber) {
-    return (
-      <div className="max-w-xl mx-auto p-6 text-center">
-        Frizer indisponibil momentan pentru programări online.
-      </div>
-    );
-  }
-
-  const resolvedBarber = await resolveBarberBySlug(
-    resolvedTenant.tenant.id,
-    barberSlug
-  );
+  const [resolvedBarber, inactiveRes] = await Promise.all([
+    resolveBarberBySlug(resolvedTenant.tenant.id, barberSlug),
+    supabaseAdmin
+      .from("barbers")
+      .select("id, display_name")
+      .eq("tenant_id", resolvedTenant.tenant.id)
+      .eq("slug", barberSlug)
+      .eq("active", false)
+      .maybeSingle(),
+  ]);
 
   if (!resolvedBarber) {
+    if (inactiveRes.data) {
+      return (
+        <div className="max-w-xl mx-auto p-6 text-center">
+          Frizer indisponibil momentan pentru programări online.
+        </div>
+      );
+    }
     return <div>Frizer inexistent</div>;
   }
 

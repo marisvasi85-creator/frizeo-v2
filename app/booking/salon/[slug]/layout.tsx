@@ -1,15 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
-
-async function getSalonName(slug: string) {
-  const { data } = await supabaseAdmin
-    .from("tenants")
-    .select("name")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  return data?.name ?? null;
-}
+import { resolveTenantBySlug } from "@/lib/slugs/slugRedirects";
 
 export default async function SalonBookingLayout({
   children,
@@ -19,7 +9,8 @@ export default async function SalonBookingLayout({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const salonName = await getSalonName(slug);
+  const resolved = await resolveTenantBySlug(slug);
+  const salonName = resolved?.tenant?.name ?? null;
 
   return (
     <>

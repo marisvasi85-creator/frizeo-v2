@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import LazyDatePicker from "../../components/LazyDatePicker";
 import type { Override, OverrideMode } from "@/types/override";
@@ -54,7 +54,13 @@ function describeOverride(item: Override) {
   return { label: "Zi specială", detail: "", tone: "text-white/60" };
 }
 
-export default function OverrideManager({ barberId }: { barberId: string }) {
+export default function OverrideManager({
+  barberId,
+  initialOverrides = [],
+}: {
+  barberId: string;
+  initialOverrides?: Override[];
+}) {
   const [date, setDate] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [mode, setMode] = useState<OverrideMode>("closed");
@@ -65,7 +71,7 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
   const [breakEnd, setBreakEnd] = useState("14:00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [overrides, setOverrides] = useState<Override[]>([]);
+  const [overrides, setOverrides] = useState<Override[]>(initialOverrides);
 
   const [vacationStart, setVacationStart] = useState<Date | null>(null);
   const [vacationEnd, setVacationEnd] = useState<Date | null>(null);
@@ -96,10 +102,6 @@ export default function OverrideManager({ barberId }: { barberId: string }) {
     const data = await res.json();
     setOverrides(data.overrides || []);
   }
-
-  useEffect(() => {
-    loadOverrides();
-  }, [barberId]);
 
   function resetForm() {
     setDate("");

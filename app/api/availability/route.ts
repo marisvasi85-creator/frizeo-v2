@@ -43,34 +43,34 @@ export async function GET(req: Request) {
       });
     }
 
-    const { data: weekly } = await supabaseAdmin
-      .from("barber_weekly_schedule")
-      .select("*")
-      .eq("barber_id", barberId);
+    const [weeklyRes, overridesRes, serviceRes] = await Promise.all([
+      supabaseAdmin
+        .from("barber_weekly_schedule")
+        .select("*")
+        .eq("barber_id", barberId),
+      supabaseAdmin
+        .from("barber_day_overrides")
+        .select("*")
+        .eq("barber_id", barberId),
+      serviceId
+        ? supabaseAdmin
+            .from("barber_services")
+            .select("duration")
+            .eq("id", serviceId)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { duration: number } | null }),
+    ]);
 
-    const { data: overrides } = await supabaseAdmin
-      .from("barber_day_overrides")
-      .select("*")
-      .eq("barber_id", barberId);
+    const weekly = weeklyRes.data;
+    const overrides = overridesRes.data;
+    const duration = serviceRes.data?.duration ?? null;
 
-    let duration: number | null = null;
-
-    if (serviceId) {
-      const { data: service } = await supabaseAdmin
-        .from("barber_services")
-        .select("duration")
-        .eq("id", serviceId)
-        .maybeSingle();
-
-      if (!service) {
-        return NextResponse.json({
-          availableDays: [],
-          weeklySchedule: weekly ?? [],
-          overrides: overrides ?? [],
-        });
-      }
-
-      duration = service.duration;
+    if (serviceId && !serviceRes.data) {
+      return NextResponse.json({
+        availableDays: [],
+        weeklySchedule: weekly ?? [],
+        overrides: overrides ?? [],
+      });
     }
 
     let bookingsByDate: Record<string, any[]> = {};
@@ -79,28 +79,27 @@ export async function GET(req: Request) {
     const now = new Date();
 
     if (serviceId && duration) {
-      const { data: bookings } = await supabaseAdmin
-        .from("bookings")
-        .select("id, date, start_time, end_time, status, expires_at")
-        .eq("barber_id", barberId)
-        .gte("date", from)
-        .lte("date", to)
-        .in("status", ["confirmed", "pending"]);
+      const [bookingsRes, noticeHours, googleBusy] = await Promise.all([
+        supabaseAdmin
+          .from("bookings")
+          .select("id, date, start_time, end_time, status, expires_at")
+          .eq("barber_id", barberId)
+          .gte("date", from)
+          .lte("date", to)
+          .in("status", ["confirmed", "pending"]),
+        getBarberMinNoticeHours(supabaseAdmin, barberId),
+        getGoogleBusyIntervalsByDate(supabaseAdmin, barberId, from, to),
+      ]);
 
-      for (const booking of bookings ?? []) {
+      for (const booking of bookingsRes.data ?? []) {
         if (!bookingsByDate[booking.date]) {
           bookingsByDate[booking.date] = [];
         }
         bookingsByDate[booking.date].push(booking);
       }
 
-      minNoticeHours = await getBarberMinNoticeHours(supabaseAdmin, barberId);
-      googleBusyByDate = await getGoogleBusyIntervalsByDate(
-        supabaseAdmin,
-        barberId,
-        from,
-        to,
-      );
+      minNoticeHours = noticeHours;
+      googleBusyByDate = googleBusy;
     }
 
     const availableDays: string[] = [];

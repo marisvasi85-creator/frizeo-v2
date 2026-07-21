@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 import BillingPlansSection from "./BillingPlansSection";
 import PayInvoiceButton from "./PayInvoiceButton";
 import { BillingInvoicesSection } from "./BillingProfileSection";
-import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
@@ -26,12 +25,12 @@ async function syncAfterCheckout(sessionId: string, tenantId: string) {
     }
 
     const subscription = await getStripe().subscriptions.retrieve(
-      session.subscription
+      session.subscription,
     );
 
     await syncStripeSubscription(
       subscription,
-      session.metadata?.tenant_id ?? tenantId
+      session.metadata?.tenant_id ?? tenantId,
     );
 
     const customerId =
@@ -59,47 +58,47 @@ export default async function BillingPage({
     session_id: sessionId,
     updated: planUpdated,
   } = await searchParams;
-  const supabase = await createSupabaseServerClient();
 
-  const barber = await getCurrentBarberInTenant();
+  const adminSession = await getAdminSession();
 
-  if (!barber) {
+  if (!adminSession?.barber) {
     redirect("/login");
   }
-  const role = await getCurrentRole();
 
-  if (role !== "owner") {
+  if (adminSession.role !== "owner") {
     redirect("/admin/dashboard");
   }
 
+  const tenantId = adminSession.barber.tenant_id;
+
   if (checkoutStatus === "success" && sessionId) {
-    await syncAfterCheckout(sessionId, barber.tenant_id);
+    await syncAfterCheckout(sessionId, tenantId);
   }
 
-  const { data: subscription } = await supabaseAdmin
-    .from("subscriptions")
-    .select(`
+  const supabase = await createSupabaseServerClient();
+
+  const [subscriptionRes, plansRawRes, activeBarbersRes] = await Promise.all([
+    supabaseAdmin
+      .from("subscriptions")
+      .select(
+        `
       *,
       plans (*)
-    `)
-    .eq("tenant_id", barber.tenant_id)
-    .single();
+    `,
+      )
+      .eq("tenant_id", tenantId)
+      .single(),
+    supabase.from("plans").select("*").in("slug", CANONICAL_PLAN_SLUGS),
+    supabase
+      .from("barbers")
+      .select("*", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("active", true),
+  ]);
 
-  const { data: plansRaw } = await supabase
-    .from("plans")
-    .select("*")
-    .in("slug", CANONICAL_PLAN_SLUGS);
-
-  const plans = sortPlansByCanonicalOrder(plansRaw ?? []);
-
-  const { count: activeBarbers } = await supabase
-    .from("barbers")
-    .select("*", {
-      count: "exact",
-      head: true,
-    })
-    .eq("tenant_id", barber.tenant_id)
-    .eq("active", true);
+  const subscription = subscriptionRes.data;
+  const plans = sortPlansByCanonicalOrder(plansRawRes.data ?? []);
+  const activeBarbers = activeBarbersRes.count;
 
   const currentPlan = subscription?.plans;
 
@@ -113,9 +112,7 @@ export default async function BillingPage({
   const trialDaysLeft = trialEnds
     ? Math.max(
         0,
-        Math.ceil(
-          (trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-        )
+        Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
       )
     : 0;
 
@@ -148,7 +145,10 @@ export default async function BillingPage({
 
       {isPastDue && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
-          <p>Ultima plată nu a reușit. Finalizează plata ca să păstrezi planul activ.</p>
+          <p>
+            Ultima plată nu a reușit. Finalizează plata ca să păstrezi planul
+            activ.
+          </p>
           <PayInvoiceButton />
         </div>
       )}
@@ -201,7 +201,7 @@ export default async function BillingPage({
         isTrial={isTrial}
       />
 
-      <BillingInvoicesSection tenantId={barber.tenant_id} />
+      <BillingInvoicesSection tenantId={tenantId} />
     </div>
   );
 }

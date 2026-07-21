@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getAdminSession } from "@/lib/auth/getAdminSession";
 import {
   isAssistantLlmConfigured,
   isFrizeoAssistantEnabled,
@@ -11,8 +11,8 @@ export default async function AssistantPage() {
     redirect("/admin/dashboard");
   }
 
-  const barber = await getCurrentBarberInTenant();
-  if (!barber) redirect("/login");
+  const session = await getAdminSession();
+  if (!session?.barber) redirect("/login");
 
   return (
     <div className="space-y-6 min-w-0">
@@ -30,7 +30,7 @@ export default async function AssistantPage() {
       <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-white/10 bg-[#161618]">
         <AssistantChatPanel
           configured={isAssistantLlmConfigured()}
-          displayName={barber.display_name || ""}
+          displayName={session.barber.display_name || ""}
           className="h-full"
         />
       </div>
