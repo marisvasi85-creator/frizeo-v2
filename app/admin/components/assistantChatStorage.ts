@@ -33,7 +33,7 @@ export function buildWelcomeMessage(displayName: string): string {
 }
 
 export function buildPlatformWelcomeMessage(): string {
-  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nÎncepe cu „Ce am azi pe platformă?” pentru briefing-ul zilnic (trial-uri, past_due, saloane noi, health). MVP read-only.`;
+  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPoți cere briefing zilnic sau, cu confirmare, să setezi planul unui salon (ex: „Pune San Barbershop pe Pro”). Nu încasează bani în Stripe — e override în Frizeo.`;
 }
 
 export function loadAssistantChat(
