@@ -1,10 +1,12 @@
 import type { PlatformToolDefinition } from "../types";
 import { billingWatchlistTool } from "./billingWatchlist";
 import { dailyBriefingTool } from "./dailyBriefing";
+import { extendTrialTool } from "./extendTrial";
 import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
 import { setTenantPlanTool } from "./setTenantPlan";
 import { tenantDetailTool } from "./tenantDetail";
+import { trialFollowupsTool } from "./trialFollowups";
 
 export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
   {
@@ -83,6 +85,25 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
     execute: billingWatchlistTool,
   },
   {
+    name: "trial_followups",
+    description:
+      "După briefing: listă follow-up trial — email owner + draft mesaj (opțional). Pentru „pe cine sun / scriu azi”, „follow-up trial”, „mesaje trial”.",
+    parameters: {
+      type: "object",
+      properties: {
+        days: {
+          type: "number",
+          description: "Fereastră (implicit 7, max 30).",
+        },
+        include_drafts: {
+          type: "boolean",
+          description: "Include draft mesaj email (implicit true).",
+        },
+      },
+    },
+    execute: trialFollowupsTool,
+  },
+  {
     name: "set_tenant_plan",
     description:
       "DOAR CREATOR: setează manual planul unui salon în Frizeo (complimentary / override). NU încasează bani în Stripe. IMPORTANT: prima dată fără confirmed; după confirmare, confirmed=true. Implicit detașează stripe_subscription_id ca webhook-ul să nu rescrie planul.",
@@ -121,6 +142,35 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       required: ["plan_slug"],
     },
     execute: setTenantPlanTool,
+  },
+  {
+    name: "extend_trial",
+    description:
+      "DOAR CREATOR: prelungește trial_ends_at cu N zile (doar în Frizeo, fără plată Stripe). IMPORTANT: prima dată fără confirmed; după „da”, confirmed=true.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Nume salon.",
+        },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        days: {
+          type: "number",
+          description: "Zile de prelungire (implicit 7, max 90).",
+        },
+        reason: {
+          type: "string",
+          description: "Motiv scurt.",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a creatorului.",
+        },
+      },
+    },
+    execute: extendTrialTool,
   },
 ];
 

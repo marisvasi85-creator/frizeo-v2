@@ -41,9 +41,11 @@ function isNeedsConfirmation(result: PlatformToolResult): boolean {
   );
 }
 
+const WRITE_TOOLS = new Set(["set_tenant_plan", "extend_trial"]);
+
 /**
  * Prefer a clear human reply from tool summaries when the model
- * fails to produce a final answer (esp. after set_tenant_plan).
+ * fails to produce a final answer (esp. after writes).
  */
 function replyFromToolResults(results: ExecutedTool[]): string | null {
   if (!results.length) return null;
@@ -52,7 +54,7 @@ function replyFromToolResults(results: ExecutedTool[]): string | null {
     .reverse()
     .find(
       (r) =>
-        r.name === "set_tenant_plan" &&
+        WRITE_TOOLS.has(r.name) &&
         r.result.ok &&
         !isNeedsConfirmation(r.result),
     );
@@ -64,7 +66,7 @@ function replyFromToolResults(results: ExecutedTool[]): string | null {
     .reverse()
     .find(
       (r) =>
-        r.name === "set_tenant_plan" &&
+        WRITE_TOOLS.has(r.name) &&
         r.result.ok &&
         isNeedsConfirmation(r.result),
     );
@@ -94,7 +96,7 @@ function replyFromToolResults(results: ExecutedTool[]): string | null {
 function shouldShortCircuit(results: ExecutedTool[]): boolean {
   return results.some(
     (r) =>
-      r.name === "set_tenant_plan" &&
+      WRITE_TOOLS.has(r.name) &&
       r.result.ok &&
       !isNeedsConfirmation(r.result),
   );
@@ -209,7 +211,7 @@ async function runWithOpenAI(
       return {
         reply:
           replyFromToolResults(roundResults) ||
-          "Planul a fost actualizat.",
+          "Actualizare reușită.",
         toolsUsed,
       };
     }
@@ -378,7 +380,7 @@ După set_tenant_plan confirmat (fără needs_confirmation), răspunde imediat c
     if (shouldShortCircuit(results)) {
       return {
         reply:
-          replyFromToolResults(results) || "Planul a fost actualizat.",
+          replyFromToolResults(results) || "Actualizare reușită.",
         toolsUsed,
       };
     }
