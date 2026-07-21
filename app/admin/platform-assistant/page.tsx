@@ -11,10 +11,10 @@ import {
 } from "../components/assistantChatStorage";
 
 const PLATFORM_SUGGESTIONS = [
+  "Ce am azi pe platformă?",
   "Overview platformă",
-  "Ce trial-uri expiră în 14 zile?",
+  "Ce trial-uri expiră în 7 zile?",
   "Cine e past_due?",
-  "Caută un salon",
 ];
 
 export default async function PlatformAssistantPage() {

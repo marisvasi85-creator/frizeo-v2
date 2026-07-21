@@ -33,7 +33,7 @@ export function buildWelcomeMessage(displayName: string): string {
 }
 
 export function buildPlatformWelcomeMessage(): string {
-  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPot să-ți dau overview pe Frizeo.ro: saloane, trial-uri, past_due, detalii pe un tenant. MVP read-only (fără modificări încă).`;
+  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nÎncepe cu „Ce am azi pe platformă?” pentru briefing-ul zilnic (trial-uri, past_due, saloane noi, health). MVP read-only.`;
 }
 
 export function loadAssistantChat(
