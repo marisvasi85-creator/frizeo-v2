@@ -3,6 +3,7 @@ import { billingWatchlistTool } from "./billingWatchlist";
 import { dailyBriefingTool } from "./dailyBriefing";
 import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
+import { setTenantPlanTool } from "./setTenantPlan";
 import { tenantDetailTool } from "./tenantDetail";
 
 export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
@@ -80,6 +81,46 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: billingWatchlistTool,
+  },
+  {
+    name: "set_tenant_plan",
+    description:
+      "DOAR CREATOR: setează manual planul unui salon în Frizeo (complimentary / override). NU încasează bani în Stripe. IMPORTANT: prima dată fără confirmed; după confirmare, confirmed=true. Implicit detașează stripe_subscription_id ca webhook-ul să nu rescrie planul.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Nume salon (ex: San Barbershop).",
+        },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        plan_slug: {
+          type: "string",
+          enum: ["free", "pro", "pro-plus", "custom"],
+          description: "Planul țintă.",
+        },
+        plan: {
+          type: "string",
+          description: "Alias pentru plan_slug (pro / pro-plus / free / custom).",
+        },
+        detach_stripe: {
+          type: "boolean",
+          description:
+            "Implicit true: șterge stripe_subscription_id din Frizeo. false = păstrează legătura Stripe (risc overwrite).",
+        },
+        reason: {
+          type: "string",
+          description: "Motiv scurt (ex: complimentary beta).",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a creatorului.",
+        },
+      },
+      required: ["plan_slug"],
+    },
+    execute: setTenantPlanTool,
   },
 ];
 
