@@ -65,6 +65,7 @@ export async function findSlotsTool(
   }
 
   const limit = Math.min(Math.max(asNumber(args.limit) ?? 12, 1), 40);
+  const excludeBookingId = asString(args.exclude_booking_id);
 
   const day = jsDayToScheduleDay(date);
   const [{ data: schedule }, { data: override }, { data: bookings }, { data: barber }] =
@@ -123,6 +124,7 @@ export async function findSlotsTool(
     bookings: getActiveBookings(bookings),
     googleBusyIntervals: [],
     minNoticeHours,
+    excludeBookingId,
     bypassMinNotice: true,
     ignoreGoogleBusy: true,
   });

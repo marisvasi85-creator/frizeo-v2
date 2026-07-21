@@ -10,6 +10,7 @@ import {
   getTodayBriefingTool,
 } from "./nextBooking";
 import { popularServicesTool } from "./popularServices";
+import { rescheduleBookingTool } from "./rescheduleBooking";
 import { closeDayTool, createVacationTool } from "./scheduleTools";
 import { subscriptionStatusTool } from "./subscriptionStatus";
 import { updateBookingTool } from "./updateBooking";
@@ -158,6 +159,11 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "number",
           description: "Câte ore să returnezi (implicit 12, max 40).",
         },
+        exclude_booking_id: {
+          type: "string",
+          description:
+            "La reprogramare: exclude această programare din ocupare (ca slotul ei să apară liber).",
+        },
       },
     },
     execute: findSlotsTool,
@@ -254,9 +260,63 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
     execute: createServiceTool,
   },
   {
+    name: "reschedule_booking",
+    description:
+      "Reprogramare ghidată: găsește programarea (booking_id sau client_name), propune ore libere pe o dată nouă, apoi mută după confirmare. Preferă acest tool față de update_booking când utilizatorul zice „mută-l pe X pe mâine”.",
+    parameters: {
+      type: "object",
+      properties: {
+        booking_id: {
+          type: "string",
+          description: "ID programare (din list_bookings). Preferat dacă îl ai.",
+        },
+        client_name: {
+          type: "string",
+          description: "Nume client dacă nu ai booking_id.",
+        },
+        client_phone: {
+          type: "string",
+          description: "Telefon opțional pentru dezambiguizare.",
+        },
+        current_date: {
+          type: "string",
+          description: "Data actuală a programării (YYYY-MM-DD) pentru dezambiguizare.",
+        },
+        date: {
+          type: "string",
+          description: "Noua dată YYYY-MM-DD.",
+        },
+        when: {
+          type: "string",
+          enum: ["today", "tomorrow"],
+          description: "Scurtătură dacă nu trimiți date.",
+        },
+        start_time: {
+          type: "string",
+          description:
+            "Noua oră HH:MM. Dacă lipsește, tool-ul returnează ore libere.",
+        },
+        barber_id: {
+          type: "string",
+          description: "Filtru frizer la căutarea după client_name (owner/manager).",
+        },
+        limit: {
+          type: "number",
+          description: "Câte ore libere să propună (implicit 12).",
+        },
+        confirmed: {
+          type: "boolean",
+          description:
+            "true doar după confirmare, și doar când ai deja start_time.",
+        },
+      },
+    },
+    execute: rescheduleBookingTool,
+  },
+  {
     name: "update_booking",
     description:
-      "Mută o programare pe altă dată/oră. Folosește list_bookings ca să afli booking_id. IMPORTANT: confirmed=true doar după confirmare.",
+      "Mută o programare pe altă dată/oră când ai deja booking_id + dată + oră. Pentru flux ghidat (propunere ore), preferă reschedule_booking. IMPORTANT: confirmed=true doar după confirmare.",
     parameters: {
       type: "object",
       properties: {
