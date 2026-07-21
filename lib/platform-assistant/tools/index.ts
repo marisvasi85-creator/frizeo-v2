@@ -1,10 +1,14 @@
 import type { PlatformToolDefinition } from "../types";
 import { billingWatchlistTool } from "./billingWatchlist";
 import { dailyBriefingTool } from "./dailyBriefing";
+import { extendTrialTool } from "./extendTrial";
+import { healthCheckTool } from "./healthCheck";
 import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
 import { setTenantPlanTool } from "./setTenantPlan";
 import { tenantDetailTool } from "./tenantDetail";
+import { addTenantNoteTool, listTenantNotesTool } from "./tenantNotes";
+import { trialFollowupsTool } from "./trialFollowups";
 
 export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
   {
@@ -22,6 +26,36 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: dailyBriefingTool,
+  },
+  {
+    name: "health_check",
+    description:
+      "Health check platformă sau pe un salon: fără frizer activ, fără servicii, past_due, trial expirat, fără telefon; pe un salon și fără programări. Pentru „health check”, „saloane problematice”, „ce e broken”.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon (opțional)." },
+        slug: { type: "string", description: "Slug salon (opțional)." },
+        tenant_id: { type: "string", description: "ID tenant (opțional)." },
+        issue: {
+          type: "string",
+          enum: [
+            "no_active_barber",
+            "no_active_services",
+            "past_due",
+            "trial_expired",
+            "no_phone",
+            "no_bookings_ever",
+          ],
+          description: "Filtrează un tip de problemă.",
+        },
+        limit: {
+          type: "number",
+          description: "Câte issue-uri să returnezi pe platformă (implicit 30).",
+        },
+      },
+    },
+    execute: healthCheckTool,
   },
   {
     name: "platform_overview",
@@ -56,7 +90,7 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
   {
     name: "tenant_detail",
     description:
-      "Detaliu pe un salon: plan, Stripe (da/nu), frizeri, programări luna asta, email owner.",
+      "Detaliu pe un salon: plan, Stripe (da/nu), frizeri, programări luna asta, email owner, note interne recente.",
     parameters: {
       type: "object",
       properties: {
@@ -66,6 +100,46 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: tenantDetailTool,
+  },
+  {
+    name: "list_tenant_notes",
+    description:
+      "Listează notele interne (creator) pe un salon. Pentru „ce am notat pe X”, „note San Barbershop”.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon." },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        limit: {
+          type: "number",
+          description: "Câte note (implicit 20, max 50).",
+        },
+      },
+    },
+    execute: listTenantNotesTool,
+  },
+  {
+    name: "add_tenant_note",
+    description:
+      "Adaugă o notă internă pe un salon (doar creator, fără efect Stripe). Pentru „notează pe X că…”, „salvează notă”.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon." },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        body: {
+          type: "string",
+          description: "Textul notei.",
+        },
+        note: {
+          type: "string",
+          description: "Alias pentru body.",
+        },
+      },
+    },
+    execute: addTenantNoteTool,
   },
   {
     name: "billing_watchlist",
@@ -81,6 +155,25 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: billingWatchlistTool,
+  },
+  {
+    name: "trial_followups",
+    description:
+      "După briefing: listă follow-up trial — email owner + draft mesaj (opțional). Pentru „pe cine sun / scriu azi”, „follow-up trial”, „mesaje trial”.",
+    parameters: {
+      type: "object",
+      properties: {
+        days: {
+          type: "number",
+          description: "Fereastră (implicit 7, max 30).",
+        },
+        include_drafts: {
+          type: "boolean",
+          description: "Include draft mesaj email (implicit true).",
+        },
+      },
+    },
+    execute: trialFollowupsTool,
   },
   {
     name: "set_tenant_plan",
@@ -121,6 +214,35 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       required: ["plan_slug"],
     },
     execute: setTenantPlanTool,
+  },
+  {
+    name: "extend_trial",
+    description:
+      "DOAR CREATOR: prelungește trial_ends_at cu N zile (doar în Frizeo, fără plată Stripe). IMPORTANT: prima dată fără confirmed; după „da”, confirmed=true.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "Nume salon.",
+        },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+        days: {
+          type: "number",
+          description: "Zile de prelungire (implicit 7, max 90).",
+        },
+        reason: {
+          type: "string",
+          description: "Motiv scurt.",
+        },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea explicită a creatorului.",
+        },
+      },
+    },
+    execute: extendTrialTool,
   },
 ];
 
