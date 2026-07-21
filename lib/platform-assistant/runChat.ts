@@ -10,9 +10,15 @@ import type {
   PlatformChatMessage,
   PlatformRunResult,
   PlatformToolContext,
+  PlatformToolResult,
 } from "./types";
 
-const MAX_TOOL_ROUNDS = 4;
+const MAX_TOOL_ROUNDS = 5;
+
+type ExecutedTool = {
+  name: string;
+  result: PlatformToolResult;
+};
 
 function getOpenAIKey(): string | null {
   return process.env.OPENAI_API_KEY?.trim() || null;
@@ -26,11 +32,79 @@ function getGeminiKey(): string | null {
   );
 }
 
+function isNeedsConfirmation(result: PlatformToolResult): boolean {
+  const data = result.data;
+  return Boolean(
+    data &&
+      typeof data === "object" &&
+      (data as { needs_confirmation?: boolean }).needs_confirmation,
+  );
+}
+
+/**
+ * Prefer a clear human reply from tool summaries when the model
+ * fails to produce a final answer (esp. after set_tenant_plan).
+ */
+function replyFromToolResults(results: ExecutedTool[]): string | null {
+  if (!results.length) return null;
+
+  const writeDone = [...results]
+    .reverse()
+    .find(
+      (r) =>
+        r.name === "set_tenant_plan" &&
+        r.result.ok &&
+        !isNeedsConfirmation(r.result),
+    );
+  if (writeDone?.result.summary) {
+    return writeDone.result.summary;
+  }
+
+  const writePropose = [...results]
+    .reverse()
+    .find(
+      (r) =>
+        r.name === "set_tenant_plan" &&
+        r.result.ok &&
+        isNeedsConfirmation(r.result),
+    );
+  if (writePropose?.result.summary) {
+    const warning =
+      writePropose.result.data &&
+      typeof writePropose.result.data === "object" &&
+      (writePropose.result.data as { proposal?: { warning?: string | null } })
+        .proposal?.warning;
+    return [
+      writePropose.result.summary,
+      warning ? `⚠️ ${warning}` : null,
+      "Confirmi?",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+  }
+
+  const parts = results
+    .map((r) => r.result.summary?.trim())
+    .filter((s): s is string => Boolean(s));
+
+  if (!parts.length) return null;
+  return parts.join("\n\n");
+}
+
+function shouldShortCircuit(results: ExecutedTool[]): boolean {
+  return results.some(
+    (r) =>
+      r.name === "set_tenant_plan" &&
+      r.result.ok &&
+      !isNeedsConfirmation(r.result),
+  );
+}
+
 async function executeToolCall(
   name: string,
   rawArgs: string,
   ctx: PlatformToolContext,
-) {
+): Promise<ExecutedTool> {
   const tool = getPlatformTool(name);
   if (!tool) {
     return {
@@ -64,6 +138,7 @@ async function runWithOpenAI(
   const client = new OpenAI({ apiKey });
   const model = getPlatformAssistantModel();
   const toolsUsed: string[] = [];
+  let lastToolResults: ExecutedTool[] = [];
 
   const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: buildPlatformSystemPrompt(ctx) },
@@ -74,21 +149,32 @@ async function runWithOpenAI(
   ];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const forceAnswer = round === MAX_TOOL_ROUNDS - 1 && lastToolResults.length > 0;
+
     const completion = await client.chat.completions.create({
       model,
       temperature: 0.2,
       messages: openaiMessages,
-      tools: getPlatformOpenAIToolDefinitions(),
-      tool_choice: "auto",
+      ...(forceAnswer
+        ? {}
+        : {
+            tools: getPlatformOpenAIToolDefinitions(),
+            tool_choice: "auto" as const,
+          }),
     });
 
     const choice = completion.choices[0]?.message;
     if (!choice) throw new Error("Nu am primit răspuns de la AI");
 
-    const toolCalls = choice.tool_calls;
+    const toolCalls = forceAnswer ? undefined : choice.tool_calls;
     if (!toolCalls || toolCalls.length === 0) {
+      const content = choice.content?.trim();
+      if (content) {
+        return { reply: content, toolsUsed };
+      }
+      const fallback = replyFromToolResults(lastToolResults);
       return {
-        reply: choice.content?.trim() || "Nu am un răspuns momentan.",
+        reply: fallback || "Nu am un răspuns momentan.",
         toolsUsed,
       };
     }
@@ -99,6 +185,7 @@ async function runWithOpenAI(
       tool_calls: toolCalls,
     });
 
+    const roundResults: ExecutedTool[] = [];
     for (const call of toolCalls) {
       if (call.type !== "function") continue;
       const executed = await executeToolCall(
@@ -107,16 +194,30 @@ async function runWithOpenAI(
         ctx,
       );
       toolsUsed.push(executed.name);
+      roundResults.push(executed);
       openaiMessages.push({
         role: "tool",
         tool_call_id: call.id,
         content: JSON.stringify(executed.result),
       });
     }
+
+    lastToolResults = roundResults;
+
+    // After a successful plan change, don't wait for another model turn.
+    if (shouldShortCircuit(roundResults)) {
+      return {
+        reply:
+          replyFromToolResults(roundResults) ||
+          "Planul a fost actualizat.",
+        toolsUsed,
+      };
+    }
   }
 
   return {
     reply:
+      replyFromToolResults(lastToolResults) ||
       "Am adunat datele, dar nu am putut finaliza răspunsul. Încearcă o întrebare mai specifică.",
     toolsUsed,
   };
@@ -219,11 +320,15 @@ async function runWithGemini(
   }));
 
   let toolMemory = "";
+  let lastToolResults: ExecutedTool[] = [];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const history = messages
       .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
       .join("\n");
+
+    const forceAnswer =
+      round === MAX_TOOL_ROUNDS - 1 && lastToolResults.length > 0;
 
     const prompt = `${buildPlatformSystemPrompt(ctx)}
 
@@ -235,9 +340,16 @@ ${toolMemory ? `Rezultate tool anterioare:\n${toolMemory}\n` : ""}
 Istoric conversație:
 ${history}
 
-Răspunde DOAR cu JSON valid:
+${
+  forceAnswer
+    ? `IMPORTANT: Ai deja rezultatele tool. Răspunde DOAR cu:
+{"type":"answer","content":"răspunsul final clar pentru utilizator"}`
+    : `Răspunde DOAR cu JSON valid:
 {"type":"tools","calls":[{"name":"tool_name","arguments":{}}]}
-{"type":"answer","content":"răspunsul final"}`;
+{"type":"answer","content":"răspunsul final"}
+
+După set_tenant_plan confirmat (fără needs_confirmation), răspunde imediat cu type=answer.`
+}`;
 
     const raw = await callGeminiJson(apiKey, model, prompt);
     const decision = parseGeminiDecision(raw);
@@ -246,7 +358,11 @@ Răspunde DOAR cu JSON valid:
       return { reply: decision.content, toolsUsed };
     }
 
-    const results = [];
+    if (forceAnswer) {
+      break;
+    }
+
+    const results: ExecutedTool[] = [];
     for (const call of decision.calls) {
       const executed = await executeToolCall(
         call.name,
@@ -256,11 +372,21 @@ Răspunde DOAR cu JSON valid:
       toolsUsed.push(executed.name);
       results.push(executed);
     }
+    lastToolResults = results;
     toolMemory += `${JSON.stringify(results, null, 2)}\n`;
+
+    if (shouldShortCircuit(results)) {
+      return {
+        reply:
+          replyFromToolResults(results) || "Planul a fost actualizat.",
+        toolsUsed,
+      };
+    }
   }
 
   return {
     reply:
+      replyFromToolResults(lastToolResults) ||
       "Am adunat datele, dar nu am putut finaliza răspunsul. Încearcă pe scurt.",
     toolsUsed,
   };
