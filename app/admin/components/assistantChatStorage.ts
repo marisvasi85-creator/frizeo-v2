@@ -4,7 +4,7 @@ export type AssistantChatMessage = {
   content: string;
 };
 
-const STORAGE_KEY = "frizeo-assistant-chat-v1";
+const DEFAULT_STORAGE_KEY = "frizeo-assistant-chat-v1";
 const MAX_STORED_MESSAGES = 40;
 
 type StoredChat = {
@@ -12,6 +12,11 @@ type StoredChat = {
   input?: string;
   updatedAt: number;
 };
+
+function storageKeyFor(namespace?: string) {
+  if (!namespace || namespace === "salon") return DEFAULT_STORAGE_KEY;
+  return `frizeo-assistant-chat-${namespace}-v1`;
+}
 
 function isMessage(value: unknown): value is AssistantChatMessage {
   if (!value || typeof value !== "object") return false;
@@ -27,14 +32,21 @@ export function buildWelcomeMessage(displayName: string): string {
   return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să adaug servicii, sau să setez zi liberă / concediu (cu confirmare). Prețul e opțional. Nu calculez încasări.`;
 }
 
-export function loadAssistantChat(displayName: string): {
+export function buildPlatformWelcomeMessage(): string {
+  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPot să-ți dau overview pe Frizeo.ro: saloane, trial-uri, past_due, detalii pe un tenant. MVP read-only (fără modificări încă).`;
+}
+
+export function loadAssistantChat(
+  displayName: string,
+  options?: { namespace?: string; welcome?: string },
+): {
   messages: AssistantChatMessage[];
   input: string;
 } {
   const welcome: AssistantChatMessage = {
     id: "welcome",
     role: "assistant",
-    content: buildWelcomeMessage(displayName),
+    content: options?.welcome || buildWelcomeMessage(displayName),
   };
 
   if (typeof window === "undefined") {
@@ -42,7 +54,7 @@ export function loadAssistantChat(displayName: string): {
   }
 
   try {
-    const raw = window.sessionStorage.getItem(STORAGE_KEY);
+    const raw = window.sessionStorage.getItem(storageKeyFor(options?.namespace));
     if (!raw) return { messages: [welcome], input: "" };
 
     const parsed = JSON.parse(raw) as Partial<StoredChat>;
@@ -66,6 +78,7 @@ export function loadAssistantChat(displayName: string): {
 export function saveAssistantChat(
   messages: AssistantChatMessage[],
   input: string,
+  namespace?: string,
 ) {
   if (typeof window === "undefined") return;
 
@@ -75,16 +88,19 @@ export function saveAssistantChat(
       input,
       updatedAt: Date.now(),
     };
-    window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    window.sessionStorage.setItem(
+      storageKeyFor(namespace),
+      JSON.stringify(payload),
+    );
   } catch {
     // ignore quota / private mode failures
   }
 }
 
-export function clearAssistantChat() {
+export function clearAssistantChat(namespace?: string) {
   if (typeof window === "undefined") return;
   try {
-    window.sessionStorage.removeItem(STORAGE_KEY);
+    window.sessionStorage.removeItem(storageKeyFor(namespace));
   } catch {
     // ignore
   }
