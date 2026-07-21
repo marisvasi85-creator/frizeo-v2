@@ -1,10 +1,27 @@
 import type { PlatformToolDefinition } from "../types";
 import { billingWatchlistTool } from "./billingWatchlist";
+import { dailyBriefingTool } from "./dailyBriefing";
 import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
 import { tenantDetailTool } from "./tenantDetail";
 
 export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
+  {
+    name: "daily_briefing",
+    description:
+      "Briefing zilnic pentru creator: programări azi/ieri, saloane noi, trial-uri care expiră (urgente ≤3 zile), past_due, health (fără frizer / fără servicii) + listă de acțiuni sugerate. Folosește-l pentru „ce am azi pe platformă”, „briefing”, „ce e de făcut azi”.",
+    parameters: {
+      type: "object",
+      properties: {
+        trial_days: {
+          type: "number",
+          description:
+            "Câte zile înainte să listezi trial-urile (implicit 7, max 30).",
+        },
+      },
+    },
+    execute: dailyBriefingTool,
+  },
   {
     name: "platform_overview",
     description:
