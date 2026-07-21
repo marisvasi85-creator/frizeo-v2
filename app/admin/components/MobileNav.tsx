@@ -50,6 +50,11 @@ const ownerMoreItems = [
     label: "Assistant",
   },
   {
+    href: "/admin/platform-assistant",
+    icon: "🛠️",
+    label: "Platform AI",
+  },
+  {
     href: "/admin/billing",
     icon: "💎",
     label: "Abonament",
@@ -82,23 +87,27 @@ const barberMoreItems = [
 export default function MobileNav({
   role,
   assistantEnabled = false,
+  platformAssistantEnabled = false,
 }: {
   role: string | null;
   assistantEnabled?: boolean;
+  platformAssistantEnabled?: boolean;
 }) {
   const pathname = usePathname();
 
-  const [open, setOpen] =
-    useState(false);
+  const [open, setOpen] = useState(false);
 
-  const mainItems =
-    role === "owner"
-      ? ownerMainItems
-      : barberMainItems;
+  const mainItems = role === "owner" ? ownerMainItems : barberMainItems;
 
   const moreItems = (
     role === "owner" ? ownerMoreItems : barberMoreItems
-  ).filter((item) => assistantEnabled || item.href !== "/admin/assistant");
+  ).filter((item) => {
+    if (item.href === "/admin/assistant") return assistantEnabled;
+    if (item.href === "/admin/platform-assistant") {
+      return platformAssistantEnabled;
+    }
+    return true;
+  });
 
   return (
     <>

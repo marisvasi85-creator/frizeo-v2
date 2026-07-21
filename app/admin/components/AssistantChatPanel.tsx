@@ -27,6 +27,9 @@ type AssistantChatPanelProps = {
   compact?: boolean;
   suggestions?: string[];
   className?: string;
+  apiPath?: string;
+  storageNamespace?: string;
+  welcomeMessage?: string;
 };
 
 export default function AssistantChatPanel({
@@ -35,8 +38,16 @@ export default function AssistantChatPanel({
   compact = false,
   suggestions = DEFAULT_SUGGESTIONS,
   className = "",
+  apiPath = "/api/assistant/chat",
+  storageNamespace = "salon",
+  welcomeMessage,
 }: AssistantChatPanelProps) {
-  const [boot] = useState(() => loadAssistantChat(displayName));
+  const [boot] = useState(() =>
+    loadAssistantChat(displayName, {
+      namespace: storageNamespace,
+      welcome: welcomeMessage,
+    }),
+  );
   const [messages, setMessages] = useState<AssistantChatMessage[]>(
     () => boot.messages,
   );
@@ -54,8 +65,8 @@ export default function AssistantChatPanel({
 
   useEffect(() => {
     if (!hydratedRef.current) return;
-    saveAssistantChat(messages, input);
-  }, [messages, input]);
+    saveAssistantChat(messages, input, storageNamespace);
+  }, [messages, input, storageNamespace]);
 
   const handleTranscript = useCallback(
     ({ committed, interim: live }: { committed: string; interim: string }) => {
@@ -91,11 +102,11 @@ export default function AssistantChatPanel({
 
   function resetConversation() {
     if (dictation.listening) dictation.stop();
-    clearAssistantChat();
+    clearAssistantChat(storageNamespace);
     const welcome: AssistantChatMessage = {
       id: "welcome",
       role: "assistant",
-      content: buildWelcomeMessage(displayName),
+      content: welcomeMessage || buildWelcomeMessage(displayName),
     };
     setMessages([welcome]);
     setInput("");
@@ -128,7 +139,7 @@ export default function AssistantChatPanel({
     setLoading(true);
 
     try {
-      const res = await fetch("/api/assistant/chat", {
+      const res = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -154,7 +165,7 @@ export default function AssistantChatPanel({
       ]);
     } catch (err: unknown) {
       const message =
-        err instanceof Error ? err.message : "Eroare la Frizeo Assistant";
+        err instanceof Error ? err.message : "Eroare la Assistant";
       setError(message);
       setMessages((prev) => [
         ...prev,
