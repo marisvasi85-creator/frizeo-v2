@@ -87,7 +87,8 @@ export async function tenantDetailTool(
     .toISOString()
     .slice(0, 10);
 
-  const [subRes, barbersRes, bookingsCountRes, ownersRes] = await Promise.all([
+  const [subRes, barbersRes, bookingsCountRes, ownersRes, notesRes] =
+    await Promise.all([
     supabaseAdmin
       .from("subscriptions")
       .select(
@@ -111,6 +112,12 @@ export async function tenantDetailTool(
       .select("user_id, role")
       .eq("tenant_id", tenant.id)
       .eq("role", "owner"),
+    supabaseAdmin
+      .from("platform_tenant_notes")
+      .select("id, body, author_email, created_at")
+      .eq("tenant_id", tenant.id)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const sub = subRes.data;
@@ -165,11 +172,18 @@ export async function tenantDetailTool(
     })),
     bookings_this_month: bookingsCountRes.count ?? 0,
     owner_emails: ownerEmails,
+    recent_notes: notesRes.error ? [] : notesRes.data ?? [],
+    notes_error: notesRes.error?.message || null,
   };
+
+  const notesHint =
+    !notesRes.error && (notesRes.data?.length || 0) > 0
+      ? `, ${notesRes.data!.length} notă/note recente`
+      : "";
 
   return {
     ok: true,
-    summary: `${tenant.name}: plan ${plan?.name || "—"} (${sub?.status || "fără sub"}), ${data.barbers.filter((b) => b.active).length} frizeri activi, ${data.bookings_this_month} programări luna asta.`,
+    summary: `${tenant.name}: plan ${plan?.name || "—"} (${sub?.status || "fără sub"}), ${data.barbers.filter((b) => b.active).length} frizeri activi, ${data.bookings_this_month} programări luna asta${notesHint}.`,
     data,
   };
 }

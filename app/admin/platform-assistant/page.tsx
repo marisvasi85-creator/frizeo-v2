@@ -12,9 +12,9 @@ import {
 
 const PLATFORM_SUGGESTIONS = [
   "Ce am azi pe platformă?",
+  "Health check saloane",
   "Follow-up trial — pe cine scriu?",
-  "Prelungește trial cu 7 zile",
-  "Cine e past_due?",
+  "Notează pe San Barbershop: beta complimentary",
 ];
 
 export default async function PlatformAssistantPage() {
@@ -31,12 +31,12 @@ export default async function PlatformAssistantPage() {
     <div className="space-y-6 min-w-0">
       <div>
         <div className="inline-flex items-center gap-2 text-xs text-sky-300/90 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-full mb-3">
-          Creator only · plan / trial cu confirmare
+          Creator only · plan / trial / note
         </div>
         <h1 className="text-2xl font-semibold">Platform Assistant</h1>
         <p className="text-white/60 mt-1">
-          Asistent intern pentru administrarea Frizeo.ro — briefing, follow-up
-          trial, planuri. Separat de asistentul de salon.
+          Asistent intern — briefing, health, follow-up trial, note pe salon,
+          planuri. Separat de asistentul de salon.
         </p>
       </div>
 

@@ -41,7 +41,11 @@ function isNeedsConfirmation(result: PlatformToolResult): boolean {
   );
 }
 
-const WRITE_TOOLS = new Set(["set_tenant_plan", "extend_trial"]);
+const WRITE_TOOLS = new Set([
+  "set_tenant_plan",
+  "extend_trial",
+  "add_tenant_note",
+]);
 
 /**
  * Prefer a clear human reply from tool summaries when the model
