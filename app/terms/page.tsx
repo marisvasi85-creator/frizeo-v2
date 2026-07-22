@@ -261,18 +261,21 @@ export default function TermsPage() {
         Utilizatorul poate solicita anularea abonamentului în orice moment.
       </p>
       <p>
-        Dacă funcționalitatea este disponibilă în platformă, anularea se poate
-        realiza direct din contul Frizeo.
-      </p>
-      <p>
-        În caz contrar, solicitarea poate fi transmisă la:
-      </p>
-      <p>
-        <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>
+        Pentru abonamentele plătite prin Stripe, anularea se poate realiza
+        direct din contul Frizeo, din secțiunea{" "}
+        <strong>Abonament → Gestionează abonamentul</strong> (portal Stripe).
       </p>
       <p>
         Anularea produce efect, de regulă, la sfârșitul perioadei de facturare
-        deja achitate.
+        deja achitate. Până atunci, funcționalitățile planului plătit rămân
+        disponibile.
+      </p>
+      <p>
+        Dacă portalul nu este disponibil sau ai nevoie de asistență,
+        solicitarea poate fi transmisă la:
+      </p>
+      <p>
+        <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>
       </p>
 
       <h2>5. Obligațiile Salonului</h2>

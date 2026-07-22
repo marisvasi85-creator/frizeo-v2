@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import BillingPlansSection from "./BillingPlansSection";
 import PayInvoiceButton from "./PayInvoiceButton";
+import ManageSubscriptionButton from "./ManageSubscriptionButton";
 import { BillingInvoicesSection } from "./BillingProfileSection";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
@@ -12,6 +13,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
 import BillingConversionTracker from "./BillingConversionTracker";
+import { getTrialDays } from "@/lib/billing/getTrialDays";
 
 async function syncAfterCheckout(sessionId: string, tenantId: string) {
   try {
@@ -117,6 +119,13 @@ export default async function BillingPage({
     : 0;
 
   const isPastDue = subscription?.status === "past_due";
+  const canManageStripe = Boolean(subscription?.stripe_customer_id);
+  const isPaidStripeSub = Boolean(subscription?.stripe_subscription_id);
+  const freeBookingLimit =
+    typeof currentPlan?.max_bookings_per_month === "number"
+      ? currentPlan.max_bookings_per_month
+      : null;
+  const trialDaysConfigured = getTrialDays();
 
   return (
     <div className="space-y-8">
@@ -180,6 +189,12 @@ export default async function BillingPage({
             {currentPlan?.max_barbers ?? 1}
           </p>
 
+          {freeBookingLimit != null && (
+            <p className="text-white/60">
+              Limită programări: {freeBookingLimit} / lună
+            </p>
+          )}
+
           {isTrial && (
             <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
               <p className="font-medium text-blue-300">
@@ -187,8 +202,22 @@ export default async function BillingPage({
               </p>
               <p className="text-sm text-white/70 mt-1">
                 Ai acces Pro+ (3 frizeri, SMS, programări nelimitate) încă{" "}
-                {trialDaysLeft} zile. După expirare treci automat pe Free.
+                {trialDaysLeft} zile
+                {trialDaysConfigured
+                  ? ` (trial ${trialDaysConfigured} zile)`
+                  : ""}
+                . După expirare treci automat pe Free
+                {freeBookingLimit != null
+                  ? ` (${freeBookingLimit} programări / lună)`
+                  : ""}
+                .
               </p>
+            </div>
+          )}
+
+          {canManageStripe && isPaidStripeSub && !isTrial && (
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <ManageSubscriptionButton />
             </div>
           )}
         </div>
