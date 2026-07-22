@@ -10,6 +10,8 @@ export const metadata = siteMetadata;
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Do not lock maximumScale — that hurts accessibility and is not the right
+  // fix for overflow-looking “zoom”. Keep scale at 1 on first paint.
   themeColor: "#0B0B0C",
 };
 

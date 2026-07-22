@@ -27,8 +27,9 @@ export default function Calendar({
   enforceAvailableDays = false,
 }: any) {
   return (
-    <div className="flex justify-center mb-6">
+    <div className="flex justify-center mb-6 w-full max-w-full overflow-x-auto">
       <DayPicker
+        className="mx-auto max-w-full"
         mode="single"
         defaultMonth={value ? parseLocalDate(value) : undefined}
         selected={value ? parseLocalDate(value) : undefined}

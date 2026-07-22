@@ -438,11 +438,14 @@ export default function EditBookingModal({
       </div>
 
       <style jsx global>{`
+        .edit-booking-calendar .rdp-root,
         .edit-booking-calendar .rdp {
           --rdp-accent-color: #ffffff;
           --rdp-background-color: #27272a;
           color: #ffffff;
           margin: 0 auto;
+          width: 100%;
+          max-width: 100%;
         }
         .edit-booking-calendar .rdp-day_disabled {
           opacity: 0.25;
@@ -451,7 +454,8 @@ export default function EditBookingModal({
         .edit-booking-calendar .rdp-weekday {
           color: rgba(255, 255, 255, 0.7);
         }
-        .edit-booking-calendar .rdp-button:hover:not([disabled]) {
+        .edit-booking-calendar .rdp-button:hover:not([disabled]),
+        .edit-booking-calendar .rdp-day_button:hover:not([disabled]) {
           background-color: rgba(255, 255, 255, 0.1);
         }
       `}</style>

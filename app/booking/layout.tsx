@@ -6,7 +6,7 @@ export default function BookingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-white min-h-screen min-w-0 max-w-[100vw] overflow-x-clip">
       {children}
 
       <BookingFooter />
