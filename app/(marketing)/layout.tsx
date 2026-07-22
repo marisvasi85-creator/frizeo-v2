@@ -10,33 +10,33 @@ export default function MarketingLayout({
     <>
       {/* HEADER */}
       <header className="border-b bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center gap-3 min-w-0">
 
           {/* LOGO */}
-          <Link href="/" className="font-semibold text-lg">
+          <Link href="/" className="font-semibold text-lg shrink-0">
             Frizeo
           </Link>
 
           {/* NAV */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-wrap justify-end">
 
             <Link
               href="/pricing"
-              className="text-sm text-gray-600 hover:text-black"
+              className="text-sm text-gray-600 hover:text-black hidden sm:inline"
             >
               Prețuri
             </Link>
 
             <Link
               href="/login"
-              className="text-sm text-gray-600 hover:text-black"
+              className="text-sm text-gray-600 hover:text-black whitespace-nowrap"
             >
               Autentificare
             </Link>
 
             <Link
               href="/signup"
-              className="bg-black text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition"
+              className="bg-black text-white px-3 sm:px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition whitespace-nowrap"
             >
               Creează cont
             </Link>

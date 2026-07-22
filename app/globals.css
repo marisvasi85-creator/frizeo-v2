@@ -14,20 +14,66 @@
   --primary: #111111;
 }
 
-/* BODY */
+/* BODY — avoid horizontal overflow looking like “zoom” on phones */
+html {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body {
   background: var(--bg);
   font-family: Inter, Arial, sans-serif;
+  overflow-x: clip;
+  max-width: 100%;
 }
 
-/* CALENDAR FIX (react-day-picker) */
-.rdp {
+/*
+  iOS Safari zooms the page when focusing inputs with font-size < 16px.
+  Keep controls ≥16px on small screens so focus doesn’t leave a “stuck zoom”.
+*/
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* CALENDAR FIX (react-day-picker v9 — root is .rdp-root, not .rdp) */
+.rdp-root {
   width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
 }
 
 .rdp-months {
   display: flex;
   justify-content: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.rdp-month {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Shrink day cells on narrow phones so 7 columns fit (7×44px overflows ~360px) */
+@media (max-width: 400px) {
+  .rdp-root {
+    --rdp-day-width: 36px;
+    --rdp-day-height: 36px;
+    --rdp-day_button-width: 34px;
+    --rdp-day_button-height: 34px;
+    --rdp-nav_button-width: 2rem;
+    --rdp-nav_button-height: 2rem;
+  }
+}
+
+/* Legacy v8 class names kept for safety if any CSS still references them */
+.rdp {
+  width: 100%;
+  max-width: 100%;
 }
 
 .rdp-day {
