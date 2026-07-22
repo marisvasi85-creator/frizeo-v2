@@ -83,7 +83,6 @@ export default async function BarberIdBookingPage({
       salon={result.salon}
       barber={result.barber}
       barberSlug={barberSlug}
-      embedAssistant
     />
   );
 }

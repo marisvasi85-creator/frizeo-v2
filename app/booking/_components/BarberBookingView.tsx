@@ -1,7 +1,6 @@
 import BookingClient from "@/app/booking/[barberId]/components/BookingClient";
 import JsonLd from "@/app/components/JsonLd";
 import PublicLocationCard from "@/app/components/location/PublicLocationCard";
-import FloatingPublicBookingAssistant from "@/app/booking/_components/FloatingPublicBookingAssistant";
 import Image from "next/image";
 import { barberBookingJsonLd } from "@/lib/site/jsonLd";
 import {
@@ -9,10 +8,6 @@ import {
   formatLocationAddress,
 } from "@/lib/location/resolveLocation";
 import type { BarberLocationFields } from "@/lib/location/types";
-import {
-  isPublicBookingAssistantEnabled,
-  isPublicBookingAssistantLlmConfigured,
-} from "@/lib/public-assistant/config";
 
 type Salon = {
   name?: string | null;
@@ -39,18 +34,13 @@ export default function BarberBookingView({
   salon,
   barber,
   barberSlug,
-  embedAssistant = false,
 }: {
   salon: Salon;
   barber: Barber;
   barberSlug: string;
-  /** Only for /booking/[barberId] — salon layout already mounts the FAB */
-  embedAssistant?: boolean;
 }) {
   const barberName = barber.display_name || "Frizer";
   const bookingLocation = resolveBarberLocation(salon, barber);
-  const showAssistant =
-    embedAssistant && isPublicBookingAssistantEnabled();
 
   return (
     <>
@@ -159,15 +149,6 @@ export default function BarberBookingView({
           )}
         </div>
       </div>
-
-      {showAssistant && (
-        <FloatingPublicBookingAssistant
-          configured={isPublicBookingAssistantLlmConfigured()}
-          salonSlug={salon.slug}
-          salonName={String(salon.name || "Salon")}
-          barberSlug={barber.slug || barberSlug}
-        />
-      )}
     </>
   );
 }
