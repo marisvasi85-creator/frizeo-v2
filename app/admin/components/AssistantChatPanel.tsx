@@ -30,6 +30,10 @@ type AssistantChatPanelProps = {
   apiPath?: string;
   storageNamespace?: string;
   welcomeMessage?: string;
+  /** Extra JSON fields merged into the chat POST body (e.g. salonSlug). */
+  requestExtra?: Record<string, unknown>;
+  appearance?: "dark" | "light";
+  titleLoading?: string;
 };
 
 export default function AssistantChatPanel({
@@ -41,7 +45,10 @@ export default function AssistantChatPanel({
   apiPath = "/api/assistant/chat",
   storageNamespace = "salon",
   welcomeMessage,
+  requestExtra,
+  appearance = "dark",
 }: AssistantChatPanelProps) {
+  const light = appearance === "light";
   const [boot] = useState(() =>
     loadAssistantChat(displayName, {
       namespace: storageNamespace,
@@ -143,6 +150,7 @@ export default function AssistantChatPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(requestExtra || {}),
           messages: nextMessages
             .filter((m) => m.id !== "welcome")
             .map((m) => ({ role: m.role, content: m.content })),
@@ -186,7 +194,13 @@ export default function AssistantChatPanel({
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
       {!configured && (
-        <div className="mx-3 mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+        <div
+          className={`mx-3 mt-3 rounded-xl border px-3 py-2 text-xs ${
+            light
+              ? "border-amber-300 bg-amber-50 text-amber-900"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-100"
+          }`}
+        >
           Setează <code>OPENAI_API_KEY</code> sau <code>GEMINI_API_KEY</code> pe
           staging ca să răspundă.
         </div>
@@ -203,8 +217,12 @@ export default function AssistantChatPanel({
             <div
               className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap ${
                 message.role === "user"
-                  ? "bg-white text-black"
-                  : "bg-white/5 border border-white/10 text-white/90"
+                  ? light
+                    ? "bg-neutral-900 text-white"
+                    : "bg-white text-black"
+                  : light
+                    ? "bg-neutral-100 border border-neutral-200 text-neutral-800"
+                    : "bg-white/5 border border-white/10 text-white/90"
               }`}
             >
               {message.content}
@@ -213,12 +231,20 @@ export default function AssistantChatPanel({
         ))}
 
         {loading && (
-          <div className="text-sm text-white/50">Assistant-ul gândește…</div>
+          <div
+            className={`text-sm ${light ? "text-neutral-500" : "text-white/50"}`}
+          >
+            Assistant-ul gândește…
+          </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-white/10 p-3 space-y-2.5">
+      <div
+        className={`border-t p-3 space-y-2.5 ${
+          light ? "border-neutral-200" : "border-white/10"
+        }`}
+      >
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5 min-w-0">
             {suggestions
@@ -229,7 +255,11 @@ export default function AssistantChatPanel({
                   type="button"
                   disabled={loading || !configured}
                   onClick={() => sendMessage(suggestion)}
-                  className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/70 hover:bg-white/5 disabled:opacity-40"
+                  className={`text-[11px] px-2.5 py-1 rounded-full border disabled:opacity-40 ${
+                    light
+                      ? "border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+                      : "border-white/10 text-white/70 hover:bg-white/5"
+                  }`}
                 >
                   {suggestion}
                 </button>
@@ -240,7 +270,11 @@ export default function AssistantChatPanel({
             <button
               type="button"
               onClick={resetConversation}
-              className="shrink-0 text-[11px] text-white/40 hover:text-white/70 px-1"
+              className={`shrink-0 text-[11px] px-1 ${
+                light
+                  ? "text-neutral-400 hover:text-neutral-700"
+                  : "text-white/40 hover:text-white/70"
+              }`}
               title="Șterge conversația"
             >
               Șterge
@@ -249,7 +283,11 @@ export default function AssistantChatPanel({
         </div>
 
         {dictation.listening && (
-          <div className="text-[11px] text-red-300 flex items-center gap-1.5">
+          <div
+            className={`text-[11px] flex items-center gap-1.5 ${
+              light ? "text-red-600" : "text-red-300"
+            }`}
+          >
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
             Ascult… oprește-se singur după ce termini, sau apasă microfonul
           </div>
@@ -274,7 +312,11 @@ export default function AssistantChatPanel({
             placeholder={
               dictation.listening ? "Vorbește acum…" : "Scrie sau dictează…"
             }
-            className="flex-1 rounded-xl bg-[#0F0F10] border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-white/30 disabled:opacity-50"
+            className={`flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none disabled:opacity-50 ${
+              light
+                ? "bg-white border-neutral-200 text-neutral-900 focus:border-neutral-400"
+                : "bg-[#0F0F10] border-white/10 focus:border-white/30"
+            }`}
           />
 
           {dictation.supported && (
@@ -298,7 +340,9 @@ export default function AssistantChatPanel({
               className={`h-11 w-11 shrink-0 rounded-xl border text-lg flex items-center justify-center transition disabled:opacity-40 ${
                 dictation.listening
                   ? "bg-red-500 text-white border-red-400 animate-pulse"
-                  : "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                  : light
+                    ? "bg-neutral-50 text-neutral-800 border-neutral-200 hover:bg-neutral-100"
+                    : "bg-white/5 text-white border-white/10 hover:bg-white/10"
               }`}
             >
               🎤
@@ -308,18 +352,28 @@ export default function AssistantChatPanel({
           <button
             type="submit"
             disabled={loading || !configured || !composeCurrentText().trim()}
-            className="rounded-xl bg-white text-black px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0"
+            className={`rounded-xl px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0 ${
+              light
+                ? "bg-neutral-900 text-white"
+                : "bg-white text-black"
+            }`}
           >
             Trimite
           </button>
         </form>
 
         {(error || dictation.error) && (
-          <p className="text-xs text-red-300">{error || dictation.error}</p>
+          <p className={`text-xs ${light ? "text-red-600" : "text-red-300"}`}>
+            {error || dictation.error}
+          </p>
         )}
 
         {!dictation.supported && (
-          <p className="text-[11px] text-white/40">
+          <p
+            className={`text-[11px] ${
+              light ? "text-neutral-400" : "text-white/40"
+            }`}
+          >
             Dictarea nu e disponibilă pe acest browser. Folosește Chrome pe
             Android sau desktop.
           </p>
