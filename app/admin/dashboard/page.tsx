@@ -100,7 +100,7 @@ export default async function DashboardPage() {
               <div className="font-semibold text-blue-300">🎁 Trial activ</div>
 
               <p className="text-white/70 mt-2">
-                Beneficiezi de acces Pro+ (SMS, 3 frizeri, programări nelimitate).
+                Beneficiezi de acces Pro+ (SMS reminder, 3 frizeri, programări nelimitate).
               </p>
 
               <p className="text-white mt-3 font-medium">

@@ -201,7 +201,7 @@ export default async function BillingPage({
                 🚀 Perioadă de probă activă
               </p>
               <p className="text-sm text-white/70 mt-1">
-                Ai acces Pro+ (3 frizeri, SMS, programări nelimitate) încă{" "}
+                Ai acces Pro+ (3 frizeri, SMS reminder, programări nelimitate) încă{" "}
                 {trialDaysLeft} zile
                 {trialDaysConfigured
                   ? ` (trial ${trialDaysConfigured} zile)`

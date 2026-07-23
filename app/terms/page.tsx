@@ -153,27 +153,32 @@ export default function TermsPage() {
 
       <h3>Pro</h3>
       <ul>
-        <li>59 lei / lună</li>
+        <li>79 lei / lună</li>
         <li>1 frizer</li>
         <li>programări nelimitate</li>
-        <li>SMS inclus</li>
+        <li>notificări email incluse</li>
+        <li>SMS reminder inclus</li>
       </ul>
 
       <h3>Pro+</h3>
       <ul>
-        <li>129 lei / lună</li>
+        <li>199 lei / lună</li>
         <li>până la 3 frizeri</li>
         <li>programări nelimitate</li>
-        <li>SMS inclus</li>
+        <li>notificări email incluse</li>
+        <li>SMS reminder inclus</li>
       </ul>
 
       <h3>Custom</h3>
-      <p>Plan personalizat, stabilit individual.</p>
+      <p>
+        Plan personalizat, stabilit individual (inclusiv volume mai mari sau SMS
+        extins, după caz).
+      </p>
 
       <h3>Trial</h3>
       <p>
         Frizeo oferă o perioadă de test gratuit de 60 de zile, cu acces la
-        funcționalitățile planului Pro+, inclusiv notificări SMS.
+        funcționalitățile planului Pro+, inclusiv SMS reminder.
       </p>
       <p>
         La expirarea perioadei Trial, dacă nu este activat un abonament plătit,
@@ -244,10 +249,19 @@ export default function TermsPage() {
         TVA-ul se aplică conform legislației în vigoare.
       </p>
 
-      <h3>SMS</h3>
+      <h3>SMS și notificări</h3>
       <p>
-        Notificările SMS sunt disponibile doar în planurile care includ această
-        funcționalitate și în perioada Trial.
+        Toate notificările sunt incluse în planurile care le prevăd. Fără
+        credite. Fără reîncărcări. Fără costuri ascunse.
+      </p>
+      <p>
+        Pe planurile Pro, Pro+ și în perioada Trial, SMS-ul este destinat
+        reminder-elor. Confirmările, anulările și reprogramările se trimit, de
+        regulă, prin email.
+      </p>
+      <p>
+        SMS-ul pentru confirmare, anulare sau reprogramare poate fi disponibil
+        pe planul Custom, în condiții negociate separat.
       </p>
 
       <h3>Plan Custom</h3>
@@ -276,6 +290,33 @@ export default function TermsPage() {
       </p>
       <p>
         <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>
+      </p>
+
+      <h3>4.3 Politica de utilizare rezonabilă (Fair Use)</h3>
+      <p>
+        Notificările SMS incluse în abonament sunt destinate utilizării normale
+        a unui salon (programări reale ale clienților salonului).
+      </p>
+      <p>
+        Dacă un cont are un consum neobișnuit de SMS pe lună (de exemplu mii de
+        SMS, volume incompatibile cu activitatea tipică a salonului, utilizare
+        abuzivă sau automată în afara fluxului de programări), Frizeo își
+        rezervă dreptul de a:
+      </p>
+      <ul>
+        <li>contacta salonul pentru clarificări;</li>
+        <li>
+          propune trecerea pe un plan Custom (sau o ofertă de tip Enterprise /
+          volum mare);
+        </li>
+        <li>
+          limita temporar trimiterea SMS până la găsirea unei soluții
+          comerciale adecvate.
+        </li>
+      </ul>
+      <p>
+        Fair Use nu reduce funcționalitățile plătite pentru utilizarea normală
+        a serviciului.
       </p>
 
       <h2>5. Obligațiile Salonului</h2>

@@ -158,13 +158,13 @@ await supabaseAdmin
 await supabaseAdmin.from("notification_settings").insert({
   tenant_id: tenant.id,
   booking_email_enabled: true,
-  booking_sms_enabled: true,
+  booking_sms_enabled: false,
   reminder_email_enabled: true,
   reminder_sms_enabled: true,
   reschedule_email_enabled: true,
-  reschedule_sms_enabled: true,
+  reschedule_sms_enabled: false,
   cancel_email_enabled: true,
-  cancel_sms_enabled: true,
+  cancel_sms_enabled: false,
 });
   // =========================
 // ✂️ SERVICII IMPLICITE

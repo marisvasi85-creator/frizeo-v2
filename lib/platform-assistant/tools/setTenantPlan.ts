@@ -229,6 +229,15 @@ export async function setTenantPlanTool(
         cancel_sms_enabled: false,
       })
       .eq("tenant_id", tenant.id);
+  } else if (planSlug !== PLAN_SLUGS.CUSTOM) {
+    await supabaseAdmin
+      .from("notification_settings")
+      .update({
+        booking_sms_enabled: false,
+        reschedule_sms_enabled: false,
+        cancel_sms_enabled: false,
+      })
+      .eq("tenant_id", tenant.id);
   }
 
   console.info("platform set_tenant_plan", {

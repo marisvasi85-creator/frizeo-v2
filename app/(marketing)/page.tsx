@@ -136,8 +136,9 @@ export default function Page() {
               Confirmări și reminder-e automate
             </h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Nu mai scrii manual mesaje de confirmare. Frizeo anunță
-              clientul prin email și SMS — tu alegi ce notificări sunt active.
+              Nu mai scrii manual mesaje. Confirmările, anulările și
+              reprogramările pleacă pe email; reminder-ul poate merge și pe SMS —
+              tu alegi ce e activ.
             </p>
           </div>
 
@@ -150,21 +151,21 @@ export default function Page() {
                   <span className="text-green-600 shrink-0">✓</span>
                   <span>
                     <strong className="text-gray-900">Confirmare</strong> imediat
-                    după programare — email și/sau SMS
+                    după programare — pe email
                   </span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-green-600 shrink-0">✓</span>
                   <span>
                     <strong className="text-gray-900">Reminder</strong> înainte
-                    de programare, ca să nu uite
+                    de programare — email și SMS (pe planurile care includ SMS)
                   </span>
                 </li>
                 <li className="flex gap-3">
                   <span className="text-green-600 shrink-0">✓</span>
                   <span>
                     Notificare la <strong className="text-gray-900">reprogramare</strong>{" "}
-                    sau <strong className="text-gray-900">anulare</strong>
+                    sau <strong className="text-gray-900">anulare</strong> — pe email
                   </span>
                 </li>
               </ul>
