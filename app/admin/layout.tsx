@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Sidebar from "./components/Sidebar";
 import MobileNav from "./components/MobileNav";
@@ -10,9 +11,21 @@ import {
 } from "@/lib/assistant/config";
 import { isPlatformAssistantEnabled } from "@/lib/platform-assistant/config";
 import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
-import { noIndexMetadata } from "@/lib/site/pageMetadata";
+import { pwaManifestHref } from "@/lib/pwa/manifestContent";
+import { SITE_NAME } from "@/lib/site/metadata";
 
-export const metadata = noIndexMetadata;
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+  manifest: pwaManifestHref({
+    startUrl: "/admin/dashboard",
+    variant: "admin",
+  }),
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: "black-translucent",
+  },
+};
 
 export default async function AdminLayout({
   children,
