@@ -1,4 +1,8 @@
 import type { Metadata } from "next";
+import {
+  pwaManifestHref,
+  type PwaManifestVariant,
+} from "@/lib/pwa/manifestContent";
 import { SITE_NAME, SITE_URL } from "@/lib/site/metadata";
 
 type PageMetadataOptions = {
@@ -7,6 +11,12 @@ type PageMetadataOptions = {
   path: string;
   keywords?: string[];
   noIndex?: boolean;
+  /** Server-side PWA manifest so Add to Home Screen opens this path, not admin login. */
+  pwa?: {
+    startUrl: string;
+    variant: PwaManifestVariant;
+    label?: string | null;
+  };
 };
 
 export function pageUrl(path: string): string {
@@ -19,6 +29,7 @@ export function createPageMetadata({
   path,
   keywords,
   noIndex = false,
+  pwa,
 }: PageMetadataOptions): Metadata {
   const url = pageUrl(path);
 
@@ -26,6 +37,20 @@ export function createPageMetadata({
     title,
     description,
     keywords,
+    ...(pwa
+      ? {
+          manifest: pwaManifestHref(pwa),
+          appleWebApp: {
+            capable: true,
+            title:
+              pwa.variant === "booking" && pwa.label?.trim()
+                ? pwa.label.trim().slice(0, 12)
+                : SITE_NAME,
+            statusBarStyle:
+              pwa.variant === "admin" ? "black-translucent" : "default",
+          },
+        }
+      : {}),
     alternates: {
       canonical: url,
     },

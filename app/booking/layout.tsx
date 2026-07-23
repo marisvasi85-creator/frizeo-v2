@@ -1,4 +1,17 @@
+import type { Metadata, Viewport } from "next";
 import BookingFooter from "@/app/components/BookingFooter";
+
+export const metadata: Metadata = {
+  appleWebApp: {
+    capable: true,
+    title: "Programări",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FFFFFF",
+};
 
 export default function BookingLayout({
   children,

@@ -25,6 +25,10 @@ export async function generateMetadata({
       description: "Pagina salonului nu a fost găsită.",
       path: `/booking/salon/${slug}`,
       noIndex: true,
+      pwa: {
+        startUrl: `/booking/salon/${slug}`,
+        variant: "booking",
+      },
     });
   }
 
@@ -32,12 +36,18 @@ export async function generateMetadata({
   const description =
     (typeof salon.description === "string" ? salon.description.trim().slice(0, 160) : "") ||
     `Programează-te online la ${salon.name}. Alege frizerul și ora disponibilă.`;
+  const startUrl = `/booking/salon/${resolved.canonicalSlug}`;
 
   return createPageMetadata({
     title: String(salon.name),
     description,
-    path: `/booking/salon/${resolved.canonicalSlug}`,
+    path: startUrl,
     keywords: [String(salon.name), "programări online frizerie", "salon"],
+    pwa: {
+      startUrl,
+      variant: "booking",
+      label: String(salon.name),
+    },
   });
 }
 

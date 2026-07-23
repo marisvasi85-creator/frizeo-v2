@@ -26,6 +26,10 @@ export async function generateMetadata({
       description: "Pagina salonului nu a fost găsită.",
       path: `/booking/salon/${slug}/${barberSlug}`,
       noIndex: true,
+      pwa: {
+        startUrl: `/booking/salon/${slug}/${barberSlug}`,
+        variant: "booking",
+      },
     });
   }
 
@@ -40,10 +44,16 @@ export async function generateMetadata({
       description: `${barberSlug} nu este disponibil pentru programări online.`,
       path: `/booking/salon/${slug}/${barberSlug}`,
       noIndex: true,
+      pwa: {
+        startUrl: `/booking/salon/${slug}/${barberSlug}`,
+        variant: "booking",
+        label: String(resolvedTenant.tenant.name),
+      },
     });
   }
 
   const barberName = String(resolvedBarber.barber.display_name || "Frizer");
+  const salonName = String(resolvedTenant.tenant.name);
   const canonicalPath = publicBookingPath(
     resolvedTenant.canonicalSlug,
     resolvedBarber.canonicalSlug
@@ -51,9 +61,14 @@ export async function generateMetadata({
 
   return createPageMetadata({
     title: `Programare online — ${barberName}`,
-    description: `Programează-te la ${barberName}, ${resolvedTenant.tenant.name}. Alege serviciul, data și ora disponibilă.`,
+    description: `Programează-te la ${barberName}, ${salonName}. Alege serviciul, data și ora disponibilă.`,
     path: canonicalPath,
-    keywords: [barberName, String(resolvedTenant.tenant.name), "programare frizer online"],
+    keywords: [barberName, salonName, "programare frizer online"],
+    pwa: {
+      startUrl: canonicalPath,
+      variant: "booking",
+      label: salonName,
+    },
   });
 }
 

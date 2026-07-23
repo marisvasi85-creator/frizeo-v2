@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import BarberBookingView from "@/app/booking/_components/BarberBookingView";
+import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { stableBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
@@ -45,22 +46,31 @@ export async function generateMetadata({
   const { barberId } = await params;
   const result = await getBarberWithSalon(barberId);
 
+  const path = stableBookingPath(barberId);
+
   if (!result) {
     return createPageMetadata({
       title: "Frizer indisponibil",
       description: "Pagina de programări nu a fost găsită.",
-      path: stableBookingPath(barberId),
+      path,
       noIndex: true,
+      pwa: { startUrl: path, variant: "booking" },
     });
   }
 
   const barberName = result.barber.display_name || "Frizer";
+  const salonName = result.salon.name;
 
   return createPageMetadata({
     title: `Programare online — ${barberName}`,
-    description: `Programează-te la ${barberName}, ${result.salon.name}. Alege serviciul, data și ora disponibilă.`,
-    path: stableBookingPath(barberId),
-    keywords: [barberName, result.salon.name, "programare frizer online"],
+    description: `Programează-te la ${barberName}, ${salonName}. Alege serviciul, data și ora disponibilă.`,
+    path,
+    keywords: [barberName, salonName, "programare frizer online"],
+    pwa: {
+      startUrl: path,
+      variant: "booking",
+      label: salonName,
+    },
   });
 }
 
@@ -79,10 +89,13 @@ export default async function BarberIdBookingPage({
   const barberSlug = result.barber.slug || barberId;
 
   return (
-    <BarberBookingView
-      salon={result.salon}
-      barber={result.barber}
-      barberSlug={barberSlug}
-    />
+    <>
+      <BarberBookingView
+        salon={result.salon}
+        barber={result.barber}
+        barberSlug={barberSlug}
+      />
+      <InstallAppPrompt variant="booking" label={result.salon.name} />
+    </>
   );
 }
