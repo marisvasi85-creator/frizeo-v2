@@ -1,4 +1,5 @@
 import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
+import { calendarEmailButtonsHtml } from "@/lib/calendar/bookingCalendar";
 import { locationEmailHtml } from "@/lib/location/emailLocationHtml";
 import type { ResolvedLocation } from "@/lib/location/types";
 
@@ -9,6 +10,8 @@ type RescheduleConfirmationArgs = {
   cancelUrl: string;
   rescheduleUrl: string;
   location?: ResolvedLocation | null;
+  googleCalendarUrl?: string | null;
+  icsUrl?: string | null;
 };
 
 export function rescheduleConfirmationTemplate({
@@ -18,8 +21,17 @@ export function rescheduleConfirmationTemplate({
   cancelUrl,
   rescheduleUrl,
   location,
+  googleCalendarUrl,
+  icsUrl,
 }: RescheduleConfirmationArgs) {
   const formattedTime = time.slice(0, 5);
+  const calendarBlock =
+    googleCalendarUrl && icsUrl
+      ? calendarEmailButtonsHtml({
+          googleUrl: googleCalendarUrl,
+          icsUrl,
+        })
+      : "";
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
@@ -38,6 +50,8 @@ export function rescheduleConfirmationTemplate({
       </div>
 
       ${locationEmailHtml(location)}
+
+      ${calendarBlock}
 
       <p>Poți modifica din nou sau anula programarea:</p>
 

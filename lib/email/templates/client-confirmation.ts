@@ -1,4 +1,5 @@
 import { bookingActionButtonsHtml } from "@/lib/bookings/bookingClientUrls";
+import { calendarEmailButtonsHtml } from "@/lib/calendar/bookingCalendar";
 import { locationEmailHtml } from "@/lib/location/emailLocationHtml";
 import type { ResolvedLocation } from "@/lib/location/types";
 
@@ -12,6 +13,8 @@ export function clientConfirmationTemplate({
   rescheduleUrl,
   location,
   notes,
+  googleCalendarUrl,
+  icsUrl,
 }: {
   clientName: string;
   barberName: string;
@@ -22,7 +25,17 @@ export function clientConfirmationTemplate({
   rescheduleUrl: string;
   location?: ResolvedLocation | null;
   notes?: string | null;
+  googleCalendarUrl?: string | null;
+  icsUrl?: string | null;
 }) {
+  const calendarBlock =
+    googleCalendarUrl && icsUrl
+      ? calendarEmailButtonsHtml({
+          googleUrl: googleCalendarUrl,
+          icsUrl,
+        })
+      : "";
+
   return `
     <div style="font-family: Arial, sans-serif; max-width: 500px; margin: auto; padding: 20px;">
       <h2 style="color: #111;">Programare confirmată</h2>
@@ -40,6 +53,8 @@ export function clientConfirmationTemplate({
       </div>
 
       ${locationEmailHtml(location)}
+
+      ${calendarBlock}
 
       <p>Dacă ai nevoie să modifici sau să anulezi programarea:</p>
 

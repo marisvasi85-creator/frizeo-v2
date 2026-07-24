@@ -19,12 +19,17 @@ type SendEmailArgs = {
   to: string;
   subject: string;
   html: string;
+  /** ICS content so mail clients can offer “Add to calendar”. */
+  icsContent?: string;
+  icsFilename?: string;
 };
 
 export async function sendEmail({
   to,
   subject,
   html,
+  icsContent,
+  icsFilename = "programare-frizeo.ics",
 }: SendEmailArgs) {
   if (!to) return;
 
@@ -33,5 +38,14 @@ export async function sendEmail({
     to,
     subject,
     html,
+    ...(icsContent
+      ? {
+          icalEvent: {
+            method: "PUBLISH",
+            filename: icsFilename,
+            content: icsContent,
+          },
+        }
+      : {}),
   });
 }
