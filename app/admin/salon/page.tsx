@@ -179,11 +179,30 @@ export default async function SalonPage() {
             <h3 className="text-lg font-medium">Locație salon</h3>
             <p className="text-sm text-white/50 mt-1">
               Apare pe pagina publică de programări, cu link Google Maps / Waze
-              și hartă.
+              și hartă. Orașul e folosit și pentru SEO / directorul local.
             </p>
           </div>
           <LocationFormFields defaults={tenant || {}} />
         </div>
+
+        <label className="flex items-start gap-3 border-t border-white/10 pt-5 cursor-pointer">
+          <input
+            type="checkbox"
+            name="directory_listed"
+            defaultChecked={tenant?.directory_listed !== false}
+            className="mt-1 h-5 w-5"
+          />
+          <span>
+            <span className="block font-medium">
+              Afișează salonul în directorul Frizeo
+            </span>
+            <span className="block text-sm text-white/50 mt-1">
+              Apară pe pagini gen „Frizerii în Arad” (după orașul din locație)
+              și ajută la descoperirea pe Google. Linkul tău de programare
+              rămâne public oricum.
+            </span>
+          </span>
+        </label>
 
         <div>
           <label className="block text-sm text-white/60 mb-2">

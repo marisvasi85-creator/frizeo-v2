@@ -17,6 +17,7 @@ type BarberRow = BarberLocationFields & {
   id: string;
   display_name?: string | null;
   slug: string;
+  avatar_url?: string | null;
 };
 
 export type ResolvedTenantSlug = {
