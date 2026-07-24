@@ -11,6 +11,7 @@ type PageMetadataOptions = {
   path: string;
   keywords?: string[];
   noIndex?: boolean;
+  image?: string | null;
   /** Server-side PWA manifest so Add to Home Screen opens this path, not admin login. */
   pwa?: {
     startUrl: string;
@@ -29,9 +30,11 @@ export function createPageMetadata({
   path,
   keywords,
   noIndex = false,
+  image,
   pwa,
 }: PageMetadataOptions): Metadata {
   const url = pageUrl(path);
+  const ogImage = image?.trim() || undefined;
 
   return {
     title,
@@ -58,10 +61,15 @@ export function createPageMetadata({
       title: `${title} | ${SITE_NAME}`,
       description,
       url,
+      type: "website",
+      locale: "ro_RO",
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
     twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
       title: `${title} | ${SITE_NAME}`,
       description,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
     robots: noIndex
       ? { index: false, follow: false }
