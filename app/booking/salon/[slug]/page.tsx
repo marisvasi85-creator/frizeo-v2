@@ -19,6 +19,7 @@ import {
   buildSalonSeoKeywords,
   buildSalonSeoTitle,
 } from "@/lib/seo/salonSeo";
+import { getSalonReviewSummary } from "@/lib/reviews/salonReviews";
 
 export async function generateMetadata({
   params,
@@ -85,7 +86,8 @@ export default async function SalonPage({
   const salon = resolved.tenant;
   const salonLocation = resolveLocation(salon);
 
-  const [{ data: gallery }, { data: barbers }, seoExtras] = await Promise.all([
+  const [{ data: gallery }, { data: barbers }, seoExtras, reviewSummary] =
+    await Promise.all([
     supabaseAdmin
       .from("salon_gallery")
       .select("*")
@@ -106,6 +108,7 @@ export default async function SalonPage({
       .eq("active", true)
       .order("display_name"),
     fetchSalonSeoExtras(salon.id),
+    getSalonReviewSummary(salon.id, 8),
   ]);
 
   const streetAddress =
@@ -147,6 +150,19 @@ export default async function SalonPage({
           openingHours: seoExtras.openingHours,
           openingHoursSpecification: seoExtras.openingHoursSpecification,
           priceRange: seoExtras.priceRange,
+          aggregateRating:
+            reviewSummary.count > 0 && reviewSummary.average != null
+              ? {
+                  ratingValue: reviewSummary.average,
+                  reviewCount: reviewSummary.count,
+                }
+              : null,
+          reviews: reviewSummary.reviews.map((r) => ({
+            author: r.author_name,
+            reviewBody: r.comment,
+            ratingValue: r.rating,
+            datePublished: r.created_at,
+          })),
         })}
       />
       <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -170,6 +186,13 @@ export default async function SalonPage({
                 Frizerie în {salon.location_city.trim()}
               </p>
             )}
+
+          {reviewSummary.count > 0 && reviewSummary.average != null && (
+            <p className="text-amber-600 mt-2 font-medium">
+              ★ {reviewSummary.average.toFixed(1)} · {reviewSummary.count}{" "}
+              {reviewSummary.count === 1 ? "recenzie" : "recenzii"}
+            </p>
+          )}
 
           {typeof salon.phone === "string" && salon.phone && (
             <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
@@ -251,6 +274,28 @@ export default async function SalonPage({
         {salonLocation && (
           <div className="max-w-xl mx-auto">
             <PublicLocationCard location={salonLocation} />
+          </div>
+        )}
+
+        {reviewSummary.reviews.length > 0 && (
+          <div className="bg-white rounded-2xl border p-6 space-y-4">
+            <h2 className="text-2xl font-semibold">Recenzii</h2>
+            <ul className="space-y-4">
+              {reviewSummary.reviews.map((r) => (
+                <li key={r.id} className="border-t border-gray-100 pt-4 first:border-0 first:pt-0">
+                  <p className="font-medium">
+                    {"★".repeat(r.rating)}
+                    <span className="text-gray-300">
+                      {"★".repeat(Math.max(0, 5 - r.rating))}
+                    </span>
+                    <span className="ml-2 text-gray-800">{r.author_name}</span>
+                  </p>
+                  {r.comment && (
+                    <p className="text-gray-600 mt-1 text-sm">{r.comment}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

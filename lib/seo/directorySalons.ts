@@ -1,6 +1,10 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasDirectoryListedMigration } from "@/lib/seo/hasDirectoryListedMigration";
 import { cityToSlug, displayCityName } from "@/lib/seo/citySlug";
+import {
+  matchServiceFilters,
+  type DirectoryFilterId,
+} from "@/lib/seo/directoryFilters";
 
 export type DirectorySalon = {
   id: string;
@@ -12,7 +16,11 @@ export type DirectorySalon = {
   location_city: string;
   location_county: string | null;
   location_address_line: string | null;
+  location_latitude: number | null;
+  location_longitude: number | null;
   active_barbers: number;
+  filter_tags: DirectoryFilterId[];
+  service_names: string[];
 };
 
 /** Salons opted into directory, with city + at least one active barber. */
@@ -24,7 +32,7 @@ export async function listDirectorySalons(options?: {
   const { data: tenants, error } = await supabaseAdmin
     .from("tenants")
     .select(
-      "id, name, slug, phone, description, logo_url, location_city, location_county, location_address_line"
+      "id, name, slug, phone, description, logo_url, location_city, location_county, location_address_line, location_latitude, location_longitude"
     )
     .not("location_city", "is", null)
     .neq("location_city", "");
@@ -44,6 +52,8 @@ export async function listDirectorySalons(options?: {
     location_city?: string | null;
     location_county?: string | null;
     location_address_line?: string | null;
+    location_latitude?: number | null;
+    location_longitude?: number | null;
   }>;
 
   if (hasFlag && rows.length > 0) {
@@ -69,7 +79,7 @@ export async function listDirectorySalons(options?: {
   const ids = rows.map((t) => t.id);
   const { data: barbers, error: barberError } = await supabaseAdmin
     .from("barbers")
-    .select("tenant_id")
+    .select("id, tenant_id")
     .in("tenant_id", ids)
     .eq("active", true);
 
@@ -79,9 +89,37 @@ export async function listDirectorySalons(options?: {
   }
 
   const countByTenant = new Map<string, number>();
+  const barberIds: string[] = [];
+  const barberTenant = new Map<string, string>();
+
   for (const b of barbers || []) {
     const tid = b.tenant_id as string;
+    const bid = b.id as string;
     countByTenant.set(tid, (countByTenant.get(tid) || 0) + 1);
+    barberIds.push(bid);
+    barberTenant.set(bid, tid);
+  }
+
+  const servicesByTenant = new Map<string, string[]>();
+  if (barberIds.length > 0) {
+    const { data: services } = await supabaseAdmin
+      .from("barber_services")
+      .select("barber_id, name, display_name")
+      .in("barber_id", barberIds)
+      .eq("active", true);
+
+    for (const s of services || []) {
+      const tid = barberTenant.get(s.barber_id as string);
+      if (!tid) continue;
+      const label =
+        (typeof s.display_name === "string" && s.display_name.trim()) ||
+        (typeof s.name === "string" && s.name.trim()) ||
+        "";
+      if (!label) continue;
+      const list = servicesByTenant.get(tid) || [];
+      list.push(label);
+      servicesByTenant.set(tid, list);
+    }
   }
 
   let list: DirectorySalon[] = [];
@@ -91,6 +129,8 @@ export async function listDirectorySalons(options?: {
     const name = t.name?.trim();
     const active = countByTenant.get(t.id) || 0;
     if (!city || !slug || !name || active < 1) continue;
+
+    const serviceNames = [...new Set(servicesByTenant.get(t.id) || [])];
 
     list.push({
       id: t.id,
@@ -102,7 +142,13 @@ export async function listDirectorySalons(options?: {
       location_city: city,
       location_county: t.location_county ?? null,
       location_address_line: t.location_address_line ?? null,
+      location_latitude:
+        typeof t.location_latitude === "number" ? t.location_latitude : null,
+      location_longitude:
+        typeof t.location_longitude === "number" ? t.location_longitude : null,
       active_barbers: active,
+      service_names: serviceNames,
+      filter_tags: matchServiceFilters(serviceNames),
     });
   }
 
