@@ -3,7 +3,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
-import { planAllowsSms } from "@/lib/billing/plans";
+import { planAllowsExtendedSms, planAllowsSms } from "@/lib/billing/plans";
 
 export default async function NotificationsPage() {
   const session = await getAdminSession();
@@ -21,16 +21,30 @@ export default async function NotificationsPage() {
   ]);
 
   const data = settingsRes.data;
-  const smsAllowed = planAllowsSms(plan);
+  const reminderSmsAllowed = planAllowsSms(plan);
+  const extendedSmsAllowed = planAllowsExtendedSms(plan);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Notificări</h1>
 
-      {!smsAllowed && (
+      <p className="text-sm text-white/60">
+        Toate notificările sunt incluse. Fără credite. Fără reîncărcări. Fără
+        costuri ascunse.
+      </p>
+
+      {!reminderSmsAllowed && (
         <p className="text-sm text-amber-400/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3">
-          SMS-urile sunt disponibile pe planurile plătite (Pro, Pro+) sau în
+          SMS reminder este disponibil pe planurile plătite (Pro, Pro+) sau în
           perioada de trial. Upgrade din Abonament pentru a activa SMS.
+        </p>
+      )}
+
+      {reminderSmsAllowed && !extendedSmsAllowed && (
+        <p className="text-sm text-white/55 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+          Pe Pro / Pro+ / trial, SMS-ul este pentru reminder. Confirmările,
+          anulările și reprogramările se trimit pe email. Pentru SMS extins,
+          contactează-ne pentru plan Custom.
         </p>
       )}
 
@@ -44,12 +58,13 @@ export default async function NotificationsPage() {
           defaultChecked={data?.booking_email_enabled ?? true}
         />
 
-        <NotificationToggle
-          name="booking_sms_enabled"
-          label="SMS confirmare"
-          defaultChecked={data?.booking_sms_enabled ?? false}
-          disabled={!smsAllowed}
-        />
+        {extendedSmsAllowed && (
+          <NotificationToggle
+            name="booking_sms_enabled"
+            label="SMS confirmare"
+            defaultChecked={data?.booking_sms_enabled ?? false}
+          />
+        )}
 
         <NotificationToggle
           name="reminder_email_enabled"
@@ -61,7 +76,7 @@ export default async function NotificationsPage() {
           name="reminder_sms_enabled"
           label="SMS reminder"
           defaultChecked={data?.reminder_sms_enabled ?? false}
-          disabled={!smsAllowed}
+          disabled={!reminderSmsAllowed}
         />
 
         <NotificationToggle
@@ -70,12 +85,13 @@ export default async function NotificationsPage() {
           defaultChecked={data?.reschedule_email_enabled ?? true}
         />
 
-        <NotificationToggle
-          name="reschedule_sms_enabled"
-          label="SMS reprogramare"
-          defaultChecked={data?.reschedule_sms_enabled ?? false}
-          disabled={!smsAllowed}
-        />
+        {extendedSmsAllowed && (
+          <NotificationToggle
+            name="reschedule_sms_enabled"
+            label="SMS reprogramare"
+            defaultChecked={data?.reschedule_sms_enabled ?? false}
+          />
+        )}
 
         <NotificationToggle
           name="cancel_email_enabled"
@@ -83,12 +99,13 @@ export default async function NotificationsPage() {
           defaultChecked={data?.cancel_email_enabled ?? true}
         />
 
-        <NotificationToggle
-          name="cancel_sms_enabled"
-          label="SMS anulare"
-          defaultChecked={data?.cancel_sms_enabled ?? false}
-          disabled={!smsAllowed}
-        />
+        {extendedSmsAllowed && (
+          <NotificationToggle
+            name="cancel_sms_enabled"
+            label="SMS anulare"
+            defaultChecked={data?.cancel_sms_enabled ?? false}
+          />
+        )}
       </FormWithSaveFeedback>
     </div>
   );

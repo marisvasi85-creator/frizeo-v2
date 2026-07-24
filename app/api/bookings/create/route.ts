@@ -7,7 +7,7 @@ import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
-import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
+import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import {
   jsDayToScheduleDay,
   timesOverlap,
@@ -113,7 +113,7 @@ const settings =
     booking.tenant_id
   );
 
-const smsAllowed = await smsAllowedForTenant(booking.tenant_id);
+const smsAllowed = await extendedSmsAllowedForTenant(booking.tenant_id);
 
 if (!limit.allowed) {
   return NextResponse.json(

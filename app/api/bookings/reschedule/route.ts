@@ -7,7 +7,7 @@ import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
-import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
+import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
@@ -142,7 +142,7 @@ export async function POST(req: Request) {
   await getNotificationSettings(
     oldBooking.tenant_id
   );
-    const smsAllowed = await smsAllowedForTenant(oldBooking.tenant_id);
+    const smsAllowed = await extendedSmsAllowedForTenant(oldBooking.tenant_id);
     // 🔥 CREATE BOOKING NOU (RPC)
     const { data: newBooking, error: rpcError } =
       await supabase.rpc("create_booking_safe_v2", {
