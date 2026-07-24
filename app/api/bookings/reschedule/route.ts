@@ -10,6 +10,7 @@ import { getNotificationSettings } from "@/lib/notifications/getNotificationSett
 import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
+import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import {
@@ -216,6 +217,7 @@ export async function POST(req: Request) {
     }
 
     // 🔥 GOOGLE CALENDAR RESCHEDULE
+    let serviceName = "Serviciu";
 
     try {
       const { data: service } = await supabase
@@ -224,7 +226,7 @@ export async function POST(req: Request) {
         .eq("id", newBooking.barber_service_id)
         .single();
 
-      const serviceName =
+      serviceName =
         service?.display_name || service?.name || "Serviciu";
 
       if (oldBooking.google_event_id) {
@@ -273,6 +275,20 @@ export async function POST(req: Request) {
     const { cancelUrl, rescheduleUrl } = bookingClientUrls(bookingWithTokens);
     const formattedDate = new Date(new_date).toLocaleDateString("ro-RO");
 
+    const calendarLinks = buildClientCalendarLinks({
+      bookingId: newBooking.id,
+      serviceName,
+      barberName,
+      date: new_date,
+      startTime: new_start_time,
+      endTime: new_end_time,
+      cancelToken: bookingWithTokens.cancel_token,
+      locationAddress: bookingLocation?.formattedAddress,
+      notes: finalNotes,
+      cancelUrl,
+      rescheduleUrl,
+    });
+
     // 🔥 EMAIL CLIENT
     if (
   finalEmail &&
@@ -286,12 +302,15 @@ export async function POST(req: Request) {
           cancelUrl,
           rescheduleUrl,
           location: bookingLocation,
+          googleCalendarUrl: calendarLinks.googleUrl,
+          icsUrl: calendarLinks.icsUrl,
         });
 
         await sendEmail({
           to: finalEmail,
           subject: "Programare reprogramată",
           html,
+          icsContent: calendarLinks.icsContent,
         });
 
       } catch (e) {
