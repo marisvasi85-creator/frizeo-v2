@@ -15,6 +15,8 @@ import {
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
+import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
+import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import {
@@ -245,7 +247,30 @@ if (!limit.allowed) {
     const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
     const formattedTime = data.start_time?.slice(0, 5);
 
-    const { cancelUrl, rescheduleUrl } = bookingClientUrls(data);
+    const tokens = await ensureBookingClientTokens(data.id);
+    const bookingForUrls = {
+      ...data,
+      cancel_token: tokens?.cancel_token ?? data.cancel_token,
+      reschedule_token: tokens?.reschedule_token ?? data.reschedule_token,
+    };
+    const { cancelUrl, rescheduleUrl } = bookingClientUrls(bookingForUrls);
+
+    const calendarLinks =
+      tokens?.cancel_token && data.end_time
+        ? buildClientCalendarLinks({
+            bookingId: data.id,
+            serviceName,
+            barberName,
+            date: data.date,
+            startTime: data.start_time,
+            endTime: data.end_time,
+            cancelToken: tokens.cancel_token,
+            locationAddress: bookingLocation?.formattedAddress,
+            notes,
+            cancelUrl,
+            rescheduleUrl,
+          })
+        : null;
 
 // =========================
 // 📅 GOOGLE CALENDAR
@@ -283,7 +308,10 @@ try {
             rescheduleUrl,
             location: bookingLocation,
             notes,
+            googleCalendarUrl: calendarLinks?.googleUrl,
+            icsUrl: calendarLinks?.icsUrl,
           }),
+          icsContent: calendarLinks?.icsContent,
         });
       } catch (e) {
         console.error("CLIENT EMAIL ERROR:", e);

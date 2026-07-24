@@ -7,6 +7,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { sendEmail } from "@/lib/email/email";
 import { barberNewBookingTemplate } from "@/lib/email/templates/barber-new-booking";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
@@ -32,6 +33,7 @@ import {
   resolveServiceForBarber,
   resolveTargetBarberId,
 } from "./helpers";
+import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 
 function resolveDate(args: Record<string, unknown>): string | null {
   const date = asString(args.date);
@@ -93,7 +95,30 @@ async function sendBookingNotifications(input: {
 
   const formattedDate = new Date(input.booking.date).toLocaleDateString("ro-RO");
   const formattedTime = String(input.booking.start_time).slice(0, 5);
-  const { cancelUrl, rescheduleUrl } = bookingClientUrls(input.booking);
+  const tokens = await ensureBookingClientTokens(input.booking.id);
+  const bookingForUrls = {
+    ...input.booking,
+    cancel_token: tokens?.cancel_token ?? input.booking.cancel_token,
+    reschedule_token: tokens?.reschedule_token ?? input.booking.reschedule_token,
+  };
+  const { cancelUrl, rescheduleUrl } = bookingClientUrls(bookingForUrls);
+
+  const calendarLinks =
+    tokens?.cancel_token && input.booking.end_time
+      ? buildClientCalendarLinks({
+          bookingId: input.booking.id,
+          serviceName: input.serviceName,
+          barberName,
+          date: input.booking.date,
+          startTime: input.booking.start_time,
+          endTime: input.booking.end_time,
+          cancelToken: tokens.cancel_token,
+          locationAddress: bookingLocation?.formattedAddress,
+          notes: input.notes,
+          cancelUrl,
+          rescheduleUrl,
+        })
+      : null;
 
   try {
     await syncBookingToGoogleCalendar(supabaseAdmin, input.booking, {
@@ -121,7 +146,10 @@ async function sendBookingNotifications(input: {
           rescheduleUrl,
           location: bookingLocation,
           notes: input.notes,
+          googleCalendarUrl: calendarLinks?.googleUrl,
+          icsUrl: calendarLinks?.icsUrl,
         }),
+        icsContent: calendarLinks?.icsContent,
       });
     } catch (e) {
       console.error("assistant create_booking client email:", e);
