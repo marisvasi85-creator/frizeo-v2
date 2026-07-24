@@ -11,6 +11,10 @@ export const SITE_DESCRIPTION =
 export const SITE_TAGLINE =
   "Programări online pentru frizerii și saloane";
 
+/** Public default PWA — never admin dashboard (that sent home-screen installs to /login). */
+export const PUBLIC_PWA_MANIFEST_HREF =
+  "/api/pwa/manifest?start=%2F&variant=booking";
+
 export const siteMetadata: Metadata = {
   metadataBase: SITE_URL,
   title: {
@@ -19,6 +23,7 @@ export const siteMetadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  manifest: PUBLIC_PWA_MANIFEST_HREF,
   keywords: [
     "programări online frizerie România",
     "programări salon România",
