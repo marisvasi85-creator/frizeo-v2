@@ -121,6 +121,16 @@ type SalonJsonLdInput = {
   openingHoursSpecification?: Array<Record<string, unknown>> | null;
   priceRange?: string | null;
   mapsUrl?: string | null;
+  aggregateRating?: {
+    ratingValue: number;
+    reviewCount: number;
+  } | null;
+  reviews?: Array<{
+    author: string;
+    reviewBody?: string | null;
+    ratingValue: number;
+    datePublished?: string | null;
+  }> | null;
 };
 
 export function salonJsonLd(salon: SalonJsonLdInput) {
@@ -154,6 +164,33 @@ export function salonJsonLd(salon: SalonJsonLdInput) {
     ...(salon.openingHoursSpecification &&
     salon.openingHoursSpecification.length > 0
       ? { openingHoursSpecification: salon.openingHoursSpecification }
+      : {}),
+    ...(salon.aggregateRating && salon.aggregateRating.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: salon.aggregateRating.ratingValue,
+            reviewCount: salon.aggregateRating.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+    ...(salon.reviews && salon.reviews.length > 0
+      ? {
+          review: salon.reviews.map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.author },
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.ratingValue,
+              bestRating: 5,
+              worstRating: 1,
+            },
+            ...(r.reviewBody ? { reviewBody: r.reviewBody } : {}),
+            ...(r.datePublished ? { datePublished: r.datePublished } : {}),
+          })),
+        }
       : {}),
     ...(hasStructuredAddress
       ? {

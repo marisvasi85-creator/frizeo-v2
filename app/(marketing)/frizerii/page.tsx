@@ -35,7 +35,17 @@ export default async function FrizeriiIndexPage() {
           </h1>
           <p className="mt-4 text-gray-600 max-w-2xl">
             Saloane pe Frizeo, organizate pe oraș. Alegi salonul, frizerul și
-            ora — fără telefon.
+            ora — fără telefon. Poți filtra după tip de serviciu și vedea
+            saloanele pe hartă.
+          </p>
+
+          <p className="mt-6">
+            <Link
+              href="/frizerii/harta"
+              className="inline-flex items-center rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+            >
+              Vezi harta saloanelor →
+            </Link>
           </p>
 
           {cities.length === 0 ? (
