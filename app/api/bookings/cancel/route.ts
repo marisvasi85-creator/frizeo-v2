@@ -12,7 +12,7 @@ import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
-import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
+import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 
 export async function POST(req: NextRequest) {
   try {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     const settings = await getNotificationSettings(booking.tenant_id);
-    const smsAllowed = await smsAllowedForTenant(booking.tenant_id);
+    const smsAllowed = await extendedSmsAllowedForTenant(booking.tenant_id);
 
     try {
       if (booking.google_event_id) {

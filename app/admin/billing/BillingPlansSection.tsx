@@ -93,6 +93,14 @@ export default function BillingPlansSection({
                     ? `${plan.max_bookings_per_month} programări / lună`
                     : "Programări nelimitate"}
                 </div>
+                <div>
+                  📱{" "}
+                  {plan.slug === "free"
+                    ? "Fără SMS"
+                    : plan.slug === "custom"
+                      ? "SMS negociat"
+                      : "SMS reminder inclus"}
+                </div>
               </div>
 
               <div className="mt-6">

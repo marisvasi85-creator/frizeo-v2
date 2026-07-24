@@ -34,7 +34,10 @@ export type PlanLike = {
   status?: string | null;
 };
 
-/** SMS: trial (Pro+) + paid plans Pro, Pro+, Custom */
+/**
+ * SMS reminder: trial + Pro / Pro+ / Custom.
+ * Confirmare / anulare / reprogramare SMS → vezi planAllowsExtendedSms.
+ */
 export function planAllowsSms(plan: PlanLike | null | undefined): boolean {
   if (!plan) return false;
   if (plan.status === "trialing") return true;
@@ -45,6 +48,17 @@ export function planAllowsSms(plan: PlanLike | null | undefined): boolean {
     slug === PLAN_SLUGS.PRO_PLUS ||
     slug === PLAN_SLUGS.CUSTOM
   );
+}
+
+/**
+ * SMS confirmare / anulare / reprogramare: doar plan Custom (negociat).
+ * Trial și Pro/Pro+ folosesc email pentru aceste evenimente.
+ */
+export function planAllowsExtendedSms(
+  plan: PlanLike | null | undefined
+): boolean {
+  if (!plan) return false;
+  return (plan.slug ?? "") === PLAN_SLUGS.CUSTOM;
 }
 
 /** free < pro < pro-plus < custom */

@@ -13,7 +13,7 @@ import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirm
 import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
-import { smsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
+import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
 import {
@@ -62,7 +62,7 @@ async function sendBookingNotifications(input: {
   serviceName: string;
 }) {
   const settings = await getNotificationSettings(input.booking.tenant_id);
-  const smsAllowed = await smsAllowedForTenant(input.booking.tenant_id);
+  const smsAllowed = await extendedSmsAllowedForTenant(input.booking.tenant_id);
 
   let barberEmail: string | null = null;
   let barberName = "Barber";
