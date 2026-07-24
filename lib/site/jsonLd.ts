@@ -110,9 +110,30 @@ type SalonJsonLdInput = {
   address?: string | null;
   description?: string | null;
   logoUrl?: string | null;
+  imageUrls?: string[] | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  county?: string | null;
+  postalCode?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  openingHours?: string[] | null;
+  openingHoursSpecification?: Array<Record<string, unknown>> | null;
+  priceRange?: string | null;
+  mapsUrl?: string | null;
 };
 
 export function salonJsonLd(salon: SalonJsonLdInput) {
+  const images = [
+    ...(salon.logoUrl ? [salon.logoUrl] : []),
+    ...(salon.imageUrls || []),
+  ].filter(Boolean);
+
+  const hasStructuredAddress =
+    Boolean(salon.streetAddress) ||
+    Boolean(salon.city) ||
+    Boolean(salon.address);
+
   return {
     "@context": "https://schema.org",
     "@type": "HairSalon",
@@ -120,13 +141,43 @@ export function salonJsonLd(salon: SalonJsonLdInput) {
     url: pageUrl(`/booking/salon/${salon.slug}`),
     ...(salon.phone ? { telephone: salon.phone } : {}),
     ...(salon.description ? { description: salon.description } : {}),
-    ...(salon.logoUrl ? { image: salon.logoUrl } : {}),
-    ...(salon.address
+    ...(images.length === 1
+      ? { image: images[0] }
+      : images.length > 1
+        ? { image: images }
+        : {}),
+    ...(salon.priceRange ? { priceRange: salon.priceRange } : {}),
+    ...(salon.mapsUrl ? { hasMap: salon.mapsUrl } : {}),
+    ...(salon.openingHours && salon.openingHours.length > 0
+      ? { openingHours: salon.openingHours }
+      : {}),
+    ...(salon.openingHoursSpecification &&
+    salon.openingHoursSpecification.length > 0
+      ? { openingHoursSpecification: salon.openingHoursSpecification }
+      : {}),
+    ...(hasStructuredAddress
       ? {
           address: {
             "@type": "PostalAddress",
-            streetAddress: salon.address,
+            ...(salon.streetAddress
+              ? { streetAddress: salon.streetAddress }
+              : salon.address
+                ? { streetAddress: salon.address }
+                : {}),
+            ...(salon.city ? { addressLocality: salon.city } : {}),
+            ...(salon.county ? { addressRegion: salon.county } : {}),
+            ...(salon.postalCode ? { postalCode: salon.postalCode } : {}),
             addressCountry: "RO",
+          },
+        }
+      : {}),
+    ...(typeof salon.latitude === "number" &&
+    typeof salon.longitude === "number"
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: salon.latitude,
+            longitude: salon.longitude,
           },
         }
       : {}),

@@ -8,6 +8,12 @@ import {
   resolveBarberBySlug,
   resolveTenantBySlug,
 } from "@/lib/slugs/slugRedirects";
+import {
+  buildBarberSeoDescription,
+  buildBarberSeoTitle,
+  buildSalonSeoKeywords,
+  salonCity,
+} from "@/lib/seo/salonSeo";
 
 export async function generateMetadata({
   params,
@@ -53,17 +59,32 @@ export async function generateMetadata({
   }
 
   const barberName = String(resolvedBarber.barber.display_name || "Frizer");
-  const salonName = String(resolvedTenant.tenant.name);
+  const salon = resolvedTenant.tenant;
+  const salonName = String(salon.name);
   const canonicalPath = publicBookingPath(
     resolvedTenant.canonicalSlug,
     resolvedBarber.canonicalSlug
   );
+  const city = salonCity(salon);
+  const avatar =
+    typeof resolvedBarber.barber.avatar_url === "string"
+      ? resolvedBarber.barber.avatar_url
+      : typeof salon.logo_url === "string"
+        ? salon.logo_url
+        : null;
 
   return createPageMetadata({
-    title: `Programare online — ${barberName}`,
-    description: `Programează-te la ${barberName}, ${salonName}. Alege serviciul, data și ora disponibilă.`,
+    title: buildBarberSeoTitle(barberName, salon),
+    description: buildBarberSeoDescription(barberName, salon),
     path: canonicalPath,
-    keywords: [barberName, salonName, "programare frizer online"],
+    keywords: [
+      barberName,
+      salonName,
+      "programare frizer online",
+      ...buildSalonSeoKeywords(salon),
+      ...(city ? [`frizer ${city}`, `${barberName} ${city}`] : []),
+    ],
+    image: avatar,
     pwa: {
       startUrl: canonicalPath,
       variant: "booking",

@@ -9,12 +9,18 @@ import {
   locationMigrationErrorMessage,
 } from "@/lib/location/hasLocationMigration";
 import { locationFieldsFromFormData } from "@/lib/location/resolveLocation";
+import {
+  directoryMigrationErrorMessage,
+  hasDirectoryListedMigration,
+} from "@/lib/seo/hasDirectoryListedMigration";
+import { cityToSlug } from "@/lib/seo/citySlug";
 import type { SaveFormState } from "../components/saveFormState";
 
-function isMissingLocationColumnError(message?: string) {
+function isMissingColumnError(message?: string) {
   return (
     !!message &&
     (message.includes("location_") ||
+      message.includes("directory_listed") ||
       message.includes("schema cache") ||
       message.includes("column"))
   );
@@ -48,8 +54,14 @@ export async function updateSalon(
     const location = locationReady
       ? locationFieldsFromFormData(formData)
       : {
-          address: (formData.get("location_address_line") as string)?.trim() || null,
+          address:
+            (formData.get("location_address_line") as string)?.trim() || null,
         };
+
+    const directoryReady = await hasDirectoryListedMigration();
+    const directoryPayload = directoryReady
+      ? { directory_listed: formData.get("directory_listed") === "on" }
+      : {};
 
     const { data, error } = await supabaseAdmin
       .from("tenants")
@@ -58,13 +70,20 @@ export async function updateSalon(
         phone,
         description,
         ...location,
+        ...directoryPayload,
       })
       .eq("id", barber.tenant_id)
       .select("id")
       .single();
 
     if (error) {
-      if (isMissingLocationColumnError(error.message)) {
+      if (isMissingColumnError(error.message)) {
+        if (error.message.includes("directory_listed")) {
+          return {
+            success: false,
+            error: directoryMigrationErrorMessage(),
+          };
+        }
         return {
           success: false,
           error: locationMigrationErrorMessage(),
@@ -80,15 +99,23 @@ export async function updateSalon(
     }
 
     revalidatePath("/admin/salon");
+    revalidatePath("/frizerii");
 
     const { data: tenant } = await supabaseAdmin
       .from("tenants")
-      .select("slug")
+      .select("slug, location_city")
       .eq("id", barber.tenant_id)
       .single();
 
     if (tenant?.slug) {
       revalidatePath(`/booking/salon/${tenant.slug}`);
+    }
+
+    const citySlug = tenant?.location_city
+      ? cityToSlug(tenant.location_city)
+      : "";
+    if (citySlug) {
+      revalidatePath(`/frizerii/${citySlug}`);
     }
 
     return { success: true };

@@ -41,6 +41,11 @@ export default function BarberBookingView({
 }) {
   const barberName = barber.display_name || "Frizer";
   const bookingLocation = resolveBarberLocation(salon, barber);
+  const streetAddress =
+    (typeof salon.location_address_line === "string" &&
+      salon.location_address_line.trim()) ||
+    (typeof salon.address === "string" && salon.address.trim()) ||
+    null;
 
   return (
     <>
@@ -51,8 +56,24 @@ export default function BarberBookingView({
             slug: salon.slug,
             phone: salon.phone,
             address: formatLocationAddress(salon) || salon.address,
+            streetAddress,
+            city:
+              typeof salon.location_city === "string"
+                ? salon.location_city
+                : null,
+            county:
+              typeof salon.location_county === "string"
+                ? salon.location_county
+                : null,
+            postalCode:
+              typeof salon.location_postal_code === "string"
+                ? salon.location_postal_code
+                : null,
             description: salon.description,
             logoUrl: salon.logo_url,
+            latitude: bookingLocation?.latitude ?? null,
+            longitude: bookingLocation?.longitude ?? null,
+            mapsUrl: bookingLocation?.mapsUrl || null,
           },
           barberName,
           barberSlug,

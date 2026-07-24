@@ -6,10 +6,19 @@ import JsonLd from "@/app/components/JsonLd";
 import PublicLocationCard from "@/app/components/location/PublicLocationCard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
-import { resolveLocation, formatLocationAddress } from "@/lib/location/resolveLocation";
+import {
+  resolveLocation,
+  formatLocationAddress,
+} from "@/lib/location/resolveLocation";
 import { salonJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 import { resolveTenantBySlug } from "@/lib/slugs/slugRedirects";
+import { fetchSalonSeoExtras } from "@/lib/seo/fetchSalonSeoExtras";
+import {
+  buildSalonSeoDescription,
+  buildSalonSeoKeywords,
+  buildSalonSeoTitle,
+} from "@/lib/seo/salonSeo";
 
 export async function generateMetadata({
   params,
@@ -33,16 +42,18 @@ export async function generateMetadata({
   }
 
   const salon = resolved.tenant;
-  const description =
-    (typeof salon.description === "string" ? salon.description.trim().slice(0, 160) : "") ||
-    `Programează-te online la ${salon.name}. Alege frizerul și ora disponibilă.`;
   const startUrl = `/booking/salon/${resolved.canonicalSlug}`;
+  const logo =
+    typeof salon.logo_url === "string" && salon.logo_url
+      ? salon.logo_url
+      : null;
 
   return createPageMetadata({
-    title: String(salon.name),
-    description,
+    title: buildSalonSeoTitle(salon),
+    description: buildSalonSeoDescription(salon),
     path: startUrl,
-    keywords: [String(salon.name), "programări online frizerie", "salon"],
+    keywords: buildSalonSeoKeywords(salon),
+    image: logo,
     pwa: {
       startUrl,
       variant: "booking",
@@ -74,7 +85,7 @@ export default async function SalonPage({
   const salon = resolved.tenant;
   const salonLocation = resolveLocation(salon);
 
-  const [{ data: gallery }, { data: barbers }] = await Promise.all([
+  const [{ data: gallery }, { data: barbers }, seoExtras] = await Promise.all([
     supabaseAdmin
       .from("salon_gallery")
       .select("*")
@@ -94,18 +105,48 @@ export default async function SalonPage({
       .eq("tenant_id", salon.id)
       .eq("active", true)
       .order("display_name"),
+    fetchSalonSeoExtras(salon.id),
   ]);
+
+  const streetAddress =
+    (typeof salon.location_address_line === "string" &&
+      salon.location_address_line.trim()) ||
+    (typeof salon.address === "string" && salon.address.trim()) ||
+    null;
 
   return (
     <>
       <JsonLd
         data={salonJsonLd({
           name: String(salon.name),
-          slug: salon.slug,
+          slug: resolved.canonicalSlug,
           phone: typeof salon.phone === "string" ? salon.phone : null,
-          address: formatLocationAddress(salon) || (typeof salon.address === "string" ? salon.address : null),
-          description: typeof salon.description === "string" ? salon.description : null,
+          address:
+            formatLocationAddress(salon) ||
+            (typeof salon.address === "string" ? salon.address : null),
+          streetAddress,
+          city:
+            typeof salon.location_city === "string"
+              ? salon.location_city
+              : null,
+          county:
+            typeof salon.location_county === "string"
+              ? salon.location_county
+              : null,
+          postalCode:
+            typeof salon.location_postal_code === "string"
+              ? salon.location_postal_code
+              : null,
+          description:
+            typeof salon.description === "string" ? salon.description : null,
           logoUrl: typeof salon.logo_url === "string" ? salon.logo_url : null,
+          imageUrls: seoExtras.galleryUrls,
+          latitude: salonLocation?.latitude ?? null,
+          longitude: salonLocation?.longitude ?? null,
+          mapsUrl: salonLocation?.mapsUrl || null,
+          openingHours: seoExtras.openingHours,
+          openingHoursSpecification: seoExtras.openingHoursSpecification,
+          priceRange: seoExtras.priceRange,
         })}
       />
       <div className="max-w-4xl mx-auto p-6 space-y-8">
@@ -122,6 +163,13 @@ export default async function SalonPage({
           )}
 
           <h1 className="text-3xl font-bold">{String(salon.name)}</h1>
+
+          {typeof salon.location_city === "string" &&
+            salon.location_city.trim() && (
+              <p className="text-gray-500 mt-2">
+                Frizerie în {salon.location_city.trim()}
+              </p>
+            )}
 
           {typeof salon.phone === "string" && salon.phone && (
             <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
