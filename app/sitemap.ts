@@ -14,6 +14,7 @@ const publicPaths: Array<{
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
   { path: "/barbers", changeFrequency: "daily", priority: 0.7 },
   { path: "/frizerii", changeFrequency: "daily", priority: 0.8 },
+  { path: "/frizerii/harta", changeFrequency: "daily", priority: 0.75 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
   { path: "/google-calendar-data", changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.4 },

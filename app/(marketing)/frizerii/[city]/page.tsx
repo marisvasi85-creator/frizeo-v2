@@ -1,13 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import JsonLd from "@/app/components/JsonLd";
+import DirectorySalonBrowser from "../DirectorySalonBrowser";
 import {
   listDirectoryCities,
   listDirectorySalons,
 } from "@/lib/seo/directorySalons";
 import { displayCityName } from "@/lib/seo/citySlug";
+import { getCityIntro } from "@/lib/seo/cityIntro";
 import { breadcrumbJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata, pageUrl } from "@/lib/site/pageMetadata";
 
@@ -60,11 +61,18 @@ export default async function FrizeriiCityPage({ params }: Props) {
   }
 
   const cityLabel = displayCityName(salons[0].location_city);
+  const { intro } = await getCityIntro({
+    citySlug,
+    cityName: cityLabel,
+    salonCount: salons.length,
+    salonNames: salons.map((s) => s.name),
+  });
 
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: `Frizerii în ${cityLabel}`,
+    description: intro,
     itemListElement: salons.map((salon, index) => ({
       "@type": "ListItem",
       position: index + 1,
@@ -90,61 +98,21 @@ export default async function FrizeriiCityPage({ params }: Props) {
             <Link href="/frizerii" className="underline hover:text-black">
               Toate orașele
             </Link>
+            {" · "}
+            <Link href="/frizerii/harta" className="underline hover:text-black">
+              Hartă
+            </Link>
           </p>
-          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+          <h1 className="text-3xl md:text-4xl font-semibold tracking-tight mb-4">
             Frizerii în {cityLabel}
           </h1>
-          <p className="mt-4 text-gray-600 max-w-2xl">
-            {salons.length}{" "}
-            {salons.length === 1
-              ? "salon cu programare online"
-              : "saloane cu programare online"}
-            . Alege și rezervă direct.
-          </p>
 
-          <ul className="mt-10 space-y-4">
-            {salons.map((salon) => (
-              <li key={salon.id}>
-                <Link
-                  href={`/booking/salon/${salon.slug}`}
-                  className="flex gap-4 rounded-2xl border border-gray-200 p-4 hover:bg-gray-50 transition"
-                >
-                  {salon.logo_url ? (
-                    <Image
-                      src={salon.logo_url}
-                      alt={`Logo ${salon.name}`}
-                      width={72}
-                      height={72}
-                      className="w-[72px] h-[72px] rounded-xl object-cover shrink-0"
-                    />
-                  ) : (
-                    <div className="w-[72px] h-[72px] rounded-xl bg-gray-100 shrink-0" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-semibold">{salon.name}</h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {[salon.location_address_line, salon.location_city]
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {salon.active_barbers}{" "}
-                      {salon.active_barbers === 1 ? "frizer" : "frizeri"} ·
-                      Programare online
-                    </p>
-                    {salon.description && (
-                      <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                        {salon.description}
-                      </p>
-                    )}
-                  </div>
-                  <span className="self-center text-sm font-medium whitespace-nowrap">
-                    Vezi →
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <DirectorySalonBrowser
+            salons={salons}
+            cityLabel={cityLabel}
+            intro={intro}
+            showMap
+          />
         </section>
       </main>
     </>
