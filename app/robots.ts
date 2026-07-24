@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
-import { LEGAL_COMPANY } from "@/lib/legal/company";
+import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const base = await getPublicBaseUrl();
+
   return {
     rules: {
       userAgent: "*",
@@ -17,6 +19,6 @@ export default function robots(): MetadataRoute.Robots {
         "/booking/confirmed/",
       ],
     },
-    sitemap: `${LEGAL_COMPANY.website}/sitemap.xml`,
+    sitemap: `${base}/sitemap.xml`,
   };
 }

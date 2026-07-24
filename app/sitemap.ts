@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
-import { LEGAL_COMPANY } from "@/lib/legal/company";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
+import { listDirectoryCities } from "@/lib/seo/directorySalons";
 
 const publicPaths: Array<{
   path: string;
@@ -12,6 +13,7 @@ const publicPaths: Array<{
   { path: "/signup", changeFrequency: "monthly", priority: 0.8 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
   { path: "/barbers", changeFrequency: "daily", priority: 0.7 },
+  { path: "/frizerii", changeFrequency: "daily", priority: 0.8 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
   { path: "/google-calendar-data", changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
@@ -25,7 +27,7 @@ type ActiveBarberRow = {
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = LEGAL_COMPANY.website.replace(/\/$/, "");
+  const base = await getPublicBaseUrl();
   const lastModified = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = publicPaths.map(
@@ -36,6 +38,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority,
     })
   );
+
+  const cities = await listDirectoryCities();
+  const cityEntries: MetadataRoute.Sitemap = cities.map((c) => ({
+    url: `${base}/frizerii/${c.slug}`,
+    lastModified,
+    changeFrequency: "daily",
+    priority: 0.8,
+  }));
 
   const { data: activeBarbers, error } = await supabaseAdmin
     .from("barbers")
@@ -52,7 +62,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   if (error) {
     console.error("sitemap salons:", error);
-    return staticEntries;
+    return [...staticEntries, ...cityEntries];
   }
 
   const salonSlugs = new Map<string, Date>();
@@ -90,5 +100,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })
   );
 
-  return [...staticEntries, ...salonEntries, ...barberEntries];
+  return [
+    ...staticEntries,
+    ...cityEntries,
+    ...salonEntries,
+    ...barberEntries,
+  ];
 }
