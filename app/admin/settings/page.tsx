@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
 import OverrideManager from "./components/OverrideManager";
 import BookingRulesForm from "./components/BookingRulesForm";
+import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import { DEFAULT_MIN_BOOKING_NOTICE_HOURS } from "@/lib/bookings/bookingLeadTime";
 
 export default async function SettingsPage() {
@@ -31,6 +32,8 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8">
+      <SetupChecklistStepMarker barberId={barber.id} step="schedule" />
+
       <BookingRulesForm minBookingNoticeHours={minBookingNoticeHours} />
 
       <div>
