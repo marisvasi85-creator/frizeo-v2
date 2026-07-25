@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import JsonLd from "@/app/components/JsonLd";
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import { listDirectoryCities } from "@/lib/seo/directorySalons";
 import {
   jsonLdGraph,
   organizationJsonLd,
@@ -16,7 +17,10 @@ export const metadata: Metadata = {
   openGraph: { url: LEGAL_COMPANY.website },
 };
 
-export default function Page() {
+export default async function Page() {
+  const cities = await listDirectoryCities();
+  const featuredCities = cities.slice(0, 6);
+
   return (
     <>
       <JsonLd
@@ -240,6 +244,57 @@ export default function Page() {
               Servicii, program, link — gata în câteva minute.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* DIRECTOR PUBLIC */}
+      <section className="bg-gray-50 py-20 px-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-semibold mb-4">
+            Cauți o frizerie cu programare online?
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto mb-8">
+            Vezi frizeriile și barbershop-urile din directorul Frizeo, pe oraș
+            sau pe hartă, și rezervă direct — fără telefon.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-10">
+            <Link
+              href="/frizerii"
+              className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition font-medium"
+            >
+              Vezi frizeriile pe oraș
+            </Link>
+            <Link
+              href="/frizerii/harta"
+              className="border border-gray-300 bg-white px-6 py-3 rounded-xl hover:bg-gray-100 transition font-medium"
+            >
+              Deschide harta
+            </Link>
+          </div>
+          {featuredCities.length > 0 && (
+            <ul className="flex flex-wrap justify-center gap-3 text-sm">
+              {featuredCities.map((city) => (
+                <li key={city.slug}>
+                  <Link
+                    href={`/frizerii/${city.slug}`}
+                    className="inline-flex items-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-gray-700 hover:border-gray-400 hover:text-black transition"
+                  >
+                    Frizerii în {city.city}
+                  </Link>
+                </li>
+              ))}
+              {cities.length > featuredCities.length && (
+                <li>
+                  <Link
+                    href="/frizerii"
+                    className="inline-flex items-center px-3 py-1.5 text-gray-500 underline hover:text-black"
+                  >
+                    Toate orașele
+                  </Link>
+                </li>
+              )}
+            </ul>
+          )}
         </div>
       </section>
 

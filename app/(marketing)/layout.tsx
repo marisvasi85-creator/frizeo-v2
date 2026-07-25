@@ -22,7 +22,7 @@ export default function MarketingLayout({
 
             <Link
               href="/frizerii"
-              className="text-sm text-gray-600 hover:text-black hidden sm:inline"
+              className="text-sm text-gray-600 hover:text-black whitespace-nowrap"
             >
               Frizerii
             </Link>
