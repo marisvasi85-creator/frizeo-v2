@@ -176,6 +176,12 @@ ${input.serviceName}${
             ? `\n\n${bookingLocation.formattedAddress}`
             : ""
         }`,
+        meta: {
+          tenantId: input.booking.tenant_id,
+          bookingId: input.booking.id,
+          barberId: input.booking.barber_id,
+          smsType: "booking",
+        },
       });
     } catch (e) {
       console.error("assistant create_booking sms:", e);

@@ -339,6 +339,12 @@ Programarea ta a fost reprogramata.
 
 ${new_date}
 ${new_start_time}`,
+      meta: {
+        tenantId: oldBooking.tenant_id,
+        bookingId: newBooking.id,
+        barberId: oldBooking.barber_id,
+        smsType: "reschedule",
+      },
     });
 
   } catch (e) {
