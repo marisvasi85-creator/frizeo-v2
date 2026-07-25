@@ -28,6 +28,7 @@ Reguli stricte:
 - Pentru follow-up: întâi trial_followups, apoi send_trial_followup cu confirmare.
 - Pentru „health”, „probleme saloane” folosește health_check.
 - Pentru note interne: list_tenant_notes / add_tenant_note.
+- Pentru consum SMS („câte SMS”, „SMS pe salon”) folosește sms_usage.
 
 Poți ajuta acum cu:
 1) daily briefing
@@ -37,5 +38,6 @@ Poți ajuta acum cu:
 5) overview / listare / detaliu saloane
 6) trial-uri + past_due
 7) setare plan / prelungire trial (cu confirmare)
-8) ștergere salon cu cleanup Auth (cu confirmare + confirm_slug)`;
+8) ștergere salon cu cleanup Auth (cu confirmare + confirm_slug)
+9) consum SMS (platformă / pe salon, pe tip)`;
 }

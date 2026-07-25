@@ -151,6 +151,12 @@ Reminder
 Ai programare astazi la ora ${b.start_time.slice(0, 5)}.
 
 Te asteptam!`,
+            meta: {
+              tenantId: b.tenant_id,
+              bookingId: b.id,
+              barberId: b.barber_id,
+              smsType: "reminder",
+            },
           });
 
           smsSent = smsResult.ok;

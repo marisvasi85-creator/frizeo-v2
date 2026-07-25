@@ -145,6 +145,12 @@ ${booking.date}
 ${booking.start_time}
 
 a fost anulata.`,
+          meta: {
+            tenantId: booking.tenant_id,
+            bookingId: booking.id,
+            barberId: booking.barber_id,
+            smsType: "cancel",
+          },
         });
       } catch (e) {
         console.error("CANCEL SMS ERROR:", e);

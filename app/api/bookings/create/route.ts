@@ -342,6 +342,12 @@ ${formattedDate}
 ${formattedTime}
 
 ${serviceName}${bookingLocation?.formattedAddress ? `\n\n${bookingLocation.formattedAddress}` : ""}`,
+    meta: {
+      tenantId: data.tenant_id,
+      bookingId: data.id,
+      barberId: data.barber_id,
+      smsType: "booking",
+    },
   });
 
 } catch (e) {
