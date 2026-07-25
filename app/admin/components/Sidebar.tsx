@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const ownerItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
+  { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   { href: "/admin/services", label: "Servicii", icon: "✂️" },
   { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
   { href: "/admin/profile", label: "Profil", icon: "👤" },
@@ -21,6 +22,7 @@ const ownerItems = [
 const barberItems = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
+  { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   { href: "/admin/services", label: "Servicii", icon: "✂️" },
   { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
   { href: "/admin/profile", label: "Profil", icon: "👤" },
