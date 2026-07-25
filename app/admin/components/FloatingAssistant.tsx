@@ -25,7 +25,11 @@ export default function FloatingAssistant({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [hasOpened, setHasOpened] = useState(false);
-  const hideOnPage = pathname.startsWith("/admin/assistant");
+  // Hide salon FAB on full-page assistants so it doesn't cover Trimite.
+  // /admin/platform-assistant is creator-only, so this path only affects the creator.
+  const hideOnPage =
+    pathname.startsWith("/admin/assistant") ||
+    pathname.startsWith("/admin/platform-assistant");
 
   useEffect(() => {
     if (!open) return;
