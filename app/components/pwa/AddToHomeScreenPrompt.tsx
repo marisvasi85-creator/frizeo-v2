@@ -5,15 +5,15 @@ import type { BeforeInstallPromptEvent } from "@/lib/pwa/beforeInstallPrompt";
 import type { PwaManifestVariant } from "@/lib/pwa/manifestContent";
 import {
   detectInstallPlatform,
-  isInstallPromptSnoozed,
+  dismissInstallPrompt,
   isMobileDevice,
-  isStandaloneMode,
-  snoozeInstallPrompt,
+  markAppInstalled,
+  markInstallPromptSeenThisSession,
+  shouldSuppressInstallPrompt,
   type InstallPlatform,
 } from "@/lib/pwa/installPrompt";
 
 const SHOW_DELAY_MS = 3000;
-const ANDROID_PROMPT_WAIT_MS = 2000;
 
 const COPY: Record<
   PwaManifestVariant,
@@ -52,32 +52,31 @@ export default function AddToHomeScreenPrompt({
   const isBooking = variant === "booking";
 
   useEffect(() => {
-    if (
-      isStandaloneMode() ||
-      isInstallPromptSnoozed(snoozeScope) ||
-      !isMobileDevice()
-    ) {
+    if (shouldSuppressInstallPrompt(snoozeScope) || !isMobileDevice()) {
       return;
     }
 
     const detected = detectInstallPlatform();
+    // Desktop / unknown: never prompt.
+    // Android: only prompt when beforeinstallprompt fires. If it never fires,
+    // the app is usually already installed (or not installable) — skip the
+    // old manual-instructions fallback that felt pushy.
     if (detected === "unsupported") {
       return;
     }
 
     let cancelled = false;
     let showTimer: ReturnType<typeof setTimeout> | null = null;
-    let receivedPrompt = false;
 
     const show = (nextPlatform: InstallPlatform) => {
-      if (cancelled) return;
+      if (cancelled || shouldSuppressInstallPrompt(snoozeScope)) return;
+      markInstallPromptSeenThisSession(snoozeScope);
       setPlatform(nextPlatform);
       setVisible(true);
     };
 
     const onBeforeInstallPrompt = (event: BeforeInstallPromptEvent) => {
       event.preventDefault();
-      receivedPrompt = true;
       if (showTimer) clearTimeout(showTimer);
       setDeferredPrompt(event);
       showTimer = setTimeout(
@@ -86,27 +85,29 @@ export default function AddToHomeScreenPrompt({
       );
     };
 
+    const onAppInstalled = () => {
+      markAppInstalled(snoozeScope);
+      setVisible(false);
+      setDeferredPrompt(null);
+    };
+
     window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+    window.addEventListener("appinstalled", onAppInstalled);
 
     if (detected === "ios") {
       showTimer = setTimeout(() => show("ios"), SHOW_DELAY_MS);
-    } else if (detected === "android-manual") {
-      showTimer = setTimeout(() => {
-        if (!receivedPrompt) {
-          show("android-manual");
-        }
-      }, SHOW_DELAY_MS + ANDROID_PROMPT_WAIT_MS);
     }
 
     return () => {
       cancelled = true;
       if (showTimer) clearTimeout(showTimer);
       window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, [snoozeScope]);
 
   function dismiss() {
-    snoozeInstallPrompt(snoozeScope);
+    dismissInstallPrompt(snoozeScope);
     setVisible(false);
   }
 
@@ -120,7 +121,11 @@ export default function AddToHomeScreenPrompt({
       const { outcome } = await deferredPrompt.userChoice;
 
       if (outcome === "accepted") {
-        snoozeInstallPrompt(snoozeScope);
+        markAppInstalled(snoozeScope);
+        setVisible(false);
+      } else {
+        // User closed the native sheet — don't keep nagging this session.
+        dismissInstallPrompt(snoozeScope);
         setVisible(false);
       }
     } finally {
@@ -187,28 +192,6 @@ export default function AddToHomeScreenPrompt({
               .
             </li>
             <li>Confirmă cu Adaugă.</li>
-          </ol>
-        )}
-
-        {platform === "android-manual" && (
-          <ol
-            className={`mb-4 list-decimal space-y-2 pl-5 text-sm ${
-              isBooking ? "text-black/75" : "text-white/80"
-            }`}
-          >
-            <li>Apasă meniul Chrome (⋮) din colțul din dreapta sus.</li>
-            <li>
-              Alege{" "}
-              <strong className={isBooking ? "text-black" : "text-white"}>
-                Adaugă la ecranul de pornire
-              </strong>{" "}
-              sau{" "}
-              <strong className={isBooking ? "text-black" : "text-white"}>
-                Instalează aplicația
-              </strong>
-              .
-            </li>
-            <li>Confirmă instalarea.</li>
           </ol>
         )}
 
