@@ -20,6 +20,11 @@ const barberMainItems = [
 
 const ownerMoreItems = [
   {
+    href: "/admin/reports",
+    icon: "📊",
+    label: "Rapoarte",
+  },
+  {
     href: "/admin/notifications",
     icon: "🔔",
     label: "Notificări",
@@ -62,6 +67,11 @@ const ownerMoreItems = [
 ];
 
 const barberMoreItems = [
+  {
+    href: "/admin/reports",
+    icon: "📊",
+    label: "Rapoarte",
+  },
   {
     href: "/admin/notifications",
     icon: "🔔",

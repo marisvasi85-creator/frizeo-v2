@@ -80,6 +80,10 @@ export default async function DashboardPage() {
             <AdminButton variant="secondary" size="sm" href="/admin/billing">
               Abonament
             </AdminButton>
+
+            <AdminButton variant="secondary" size="sm" href="/admin/reports">
+              Rapoarte
+            </AdminButton>
           </div>
         </AdminCard>
       )}
@@ -159,6 +163,10 @@ export default async function DashboardPage() {
 
           <AdminButton size="sm" href="/admin/bookings">
             Programări
+          </AdminButton>
+
+          <AdminButton size="sm" href="/admin/reports">
+            Rapoarte
           </AdminButton>
 
           <AdminButton size="sm" href="/admin/services">
