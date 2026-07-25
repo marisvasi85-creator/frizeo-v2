@@ -8,6 +8,7 @@ import { listTenantsTool } from "./listTenants";
 import { platformOverviewTool } from "./platformOverview";
 import { sendTrialFollowupTool } from "./sendTrialFollowup";
 import { setTenantPlanTool } from "./setTenantPlan";
+import { smsUsageTool } from "./smsUsage";
 import { tenantDetailTool } from "./tenantDetail";
 import { addTenantNoteTool, listTenantNotesTool } from "./tenantNotes";
 import { trialFollowupsTool } from "./trialFollowups";
@@ -157,6 +158,33 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: billingWatchlistTool,
+  },
+  {
+    name: "sms_usage",
+    description:
+      "Contorizează consumul de SMS (trimise ok / eșuate) pe platformă sau pe un salon, pe ultimele N zile, opțional pe tip (booking/reminder/reschedule/cancel). Pentru „câte SMS-uri”, „consum SMS”, „SMS San Barbershop”.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon (opțional)." },
+        slug: { type: "string", description: "Slug salon (opțional)." },
+        tenant_id: { type: "string", description: "ID tenant (opțional)." },
+        days: {
+          type: "number",
+          description: "Fereastră în zile (implicit 30, max 90).",
+        },
+        sms_type: {
+          type: "string",
+          enum: ["booking", "reminder", "reschedule", "cancel"],
+          description: "Filtru tip SMS (opțional).",
+        },
+        type: {
+          type: "string",
+          description: "Alias pentru sms_type.",
+        },
+      },
+    },
+    execute: smsUsageTool,
   },
   {
     name: "trial_followups",
