@@ -34,6 +34,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/frizerii/harta" className="hover:text-black">
+                Hartă frizerii
+              </Link>
+            </li>
+            <li>
               <Link href="/pricing" className="hover:text-black">
                 Prețuri
               </Link>

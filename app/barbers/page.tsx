@@ -27,9 +27,16 @@ export default async function BarbersPage() {
 
   return (
     <main className="max-w-4xl mx-auto px-6 py-16">
-      <h1 className="text-3xl font-semibold mb-10 text-center">
+      <h1 className="text-3xl font-semibold mb-4 text-center">
         Alege un frizer
       </h1>
+      <p className="text-center text-gray-600 mb-10">
+        Preferi pe oraș?{" "}
+        <Link href="/frizerii" className="underline hover:text-black">
+          Vezi frizeriile din director
+        </Link>
+        .
+      </p>
 
       {!barbers?.length ? (
         <p className="text-center text-gray-500">

@@ -10,8 +10,13 @@ import {
 } from "@/lib/seo/directorySalons";
 import { displayCityName } from "@/lib/seo/citySlug";
 import { getCityIntro } from "@/lib/seo/cityIntro";
-import { breadcrumbJsonLd } from "@/lib/site/jsonLd";
-import { createPageMetadata, pageUrl } from "@/lib/site/pageMetadata";
+import {
+  breadcrumbJsonLd,
+  collectionPageJsonLd,
+  itemListJsonLd,
+  jsonLdGraph,
+} from "@/lib/site/jsonLd";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 type Props = { params: Promise<{ city: string }> };
 
@@ -74,15 +79,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 async function HartaPage() {
   const salons = await listDirectorySalons();
+  const description =
+    "Vezi pe hartă frizeriile și barbershop-urile din directorul Frizeo și programează-te online.";
 
   return (
     <>
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Acasă", path: "/" },
-          { name: "Frizerii", path: "/frizerii" },
-          { name: "Hartă", path: "/frizerii/harta" },
-        ])}
+        data={jsonLdGraph(
+          collectionPageJsonLd({
+            name: "Hartă frizerii — programări online",
+            description,
+            path: "/frizerii/harta",
+          }),
+          breadcrumbJsonLd([
+            { name: "Acasă", path: "/" },
+            { name: "Frizerii", path: "/frizerii" },
+            { name: "Hartă", path: "/frizerii/harta" },
+          ]),
+          itemListJsonLd({
+            name: "Frizerii pe hartă",
+            description,
+            path: "/frizerii/harta",
+            items: salons.map((salon) => ({
+              name: salon.name,
+              path: `/booking/salon/${salon.slug}`,
+            })),
+          })
+        )}
       />
       <main className="bg-white text-gray-900">
         <section className="px-6 py-16 max-w-4xl mx-auto space-y-6">
@@ -95,8 +118,9 @@ async function HartaPage() {
             Hartă frizerii
           </h1>
           <p className="text-gray-600 max-w-2xl">
-            Saloane din directorul Frizeo care au coordonate pe locație. Dacă
-            harta e goală, completează lat/lng la salon în Admin → Salon.
+            Saloane din directorul Frizeo care au coordonate pe locație.
+            Apasă pe un marker ca să deschizi pagina de programare. Dacă harta
+            e goală, completează lat/lng la salon în Admin → Salon.
           </p>
           <DirectoryMap salons={salons} />
         </section>
@@ -119,36 +143,42 @@ export default async function FrizeriiCityPage({ params }: Props) {
   }
 
   const cityLabel = displayCityName(salons[0].location_city);
+  const cityPath = `/frizerii/${citySlug}`;
   const { intro } = await getCityIntro({
     citySlug,
     cityName: cityLabel,
     salonCount: salons.length,
     salonNames: salons.map((s) => s.name),
   });
-
-  const itemListJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    name: `Frizerii în ${cityLabel}`,
-    description: intro,
-    itemListElement: salons.map((salon, index) => ({
-      "@type": "ListItem",
-      position: index + 1,
-      url: pageUrl(`/booking/salon/${salon.slug}`),
-      name: salon.name,
-    })),
-  };
+  const description =
+    intro ||
+    `Programează-te online la frizerii și barbershop-uri din ${cityLabel}.`;
 
   return (
     <>
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Acasă", path: "/" },
-          { name: "Frizerii", path: "/frizerii" },
-          { name: cityLabel, path: `/frizerii/${citySlug}` },
-        ])}
+        data={jsonLdGraph(
+          collectionPageJsonLd({
+            name: `Frizerii în ${cityLabel} — programări online`,
+            description,
+            path: cityPath,
+          }),
+          breadcrumbJsonLd([
+            { name: "Acasă", path: "/" },
+            { name: "Frizerii", path: "/frizerii" },
+            { name: cityLabel, path: cityPath },
+          ]),
+          itemListJsonLd({
+            name: `Frizerii în ${cityLabel}`,
+            description,
+            path: cityPath,
+            items: salons.map((salon) => ({
+              name: salon.name,
+              path: `/booking/salon/${salon.slug}`,
+            })),
+          })
+        )}
       />
-      <JsonLd data={itemListJsonLd} />
 
       <main className="bg-white text-gray-900">
         <section className="px-6 py-16 max-w-4xl mx-auto">

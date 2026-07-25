@@ -74,6 +74,65 @@ export function breadcrumbJsonLd(
   };
 }
 
+export function collectionPageJsonLd(options: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: options.name,
+    description: options.description,
+    url: pageUrl(options.path),
+    inLanguage: "ro-RO",
+    isPartOf: {
+      "@type": "WebSite",
+      name: SITE_NAME,
+      url: LEGAL_COMPANY.website,
+    },
+  };
+}
+
+export function itemListJsonLd(options: {
+  name: string;
+  description?: string;
+  path: string;
+  items: Array<{ name: string; path: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: options.name,
+    ...(options.description ? { description: options.description } : {}),
+    url: pageUrl(options.path),
+    numberOfItems: options.items.length,
+    itemListElement: options.items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      url: pageUrl(item.path),
+    })),
+  };
+}
+
+export function faqPageJsonLd(
+  faqs: Array<{ question: string; answer: string }>
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
 export function contactPageJsonLd() {
   return {
     "@context": "https://schema.org",
