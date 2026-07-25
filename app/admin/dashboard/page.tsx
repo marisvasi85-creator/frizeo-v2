@@ -8,6 +8,7 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import { stableBookingUrl } from "@/lib/booking/publicBookingPath";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
+import SetupChecklist from "../components/SetupChecklist";
 
 export default async function DashboardPage() {
   const session = await getAdminSession();
@@ -19,25 +20,31 @@ export default async function DashboardPage() {
   const { user, role, barber } = session;
   const today = new Date().toISOString().split("T")[0];
 
-  const [currentPlan, status, todayRes, upcomingRes] = await Promise.all([
-    getCurrentPlan(barber.tenant_id),
-    getDashboardStatus(user.id, barber.id),
-    supabaseAdmin
-      .from("bookings")
-      .select("id, client_name, start_time, end_time, date, status")
-      .eq("barber_id", barber.id)
-      .eq("date", today)
-      .eq("status", "confirmed"),
-    supabaseAdmin
-      .from("bookings")
-      .select("id, client_name, start_time, date, status")
-      .eq("barber_id", barber.id)
-      .eq("status", "confirmed")
-      .gt("date", today)
-      .order("date", { ascending: true })
-      .order("start_time", { ascending: true })
-      .limit(5),
-  ]);
+  const [currentPlan, status, todayRes, upcomingRes, anyBookingRes] =
+    await Promise.all([
+      getCurrentPlan(barber.tenant_id),
+      getDashboardStatus(user.id, barber.id),
+      supabaseAdmin
+        .from("bookings")
+        .select("id, client_name, start_time, end_time, date, status")
+        .eq("barber_id", barber.id)
+        .eq("date", today)
+        .eq("status", "confirmed"),
+      supabaseAdmin
+        .from("bookings")
+        .select("id, client_name, start_time, date, status")
+        .eq("barber_id", barber.id)
+        .eq("status", "confirmed")
+        .gt("date", today)
+        .order("date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(5),
+      supabaseAdmin
+        .from("bookings")
+        .select("id")
+        .eq("barber_id", barber.id)
+        .limit(1),
+    ]);
 
   if (!status.completed) {
     if (status.step === "services") {
@@ -52,6 +59,7 @@ export default async function DashboardPage() {
   const todayBookings = todayRes.data;
   const upcoming = upcomingRes.data;
   const bookingUrl = stableBookingUrl(barber.id, getAppUrl());
+  const showSetupChecklist = !anyBookingRes.data?.length;
 
   return (
     <div className="space-y-8 min-w-0">
@@ -61,6 +69,8 @@ export default async function DashboardPage() {
         </h1>
         <p className="text-white/60 mt-1">Panoul tău de control</p>
       </div>
+
+      <SetupChecklist barberId={barber.id} eligible={showSetupChecklist} />
 
       <BookingLinkCard initialUrl={bookingUrl} />
 

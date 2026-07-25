@@ -1,6 +1,7 @@
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import ServicesClient from "./ServicesClient";
 
 export default async function ServicesPage() {
@@ -29,5 +30,10 @@ export default async function ServicesPage() {
     console.error("SERVICES LOAD ERROR:", error);
   }
 
-  return <ServicesClient services={services ?? []} barberId={barber.id} />;
+  return (
+    <>
+      <SetupChecklistStepMarker barberId={barber.id} step="services" />
+      <ServicesClient services={services ?? []} barberId={barber.id} />
+    </>
+  );
 }
