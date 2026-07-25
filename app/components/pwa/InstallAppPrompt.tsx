@@ -9,6 +9,10 @@ import {
   isAllowedPwaStartPath,
   type PwaManifestVariant,
 } from "@/lib/pwa/manifestContent";
+import {
+  isMobileDevice,
+  shouldSuppressInstallPrompt,
+} from "@/lib/pwa/installPrompt";
 
 type InstallAppPromptProps = {
   variant: PwaManifestVariant;
@@ -56,10 +60,13 @@ export default function InstallAppPrompt({
 
   useEffect(() => {
     if (!enabled) return;
+    if (shouldSuppressInstallPrompt(snoozeScope) || !isMobileDevice()) {
+      return;
+    }
     // Defer install prompt so it doesn't compete with first paint.
     const id = window.setTimeout(() => setShowPrompt(true), 4000);
     return () => window.clearTimeout(id);
-  }, [enabled]);
+  }, [enabled, snoozeScope]);
 
   if (!enabled) {
     return null;
