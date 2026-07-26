@@ -1,0 +1,104 @@
+/* Marketing surface — scoped so admin/booking stay untouched */
+.mkt {
+  --mkt-ink: #0b0b0c;
+  --mkt-ink-soft: #1c1f24;
+  --mkt-steel: #3d4a5c;
+  --mkt-mist: #e8eef5;
+  --mkt-fog: #f3f6fa;
+  --mkt-line: #d5dde8;
+  --mkt-accent: #1f6feb;
+  --mkt-accent-soft: #dbeafe;
+  --mkt-muted: #5b6573;
+  color: var(--mkt-ink);
+  background: var(--mkt-fog);
+}
+
+.mkt-display {
+  font-family: var(--font-mkt-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.04em;
+  font-weight: 700;
+}
+
+.mkt-body {
+  font-family: var(--font-mkt-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+@keyframes mkt-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mkt-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(1.5%, -1.2%, 0) scale(1.03);
+  }
+}
+
+@keyframes mkt-sheen {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.mkt-rise {
+  animation: mkt-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.mkt-rise-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.mkt-rise-delay-2 {
+  animation-delay: 0.24s;
+}
+
+.mkt-rise-delay-3 {
+  animation-delay: 0.36s;
+}
+
+.mkt-rise-delay-4 {
+  animation-delay: 0.48s;
+}
+
+.mkt-hero-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, rgba(31, 111, 235, 0.18), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 10%, rgba(61, 74, 92, 0.16), transparent 50%),
+    linear-gradient(160deg, #f7f9fc 0%, #e8eef5 42%, #f3f6fa 100%);
+  background-size: 140% 140%;
+  animation: mkt-sheen 18s ease-in-out infinite;
+}
+
+.mkt-hero-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  pointer-events: none;
+}
+
+.mkt-hero-visual-motion {
+  animation: mkt-drift 14s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-rise,
+  .mkt-hero-atmosphere,
+  .mkt-hero-visual-motion {
+    animation: none !important;
+  }
+}

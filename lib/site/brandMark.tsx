@@ -65,7 +65,7 @@ export function OpenGraphCard() {
           maxWidth: 900,
         }}
       >
-        Programări online pentru frizerii și saloane
+        Programări online pentru frizerii și barbershop-uri
       </div>
       <div
         style={{
@@ -74,7 +74,7 @@ export function OpenGraphCard() {
           color: "rgba(255,255,255,0.55)",
         }}
       >
-        Link personal · Calendar · Email & SMS automate
+        Link personal · SMS automate · Marketing AI · Director local
       </div>
     </div>
   );
