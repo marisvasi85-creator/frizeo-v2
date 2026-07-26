@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { validateImageUpload } from "@/lib/uploads/imageUpload";
 
 export async function POST(req: Request) {
   try {
@@ -45,21 +46,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const bytes =
-      await file.arrayBuffer();
-
-    const buffer =
-      Buffer.from(bytes);
+    const image = await validateImageUpload(file);
 
     const path =
-      `${barber.id}/avatar.webp`;
+      `${barber.id}/avatar.${image.extension}`;
 
     const { error } =
       await supabaseAdmin.storage
         .from("barber-avatars")
-        .upload(path, buffer, {
+        .upload(path, image.bytes, {
           upsert: true,
-          contentType: file.type,
+          contentType: image.contentType,
         });
 
     if (error) {
@@ -87,11 +84,11 @@ export async function POST(req: Request) {
       url: data.publicUrl,
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
 
     return NextResponse.json(
-      { error: e.message },
-      { status: 500 }
+      { error: e instanceof Error ? e.message : "Upload eșuat" },
+      { status: 400 }
     );
 
   }

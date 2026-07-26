@@ -25,6 +25,27 @@ export const getActiveTenant = cache(async () => {
 
   tenantId = active?.tenant_id ?? null;
 
+  if (tenantId) {
+    const [{ data: membership }, { data: barber }] = await Promise.all([
+      supabaseAdmin
+        .from("tenant_users")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("barbers")
+        .select("tenant_id")
+        .eq("user_id", user.id)
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+    ]);
+
+    if (!membership && !barber) {
+      tenantId = null;
+    }
+  }
+
   if (!tenantId) {
     const { data: memberships } = await supabaseAdmin
       .from("tenant_users")

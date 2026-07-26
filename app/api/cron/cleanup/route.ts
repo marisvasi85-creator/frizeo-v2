@@ -28,6 +28,14 @@ export async function GET(req: Request) {
       );
     }
 
+    await supabaseAdmin
+      .from("api_rate_limits")
+      .delete()
+      .lt(
+        "window_started_at",
+        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      );
+
     return NextResponse.json({
       success: true,
     });

@@ -6,10 +6,18 @@ import {
   mapAuthError,
   normalizeEmail,
 } from "@/lib/auth/credentials";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
+    const limited = await enforceRateLimit(req, {
+      bucket: "auth-login",
+      identifier: normalizeEmail(email || ""),
+      limit: 10,
+      windowSeconds: 15 * 60,
+    });
+    if (limited) return limited;
 
     if (!isValidEmail(email || "")) {
       return NextResponse.json({ error: "Email invalid." }, { status: 400 });

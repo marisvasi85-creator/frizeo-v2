@@ -12,6 +12,7 @@ import {
   addMinutesToTime,
   timesOverlap,
 } from "@/lib/schedule/time";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 import {
   getGoogleBusyIntervalsForDate,
   slotOverlapsBusyIntervals,
@@ -19,6 +20,13 @@ import {
 
 export async function POST(req: Request) {
   try {
+    const limited = await enforceRateLimit(req, {
+      bucket: "booking-hold",
+      limit: 30,
+      windowSeconds: 600,
+    });
+    if (limited) return limited;
+
     const supabase = supabaseAdmin;
     const body = await req.json();
 
@@ -44,6 +52,9 @@ export async function POST(req: Request) {
       .from("barber_services")
       .select("duration")
       .eq("id", barber_service_id)
+      .eq("barber_id", barber_id)
+      .eq("tenant_id", barberCheck.barber.tenant_id)
+      .eq("active", true)
       .single();
 
     if (!service) {

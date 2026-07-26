@@ -11,10 +11,22 @@ import {
 import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
 import { getTrialDays } from "@/lib/billing/getTrialDays";
 import { PLAN_SLUGS } from "@/lib/billing/plans";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
+  let createdUserId: string | null = null;
+  let createdTenantId: string | null = null;
+  let provisioningComplete = false;
+
   try {
     const { email, password, fullName, phone, acceptedTerms } = await req.json();
+    const limited = await enforceRateLimit(req, {
+      bucket: "auth-signup",
+      identifier: normalizeEmail(email || ""),
+      limit: 5,
+      windowSeconds: 60 * 60,
+    });
+    if (limited) return limited;
 
     const name = (fullName || "").trim();
     const emailNorm = normalizeEmail(email || "");
@@ -70,12 +82,14 @@ export async function POST(req: Request) {
     }
 
     const userId = createdUser.user.id;
+    createdUserId = userId;
 
-    await supabaseAdmin.from("profiles").insert({
+    const { error: profileError } = await supabaseAdmin.from("profiles").insert({
       id: userId,
       full_name: name,
       phone: phoneNorm,
     });
+    if (profileError) throw profileError;
 
     const tenantSlug = `${name}-salon`
       .toLowerCase()
@@ -89,7 +103,7 @@ export async function POST(req: Request) {
     // =========================
     // 🔥 TENANT
     // =========================
-    const { data: tenant } = await supabaseAdmin
+    const { data: tenant, error: tenantError } = await supabaseAdmin
   .from("tenants")
   .insert({
     name: name + " Salon",
@@ -97,20 +111,25 @@ export async function POST(req: Request) {
   })
   .select()
   .single();
+    if (tenantError || !tenant) {
+      throw tenantError ?? new Error("Nu s-a putut crea salonul.");
+    }
+    createdTenantId = tenant.id;
 
     // =========================
     // 🔥 TENANT USER
     // =========================
-    await supabaseAdmin.from("tenant_users").insert({
+    const { error: membershipError } = await supabaseAdmin.from("tenant_users").insert({
       user_id: userId,
       tenant_id: tenant.id,
       role: "owner",
     });
+    if (membershipError) throw membershipError;
 
     // =========================
     // 🔥 BARBER
     // =========================
-    const { data: barber } = await supabaseAdmin
+    const { data: barber, error: barberError } = await supabaseAdmin
   .from("barbers")
   .insert({
     user_id: userId,
@@ -121,14 +140,18 @@ export async function POST(req: Request) {
   })
   .select()
   .single();
+    if (barberError || !barber) {
+      throw barberError ?? new Error("Nu s-a putut crea profilul frizerului.");
+    }
 
     // =========================
     // 🔥 ACTIVE TENANT
     // =========================
-    await supabaseAdmin.from("user_active_tenant").insert({
+    const { error: activeTenantError } = await supabaseAdmin.from("user_active_tenant").insert({
       user_id: userId,
       tenant_id: tenant.id,
     });
+    if (activeTenantError) throw activeTenantError;
     
 const trialEnds = new Date();
 trialEnds.setDate(trialEnds.getDate() + getTrialDays());
@@ -144,7 +167,7 @@ if (!proPlusPlanId) {
   );
 }
 
-await supabaseAdmin
+const { error: subscriptionError } = await supabaseAdmin
   .from("subscriptions")
   .insert({
     tenant_id: tenant.id,
@@ -154,8 +177,9 @@ await supabaseAdmin
     current_period_end: trialEnds.toISOString(),
     trial_ends_at: trialEnds.toISOString(),
   });
+if (subscriptionError) throw subscriptionError;
 
-await supabaseAdmin.from("notification_settings").insert({
+const { error: notificationError } = await supabaseAdmin.from("notification_settings").insert({
   tenant_id: tenant.id,
   booking_email_enabled: true,
   booking_sms_enabled: false,
@@ -166,11 +190,12 @@ await supabaseAdmin.from("notification_settings").insert({
   cancel_email_enabled: true,
   cancel_sms_enabled: false,
 });
+if (notificationError) throw notificationError;
   // =========================
 // ✂️ SERVICII IMPLICITE
 // =========================
 
-await supabaseAdmin
+const { error: servicesError } = await supabaseAdmin
   .from("barber_services")
   .insert([
     {
@@ -210,12 +235,13 @@ await supabaseAdmin
       show_price: true,
     },
   ]);
+if (servicesError) throw servicesError;
 
   // =========================
 // 📅 PROGRAM IMPLICIT
 // =========================
 
-await supabaseAdmin
+const { error: scheduleError } = await supabaseAdmin
   .from("barber_weekly_schedule")
   .insert([
     {
@@ -290,6 +316,8 @@ await supabaseAdmin
       break_enabled: false,
     },
   ]);
+    if (scheduleError) throw scheduleError;
+    provisioningComplete = true;
 
     const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
       () =>
@@ -313,9 +341,26 @@ await supabaseAdmin
 
     return getResponse();
 
-  } catch (e: any) {
+  } catch (e: unknown) {
+    if (!provisioningComplete) {
+      if (createdTenantId) {
+        const { error } = await supabaseAdmin
+          .from("tenants")
+          .delete()
+          .eq("id", createdTenantId);
+        if (error) console.error("SIGNUP TENANT ROLLBACK ERROR:", error);
+      }
+
+      if (createdUserId) {
+        const { error } = await supabaseAdmin.auth.admin.deleteUser(
+          createdUserId,
+        );
+        if (error) console.error("SIGNUP USER ROLLBACK ERROR:", error);
+      }
+    }
+
     return NextResponse.json(
-      { error: mapAuthError(e.message) },
+      { error: mapAuthError(e instanceof Error ? e.message : undefined) },
       { status: 500 }
     );
   }

@@ -37,6 +37,10 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
+  if (!session.role) {
+    redirect("/login?error=access");
+  }
+
   const assistantEnabled = isFrizeoAssistantEnabled();
   const platformAssistantEnabled =
     isPlatformAssistantEnabled() &&

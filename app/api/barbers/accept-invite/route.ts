@@ -7,6 +7,7 @@ import {
   isValidPassword,
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 // ===================================
 // GET INVITATION
@@ -67,6 +68,13 @@ export async function POST(req: Request) {
       token,
       password,
     } = await req.json();
+    const limited = await enforceRateLimit(req, {
+      bucket: "accept-invite",
+      identifier: token || "",
+      limit: 10,
+      windowSeconds: 60 * 60,
+    });
+    if (limited) return limited;
 
     if (!token || !password) {
       return NextResponse.json(

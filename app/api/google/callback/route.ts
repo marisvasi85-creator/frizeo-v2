@@ -15,13 +15,27 @@ function redirectToProfile(
       url.searchParams.set(key, value);
     });
   }
-  return NextResponse.redirect(url.toString());
+  const response = NextResponse.redirect(url.toString());
+  response.cookies.set("frizeo_google_oauth_state", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/api/google/callback",
+    maxAge: 0,
+  });
+  return response;
 }
 
 export async function GET(req: NextRequest) {
   const appUrl = getAppUrl();
   const code = req.nextUrl.searchParams.get("code");
+  const state = req.nextUrl.searchParams.get("state");
+  const expectedState = req.cookies.get("frizeo_google_oauth_state")?.value;
   const oauthError = req.nextUrl.searchParams.get("error");
+
+  if (!state || !expectedState || state !== expectedState) {
+    return redirectToProfile(appUrl, { google: "invalid_state" });
+  }
 
   if (oauthError) {
     return redirectToProfile(appUrl, { google: oauthError });

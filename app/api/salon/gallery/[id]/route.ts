@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
 
 export async function DELETE(
   req: Request,
@@ -14,21 +13,11 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    const supabase =
-      await createSupabaseServerClient();
-
-    const barber =
-      await getCurrentBarberInTenant();
-
-    if (!barber) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireTenantAccess(["owner", "manager"]);
+    if (isAuthError(auth)) return auth;
 
     const { data: image } =
-      await supabase
+      await supabaseAdmin
         .from("salon_gallery")
         .select("*")
         .eq("id", id)
@@ -43,7 +32,7 @@ export async function DELETE(
 
     if (
       image.tenant_id !==
-      barber.tenant_id
+      auth.tenantId
     ) {
       return NextResponse.json(
         { error: "Forbidden" },
@@ -76,11 +65,11 @@ export async function DELETE(
     return NextResponse.json({
       success: true,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
       {
         error:
-          e.message ||
+          (e instanceof Error ? e.message : null) ||
           "Delete failed",
       },
       {

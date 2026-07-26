@@ -19,9 +19,18 @@ import {
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
+import { addMinutesToTime } from "@/lib/schedule/time";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
   try {
+    const limited = await enforceRateLimit(req, {
+      bucket: "booking-reschedule",
+      limit: 15,
+      windowSeconds: 600,
+    });
+    if (limited) return limited;
+
     const supabase = supabaseAdmin;
     const body = await req.json();
 
@@ -29,7 +38,6 @@ export async function POST(req: Request) {
       token,
       new_date,
       new_start_time,
-      new_end_time,
 
       // 🔥 ADAUGAT (din edit modal)
       client_name,
@@ -38,7 +46,7 @@ export async function POST(req: Request) {
       client_notes,
     } = body;
 
-    if (!token || !new_date || !new_start_time || !new_end_time) {
+    if (!token || !new_date || !new_start_time) {
       return NextResponse.json(
         { error: "Date invalide" },
         { status: 400 }
@@ -104,6 +112,26 @@ export async function POST(req: Request) {
       );
     }
 
+    const { data: selectedService } = await supabase
+      .from("barber_services")
+      .select("duration")
+      .eq("id", barberServiceId)
+      .eq("barber_id", oldBooking.barber_id)
+      .eq("tenant_id", oldBooking.tenant_id)
+      .single();
+
+    if (!selectedService?.duration) {
+      return NextResponse.json(
+        { error: "Serviciu invalid" },
+        { status: 400 },
+      );
+    }
+
+    const calculatedEndTime = addMinutesToTime(
+      new_start_time,
+      selectedService.duration,
+    );
+
     let bypassMinNotice = false;
     const auth = await requireTenantAccess(["owner", "manager", "barber"]);
 
@@ -151,7 +179,7 @@ export async function POST(req: Request) {
         p_barber_service_id: barberServiceId,
         p_date: new_date,
         p_start: new_start_time,
-        p_end: new_end_time,
+        p_end: calculatedEndTime,
         p_client_name: finalName,
         p_client_phone: finalPhone,
         p_client_email: finalEmail,

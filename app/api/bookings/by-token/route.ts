@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
+  const limited = await enforceRateLimit(req, {
+    bucket: "booking-by-token",
+    limit: 30,
+    windowSeconds: 10 * 60,
+  });
+  if (limited) return limited;
+
   const supabase = supabaseAdmin;
   const { token } = await req.json();
 

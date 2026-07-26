@@ -1,18 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
+import { validateImageUpload } from "@/lib/uploads/imageUpload";
 
 export async function POST(req: Request) {
   try {
-    const barber =
-      await getCurrentBarberInTenant();
-
-    if (!barber) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireTenantAccess(["owner", "manager"]);
+    if (isAuthError(auth)) return auth;
 
     const formData =
       await req.formData();
@@ -27,23 +21,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const bytes =
-      await file.arrayBuffer();
-
-    const buffer =
-      Buffer.from(bytes);
-
-    const fileName =
-      `${Date.now()}-${file.name}`;
+    const image = await validateImageUpload(file);
 
     const path =
-      `${barber.tenant_id}/${fileName}`;
+      `${auth.tenantId}/gallery-${Date.now()}-${crypto.randomUUID()}.${image.extension}`;
 
     const { error } =
       await supabaseAdmin.storage
         .from("salon-gallery")
-        .upload(path, buffer, {
-          contentType: file.type,
+        .upload(path, image.bytes, {
+          contentType: image.contentType,
           upsert: true,
         });
 
@@ -60,7 +47,7 @@ export async function POST(req: Request) {
     const { data: inserted, error: insertError } = await supabaseAdmin
       .from("salon_gallery")
       .insert({
-        tenant_id: barber.tenant_id,
+        tenant_id: auth.tenantId,
         image_url: publicUrl,
       })
       .select("id, image_url, created_at")
@@ -76,10 +63,10 @@ export async function POST(req: Request) {
       url: inserted.image_url ?? publicUrl,
       created_at: inserted.created_at,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
-      { error: e.message },
-      { status: 500 }
+      { error: e instanceof Error ? e.message : "Upload eșuat" },
+      { status: 400 }
     );
   }
 }

@@ -19,6 +19,43 @@ FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'bookings'
 ORDER BY policyname;
 
+-- 10) No browser-writable tenant memberships (must return 0 rows)
+SELECT policyname, cmd, roles::text
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'tenant_users'
+  AND cmd IN ('INSERT', 'UPDATE', 'DELETE', 'ALL')
+  AND (
+    roles::text LIKE '%authenticated%'
+    OR roles::text LIKE '%anon%'
+    OR roles::text LIKE '%public%'
+  );
+
+-- 11) Barber booking policies are scoped by barber_id / role
+SELECT policyname, cmd, qual, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'bookings'
+ORDER BY policyname;
+
+-- 12) Rate-limit function is service-only
+SELECT
+  has_function_privilege(
+    'anon',
+    'public.consume_api_rate_limit(text,text,integer,integer)',
+    'EXECUTE'
+  ) AS anon_can_execute,
+  has_function_privilege(
+    'authenticated',
+    'public.consume_api_rate_limit(text,text,integer,integer)',
+    'EXECUTE'
+  ) AS authenticated_can_execute,
+  has_function_privilege(
+    'service_role',
+    'public.consume_api_rate_limit(text,text,integer,integer)',
+    'EXECUTE'
+  ) AS service_role_can_execute;
+
 -- 2b) Red flag: public/anon write policies on bookings (should return 0 rows)
 SELECT policyname, cmd
 FROM pg_policies

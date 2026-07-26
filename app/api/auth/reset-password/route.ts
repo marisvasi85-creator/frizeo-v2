@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isValidEmail, normalizeEmail } from "@/lib/auth/credentials";
 import { getAppUrl } from "@/lib/app/getAppUrl";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
   const { email } = await req.json();
+  const limited = await enforceRateLimit(req, {
+    bucket: "auth-reset-password",
+    identifier: normalizeEmail(email || ""),
+    limit: 5,
+    windowSeconds: 60 * 60,
+  });
+  if (limited) return limited;
 
   if (!isValidEmail(email || "")) {
     return NextResponse.json({ error: "Email invalid." }, { status: 400 });

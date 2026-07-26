@@ -1,21 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
+import { validateImageUpload } from "@/lib/uploads/imageUpload";
 
 export async function POST(req: Request) {
   try {
-    const supabase = await createSupabaseServerClient();
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+    const auth = await requireTenantAccess(["owner", "manager"]);
+    if (isAuthError(auth)) return auth;
 
     const formData = await req.formData();
 
@@ -29,32 +20,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: barber } =
-      await supabaseAdmin
-        .from("barbers")
-        .select("tenant_id")
-        .eq("user_id", user.id)
-        .single();
-
-    if (!barber) {
-      return NextResponse.json(
-        { error: "Barber not found" },
-        { status: 404 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-
-    const buffer = Buffer.from(bytes);
+    const image = await validateImageUpload(file);
 
     const path =
-      `${barber.tenant_id}/${Date.now()}-${file.name}`;
+      `${auth.tenantId}/logo-${Date.now()}.${image.extension}`;
 
     const { error: uploadError } =
       await supabaseAdmin.storage
         .from("salon-logos")
-        .upload(path, buffer, {
-          contentType: file.type,
+        .upload(path, image.bytes, {
+          contentType: image.contentType,
           upsert: true,
         });
 
@@ -76,16 +51,16 @@ export async function POST(req: Request) {
       .update({
         logo_url: publicUrl,
       })
-      .eq("id", barber.tenant_id);
+      .eq("id", auth.tenantId);
 
     return NextResponse.json({
       success: true,
       url: publicUrl,
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return NextResponse.json(
-      { error: e.message },
-      { status: 500 }
+      { error: e instanceof Error ? e.message : "Upload eșuat" },
+      { status: 400 }
     );
   }
 }
