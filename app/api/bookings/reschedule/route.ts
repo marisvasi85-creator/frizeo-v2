@@ -309,7 +309,7 @@ export async function POST(req: Request) {
       barberName,
       date: new_date,
       startTime: new_start_time,
-      endTime: new_end_time,
+      endTime: calculatedEndTime,
       cancelToken: bookingWithTokens.cancel_token,
       locationAddress: bookingLocation?.formattedAddress,
       notes: finalNotes,

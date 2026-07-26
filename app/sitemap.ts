@@ -23,7 +23,6 @@ const publicPaths: Array<{
 
 type ActiveBarberRow = {
   slug: string | null;
-  updated_at?: string | null;
   tenant: { slug: string | null } | { slug: string | null }[] | null;
 };
 
@@ -53,7 +52,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .select(
       `
       slug,
-      updated_at,
       tenant:tenants!inner (
         slug
       )
@@ -78,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (!tenantSlug || !barberSlug) continue;
 
-    const modified = row.updated_at ? new Date(row.updated_at) : lastModified;
+    const modified = lastModified;
     const prev = salonSlugs.get(tenantSlug);
     if (!prev || modified > prev) {
       salonSlugs.set(tenantSlug, modified);
