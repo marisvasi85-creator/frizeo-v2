@@ -1,16 +1,17 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { slugify } from "@/lib/utils/slugify";
+import { allocateTenantSlug } from "@/lib/tenant/allocateTenantSlug";
 
 export async function ensureTenantSlug(tenant: {
   id: string;
   name: string | null;
   slug: string | null;
 }): Promise<string> {
+  // Never rewrite an existing slug — rename must not break shared links.
   if (tenant.slug) {
     return tenant.slug;
   }
 
-  const slug = slugify(tenant.name || "salon");
+  const slug = await allocateTenantSlug(tenant.name || "salon", tenant.id);
 
   await supabaseAdmin
     .from("tenants")

@@ -52,6 +52,7 @@ export default async function ProfilePage({
       .from("tenants")
       .select(
         `
+      slug,
       address,
       location_address_line,
       location_city,
@@ -203,12 +204,14 @@ export default async function ProfilePage({
           </label>
 
           <p className="text-xs text-white/40">
-            Linkul permanent nu se schimbă când îți actualizezi numele. Îl poți
-            trimite clienților fără griji.
+            Linkul frumos se creează o singură dată și nu se schimbă când îți
+            actualizezi numele. Îl poți trimite clienților fără griji.
           </p>
 
           <p className="mt-2 text-sm text-white/50 font-mono break-all">
-            /booking/{barber.id}
+            {barber.slug && tenantRes.data?.slug
+              ? `/booking/salon/${tenantRes.data.slug}/${barber.slug}`
+              : `/booking/${barber.id}`}
           </p>
         </div>
 

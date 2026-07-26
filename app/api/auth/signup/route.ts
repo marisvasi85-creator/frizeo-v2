@@ -12,6 +12,8 @@ import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
 import { getTrialDays } from "@/lib/billing/getTrialDays";
 import { PLAN_SLUGS } from "@/lib/billing/plans";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
+import { allocateTenantSlug } from "@/lib/tenant/allocateTenantSlug";
+import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 
 export async function POST(req: Request) {
   let createdUserId: string | null = null;
@@ -91,15 +93,8 @@ export async function POST(req: Request) {
     });
     if (profileError) throw profileError;
 
-    const tenantSlug = `${name}-salon`
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-
-    const barberSlug = name
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+    // Slug-uri stabile: se alocă o singură dată la creare, nu se rescriu la redenumire.
+    const tenantSlug = await allocateTenantSlug(`${name} Salon`);
     // =========================
     // 🔥 TENANT
     // =========================
@@ -125,6 +120,8 @@ export async function POST(req: Request) {
       role: "owner",
     });
     if (membershipError) throw membershipError;
+
+    const barberSlug = await allocateBarberSlug(tenant.id, name);
 
     // =========================
     // 🔥 BARBER

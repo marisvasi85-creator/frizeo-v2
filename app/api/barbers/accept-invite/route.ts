@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
-import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
+import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 import {
   isValidPassword,
   PASSWORD_REQUIREMENTS_MESSAGE,
@@ -180,7 +180,12 @@ export async function POST(req: Request) {
         role: "barber",
       });
 
-    const { data: barber } = await supabaseAdmin
+    const barberSlug = await allocateBarberSlug(
+      invitation.tenant_id,
+      invitation.full_name,
+    );
+
+    const { data: barber, error: barberError } = await supabaseAdmin
   .from("barbers")
   .insert({
     user_id: userId,
@@ -188,16 +193,15 @@ export async function POST(req: Request) {
     display_name: invitation.full_name,
     phone: invitation.phone || null,
     active: true,
+    slug: barberSlug,
   })
   .select()
   .single();
 
-    await ensureBarberSlug({
-      id: barber.id,
-      tenant_id: barber.tenant_id,
-      display_name: barber.display_name,
-      slug: barber.slug,
-    });
+    if (barberError || !barber) {
+      throw barberError ?? new Error("Nu s-a putut crea profilul frizerului.");
+    }
+
     await supabaseAdmin
   .from("barber_services")
   .insert([

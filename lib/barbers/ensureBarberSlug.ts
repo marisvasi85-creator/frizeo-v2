@@ -24,6 +24,7 @@ async function isSlugAvailable(
 }
 
 export async function ensureBarberSlug(barber: BarberSlugInput): Promise<string> {
+  // Keep existing slug forever so rename does not break shared booking links.
   if (barber.slug && (await isSlugAvailable(barber.tenant_id, barber.slug, barber.id))) {
     return barber.slug;
   }

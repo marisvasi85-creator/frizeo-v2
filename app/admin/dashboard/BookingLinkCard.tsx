@@ -25,8 +25,9 @@ export default function BookingLinkCard({
       <p className="text-sm text-white/60 mb-2">Linkul tău de programări</p>
 
       <p className="text-xs text-white/40 mb-3">
-        Acest link permanent nu se schimbă când îți actualizezi numele sau
-        datele salonului. Îl poți trimite clienților o singură dată.
+        Linkul frumos se creează o singură dată (din numele salonului/frizerului)
+        și nu se schimbă când îți actualizezi numele. Îl poți trimite clienților
+        fără griji.
       </p>
 
       {!url ? (

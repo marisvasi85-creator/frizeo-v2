@@ -5,7 +5,12 @@ import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
-import { stableBookingUrl } from "@/lib/booking/publicBookingPath";
+import {
+  publicBookingUrl,
+  stableBookingUrl,
+} from "@/lib/booking/publicBookingPath";
+import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
+import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 import SetupChecklist from "../components/SetupChecklist";
@@ -20,7 +25,7 @@ export default async function DashboardPage() {
   const { user, role, barber } = session;
   const today = new Date().toISOString().split("T")[0];
 
-  const [currentPlan, status, todayRes, upcomingRes, anyBookingRes] =
+  const [currentPlan, status, todayRes, upcomingRes, anyBookingRes, tenantRes] =
     await Promise.all([
       getCurrentPlan(barber.tenant_id),
       getDashboardStatus(user.id, barber.id),
@@ -44,6 +49,11 @@ export default async function DashboardPage() {
         .select("id")
         .eq("barber_id", barber.id)
         .limit(1),
+      supabaseAdmin
+        .from("tenants")
+        .select("id, name, slug")
+        .eq("id", barber.tenant_id)
+        .single(),
     ]);
 
   if (!status.completed) {
@@ -58,7 +68,22 @@ export default async function DashboardPage() {
 
   const todayBookings = todayRes.data;
   const upcoming = upcomingRes.data;
-  const bookingUrl = stableBookingUrl(barber.id, getAppUrl());
+  const appUrl = getAppUrl();
+  const stableUrl = stableBookingUrl(barber.id, appUrl);
+
+  let bookingUrl = stableUrl;
+  const tenant = tenantRes.data;
+  if (tenant) {
+    const tenantSlug = await ensureTenantSlug(tenant);
+    const barberSlug = await ensureBarberSlug({
+      id: barber.id,
+      tenant_id: barber.tenant_id,
+      display_name: barber.display_name,
+      slug: barber.slug ?? null,
+    });
+    bookingUrl = publicBookingUrl(tenantSlug, barberSlug, appUrl);
+  }
+
   const showSetupChecklist = !anyBookingRes.data?.length;
 
   return (

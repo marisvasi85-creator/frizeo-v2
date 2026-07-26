@@ -43,7 +43,8 @@ export async function GET() {
       : publicSalonUrl(tenantSlug, appUrl);
 
     return NextResponse.json({
-      url: stableUrl,
+      // Primary share link: pretty slug URL (immutable after creation).
+      url: prettyUrl || stableUrl,
       stableUrl,
       prettyUrl,
     });
