@@ -20,6 +20,9 @@ COMMENT ON TABLE public.tenant_fiscal_invoices IS 'Facturi fiscale emise via FGO
 
 ALTER TABLE public.tenant_fiscal_invoices ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "tenant_fiscal_invoices_owner_read"
+ON public.tenant_fiscal_invoices;
+
 CREATE POLICY "tenant_fiscal_invoices_owner_read"
 ON public.tenant_fiscal_invoices
 FOR SELECT

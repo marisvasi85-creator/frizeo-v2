@@ -237,6 +237,7 @@ WITH CHECK (user_id = auth.uid());
 -- 13. tenants — membership read + controlled write
 -- ---------------------------------------------------------------------------
 DROP POLICY IF EXISTS "Users can read only their tenants" ON public.tenants;
+DROP POLICY IF EXISTS "tenants_read_members" ON public.tenants;
 DROP POLICY IF EXISTS "tenants_insert_authenticated" ON public.tenants;
 DROP POLICY IF EXISTS "tenants_update_member" ON public.tenants;
 
