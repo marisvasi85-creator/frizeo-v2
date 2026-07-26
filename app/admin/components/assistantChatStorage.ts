@@ -29,7 +29,7 @@ function isMessage(value: unknown): value is AssistantChatMessage {
 }
 
 export function buildWelcomeMessage(displayName: string): string {
-  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să adaug servicii, sau să setez zi liberă / concediu (cu confirmare). Prețul e opțional. Nu calculez încasări.`;
+  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să adaug servicii, sau să setez zi liberă / concediu. Acțiunile importante cer Confirmă / Renunță din butoane. Prețul e opțional. Nu calculez încasări.`;
 }
 
 export function buildPlatformWelcomeMessage(): string {

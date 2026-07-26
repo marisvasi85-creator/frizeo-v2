@@ -1,44 +1,24 @@
-import {
-  bookingAccessibleByUser,
-} from "@/lib/auth/requireTenantAccess";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
-import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
+import { getActiveBookings } from "@/lib/schedule/bookings";
+import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
+import {
+  addMinutesToTime,
+  jsDayToScheduleDay,
+  timesOverlap,
+} from "@/lib/schedule/time";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function asBoolean(value: unknown): boolean {
-  return value === true || value === "true" || value === 1 || value === "1";
-}
-
-function normalizeTime(value: string): string {
-  const trimmed = value.trim();
-  if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
-    const [h, m] = trimmed.split(":");
-    return `${h.padStart(2, "0")}:${m}`;
-  }
-  return trimmed.slice(0, 5);
-}
+import { asBoolean, asString, normalizeTime } from "./helpers";
+import { syncAndNotifyBookingRescheduled } from "./notifyBookingChange";
+import { resolveBookingForAssistant } from "./resolveBooking";
 
 export async function updateBookingTool(
   args: Record<string, unknown>,
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
-  const bookingId = asString(args.booking_id);
   const date = asString(args.date);
   const startRaw = asString(args.start_time) || asString(args.time);
   const confirmed = asBoolean(args.confirmed);
-
-  if (!bookingId) {
-    return {
-      ok: false,
-      summary: "Lipsa booking_id. Folosește list_bookings ca să identifici programarea.",
-      error: "missing_booking_id",
-    };
-  }
 
   if (!date || !startRaw) {
     return {
@@ -48,45 +28,11 @@ export async function updateBookingTool(
     };
   }
 
+  const resolved = await resolveBookingForAssistant(args, ctx);
+  if (!resolved.ok) return resolved.result;
+
+  const booking = resolved.booking;
   const start_time = normalizeTime(startRaw);
-
-  const canAccess = await bookingAccessibleByUser(
-    bookingId,
-    ctx.tenantId,
-    ctx.role,
-    ctx.barberId,
-  );
-  if (!canAccess) {
-    return {
-      ok: false,
-      summary: "Nu ai acces la această programare.",
-      error: "forbidden",
-    };
-  }
-
-  const { data: booking, error: bookingError } = await supabaseAdmin
-    .from("bookings")
-    .select(
-      "id, date, start_time, end_time, status, client_name, client_phone, client_email, client_notes, barber_id, barber_service_id",
-    )
-    .eq("id", bookingId)
-    .maybeSingle();
-
-  if (bookingError || !booking) {
-    return {
-      ok: false,
-      summary: "Programarea nu a fost găsită.",
-      error: bookingError?.message || "not_found",
-    };
-  }
-
-  if (booking.status === "cancelled") {
-    return {
-      ok: false,
-      summary: "Programarea este deja anulată.",
-      error: "cancelled",
-    };
-  }
 
   const serviceId = asString(args.barber_service_id) || booking.barber_service_id;
   const { data: service } = serviceId
@@ -99,6 +45,8 @@ export async function updateBookingTool(
 
   const duration = service?.duration || 30;
   const end_time = addMinutesToTime(start_time, duration);
+  const serviceName =
+    service?.display_name || service?.name || "Serviciu";
 
   const proposal = {
     booking_id: booking.id,
@@ -112,7 +60,7 @@ export async function updateBookingTool(
       start_time,
       end_time: String(end_time).slice(0, 5),
     },
-    service_name: service?.display_name || service?.name || null,
+    service_name: serviceName,
   };
 
   if (!confirmed) {
@@ -124,20 +72,63 @@ export async function updateBookingTool(
         action: "update_booking",
         proposal,
         instruct_user:
-          "Cere confirmare. Dacă utilizatorul acceptă, apelează update_booking din nou cu confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true singur).",
       },
     };
   }
 
-  const { data: existing } = await supabaseAdmin
-    .from("bookings")
-    .select("id, start_time, end_time")
-    .eq("date", date)
-    .eq("barber_id", booking.barber_id)
-    .neq("id", booking.id)
-    .in("status", ["confirmed", "pending"]);
+  const day = jsDayToScheduleDay(date);
+  const [{ data: schedule }, { data: override }, { data: existing }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("barber_weekly_schedule")
+        .select("*")
+        .eq("barber_id", booking.barber_id)
+        .eq("day_of_week", day)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("barber_day_overrides")
+        .select("*")
+        .eq("barber_id", booking.barber_id)
+        .eq("date", date)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("bookings")
+        .select("id, start_time, end_time, status, expires_at")
+        .eq("date", date)
+        .eq("barber_id", booking.barber_id)
+        .neq("id", booking.id)
+        .in("status", ["confirmed", "pending"]),
+    ]);
 
-  const overlap = existing?.some((b) =>
+  const daySchedule = resolveDaySchedule(schedule, override);
+  if (!daySchedule.isWorking) {
+    return {
+      ok: false,
+      summary: "Ziua selectată nu este disponibilă (închis / concediu).",
+      error: "day_closed",
+    };
+  }
+
+  if (
+    daySchedule.breakEnabled &&
+    daySchedule.breakStart &&
+    daySchedule.breakEnd &&
+    timesOverlap(
+      start_time,
+      end_time,
+      daySchedule.breakStart,
+      daySchedule.breakEnd,
+    )
+  ) {
+    return {
+      ok: false,
+      summary: "Nu poți muta programarea peste pauză.",
+      error: "break_overlap",
+    };
+  }
+
+  const overlap = getActiveBookings(existing).some((b) =>
     timesOverlap(start_time, end_time, b.start_time, b.end_time),
   );
 
@@ -165,6 +156,8 @@ export async function updateBookingTool(
     };
   }
 
+  const previousGoogleEventId = booking.google_event_id;
+
   const { error } = await supabaseAdmin
     .from("bookings")
     .update({
@@ -176,6 +169,7 @@ export async function updateBookingTool(
       date,
       start_time,
       end_time,
+      google_event_id: null,
     })
     .eq("id", booking.id);
 
@@ -187,9 +181,26 @@ export async function updateBookingTool(
     };
   }
 
+  await syncAndNotifyBookingRescheduled({
+    booking: {
+      id: booking.id,
+      tenant_id: booking.tenant_id,
+      barber_id: booking.barber_id,
+      date,
+      start_time,
+      end_time,
+      client_name: booking.client_name,
+      client_phone: booking.client_phone,
+      client_email: booking.client_email,
+      client_notes: booking.client_notes,
+    },
+    previousGoogleEventId,
+    serviceName,
+  });
+
   return {
     ok: true,
-    summary: `Programarea lui ${booking.client_name} a fost mutată pe ${date} la ${start_time}.`,
+    summary: `Programarea lui ${booking.client_name} a fost mutată pe ${date} la ${start_time}. Clientul a fost notificat dacă e activ în setări.`,
     data: { booking_id: booking.id, date, start_time, end_time },
   };
 }

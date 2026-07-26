@@ -21,6 +21,14 @@ const DEFAULT_SUGGESTIONS = [
   "Adaugă un serviciu de 60 de minute",
 ];
 
+type PendingConfirmation = {
+  id: string;
+  action: string;
+  summary: string;
+  proposal?: unknown;
+  expiresAt: number;
+};
+
 type AssistantChatPanelProps = {
   configured: boolean;
   displayName: string;
@@ -28,9 +36,18 @@ type AssistantChatPanelProps = {
   suggestions?: string[];
   className?: string;
   apiPath?: string;
+  confirmApiPath?: string;
   storageNamespace?: string;
   welcomeMessage?: string;
 };
+
+function resolveConfirmPath(apiPath: string, confirmApiPath?: string) {
+  if (confirmApiPath) return confirmApiPath;
+  if (apiPath.endsWith("/chat")) {
+    return `${apiPath.slice(0, -"/chat".length)}/confirm`;
+  }
+  return `${apiPath.replace(/\/$/, "")}/confirm`;
+}
 
 export default function AssistantChatPanel({
   configured,
@@ -39,9 +56,11 @@ export default function AssistantChatPanel({
   suggestions = DEFAULT_SUGGESTIONS,
   className = "",
   apiPath = "/api/assistant/chat",
+  confirmApiPath,
   storageNamespace = "salon",
   welcomeMessage,
 }: AssistantChatPanelProps) {
+  const confirmPath = resolveConfirmPath(apiPath, confirmApiPath);
   const [boot] = useState(() =>
     loadAssistantChat(displayName, {
       namespace: storageNamespace,
@@ -55,6 +74,8 @@ export default function AssistantChatPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [interim, setInterim] = useState("");
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingConfirmation | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const baseInputRef = useRef(boot.input);
   const hydratedRef = useRef(false);
@@ -86,7 +107,7 @@ export default function AssistantChatPanel({
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, loading, pendingConfirmation]);
 
   useEffect(() => {
     if (!dictation.listening) {
@@ -113,6 +134,7 @@ export default function AssistantChatPanel({
     baseInputRef.current = "";
     setInterim("");
     setError(null);
+    setPendingConfirmation(null);
   }
 
   async function sendMessage(raw: string) {
@@ -124,6 +146,7 @@ export default function AssistantChatPanel({
     }
 
     setError(null);
+    setPendingConfirmation(null);
     setInput("");
     baseInputRef.current = "";
     setInterim("");
@@ -149,7 +172,11 @@ export default function AssistantChatPanel({
         }),
       });
 
-      const data = (await res.json()) as { reply?: string; error?: string };
+      const data = (await res.json()) as {
+        reply?: string;
+        error?: string;
+        pendingConfirmation?: PendingConfirmation | null;
+      };
 
       if (!res.ok) {
         throw new Error(data.error || "Nu am putut răspunde acum.");
@@ -163,6 +190,7 @@ export default function AssistantChatPanel({
           content: data.reply || "Nu am un răspuns momentan.",
         },
       ]);
+      setPendingConfirmation(data.pendingConfirmation ?? null);
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : "Eroare la Assistant";
@@ -180,8 +208,69 @@ export default function AssistantChatPanel({
     }
   }
 
+  async function handleConfirmation(accept: boolean) {
+    if (!pendingConfirmation || loading) return;
+
+    setLoading(true);
+    setError(null);
+    const confirmationId = pendingConfirmation.id;
+    setPendingConfirmation(null);
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `u-confirm-${Date.now()}`,
+        role: "user",
+        content: accept ? "Confirmă" : "Renunță",
+      },
+    ]);
+
+    try {
+      const res = await fetch(confirmPath, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmationId, accept }),
+      });
+
+      const data = (await res.json()) as {
+        reply?: string;
+        error?: string;
+        pendingConfirmation?: PendingConfirmation | null;
+      };
+
+      if (!res.ok) {
+        throw new Error(data.error || "Nu am putut confirma acțiunea.");
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-confirm-${Date.now()}`,
+          role: "assistant",
+          content: data.reply || (accept ? "Gata." : "Am renunțat."),
+        },
+      ]);
+      setPendingConfirmation(data.pendingConfirmation ?? null);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Eroare la confirmare";
+      setError(message);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `e-confirm-${Date.now()}`,
+          role: "assistant",
+          content: `Nu am putut finaliza: ${message}`,
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const displayValue = composeCurrentText();
   const canClear = messages.some((m) => m.id !== "welcome");
+  const inputLocked = loading || !configured || Boolean(pendingConfirmation);
 
   return (
     <div className={`flex flex-col min-h-0 ${className}`}>
@@ -212,6 +301,32 @@ export default function AssistantChatPanel({
           </div>
         ))}
 
+        {pendingConfirmation && (
+          <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3 space-y-3">
+            <p className="text-xs text-amber-100/80">
+              Confirmare necesară — acțiunea nu s-a aplicat încă.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void handleConfirmation(true)}
+                className="rounded-lg bg-white text-black px-3.5 py-2 text-sm font-medium disabled:opacity-40"
+              >
+                Confirmă
+              </button>
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => void handleConfirmation(false)}
+                className="rounded-lg border border-white/15 bg-white/5 text-white px-3.5 py-2 text-sm disabled:opacity-40"
+              >
+                Renunță
+              </button>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="text-sm text-white/50">Assistant-ul gândește…</div>
         )}
@@ -227,7 +342,7 @@ export default function AssistantChatPanel({
                 <button
                   key={suggestion}
                   type="button"
-                  disabled={loading || !configured}
+                  disabled={inputLocked}
                   onClick={() => sendMessage(suggestion)}
                   className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/70 hover:bg-white/5 disabled:opacity-40"
                 >
@@ -269,10 +384,14 @@ export default function AssistantChatPanel({
               setInput(e.target.value);
               baseInputRef.current = e.target.value;
             }}
-            disabled={loading || !configured}
+            disabled={inputLocked}
             readOnly={dictation.listening}
             placeholder={
-              dictation.listening ? "Vorbește acum…" : "Scrie sau dictează…"
+              pendingConfirmation
+                ? "Confirmă sau renunță mai sus…"
+                : dictation.listening
+                  ? "Vorbește acum…"
+                  : "Scrie sau dictează…"
             }
             className="flex-1 rounded-xl bg-[#0F0F10] border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-white/30 disabled:opacity-50"
           />
@@ -280,7 +399,7 @@ export default function AssistantChatPanel({
           {dictation.supported && (
             <button
               type="button"
-              disabled={loading || !configured}
+              disabled={inputLocked}
               onClick={() => {
                 dictation.clearError();
                 if (!dictation.listening) {
@@ -307,7 +426,7 @@ export default function AssistantChatPanel({
 
           <button
             type="submit"
-            disabled={loading || !configured || !composeCurrentText().trim()}
+            disabled={inputLocked || !composeCurrentText().trim()}
             className="rounded-xl bg-white text-black px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0"
           >
             Trimite

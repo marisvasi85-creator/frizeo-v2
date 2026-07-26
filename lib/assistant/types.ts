@@ -10,6 +10,16 @@ export type AssistantToolContext = {
   userId: string;
   role: "owner" | "manager" | "barber";
   barberId: string | null;
+  /** Only the confirm endpoint may set this — blocks LLM from skipping UI chips. */
+  allowConfirmed?: boolean;
+};
+
+export type AssistantPendingConfirmationPublic = {
+  id: string;
+  action: string;
+  summary: string;
+  proposal?: unknown;
+  expiresAt: number;
 };
 
 export type AssistantToolResult = {
@@ -32,4 +42,5 @@ export type AssistantToolDefinition = {
 export type AssistantRunResult = {
   reply: string;
   toolsUsed: string[];
+  pendingConfirmation?: AssistantPendingConfirmationPublic | null;
 };

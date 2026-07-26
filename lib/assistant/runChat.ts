@@ -1,13 +1,16 @@
 import OpenAI from "openai";
 import { getAssistantModel } from "./config";
+import { extractNeedsConfirmation } from "./extractConfirmation";
 import { buildAssistantSystemPrompt } from "./systemPrompt";
 import {
   ASSISTANT_TOOLS,
   getAssistantTool,
   getOpenAIToolDefinitions,
 } from "./tools";
+import { asBoolean } from "./tools/helpers";
 import type {
   AssistantChatMessage,
+  AssistantPendingConfirmationPublic,
   AssistantRunResult,
   AssistantToolContext,
 } from "./types";
@@ -26,6 +29,15 @@ function getGeminiKey(): string | null {
   );
 }
 
+function sanitizeToolArgs(
+  args: Record<string, unknown>,
+  ctx: AssistantToolContext,
+): Record<string, unknown> {
+  if (ctx.allowConfirmed) return args;
+  if (!asBoolean(args.confirmed)) return args;
+  return { ...args, confirmed: false };
+}
+
 async function executeToolCall(
   name: string,
   rawArgs: string,
@@ -35,6 +47,7 @@ async function executeToolCall(
   if (!tool) {
     return {
       name,
+      args: {} as Record<string, unknown>,
       result: {
         ok: false,
         summary: `Tool necunoscut: ${name}`,
@@ -50,8 +63,13 @@ async function executeToolCall(
     args = {};
   }
 
+  args = sanitizeToolArgs(args, ctx);
   const result = await tool.execute(args, ctx);
-  return { name, result };
+  return { name, args, result };
+}
+
+function confirmationReply(summary: string): string {
+  return `${summary}\n\nApasă Confirmă sau Renunță mai jos.`;
 }
 
 async function runWithOpenAI(
@@ -64,6 +82,7 @@ async function runWithOpenAI(
   const client = new OpenAI({ apiKey });
   const model = getAssistantModel();
   const toolsUsed: string[] = [];
+  let pendingConfirmation: AssistantPendingConfirmationPublic | null = null;
 
   const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
     { role: "system", content: buildAssistantSystemPrompt(ctx) },
@@ -92,6 +111,7 @@ async function runWithOpenAI(
       return {
         reply: choice.content?.trim() || "Nu am un răspuns momentan.",
         toolsUsed,
+        pendingConfirmation,
       };
     }
 
@@ -109,11 +129,28 @@ async function runWithOpenAI(
         ctx,
       );
       toolsUsed.push(executed.name);
+
+      const extracted = extractNeedsConfirmation(
+        executed.name,
+        executed.args,
+        executed.result,
+        ctx,
+      );
+
       openaiMessages.push({
         role: "tool",
         tool_call_id: call.id,
         content: JSON.stringify(executed.result),
       });
+
+      if (extracted) {
+        pendingConfirmation = extracted.publicPending;
+        return {
+          reply: confirmationReply(executed.result.summary),
+          toolsUsed,
+          pendingConfirmation,
+        };
+      }
     }
   }
 
@@ -121,6 +158,7 @@ async function runWithOpenAI(
     reply:
       "Am adunat datele, dar nu am putut finaliza răspunsul. Încearcă din nou cu o întrebare mai specifică.",
     toolsUsed,
+    pendingConfirmation,
   };
 }
 
@@ -213,6 +251,7 @@ async function runWithGemini(
     "gemini-3.1-flash-lite";
 
   const toolsUsed: string[] = [];
+  let pendingConfirmation: AssistantPendingConfirmationPublic | null = null;
   const toolCatalog = ASSISTANT_TOOLS.map((t) => ({
     name: t.name,
     description: t.description,
@@ -241,13 +280,18 @@ Răspunde DOAR cu JSON valid în unul din formatele:
 {"type":"answer","content":"răspunsul final pentru utilizator"}
 
 Dacă ai deja suficiente date în rezultatele tool, răspunde cu type=answer.
-Dacă ai nevoie de date, alege type=tools.`;
+Dacă ai nevoie de date, alege type=tools.
+Nu seta confirmed=true — confirmările se fac din butoanele din UI.`;
 
     const raw = await callGeminiJson(apiKey, model, prompt);
     const decision = parseGeminiDecision(raw);
 
     if (decision.type === "answer") {
-      return { reply: decision.content, toolsUsed };
+      return {
+        reply: decision.content,
+        toolsUsed,
+        pendingConfirmation,
+      };
     }
 
     const results = [];
@@ -259,6 +303,21 @@ Dacă ai nevoie de date, alege type=tools.`;
       );
       toolsUsed.push(executed.name);
       results.push(executed);
+
+      const extracted = extractNeedsConfirmation(
+        executed.name,
+        executed.args,
+        executed.result,
+        ctx,
+      );
+      if (extracted) {
+        pendingConfirmation = extracted.publicPending;
+        return {
+          reply: confirmationReply(executed.result.summary),
+          toolsUsed,
+          pendingConfirmation,
+        };
+      }
     }
     toolMemory += `${JSON.stringify(results, null, 2)}\n`;
   }
@@ -267,6 +326,7 @@ Dacă ai nevoie de date, alege type=tools.`;
     reply:
       "Am adunat datele, dar nu am putut finaliza răspunsul. Încearcă din nou cu o întrebare pe scurt.",
     toolsUsed,
+    pendingConfirmation,
   };
 }
 
@@ -289,4 +349,54 @@ export async function runAssistantChat(
   throw new Error(
     "Frizeo Assistant nu este configurat. Adaugă OPENAI_API_KEY sau GEMINI_API_KEY.",
   );
+}
+
+export async function confirmAssistantAction(
+  confirmationId: string,
+  ctx: AssistantToolContext,
+  accept: boolean,
+): Promise<AssistantRunResult> {
+  const { consumePendingConfirmation } = await import("./pendingConfirmations");
+
+  const pending = consumePendingConfirmation({
+    id: confirmationId,
+    tenantId: ctx.tenantId,
+    userId: ctx.userId,
+  });
+
+  if (!pending) {
+    return {
+      reply: "Confirmarea a expirat sau nu mai e validă. Reia acțiunea.",
+      toolsUsed: [],
+      pendingConfirmation: null,
+    };
+  }
+
+  if (!accept) {
+    return {
+      reply: "Am renunțat. Nu s-a modificat nimic.",
+      toolsUsed: [],
+      pendingConfirmation: null,
+    };
+  }
+
+  const tool = getAssistantTool(pending.toolName);
+  if (!tool) {
+    return {
+      reply: `Nu mai pot rula acțiunea (${pending.toolName}).`,
+      toolsUsed: [],
+      pendingConfirmation: null,
+    };
+  }
+
+  const result = await tool.execute(
+    { ...pending.args, confirmed: true },
+    { ...ctx, allowConfirmed: true },
+  );
+
+  return {
+    reply: result.summary,
+    toolsUsed: [pending.toolName],
+    pendingConfirmation: null,
+  };
 }

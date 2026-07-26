@@ -333,7 +333,7 @@ export async function createBookingTool(
         action: "create_booking",
         proposal,
         instruct_user:
-          "Cere confirmare. Dacă acceptă, apelează create_booking din nou cu aceleași date și confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true).",
       },
     };
   }

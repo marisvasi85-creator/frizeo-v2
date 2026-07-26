@@ -3,6 +3,7 @@ import {
   addDaysToDateString,
   getTodayInBookingTimezone,
 } from "@/lib/bookings/bookingTimezone";
+import { getGoogleBusyIntervalsForDate } from "@/lib/google/getGoogleBusyIntervals";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
@@ -112,21 +113,21 @@ export async function findSlotsTool(
     };
   }
 
-  const minNoticeHours = await getBarberMinNoticeHours(
-    supabaseAdmin,
-    target.barberId,
-  );
+  const [minNoticeHours, googleBusyIntervals] = await Promise.all([
+    getBarberMinNoticeHours(supabaseAdmin, target.barberId),
+    getGoogleBusyIntervalsForDate(supabaseAdmin, target.barberId, date),
+  ]);
 
   const freeSlots = generatePublicFreeSlots({
     date,
     resolved,
     duration: service.service.duration,
     bookings: getActiveBookings(bookings),
-    googleBusyIntervals: [],
+    googleBusyIntervals,
     minNoticeHours,
     excludeBookingId,
     bypassMinNotice: true,
-    ignoreGoogleBusy: true,
+    ignoreGoogleBusy: false,
   });
 
   const slots = freeSlots.slice(0, limit);

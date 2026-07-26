@@ -8,11 +8,7 @@ import {
   isAssistantLlmConfigured,
   isFrizeoAssistantEnabled,
 } from "@/lib/assistant/config";
-import { runAssistantChat } from "@/lib/assistant/runChat";
-import type { AssistantChatMessage } from "@/lib/assistant/types";
-
-const MAX_MESSAGES = 20;
-const MAX_CONTENT_LENGTH = 2000;
+import { confirmAssistantAction } from "@/lib/assistant/runChat";
 
 export async function POST(req: Request) {
   if (!isFrizeoAssistantEnabled()) {
@@ -35,49 +31,37 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { messages?: unknown };
+  let body: { confirmationId?: unknown; accept?: unknown };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Date invalide" }, { status: 400 });
   }
 
-  if (!Array.isArray(body.messages) || body.messages.length === 0) {
-    return NextResponse.json({ error: "Mesajele sunt obligatorii" }, { status: 400 });
-  }
-
-  const messages: AssistantChatMessage[] = [];
-  for (const item of body.messages.slice(-MAX_MESSAGES)) {
-    if (!item || typeof item !== "object") continue;
-    const role = (item as { role?: unknown }).role;
-    const content = (item as { content?: unknown }).content;
-    if ((role !== "user" && role !== "assistant") || typeof content !== "string") {
-      continue;
-    }
-    const trimmed = content.trim();
-    if (!trimmed) continue;
-    messages.push({
-      role,
-      content: trimmed.slice(0, MAX_CONTENT_LENGTH),
-    });
-  }
-
-  if (messages.length === 0 || messages[messages.length - 1]?.role !== "user") {
+  const confirmationId =
+    typeof body.confirmationId === "string" ? body.confirmationId.trim() : "";
+  if (!confirmationId) {
     return NextResponse.json(
-      { error: "Ultimul mesaj trebuie să fie de la utilizator" },
+      { error: "confirmationId este obligatoriu" },
       { status: 400 },
     );
   }
 
+  const accept = body.accept !== false && body.accept !== "false";
+
   const barberId = await getCurrentBarberId(auth.user.id, auth.tenantId);
 
   try {
-    const result = await runAssistantChat(messages, {
-      tenantId: auth.tenantId,
-      userId: auth.user.id,
-      role: auth.role,
-      barberId,
-    });
+    const result = await confirmAssistantAction(
+      confirmationId,
+      {
+        tenantId: auth.tenantId,
+        userId: auth.user.id,
+        role: auth.role,
+        barberId,
+      },
+      accept,
+    );
 
     return NextResponse.json({
       reply: result.reply,
@@ -85,9 +69,9 @@ export async function POST(req: Request) {
       pendingConfirmation: result.pendingConfirmation ?? null,
     });
   } catch (error: unknown) {
-    console.error("assistant/chat:", error);
+    console.error("assistant/confirm:", error);
     const message =
-      error instanceof Error ? error.message : "Eroare la Frizeo Assistant";
+      error instanceof Error ? error.message : "Eroare la confirmare";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

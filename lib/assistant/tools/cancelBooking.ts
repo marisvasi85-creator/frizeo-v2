@@ -1,69 +1,22 @@
-import { bookingAccessibleByUser } from "@/lib/auth/requireTenantAccess";
-import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function asBoolean(value: unknown): boolean {
-  return value === true || value === "true" || value === 1 || value === "1";
-}
+import { asBoolean } from "./helpers";
+import {
+  deleteBookingGoogleEvent,
+  notifyBookingCancelled,
+} from "./notifyBookingChange";
+import { resolveBookingForAssistant } from "./resolveBooking";
 
 export async function cancelBookingTool(
   args: Record<string, unknown>,
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
-  const bookingId = asString(args.booking_id);
   const confirmed = asBoolean(args.confirmed);
 
-  if (!bookingId) {
-    return {
-      ok: false,
-      summary: "Lipsa booking_id. Folosește list_bookings ca să identifici programarea.",
-      error: "missing_booking_id",
-    };
-  }
+  const resolved = await resolveBookingForAssistant(args, ctx);
+  if (!resolved.ok) return resolved.result;
 
-  const canAccess = await bookingAccessibleByUser(
-    bookingId,
-    ctx.tenantId,
-    ctx.role,
-    ctx.barberId,
-  );
-  if (!canAccess) {
-    return {
-      ok: false,
-      summary: "Nu ai acces la această programare.",
-      error: "forbidden",
-    };
-  }
-
-  const { data: booking } = await supabaseAdmin
-    .from("bookings")
-    .select(
-      "id, date, start_time, status, client_name, barber_id, google_event_id",
-    )
-    .eq("id", bookingId)
-    .maybeSingle();
-
-  if (!booking) {
-    return {
-      ok: false,
-      summary: "Programarea nu a fost găsită.",
-      error: "not_found",
-    };
-  }
-
-  if (booking.status === "cancelled") {
-    return {
-      ok: false,
-      summary: "Programarea este deja anulată.",
-      error: "already_cancelled",
-    };
-  }
+  const booking = resolved.booking;
 
   const proposal = {
     booking_id: booking.id,
@@ -81,7 +34,7 @@ export async function cancelBookingTool(
         action: "cancel_booking",
         proposal,
         instruct_user:
-          "Cere confirmare. Dacă utilizatorul acceptă, apelează cancel_booking din nou cu confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true singur).",
       },
     };
   }
@@ -99,27 +52,16 @@ export async function cancelBookingTool(
     };
   }
 
-  if (booking.google_event_id && booking.barber_id) {
-    try {
-      const google = await getAccessTokenForBarber(
-        supabaseAdmin,
-        booking.barber_id,
-      );
-      if (google) {
-        await deleteGoogleEvent({
-          accessToken: google.accessToken,
-          calendarId: google.calendarId,
-          eventId: booking.google_event_id,
-        });
-      }
-    } catch (err) {
-      console.error("assistant cancelBooking google:", err);
-    }
-  }
+  await deleteBookingGoogleEvent({
+    barberId: booking.barber_id,
+    googleEventId: booking.google_event_id,
+  });
+
+  await notifyBookingCancelled({ booking });
 
   return {
     ok: true,
-    summary: `Programarea lui ${booking.client_name} a fost anulată.`,
+    summary: `Programarea lui ${booking.client_name} a fost anulată. Clientul a fost notificat dacă e activ în setări.`,
     data: { booking_id: booking.id, status: "cancelled" },
   };
 }

@@ -68,7 +68,7 @@ export async function closeDayTool(
         action: "close_day",
         proposal,
         instruct_user:
-          "Cere confirmare. Dacă acceptă, apelează close_day din nou cu confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true).",
       },
     };
   }
@@ -175,7 +175,7 @@ export async function createVacationTool(
         action: "create_vacation",
         proposal,
         instruct_user:
-          "Cere confirmare. Dacă acceptă, apelează create_vacation din nou cu confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true).",
       },
     };
   }

@@ -118,7 +118,7 @@ export async function createServiceTool(
         action: "create_service",
         proposal,
         instruct_user:
-          "Cere utilizatorului să confirme. Dacă spune da, apelează din nou create_service cu aceleași argumente și confirmed=true.",
+          "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true).",
       },
     };
   }

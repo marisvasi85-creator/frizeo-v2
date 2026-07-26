@@ -316,13 +316,17 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "update_booking",
     description:
-      "Mută o programare pe altă dată/oră când ai deja booking_id + dată + oră. Pentru flux ghidat (propunere ore), preferă reschedule_booking. IMPORTANT: confirmed=true doar după confirmare.",
+      "Mută o programare pe altă dată/oră când ai booking_id (sau client_name) + dată + oră. Pentru flux ghidat, preferă reschedule_booking. Confirmarea finală se face din butoanele UI.",
     parameters: {
       type: "object",
       properties: {
         booking_id: {
           type: "string",
           description: "ID-ul programării.",
+        },
+        client_name: {
+          type: "string",
+          description: "Nume client dacă nu ai booking_id.",
         },
         date: {
           type: "string",
@@ -338,30 +342,47 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
         },
         confirmed: {
           type: "boolean",
-          description: "true doar după confirmarea utilizatorului.",
+          description:
+            "Nu seta true din chat — confirmarea vine din butoanele UI.",
         },
       },
-      required: ["booking_id", "date", "start_time"],
+      required: ["date", "start_time"],
     },
     execute: updateBookingTool,
   },
   {
     name: "cancel_booking",
     description:
-      "Anulează o programare. Folosește list_bookings ca să afli booking_id. IMPORTANT: confirmed=true doar după confirmare.",
+      "Anulează o programare după booking_id sau client_name. IMPORTANT: apelează fără confirmed; confirmarea se face din butoanele UI.",
     parameters: {
       type: "object",
       properties: {
         booking_id: {
           type: "string",
-          description: "ID-ul programării.",
+          description: "ID-ul programării (preferat).",
+        },
+        client_name: {
+          type: "string",
+          description: "Nume client dacă nu ai booking_id.",
+        },
+        client_phone: {
+          type: "string",
+          description: "Telefon opțional pentru dezambiguizare.",
+        },
+        current_date: {
+          type: "string",
+          description: "Data programării (YYYY-MM-DD) pentru dezambiguizare.",
+        },
+        barber_id: {
+          type: "string",
+          description: "Filtru frizer la căutarea după nume (owner/manager).",
         },
         confirmed: {
           type: "boolean",
-          description: "true doar după confirmarea utilizatorului.",
+          description:
+            "Nu seta true din chat — confirmarea vine din butoanele UI.",
         },
       },
-      required: ["booking_id"],
     },
     execute: cancelBookingTool,
   },
