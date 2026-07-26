@@ -75,11 +75,15 @@ export default async function DashboardPage() {
   const tenant = tenantRes.data;
   if (tenant) {
     const tenantSlug = await ensureTenantSlug(tenant);
+    const existingSlug =
+      typeof barber.slug === "string" && barber.slug.trim()
+        ? barber.slug
+        : null;
     const barberSlug = await ensureBarberSlug({
       id: barber.id,
       tenant_id: barber.tenant_id,
       display_name: barber.display_name,
-      slug: barber.slug ?? null,
+      slug: existingSlug,
     });
     bookingUrl = publicBookingUrl(tenantSlug, barberSlug, appUrl);
   }
