@@ -70,21 +70,21 @@ WITH checks AS (
     NULL,
     format(
       'anon=%s auth=%s service=%s',
-      has_function_privilege(
+      CASE WHEN has_function_privilege(
         'anon',
         'public.consume_api_rate_limit(text,text,integer,integer)',
         'EXECUTE'
-      ),
-      has_function_privilege(
+      ) THEN 'true' ELSE 'false' END,
+      CASE WHEN has_function_privilege(
         'authenticated',
         'public.consume_api_rate_limit(text,text,integer,integer)',
         'EXECUTE'
-      ),
-      has_function_privilege(
+      ) THEN 'true' ELSE 'false' END,
+      CASE WHEN has_function_privilege(
         'service_role',
         'public.consume_api_rate_limit(text,text,integer,integer)',
         'EXECUTE'
-      )
+      ) THEN 'true' ELSE 'false' END
     ),
     'expect anon=false auth=false service=true'
 
@@ -93,17 +93,17 @@ WITH checks AS (
     NULL,
     format(
       'table=%s rate_fn=%s booking_rpc=%s',
-      to_regclass('public.api_rate_limits') IS NOT NULL,
-      EXISTS (
+      CASE WHEN to_regclass('public.api_rate_limits') IS NOT NULL THEN 'true' ELSE 'false' END,
+      CASE WHEN EXISTS (
         SELECT 1 FROM pg_proc p
         JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'public' AND p.proname = 'consume_api_rate_limit'
-      ),
-      EXISTS (
+      ) THEN 'true' ELSE 'false' END,
+      CASE WHEN EXISTS (
         SELECT 1 FROM pg_proc p
         JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'public' AND p.proname = 'create_booking_safe_v2'
-      )
+      ) THEN 'true' ELSE 'false' END
     ),
     'expect table=true rate_fn=true booking_rpc=true'
 )
