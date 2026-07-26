@@ -15,7 +15,11 @@ import {
 } from "@/lib/marketing-ai/usage";
 import {
   MARKETING_CONTENT_TYPES,
+  MARKETING_EXTRA_NOTES_MAX,
+  MARKETING_VARIANT_COUNT,
+  isMarketingTone,
   type MarketingContentType,
+  type MarketingTone,
 } from "@/lib/marketing-ai/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -32,6 +36,7 @@ export async function POST(req: Request) {
     barberId?: string;
     serviceId?: string;
     extraNotes?: string;
+    tone?: string;
   };
 
   try {
@@ -75,6 +80,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const tone: MarketingTone | undefined =
+    body.tone && isMarketingTone(body.tone) ? body.tone : undefined;
+
+  const extraNotes = body.extraNotes?.trim()
+    ? body.extraNotes.trim().slice(0, MARKETING_EXTRA_NOTES_MAX)
+    : undefined;
+
   const context = await buildMarketingContext(auth.tenantId, barberId);
   if (!context) {
     return NextResponse.json({ error: "Date salon indisponibile" }, { status: 404 });
@@ -101,32 +113,43 @@ export async function POST(req: Request) {
     const generated = await generateMarketingContent(context, {
       contentType,
       serviceId: body.serviceId,
-      extraNotes: body.extraNotes,
+      extraNotes,
+      tone,
+      variantCount: MARKETING_VARIANT_COUNT,
     });
 
-    const { usedTemplateFallback, fallbackWarning, ...result } = generated;
+    const { usedTemplateFallback, fallbackWarning, variants, result } = generated;
     const providerConfig = getMarketingAIProviderConfig();
     const countsTowardLimit =
       providerConfig.provider !== "template" && !usedTemplateFallback;
 
-    const generationId = await recordMarketingAIUsage({
-      tenantId: auth.tenantId,
-      barberId,
-      contentType,
-      provider: usedTemplateFallback
-        ? "template-fallback"
-        : providerConfig.provider,
-      countsTowardLimit,
-      result,
-      serviceId: body.serviceId,
-    });
+    const generationIds: string[] = [];
+
+    for (let i = 0; i < variants.length; i += 1) {
+      const id = await recordMarketingAIUsage({
+        tenantId: auth.tenantId,
+        barberId,
+        contentType,
+        provider: usedTemplateFallback
+          ? "template-fallback"
+          : providerConfig.provider,
+        // One click = one counted generation; extra variants stay in history.
+        countsTowardLimit: countsTowardLimit && i === 0,
+        result: variants[i],
+        serviceId: body.serviceId,
+      });
+      if (id) generationIds.push(id);
+    }
 
     const usage = await getMarketingAIUsageStatus(auth.tenantId);
 
     return NextResponse.json({
       result,
-      generationId,
+      variants,
+      generationId: generationIds[0] ?? null,
+      generationIds,
       contentType,
+      tone: tone || "relaxed",
       warning: fallbackWarning,
       usedTemplateFallback: usedTemplateFallback ?? false,
       usage,

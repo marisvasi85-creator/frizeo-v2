@@ -3,51 +3,97 @@ import type {
   GenerateMarketingResult,
   MarketingContext,
 } from "./types";
+import { MARKETING_VARIANT_COUNT } from "./types";
 import { buildMarketingPrompt } from "./prompts";
 import {
   getMarketingAIProvider,
   getMarketingAIProviderConfig,
   isMarketingAIConfigured,
 } from "./providers";
-import { generateTemplateContent } from "./providers/template";
+import { generateTemplateVariants } from "./providers/template";
 import { isGeminiRetryableError } from "./providers/gemini";
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
-function parseModelJson(raw: string): GenerateMarketingResult {
+function normalizeResult(
+  parsed: Partial<GenerateMarketingResult>,
+): GenerateMarketingResult {
+  if (!parsed.content || typeof parsed.content !== "string") {
+    throw new Error("Răspuns AI invalid");
+  }
+
+  return {
+    title:
+      typeof parsed.title === "string" && parsed.title.trim()
+        ? parsed.title.trim().slice(0, 80)
+        : "Conținut generat",
+    content: parsed.content.trim(),
+    hashtags: Array.isArray(parsed.hashtags)
+      ? parsed.hashtags
+          .filter((tag): tag is string => typeof tag === "string")
+          .map((tag) => tag.replace(/^#/, "").trim())
+          .filter(Boolean)
+          .slice(0, 12)
+      : [],
+    callToAction:
+      typeof parsed.callToAction === "string" && parsed.callToAction.trim()
+        ? parsed.callToAction.trim().slice(0, 160)
+        : "Programează-te online!",
+  };
+}
+
+function parseModelVariants(
+  raw: string,
+  expectedCount: number,
+): GenerateMarketingResult[] {
   const cleaned = raw
     .trim()
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "");
 
-  const parsed = JSON.parse(cleaned) as Partial<GenerateMarketingResult>;
+  const parsed = JSON.parse(cleaned) as
+    | { variants?: Partial<GenerateMarketingResult>[] }
+    | Partial<GenerateMarketingResult>;
 
-  if (!parsed.content || typeof parsed.content !== "string") {
-    throw new Error("Răspuns AI invalid");
+  if (
+    parsed &&
+    typeof parsed === "object" &&
+    "variants" in parsed &&
+    Array.isArray(parsed.variants)
+  ) {
+    const variants = parsed.variants
+      .slice(0, expectedCount)
+      .map((item) => normalizeResult(item));
+    if (!variants.length) throw new Error("Răspuns AI fără variante");
+    return variants;
   }
 
-  return {
-    title: typeof parsed.title === "string" ? parsed.title : "Conținut generat",
-    content: parsed.content,
-    hashtags: Array.isArray(parsed.hashtags)
-      ? parsed.hashtags.filter((tag): tag is string => typeof tag === "string")
-      : [],
-    callToAction:
-      typeof parsed.callToAction === "string"
-        ? parsed.callToAction
-        : "Programează-te online!",
-  };
+  // Backward compat: single object
+  return [normalizeResult(parsed as Partial<GenerateMarketingResult>)];
 }
+
+export type GenerateMarketingOutput = {
+  variants: GenerateMarketingResult[];
+  result: GenerateMarketingResult;
+  usedTemplateFallback?: boolean;
+  fallbackWarning?: string;
+};
 
 export async function generateMarketingContent(
   context: MarketingContext,
   input: GenerateMarketingInput,
-): Promise<GenerateMarketingResult & { usedTemplateFallback?: boolean; fallbackWarning?: string }> {
+): Promise<GenerateMarketingOutput> {
   const config = getMarketingAIProviderConfig();
+  const variantCount = Math.min(
+    Math.max(input.variantCount ?? MARKETING_VARIANT_COUNT, 1),
+    MARKETING_VARIANT_COUNT,
+  );
+  const normalizedInput = { ...input, variantCount };
 
   if (config.provider === "template") {
-    return generateTemplateContent(context, input);
+    const variants = generateTemplateVariants(context, normalizedInput);
+    return { variants, result: variants[0] };
   }
 
   const provider = getMarketingAIProvider();
@@ -57,7 +103,7 @@ export async function generateMarketingContent(
     );
   }
 
-  const prompt = buildMarketingPrompt(context, input);
+  const prompt = buildMarketingPrompt(context, normalizedInput);
 
   try {
     const raw = await provider.complete({
@@ -73,14 +119,24 @@ export async function generateMarketingContent(
       temperature: config.temperature,
     });
 
-    return parseModelJson(raw);
+    const variants = parseModelVariants(raw, variantCount);
+    // Pad with template variants if model returned fewer than expected
+    if (variants.length < variantCount) {
+      const fillers = generateTemplateVariants(context, normalizedInput).slice(
+        variants.length,
+      );
+      variants.push(...fillers.slice(0, variantCount - variants.length));
+    }
+
+    return { variants, result: variants[0] };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Eroare la generare";
 
     if (config.provider === "gemini" && isGeminiRetryableError(message)) {
-      const fallback = generateTemplateContent(context, input);
+      const variants = generateTemplateVariants(context, normalizedInput);
       return {
-        ...fallback,
+        variants,
+        result: variants[0],
         usedTemplateFallback: true,
         fallbackWarning:
           "Gemini indisponibil momentan — am folosit text demo. " +

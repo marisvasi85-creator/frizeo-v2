@@ -60,8 +60,8 @@ export default async function MarketingAIPage() {
       <div>
         <h1 className="text-2xl font-semibold">Marketing AI</h1>
         <p className="text-white/60 mt-1">
-          Generează, salvează și distribuie postări — text, card Story/feed, WhatsApp
-          și QR pentru programări.
+          Generează 3 variante, alege tonul, salvează în istoric și distribuie — text,
+          Story/feed, WhatsApp și QR.
         </p>
       </div>
 

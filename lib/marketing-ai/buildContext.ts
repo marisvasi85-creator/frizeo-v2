@@ -3,6 +3,7 @@ import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import { stableBookingUrl } from "@/lib/booking/publicBookingPath";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { extractCityHint } from "./cityHint";
 import type { MarketingContext } from "./types";
 
 export async function buildMarketingContext(
@@ -39,6 +40,7 @@ export async function buildMarketingContext(
     salonName: tenant.name,
     salonDescription: tenant.description,
     salonAddress: tenant.address,
+    cityHint: extractCityHint(tenant.address),
     barberName: barber.display_name || "Frizer",
     barberBio: barber.bio,
     barberInstagram: barber.instagram_url,

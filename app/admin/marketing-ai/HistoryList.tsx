@@ -3,16 +3,7 @@
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
 import type { MarketingAIHistoryItem } from "@/lib/marketing-ai/historyTypes";
-import { MARKETING_CONTENT_TYPES } from "@/lib/marketing-ai/types";
-
-const TYPE_LABELS: Record<string, string> = {
-  instagram_post: "Postare Instagram",
-  reel: "Reel",
-  story: "Story",
-  christmas_promo: "Promo Crăciun",
-  service_promo: "Promo serviciu",
-  birthday_offer: "Aniversare",
-};
+import { getMarketingContentTypeLabel } from "@/lib/marketing-ai/seasonal";
 
 function formatWhen(iso: string): string {
   try {
@@ -69,13 +60,7 @@ export default function HistoryList({
       {items.length > 0 && (
         <ul className="divide-y divide-white/10 border border-white/10 rounded-xl overflow-hidden">
           {items.map((item) => {
-            const label =
-              TYPE_LABELS[item.contentType] ||
-              (MARKETING_CONTENT_TYPES.includes(
-                item.contentType as (typeof MARKETING_CONTENT_TYPES)[number],
-              )
-                ? item.contentType
-                : "Conținut");
+            const label = getMarketingContentTypeLabel(item.contentType);
             const active = activeId === item.id;
 
             return (

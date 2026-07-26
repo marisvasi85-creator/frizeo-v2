@@ -4,11 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
 import { AdminSelect } from "../components/AdminInput";
-import type { MarketingContentType } from "@/lib/marketing-ai/types";
 import type { BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
 import type { MarketingAIHistoryItem } from "@/lib/marketing-ai/historyTypes";
 import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
+import { getAvailableMarketingActions } from "@/lib/marketing-ai/seasonal";
 import { copyTextToClipboard } from "@/lib/marketing-ai/share";
+import {
+  MARKETING_EXTRA_NOTES_MAX,
+  MARKETING_TONE_LABELS,
+  MARKETING_TONES,
+  type MarketingContentType,
+  type MarketingTone,
+} from "@/lib/marketing-ai/types";
 import BrandedCardButton from "./BrandedCardButton";
 import HistoryList from "./HistoryList";
 import ShareKit from "./ShareKit";
@@ -32,20 +39,6 @@ type GeneratedResult = {
   hashtags: string[];
   callToAction: string;
 };
-
-const ACTIONS: Array<{
-  type: MarketingContentType;
-  label: string;
-  icon: string;
-  needsService?: boolean;
-}> = [
-  { type: "instagram_post", label: "Generează postare Instagram", icon: "📸" },
-  { type: "reel", label: "Generează Reel", icon: "🎥" },
-  { type: "story", label: "Generează Story", icon: "📖" },
-  { type: "christmas_promo", label: "Generează promoție de Crăciun", icon: "🎄" },
-  { type: "service_promo", label: "Promovează serviciul", icon: "💈", needsService: true },
-  { type: "birthday_offer", label: "Generează ofertă de aniversare", icon: "🎂" },
-];
 
 type UsageStatus = {
   used: number;
@@ -90,24 +83,30 @@ export default function MarketingAIClient({
   initialSocialLinks: SocialLinks;
   initialHistory: MarketingAIHistoryItem[];
 }) {
+  const actions = useMemo(() => getAvailableMarketingActions(), []);
   const [usage, setUsage] = useState(initialUsage);
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
   const [barberServices, setBarberServices] = useState(services);
   const [selectedServiceId, setSelectedServiceId] = useState("");
   const [extraNotes, setExtraNotes] = useState("");
+  const [tone, setTone] = useState<MarketingTone>("relaxed");
   const [loadingType, setLoadingType] = useState<MarketingContentType | null>(null);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
-  const [result, setResult] = useState<GeneratedResult | null>(null);
+  const [variants, setVariants] = useState<GeneratedResult[]>([]);
+  const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [resultContentType, setResultContentType] = useState<
     MarketingContentType | string | null
   >(null);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [generationIds, setGenerationIds] = useState<string[]>([]);
   const [history, setHistory] = useState<MarketingAIHistoryItem[]>(initialHistory);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [branding, setBranding] = useState<BrandedCardBranding | null>(null);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
+
+  const result = variants[activeVariantIndex] || null;
 
   async function loadBranding(barberId: string): Promise<BrandedCardBranding | null> {
     const res = await fetch(`/api/marketing-ai/branding?barberId=${barberId}`);
@@ -221,6 +220,7 @@ export default function MarketingAIClient({
           barberId: selectedBarberId,
           serviceId: needsService ? selectedServiceId : undefined,
           extraNotes: extraNotes.trim() || undefined,
+          tone,
         }),
       });
 
@@ -232,9 +232,27 @@ export default function MarketingAIClient({
         throw new Error(data.error || "Nu am putut genera conținutul");
       }
 
-      setResult(data.result);
+      const nextVariants: GeneratedResult[] = Array.isArray(data.variants)
+        ? data.variants
+        : data.result
+          ? [data.result]
+          : [];
+
+      setVariants(nextVariants);
+      setActiveVariantIndex(0);
       setResultContentType(data.contentType || type);
-      setActiveHistoryId(data.generationId || null);
+      setGenerationIds(
+        Array.isArray(data.generationIds)
+          ? data.generationIds
+          : data.generationId
+            ? [data.generationId]
+            : [],
+      );
+      setActiveHistoryId(
+        Array.isArray(data.generationIds)
+          ? data.generationIds[0] || null
+          : data.generationId || null,
+      );
       if (data.warning) {
         setWarning(data.warning);
       }
@@ -244,9 +262,10 @@ export default function MarketingAIClient({
       void refreshHistory();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare la generare");
-      setResult(null);
+      setVariants([]);
       setResultContentType(null);
       setActiveHistoryId(null);
+      setGenerationIds([]);
     } finally {
       setLoadingType(null);
     }
@@ -256,9 +275,17 @@ export default function MarketingAIClient({
     setError("");
     setWarning("");
     setCopied(false);
-    setResult(historyItemToResult(item));
+    setVariants([historyItemToResult(item)]);
+    setActiveVariantIndex(0);
     setResultContentType(item.contentType);
     setActiveHistoryId(item.id);
+    setGenerationIds([item.id]);
+  }
+
+  function handleSelectVariant(index: number) {
+    setActiveVariantIndex(index);
+    setCopied(false);
+    setActiveHistoryId(generationIds[index] || generationIds[0] || null);
   }
 
   async function handleCopy() {
@@ -328,7 +355,7 @@ export default function MarketingAIClient({
                   · <span className="text-red-300">limită atinsă</span>
                 </>
               )}{" "}
-              — reset la miezul nopții
+              — 1 click = 1 generare (3 variante) · reset la miezul nopții
             </p>
           )}
 
@@ -378,8 +405,8 @@ export default function MarketingAIClient({
 
       <AdminCard className="space-y-4">
         <p className="text-white/60 text-sm">
-          AI-ul folosește datele salonului tău (nume, servicii, link programări) pentru a
-          crea texte gata de postat.
+          AI-ul folosește datele salonului tău (nume, servicii, link programări) și generează
+          3 variante dintr-un click.
         </p>
 
         {role === "owner" && barbers.length > 1 && (
@@ -401,6 +428,26 @@ export default function MarketingAIClient({
         )}
 
         <div className="space-y-2">
+          <label className="text-sm text-white/50">Ton</label>
+          <div className="flex flex-wrap gap-2">
+            {MARKETING_TONES.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTone(value)}
+                className={`rounded-lg px-3 py-2 text-sm transition ${
+                  tone === value
+                    ? "bg-white text-black font-medium"
+                    : "bg-white/10 text-white/80 hover:bg-white/15"
+                }`}
+              >
+                {MARKETING_TONE_LABELS[value]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm text-white/50">Serviciu pentru promovare (opțional)</label>
           <AdminSelect
             value={selectedServiceId}
@@ -418,10 +465,14 @@ export default function MarketingAIClient({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm text-white/50">Note suplimentare (opțional)</label>
+          <label className="text-sm text-white/50">
+            Note suplimentare (opțional, max {MARKETING_EXTRA_NOTES_MAX})
+          </label>
           <textarea
             value={extraNotes}
-            onChange={(e) => setExtraNotes(e.target.value)}
+            onChange={(e) =>
+              setExtraNotes(e.target.value.slice(0, MARKETING_EXTRA_NOTES_MAX))
+            }
             placeholder="Ex: vreau ton relaxat, menționează că avem cafea gratuită..."
             rows={3}
             className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
@@ -430,7 +481,7 @@ export default function MarketingAIClient({
       </AdminCard>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {ACTIONS.map((action) => (
+        {actions.map((action) => (
           <AdminButton
             key={action.type}
             variant="secondary"
@@ -446,7 +497,14 @@ export default function MarketingAIClient({
             className="justify-start gap-3 text-left"
           >
             <span className="text-lg">{action.icon}</span>
-            <span>{action.label}</span>
+            <span>
+              {action.label}
+              {action.seasonal ? (
+                <span className="block text-[11px] text-white/45 font-normal">
+                  Sezon actual
+                </span>
+              ) : null}
+            </span>
           </AdminButton>
         ))}
       </div>
@@ -463,11 +521,33 @@ export default function MarketingAIClient({
               Gemini Free.
             </p>
           )}
+
+          {variants.length > 1 && (
+            <div className="flex flex-wrap gap-2">
+              {variants.map((_, index) => (
+                <button
+                  key={`variant-${index}`}
+                  type="button"
+                  onClick={() => handleSelectVariant(index)}
+                  className={`rounded-lg px-3 py-2 text-sm transition ${
+                    activeVariantIndex === index
+                      ? "bg-white text-black font-medium"
+                      : "bg-white/10 text-white/80 hover:bg-white/15"
+                  }`}
+                >
+                  Varianta {index + 1}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">{result.title}</h2>
               <p className="text-white/50 text-sm mt-1">
                 {activeHistoryId ? "Din istoric / generare salvată" : "Conținut generat"}
+                {" · "}
+                Ton {MARKETING_TONE_LABELS[tone]}
               </p>
             </div>
             <AdminButton variant="secondary" size="sm" onClick={handleCopy}>
