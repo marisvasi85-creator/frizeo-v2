@@ -30,8 +30,8 @@ import {
   asString,
   isValidRoPhone,
   normalizeTime,
+  resolveBarberFromArgs,
   resolveServiceForBarber,
-  resolveTargetBarberId,
 } from "./helpers";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 
@@ -256,14 +256,8 @@ export async function createBookingTool(
 
   const start_time = normalizeTime(startRaw);
 
-  const target = await resolveTargetBarberId(ctx, asString(args.barber_id));
-  if (!target.barberId) {
-    return {
-      ok: false,
-      summary: target.error || "Nu am găsit frizerul.",
-      error: "missing_barber",
-    };
-  }
+  const target = await resolveBarberFromArgs(ctx, args);
+  if (!target.ok) return target.result;
 
   const barberCheck = await requireActiveBarberForNewBooking(target.barberId);
   if (!barberCheck.ok) {

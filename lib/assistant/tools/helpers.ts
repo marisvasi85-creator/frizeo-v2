@@ -2,10 +2,45 @@ import { barberBelongsToTenant } from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext } from "../types";
 
+export type BarberCandidate = {
+  id: string;
+  name: string;
+};
+
+export async function listActiveBarbersForTenant(
+  tenantId: string,
+): Promise<BarberCandidate[]> {
+  const { data } = await supabaseAdmin
+    .from("barbers")
+    .select("id, display_name")
+    .eq("tenant_id", tenantId)
+    .eq("active", true)
+    .order("display_name", { ascending: true });
+
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    name: (row.display_name as string | null) || "Frizer",
+  }));
+}
+
+/**
+ * Resolve which barber an owner/manager/barber action targets.
+ * - Barber role: always self
+ * - Explicit barber_id / barber_name: preferred
+ * - Owner with own barber profile: self
+ * - Single active barber: that one
+ * - Multiple active barbers without choice: needsChoice
+ */
 export async function resolveTargetBarberId(
   ctx: AssistantToolContext,
   barberIdArg: string | null,
-): Promise<{ barberId: string | null; error?: string }> {
+  barberNameArg?: string | null,
+): Promise<{
+  barberId: string | null;
+  error?: string;
+  needsChoice?: boolean;
+  candidates?: BarberCandidate[];
+}> {
   if (ctx.role === "barber") {
     if (!ctx.barberId) {
       return { barberId: null, error: "Nu am găsit profilul de frizer." };
@@ -25,23 +60,150 @@ export async function resolveTargetBarberId(
     return { barberId: barberIdArg };
   }
 
-  if (ctx.barberId) {
-    return { barberId: ctx.barberId };
+  const candidates = await listActiveBarbersForTenant(ctx.tenantId);
+
+  if (barberNameArg?.trim()) {
+    const needle = barberNameArg.trim().toLowerCase();
+    const matches = candidates.filter(
+      (b) =>
+        b.name.toLowerCase().includes(needle) ||
+        needle.includes(b.name.toLowerCase()),
+    );
+
+    if (matches.length === 1) {
+      return { barberId: matches[0].id };
+    }
+
+    if (matches.length === 0) {
+      return {
+        barberId: null,
+        error: `Nu am găsit frizerul „${barberNameArg}". Folosește list_barbers.`,
+        candidates,
+        needsChoice: candidates.length > 1,
+      };
+    }
+
+    return {
+      barberId: null,
+      error: `Mai mulți frizeri potrivesc „${barberNameArg}": ${matches
+        .map((b) => b.name)
+        .join(", ")}. Specifică barber_id.`,
+      candidates: matches,
+      needsChoice: true,
+    };
   }
 
-  const { data } = await supabaseAdmin
-    .from("barbers")
-    .select("id")
-    .eq("tenant_id", ctx.tenantId)
-    .eq("active", true)
-    .limit(1)
-    .maybeSingle();
+  if (ctx.barberId) {
+    const selfActive = candidates.some((b) => b.id === ctx.barberId);
+    if (selfActive) {
+      return { barberId: ctx.barberId };
+    }
+  }
 
-  if (!data) {
+  if (candidates.length === 1) {
+    return { barberId: candidates[0].id };
+  }
+
+  if (candidates.length === 0) {
     return { barberId: null, error: "Nu există frizer activ în salon." };
   }
 
-  return { barberId: data.id };
+  return {
+    barberId: null,
+    error:
+      "Salonul are mai mulți frizeri. Specifică barber_id sau barber_name (folosește list_barbers).",
+    needsChoice: true,
+    candidates,
+  };
+}
+
+export function barberChoiceResult(resolved: {
+  error?: string;
+  candidates?: BarberCandidate[];
+  needsChoice?: boolean;
+}) {
+  return {
+    ok: false as const,
+    summary: resolved.error || "Alege frizerul.",
+    error: resolved.needsChoice ? "needs_barber_choice" : "missing_barber",
+    data: resolved.candidates
+      ? {
+          needs_barber_choice: true,
+          candidates: resolved.candidates,
+          instruct_user:
+            "Prezintă lista de frizeri și cere utilizatorului să aleagă. Apoi reia tool-ul cu barber_id sau barber_name.",
+        }
+      : undefined,
+  };
+}
+
+export async function resolveBarberFromArgs(
+  ctx: AssistantToolContext,
+  args: Record<string, unknown>,
+): Promise<
+  | { ok: true; barberId: string }
+  | { ok: false; result: ReturnType<typeof barberChoiceResult> }
+> {
+  const resolved = await resolveTargetBarberId(
+    ctx,
+    asString(args.barber_id),
+    asString(args.barber_name) || asString(args.barber),
+  );
+
+  if (!resolved.barberId) {
+    return { ok: false, result: barberChoiceResult(resolved) };
+  }
+
+  return { ok: true, barberId: resolved.barberId };
+}
+
+/**
+ * Optional barber filter for list tools.
+ * - No barber_id/name → all active barbers (or self for barber role)
+ * - Explicit choice → that barber (or needsChoice / error)
+ */
+export async function resolveOptionalBarberFilter(
+  ctx: AssistantToolContext,
+  args: Record<string, unknown>,
+): Promise<
+  | { ok: true; barberIds: string[] }
+  | { ok: false; result: ReturnType<typeof barberChoiceResult> }
+> {
+  if (ctx.role === "barber") {
+    if (!ctx.barberId) {
+      return {
+        ok: false,
+        result: {
+          ok: false,
+          summary: "Nu am găsit profilul de frizer.",
+          error: "missing_barber",
+          data: undefined,
+        },
+      };
+    }
+    return { ok: true, barberIds: [ctx.barberId] };
+  }
+
+  const barberIdArg = asString(args.barber_id);
+  const barberNameArg =
+    asString(args.barber_name) || asString(args.barber);
+
+  if (!barberIdArg && !barberNameArg) {
+    const candidates = await listActiveBarbersForTenant(ctx.tenantId);
+    return { ok: true, barberIds: candidates.map((b) => b.id) };
+  }
+
+  const resolved = await resolveTargetBarberId(
+    ctx,
+    barberIdArg,
+    barberNameArg,
+  );
+
+  if (!resolved.barberId) {
+    return { ok: false, result: barberChoiceResult(resolved) };
+  }
+
+  return { ok: true, barberIds: [resolved.barberId] };
 }
 
 export function asString(value: unknown): string | null {
@@ -103,7 +265,6 @@ export async function resolveServiceForBarber(
       };
     }
 
-    // Ensure the barber (and thus the service) belongs to this tenant.
     const { data: barber } = await supabaseAdmin
       .from("barbers")
       .select("id")
@@ -148,7 +309,10 @@ export async function resolveServiceForBarber(
 
   const matches = (services ?? []).filter((s) => {
     const label = `${s.display_name || ""} ${s.name || ""}`.toLowerCase();
-    return label.includes(needle) || needle.includes((s.display_name || s.name || "").toLowerCase());
+    return (
+      label.includes(needle) ||
+      needle.includes((s.display_name || s.name || "").toLowerCase())
+    );
   });
 
   if (matches.length === 0) {

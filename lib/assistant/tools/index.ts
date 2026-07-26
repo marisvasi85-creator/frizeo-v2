@@ -3,6 +3,7 @@ import { cancelBookingTool } from "./cancelBooking";
 import { createBookingTool } from "./createBooking";
 import { createServiceTool } from "./createService";
 import { findSlotsTool } from "./findSlots";
+import { listBarbersTool } from "./listBarbers";
 import { listBookingsTool } from "./listBookings";
 import { listServicesTool } from "./listServices";
 import {
@@ -11,11 +12,39 @@ import {
 } from "./nextBooking";
 import { popularServicesTool } from "./popularServices";
 import { rescheduleBookingTool } from "./rescheduleBooking";
-import { closeDayTool, createVacationTool } from "./scheduleTools";
+import {
+  closeDayTool,
+  createVacationTool,
+  deleteVacationTool,
+  listVacationsTool,
+  openDayTool,
+} from "./scheduleTools";
 import { subscriptionStatusTool } from "./subscriptionStatus";
 import { updateBookingTool } from "./updateBooking";
 
+const BARBER_ID_PROP = {
+  type: "string",
+  description:
+    "ID frizer (owner/manager). Dacă salonul are mai mulți frizeri și e ambiguu, folosește list_barbers.",
+};
+
+const BARBER_NAME_PROP = {
+  type: "string",
+  description:
+    "Nume frizer dacă nu ai barber_id (ex: „Andrei”). Folosește list_barbers când e nevoie.",
+};
+
 export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
+  {
+    name: "list_barbers",
+    description:
+      "Listează frizerii salonului (activi + inactivi). Folosește când sunt mai mulți și trebuie ales unul înainte de o acțiune.",
+    parameters: {
+      type: "object",
+      properties: {},
+    },
+    execute: listBarbersTool,
+  },
   {
     name: "today_briefing",
     description:
@@ -23,10 +52,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager). Implicit profilul curent.",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
       },
     },
     execute: getTodayBriefingTool,
@@ -38,10 +65,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager). Implicit profilul curent.",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
       },
     },
     execute: getNextBookingTool,
@@ -66,9 +91,11 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Dată end YYYY-MM-DD (opțional).",
         },
-        barber_id: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: {
           type: "string",
-          description: "Filtrează pe un frizer (doar owner/manager).",
+          description:
+            "Filtrează pe numele frizerului (opțional; fără filtru = tot salonul).",
         },
       },
     },
@@ -81,10 +108,11 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
     parameters: {
       type: "object",
       properties: {
-        barber_id: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: {
           type: "string",
           description:
-            "Frizerul pentru care listezi serviciile (owner/manager).",
+            "Filtrează pe numele frizerului (opțional; fără filtru = tot salonul).",
         },
         include_inactive: {
           type: "boolean",
@@ -109,9 +137,11 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "number",
           description: "Câte servicii să returnezi (implicit 5, max 20).",
         },
-        barber_id: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: {
           type: "string",
-          description: "Filtrează pe un frizer (owner/manager).",
+          description:
+            "Filtrează pe numele frizerului (opțional; fără filtru = tot salonul).",
         },
       },
     },
@@ -151,10 +181,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Nume serviciu dacă nu ai service_id (ex: Tuns).",
         },
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager). Implicit profilul curent.",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         limit: {
           type: "number",
           description: "Câte ore să returnezi (implicit 12, max 40).",
@@ -212,10 +240,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Nume serviciu dacă nu ai service_id.",
         },
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager).",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         confirmed: {
           type: "boolean",
           description: "true doar după confirmarea explicită a utilizatorului.",
@@ -245,11 +271,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "number",
           description: "Preț opțional în lei. Poate lipsi.",
         },
-        barber_id: {
-          type: "string",
-          description:
-            "Frizerul (owner/manager). Pentru barber se folosește profilul curent.",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         confirmed: {
           type: "boolean",
           description: "true doar după confirmarea explicită a utilizatorului.",
@@ -296,10 +319,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           description:
             "Noua oră HH:MM. Dacă lipsește, tool-ul returnează ore libere.",
         },
-        barber_id: {
-          type: "string",
-          description: "Filtru frizer la căutarea după client_name (owner/manager).",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         limit: {
           type: "number",
           description: "Câte ore libere să propună (implicit 12).",
@@ -373,10 +394,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Data programării (YYYY-MM-DD) pentru dezambiguizare.",
         },
-        barber_id: {
-          type: "string",
-          description: "Filtru frizer la căutarea după nume (owner/manager).",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         confirmed: {
           type: "boolean",
           description:
@@ -402,10 +421,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           enum: ["today", "tomorrow"],
           description: "Scurtătură relativă dacă nu trimiți date.",
         },
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager).",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         confirmed: {
           type: "boolean",
           description: "true doar după confirmarea utilizatorului.",
@@ -413,6 +430,32 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
       },
     },
     execute: closeDayTool,
+  },
+  {
+    name: "open_day",
+    description:
+      "Redeschide o zi închisă (șterge override-ul de zi liberă). Folosește date=YYYY-MM-DD sau when=today|tomorrow. IMPORTANT: confirmed=true doar după confirmare.",
+    parameters: {
+      type: "object",
+      properties: {
+        date: {
+          type: "string",
+          description: "Data YYYY-MM-DD.",
+        },
+        when: {
+          type: "string",
+          enum: ["today", "tomorrow"],
+          description: "Scurtătură relativă dacă nu trimiți date.",
+        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: openDayTool,
   },
   {
     name: "create_vacation",
@@ -429,10 +472,8 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Sfârșit YYYY-MM-DD.",
         },
-        barber_id: {
-          type: "string",
-          description: "Frizer (owner/manager).",
-        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
         confirmed: {
           type: "boolean",
           description: "true doar după confirmarea utilizatorului.",
@@ -441,6 +482,52 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
       required: ["date_from", "date_to"],
     },
     execute: createVacationTool,
+  },
+  {
+    name: "list_vacations",
+    description:
+      "Listează concediile / zilele libere viitoare pentru un frizer (cu vacation_period_id pentru ștergere).",
+    parameters: {
+      type: "object",
+      properties: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+      },
+    },
+    execute: listVacationsTool,
+  },
+  {
+    name: "delete_vacation",
+    description:
+      "Șterge un concediu după vacation_period_id (din list_vacations) sau după date_from + date_to. IMPORTANT: confirmed=true doar după confirmare.",
+    parameters: {
+      type: "object",
+      properties: {
+        vacation_period_id: {
+          type: "string",
+          description: "ID perioadă din list_vacations.",
+        },
+        vacation_id: {
+          type: "string",
+          description: "Alias pentru vacation_period_id.",
+        },
+        date_from: {
+          type: "string",
+          description: "Început YYYY-MM-DD dacă nu ai period id.",
+        },
+        date_to: {
+          type: "string",
+          description: "Sfârșit YYYY-MM-DD dacă nu ai period id.",
+        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: deleteVacationTool,
   },
 ];
 

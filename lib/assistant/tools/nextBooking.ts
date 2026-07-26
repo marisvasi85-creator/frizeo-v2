@@ -5,7 +5,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-import { asString, resolveTargetBarberId } from "./helpers";
+import { resolveBarberFromArgs } from "./helpers";
 
 function nowPartsInBucharest(now = new Date()) {
   const formatter = new Intl.DateTimeFormat("en-GB", {
@@ -67,14 +67,8 @@ export async function getNextBookingTool(
   args: Record<string, unknown>,
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
-  const resolved = await resolveTargetBarberId(ctx, asString(args.barber_id));
-  if (resolved.error || !resolved.barberId) {
-    return {
-      ok: false,
-      summary: resolved.error || "Frizer lipsă",
-      error: resolved.error,
-    };
-  }
+  const resolved = await resolveBarberFromArgs(ctx, args);
+  if (!resolved.ok) return resolved.result;
 
   const { today, time } = nowPartsInBucharest();
   const horizon = addDaysToDateString(today, 30);
@@ -127,14 +121,8 @@ export async function getTodayBriefingTool(
   args: Record<string, unknown>,
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
-  const resolved = await resolveTargetBarberId(ctx, asString(args.barber_id));
-  if (resolved.error || !resolved.barberId) {
-    return {
-      ok: false,
-      summary: resolved.error || "Frizer lipsă",
-      error: resolved.error,
-    };
-  }
+  const resolved = await resolveBarberFromArgs(ctx, args);
+  if (!resolved.ok) return resolved.result;
 
   const { today, time } = nowPartsInBucharest();
 

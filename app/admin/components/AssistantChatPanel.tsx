@@ -16,9 +16,10 @@ export { buildWelcomeMessage };
 const DEFAULT_SUGGESTIONS = [
   "Ce am azi?",
   "Cine e următorul client?",
+  "Ce frizeri avem?",
   "Închide mâine (zi liberă)",
+  "Ce concedii am?",
   "Ce programări am mâine?",
-  "Adaugă un serviciu de 60 de minute",
 ];
 
 type PendingConfirmation = {

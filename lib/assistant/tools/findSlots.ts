@@ -13,8 +13,8 @@ import type { AssistantToolContext, AssistantToolResult } from "../types";
 import {
   asNumber,
   asString,
+  resolveBarberFromArgs,
   resolveServiceForBarber,
-  resolveTargetBarberId,
 } from "./helpers";
 
 function resolveDate(args: Record<string, unknown>): string | null {
@@ -41,14 +41,8 @@ export async function findSlotsTool(
     };
   }
 
-  const target = await resolveTargetBarberId(ctx, asString(args.barber_id));
-  if (!target.barberId) {
-    return {
-      ok: false,
-      summary: target.error || "Nu am găsit frizerul.",
-      error: "missing_barber",
-    };
-  }
+  const target = await resolveBarberFromArgs(ctx, args);
+  if (!target.ok) return target.result;
 
   const service = await resolveServiceForBarber(
     target.barberId,

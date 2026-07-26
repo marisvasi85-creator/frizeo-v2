@@ -4,43 +4,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-async function resolveBarberIds(
-  ctx: AssistantToolContext,
-  barberIdArg: string | null,
-): Promise<{ barberIds: string[]; error?: string }> {
-  if (ctx.role === "barber") {
-    if (!ctx.barberId) {
-      return { barberIds: [], error: "Nu am găsit profilul de frizer." };
-    }
-    return { barberIds: [ctx.barberId] };
-  }
-
-  if (barberIdArg) {
-    const { data } = await supabaseAdmin
-      .from("barbers")
-      .select("id")
-      .eq("id", barberIdArg)
-      .eq("tenant_id", ctx.tenantId)
-      .maybeSingle();
-
-    if (!data) {
-      return { barberIds: [], error: "Frizerul nu aparține salonului." };
-    }
-    return { barberIds: [data.id] };
-  }
-
-  const { data: tenantBarbers } = await supabaseAdmin
-    .from("barbers")
-    .select("id")
-    .eq("tenant_id", ctx.tenantId);
-
-  return { barberIds: (tenantBarbers ?? []).map((b) => b.id) };
-}
+import { asString, resolveOptionalBarberFilter } from "./helpers";
 
 function resolveDateRange(range: string | null, from: string | null, to: string | null) {
   const today = getTodayInBookingTimezone();
@@ -67,15 +31,12 @@ export async function listBookingsTool(
   ctx: AssistantToolContext,
 ): Promise<AssistantToolResult> {
   const range = asString(args.range);
-  const from = asString(args.from_date);
-  const to = asString(args.to_date);
-  const barberIdArg = asString(args.barber_id);
+  const from = asString(args.from_date) || asString(args.date);
+  const to = asString(args.to_date) || asString(args.date);
   const { from: startDate, to: endDate } = resolveDateRange(range, from, to);
 
-  const resolved = await resolveBarberIds(ctx, barberIdArg);
-  if (resolved.error) {
-    return { ok: false, summary: resolved.error, error: resolved.error };
-  }
+  const resolved = await resolveOptionalBarberFilter(ctx, args);
+  if (!resolved.ok) return resolved.result;
   if (resolved.barberIds.length === 0) {
     return { ok: true, summary: "Nu există frizeri în salon.", data: { bookings: [] } };
   }

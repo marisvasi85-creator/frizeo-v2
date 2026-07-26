@@ -1,20 +1,13 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
+import {
+  asBoolean,
+  asNumber,
+  asString,
+  resolveBarberFromArgs,
+} from "./helpers";
 
 const ALLOWED_DURATIONS = [15, 30, 45, 60, 75, 90, 120];
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim() ? value.trim() : null;
-}
-
-function asNumber(value: unknown): number | null {
-  const n = typeof value === "number" ? value : Number(value);
-  return Number.isFinite(n) ? n : null;
-}
-
-function asBoolean(value: unknown): boolean {
-  return value === true || value === "true" || value === 1 || value === "1";
-}
 
 function nearestDuration(minutes: number): number {
   return ALLOWED_DURATIONS.reduce((best, current) =>
@@ -30,7 +23,6 @@ export async function createServiceTool(
   const rawDuration = asNumber(args.duration_minutes) ?? asNumber(args.duration);
   const price = asNumber(args.price_ron) ?? asNumber(args.price);
   const confirmed = asBoolean(args.confirmed);
-  const barberIdArg = asString(args.barber_id);
 
   if (!name) {
     return {
@@ -52,48 +44,9 @@ export async function createServiceTool(
     ? rawDuration
     : nearestDuration(rawDuration);
 
-  let barberId = ctx.barberId;
-  if (ctx.role === "barber") {
-    if (!barberId) {
-      return {
-        ok: false,
-        summary: "Nu am găsit profilul de frizer.",
-        error: "missing_barber",
-      };
-    }
-  } else if (barberIdArg) {
-    const { data } = await supabaseAdmin
-      .from("barbers")
-      .select("id, display_name")
-      .eq("id", barberIdArg)
-      .eq("tenant_id", ctx.tenantId)
-      .maybeSingle();
-    if (!data) {
-      return {
-        ok: false,
-        summary: "Frizerul nu aparține salonului.",
-        error: "invalid_barber",
-      };
-    }
-    barberId = data.id;
-  } else if (!barberId) {
-    const { data } = await supabaseAdmin
-      .from("barbers")
-      .select("id")
-      .eq("tenant_id", ctx.tenantId)
-      .eq("active", true)
-      .limit(1)
-      .maybeSingle();
-    barberId = data?.id ?? null;
-  }
-
-  if (!barberId) {
-    return {
-      ok: false,
-      summary: "Nu am un frizer pentru care să adaug serviciul.",
-      error: "missing_barber",
-    };
-  }
+  const target = await resolveBarberFromArgs(ctx, args);
+  if (!target.ok) return target.result;
+  const barberId = target.barberId;
 
   const proposal = {
     barber_id: barberId,
