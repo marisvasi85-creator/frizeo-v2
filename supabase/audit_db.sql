@@ -104,7 +104,43 @@ SELECT policyname FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'tenant_users'
 ORDER BY policyname;
 
--- 9) notification_settings policies (migration 20260630)
+-- 9) notification_settings policies (migration 20260630 / 20260726)
 SELECT policyname, cmd FROM pg_policies
 WHERE schemaname = 'public' AND tablename = 'notification_settings'
 ORDER BY policyname;
+
+-- 13) Legacy booking policies that reopen cross-barber reads (must return 0)
+SELECT policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'bookings'
+  AND policyname IN (
+    'tenant read bookings',
+    'Barber can read own bookings',
+    'Barber can update own bookings',
+    'bookings_select',
+    'bookings_update',
+    'bookings_insert',
+    'bookings_delete'
+  );
+
+-- 14) Expected booking policies after 20260726 (exactly these two)
+SELECT policyname, cmd
+FROM pg_policies
+WHERE schemaname = 'public' AND tablename = 'bookings'
+ORDER BY policyname;
+
+-- 15) notification_settings write must require owner/manager (no role-less update/insert)
+SELECT policyname, cmd, qual, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+  AND tablename = 'notification_settings'
+  AND cmd IN ('INSERT', 'UPDATE', 'ALL')
+ORDER BY policyname;
+
+-- 16) api_rate_limits table + function exist
+SELECT to_regclass('public.api_rate_limits') AS api_rate_limits_table;
+SELECT proname
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND proname = 'consume_api_rate_limit';
