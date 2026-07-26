@@ -6,10 +6,10 @@ export const SITE_NAME = "Frizeo";
 export const SITE_URL = new URL(LEGAL_COMPANY.website);
 
 export const SITE_DESCRIPTION =
-  "Programări online pentru frizerii și saloane din România. Link personal, calendar, confirmări și reminder-e automate prin email și SMS.";
+  "Programări online pentru frizerii și barbershop-uri din România. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar.";
 
 export const SITE_TAGLINE =
-  "Programări online pentru frizerii și saloane";
+  "Programări online pentru frizerii și barbershop-uri";
 
 /** Public default PWA — never admin dashboard (that sent home-screen installs to /login). */
 export const PUBLIC_PWA_MANIFEST_HREF =

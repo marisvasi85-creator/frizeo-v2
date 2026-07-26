@@ -8,12 +8,15 @@ import {
   softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/lib/site/jsonLd";
+import BookingHeroVisual from "./components/BookingHeroVisual";
 
 const LANDING_VIDEO_ID = "do-k1cNkCOg";
 
 export const metadata: Metadata = {
   alternates: { canonical: LEGAL_COMPANY.website },
   openGraph: { url: LEGAL_COMPANY.website },
+  description:
+    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial Pro+ 60 zile.",
 };
 
 export default function Page() {
@@ -26,243 +29,480 @@ export default function Page() {
           softwareApplicationJsonLd()
         )}
       />
-    <main className="bg-white text-gray-900">
 
-      {/* HERO */}
-      <section className="px-6 py-24 text-center max-w-4xl mx-auto">
-        <p className="text-sm font-medium text-gray-500 mb-4 tracking-wide uppercase">
-          Programări online pentru frizerii și saloane
-        </p>
+      <main>
+        {/* HERO — one composition: brand, headline, support, CTAs, full-bleed product */}
+        <section className="relative overflow-hidden">
+          <div className="mkt-hero-atmosphere absolute inset-0" />
+          <div className="mkt-hero-grain absolute inset-0" />
 
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight mb-6">
-          Nu mai pierde clienți pentru că nu poți răspunde la telefon.
-        </h1>
+          <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-10 text-center sm:pt-20 sm:pb-12">
+            <h1 className="mkt-display mkt-rise text-[clamp(3.4rem,12vw,6.5rem)] leading-[0.9] text-[var(--mkt-ink)]">
+              Frizeo
+            </h1>
 
-        <p className="text-lg text-gray-600 mb-4 max-w-2xl mx-auto">
-          Cu Frizeo, clienții se programează singuri — aleg serviciul, ziua
-          și ora. Tu vezi totul în calendar, fără haos și fără apeluri
-          întrerupte.
-        </p>
+            <p className="mkt-rise mkt-rise-delay-1 mx-auto mt-6 max-w-2xl text-xl font-medium tracking-tight text-[var(--mkt-ink-soft)] sm:text-2xl md:text-[1.7rem]">
+              Nu mai pierde clienți pentru că nu poți răspunde la telefon.
+            </p>
 
-        <p className="text-base text-gray-500 mb-10 max-w-xl mx-auto">
-          Link personal de programări, confirmări și reminder-e automate
-          prin email și SMS.
-        </p>
+            <p className="mkt-rise mkt-rise-delay-2 mx-auto mt-4 max-w-xl text-base text-[var(--mkt-muted)] sm:text-lg">
+              Clienții se programează singuri. Tu lucrezi — calendarul, SMS-urile
+              și reminder-ele rulează singure.
+            </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/signup"
-            className="bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-800 transition font-medium"
-          >
-            Creează cont gratuit
-          </Link>
-
-          <Link
-            href="/barbers"
-            className="border border-gray-300 px-6 py-3 rounded-xl hover:bg-gray-100 transition font-medium"
-          >
-            Vezi pagina de programări
-          </Link>
-        </div>
-
-        <p className="text-sm text-gray-400 mt-4">
-          Fără instalare. Gata în câteva minute.
-        </p>
-
-        <div className="mt-12 max-w-3xl mx-auto text-left">
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xl border border-gray-200 bg-black">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${LANDING_VIDEO_ID}?rel=0`}
-              title="Frizeo — programări online pentru frizerii și saloane"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-              loading="lazy"
-              className="absolute inset-0 h-full w-full"
-            />
-          </div>
-          <p className="mt-3 text-center text-sm text-gray-500">
-            Vezi cum arată pagina de programări — serviciu, calendar, confirmare.
-          </p>
-        </div>
-      </section>
-
-      {/* CUM FUNCTIONEAZA */}
-      <section id="cum-functioneaza" className="bg-gray-50 py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <h2 className="text-3xl font-semibold text-center mb-4">
-            Cum funcționează
-          </h2>
-          <p className="text-gray-600 text-center mb-12 max-w-2xl mx-auto">
-            Trei pași simpli — funcționează la fel dacă lucrezi singur
-            sau ai o echipă.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <p className="text-sm font-medium text-gray-400 mb-2">Pasul 1</p>
-              <h3 className="font-semibold text-lg mb-2">Configurezi serviciile și programul</h3>
-              <p className="text-gray-600 text-sm">
-                Adaugi ce oferi (tuns, barbă etc.) și când lucrezi.
-                Poți marca zile libere sau concedii oricând.
-              </p>
+            <div className="mkt-rise mkt-rise-delay-3 mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+              <Link
+                href="/signup"
+                className="inline-flex min-w-[12rem] items-center justify-center rounded-xl bg-[var(--mkt-ink)] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[var(--mkt-ink-soft)]"
+              >
+                Creează cont gratuit
+              </Link>
+              <Link
+                href="/pricing"
+                className="inline-flex min-w-[12rem] items-center justify-center rounded-xl border border-[var(--mkt-line)] bg-white/70 px-6 py-3.5 text-sm font-semibold text-[var(--mkt-ink)] transition hover:bg-white"
+              >
+                Vezi prețurile
+              </Link>
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <p className="text-sm font-medium text-gray-400 mb-2">Pasul 2</p>
-              <h3 className="font-semibold text-lg mb-2">Distribui link-ul tău</h3>
-              <p className="text-gray-600 text-sm">
-                Primești un link personal pe care îl pui în bio Instagram,
-                pe site sau îl trimiți clienților direct — inclusiv pe WhatsApp.
-              </p>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 border border-gray-100">
-              <p className="text-sm font-medium text-gray-400 mb-2">Pasul 3</p>
-              <h3 className="font-semibold text-lg mb-2">Clienții se programează singuri</h3>
-              <p className="text-gray-600 text-sm">
-                Aleg serviciul, data și ora disponibilă. Programarea
-                apare în calendarul tău — tu doar lucrezi.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* NOTIFICARI */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-semibold mb-4">
-              Confirmări și reminder-e automate
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Nu mai scrii manual mesaje. Confirmările, anulările și
-              reprogramările pleacă pe email; reminder-ul poate merge și pe SMS —
-              tu alegi ce e activ.
+            <p className="mkt-rise mkt-rise-delay-4 mt-4 text-sm text-[var(--mkt-muted)]">
+              {LEGAL_PRICING.trialDays} zile trial Pro+ · Free cu 80 programări /
+              lună · Fără instalare
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Ce primește clientul</h3>
+          <BookingHeroVisual />
+        </section>
 
-              <ul className="space-y-3 text-gray-600">
+        {/* PROBLEM — one job */}
+        <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              Haosul din frizerie arată așa
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-[var(--mkt-muted)]">
+              Dacă recunoști măcar două, Frizeo e făcut pentru tine.
+            </p>
+            <ul className="mt-10 space-y-4 text-[var(--mkt-steel)]">
+              {[
+                "Ești în tuns și telefonul sună — clientul renunță după 2 apeluri.",
+                "Programările stau în WhatsApp, pe hârtie sau „în cap”.",
+                "Nu știi sigur cine vine mâine, la ce oră și pentru ce serviciu.",
+                "No-show-urile mănâncă din zi fără reminder automat.",
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="border-l-2 border-[var(--mkt-accent)] pl-4 text-base sm:text-lg"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        {/* HOW IT WORKS */}
+        <section
+          id="cum-functioneaza"
+          className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20"
+        >
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              Cum funcționează
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
+              Trei pași. Singur sau cu echipă — același flux.
+            </p>
+
+            <ol className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
+              {[
+                {
+                  step: "01",
+                  title: "Configurezi serviciile și programul",
+                  body: "Adaugi tuns, fade, barbă, durate și orele tale. Zile libere și concedii — oricând.",
+                },
+                {
+                  step: "02",
+                  title: "Distribui link-ul tău",
+                  body: "Îl pui în bio Instagram, pe Google, pe WhatsApp sau pe afiș în salon.",
+                },
+                {
+                  step: "03",
+                  title: "Clienții se programează singuri",
+                  body: "Aleg serviciul, data și ora. Tu vezi totul în calendar — fără apeluri întrerupte.",
+                },
+              ].map((item) => (
+                <li key={item.step} className="min-w-0">
+                  <p className="mkt-display text-sm text-[var(--mkt-accent)]">
+                    {item.step}
+                  </p>
+                  <h3 className="mt-3 text-lg font-semibold tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
+                    {item.body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* AUTOMATIONS */}
+        <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
+          <div className="mx-auto grid max-w-5xl items-center gap-12 md:grid-cols-2">
+            <div>
+              <h2 className="mkt-display text-3xl sm:text-4xl">
+                Confirmări și reminder-e pe pilot automat
+              </h2>
+              <p className="mt-4 text-[var(--mkt-muted)]">
+                Nu mai scrii manual. Confirmările, anulările și reprogramările
+                pleacă pe email; reminder-ul poate merge și pe SMS — tu alegi ce
+                e activ.
+              </p>
+              <ul className="mt-8 space-y-3 text-sm text-[var(--mkt-steel)]">
                 <li className="flex gap-3">
-                  <span className="text-green-600 shrink-0">✓</span>
+                  <span className="text-[var(--mkt-accent)]" aria-hidden>
+                    →
+                  </span>
                   <span>
-                    <strong className="text-gray-900">Confirmare</strong> imediat
-                    după programare — pe email
+                    Confirmare imediată după programare
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-green-600 shrink-0">✓</span>
+                  <span className="text-[var(--mkt-accent)]" aria-hidden>
+                    →
+                  </span>
                   <span>
-                    <strong className="text-gray-900">Reminder</strong> înainte
-                    de programare — email și SMS (pe planurile care includ SMS)
+                    Reminder înainte de vizită — email și SMS (planuri Pro)
                   </span>
                 </li>
                 <li className="flex gap-3">
-                  <span className="text-green-600 shrink-0">✓</span>
+                  <span className="text-[var(--mkt-accent)]" aria-hidden>
+                    →
+                  </span>
                   <span>
-                    Notificare la <strong className="text-gray-900">reprogramare</strong>{" "}
-                    sau <strong className="text-gray-900">anulare</strong> — pe email
+                    {LEGAL_PRICING.includedNote}
                   </span>
                 </li>
               </ul>
             </div>
 
-            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 space-y-4">
-              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
-                Exemplu SMS reminder
+            <div className="rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-fog)] p-6">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--mkt-muted)]">
+                Exemplu SMS
               </p>
-              <div className="bg-white rounded-xl p-4 border border-gray-200 text-sm text-gray-700 leading-relaxed">
-                <p className="font-medium text-gray-900 mb-1">Frizeo</p>
-                <p>Reminder: ai programare astăzi la ora 14:00.</p>
-                <p className="mt-1 text-gray-500">Te așteptăm!</p>
+              <div className="mt-4 rounded-xl border border-[var(--mkt-line)] bg-white px-4 py-4 text-sm leading-relaxed text-[var(--mkt-ink-soft)]">
+                <p className="font-semibold text-[var(--mkt-ink)]">Frizeo</p>
+                <p className="mt-2">
+                  Reminder: ai programare astăzi la ora 14:00.
+                </p>
+                <p className="mt-1 text-[var(--mkt-muted)]">Te așteptăm!</p>
               </div>
-
-              <p className="text-xs text-gray-500">
-                Poți activa sau dezactiva fiecare tip de notificare
-                din panoul de administrare.
-              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* PROBLEMA */}
-      <section className="bg-gray-50 py-20 px-6">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-semibold mb-6">
-            Îți sună cunoscut?
+        {/* MARKETING AI — differentiator */}
+        <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-ink)] px-6 py-20 text-white">
+          <div className="mx-auto max-w-5xl">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">
+              Marketing AI
+            </p>
+            <h2 className="mkt-display mt-3 max-w-3xl text-3xl sm:text-4xl md:text-5xl">
+              Conținut pentru Instagram, generat pentru salonul tău
+            </h2>
+            <p className="mt-4 max-w-2xl text-base text-white/65 sm:text-lg">
+              Postări, story-uri, scripturi pentru Reel și oferte — cu brandul
+              tău pe card. Nu mai stai blocat fără idei de promovare.
+            </p>
+
+            <div className="mt-12 grid gap-8 sm:grid-cols-3">
+              {[
+                {
+                  title: "Post & Story",
+                  body: "Text gata de publicat + card vizual descărcabil.",
+                },
+                {
+                  title: "Promoții",
+                  body: "Oferte pe servicii, birthday și campanii sezoniere.",
+                },
+                {
+                  title: "Inclus în plan",
+                  body: "Limite zilnice pe Free / Pro / Pro+ — fără pachete separate.",
+                },
+              ].map((item) => (
+                <div key={item.title}>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/55">
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10">
+              <Link
+                href="/signup"
+                className="inline-flex rounded-xl bg-white px-6 py-3.5 text-sm font-semibold text-[var(--mkt-ink)] transition hover:bg-[var(--mkt-mist)]"
+              >
+                Încearcă Marketing AI
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* DIRECTORY / LOCAL SEO */}
+        <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mkt-display max-w-3xl text-3xl sm:text-4xl">
+              Fii găsit de clienți noi din orașul tău
+            </h2>
+            <p className="mt-4 max-w-2xl text-[var(--mkt-muted)]">
+              Nu doar link în bio — apari în directorul Frizeo pe oraș, pe hartă,
+              cu servicii, poze și recenzii. Clienții noi rezervă direct.
+            </p>
+
+            <div className="mt-12 grid gap-10 md:grid-cols-3">
+              {[
+                {
+                  title: "Director pe oraș",
+                  body: "Pagini locale tip „frizerii în [oraș]” — vizibilitate fără comision pe programare.",
+                },
+                {
+                  title: "Hartă & filtre",
+                  body: "Fade, barbă, tuns, copii — clienții găsesc exact ce caută.",
+                },
+                {
+                  title: "Recenzii",
+                  body: "Cereri de review după vizită. Încredere înainte de prima programare.",
+                },
+              ].map((item) => (
+                <div key={item.title}>
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10">
+              <Link
+                href="/frizerii"
+                className="text-sm font-semibold text-[var(--mkt-accent)] hover:underline"
+              >
+                Vezi directorul Frizerii →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* OPS STACK */}
+        <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              Tot ce ai nevoie ca să rulezi ziua
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
+              Dincolo de booking: calendar real, echipă, rapoarte — fără haos.
+            </p>
+
+            <div className="mt-14 grid gap-x-10 gap-y-12 sm:grid-cols-2">
+              {[
+                {
+                  title: "Google Calendar sync",
+                  body: "Evenimente create/actualizate automat și free/busy ca să nu se dubleze programările.",
+                },
+                {
+                  title: "Program flexibil",
+                  body: "Ore săptămânale, override pe zile, concedii și regulă de preaviz (0–24h).",
+                },
+                {
+                  title: "Echipă până la 3 frizeri",
+                  body: "Pe Pro+: invitații, pagină de salon și vizibilitate pe programările echipei.",
+                },
+                {
+                  title: "Rapoarte clare",
+                  body: "Confirmate / anulate, clienți unici, venit estimat — pe frizer și pe serviciu.",
+                },
+              ].map((item) => (
+                <div key={item.title} className="border-t border-[var(--mkt-line)] pt-5">
+                  <h3 className="text-lg font-semibold tracking-tight">
+                    {item.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
+                    {item.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* WHY FRIZEO — competitive without naming rivals */}
+        <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              De ce Frizeo, nu „încă o aplicație”
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
+              Creat special pentru frizerii și barbershop-uri din România — nu un
+              tool generic de beauty cu 20 de industrii.
+            </p>
+
+            <dl className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+              {[
+                {
+                  dt: `${LEGAL_PRICING.trialDays} zile Pro+`,
+                  dd: "Trial lung, cu SMS reminder inclus — testezi pe bune, nu 2 săptămâni.",
+                },
+                {
+                  dt: "Free cu 80 programări",
+                  dd: "Mai mult spațiu să pornești fără card și fără presiune.",
+                },
+                {
+                  dt: "Pro de la 79 lei",
+                  dd: "Programări nelimitate, SMS reminder, Google Calendar — preț fix.",
+                },
+                {
+                  dt: "Fără credite SMS",
+                  dd: "Notificările incluse în plan. Fără top-up, fără surprize la final de lună.",
+                },
+                {
+                  dt: "Marketing AI inclus",
+                  dd: "Promovezi salonul din același loc din care gestionezi programările.",
+                },
+                {
+                  dt: "0% comision pe booking",
+                  dd: "Clienții rezervă pe link-ul tău. Tu păstrezi 100% din încasări.",
+                },
+              ].map((item) => (
+                <div key={item.dt}>
+                  <dt className="mkt-display text-xl text-[var(--mkt-ink)]">
+                    {item.dt}
+                  </dt>
+                  <dd className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
+                    {item.dd}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        {/* DEMO VIDEO — after product story, not crowding hero */}
+        <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20">
+          <div className="mx-auto max-w-3xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              Vezi fluxul de programare
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-center text-[var(--mkt-muted)]">
+              Serviciu, calendar, confirmare — în câteva secunde.
+            </p>
+            <div className="relative mt-10 aspect-video w-full overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-black">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${LANDING_VIDEO_ID}?rel=0`}
+                title="Frizeo — programări online pentru frizerii și saloane"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                loading="lazy"
+                className="absolute inset-0 h-full w-full"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* PRICING TEASER */}
+        <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
+          <div className="mx-auto max-w-5xl text-center">
+            <h2 className="mkt-display text-3xl sm:text-4xl">
+              Prețuri simple, fără costuri ascunse
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-muted)]">
+              {LEGAL_PRICING.trialDays} zile trial Pro+. Apoi Free, Pro, Pro+ sau
+              Custom — tu alegi.
+            </p>
+
+            <div className="mt-12 grid gap-6 text-left sm:grid-cols-3">
+              {LEGAL_PRICING.plans
+                .filter((p) => p.slug !== "custom")
+                .map((plan) => (
+                  <div
+                    key={plan.slug}
+                    className={`rounded-2xl border p-6 ${
+                      plan.highlighted
+                        ? "border-[var(--mkt-ink)] bg-[var(--mkt-ink)] text-white"
+                        : "border-[var(--mkt-line)] bg-[var(--mkt-fog)]"
+                    }`}
+                  >
+                    <p
+                      className={`text-sm font-medium ${
+                        plan.highlighted ? "text-white/60" : "text-[var(--mkt-muted)]"
+                      }`}
+                    >
+                      {plan.name}
+                    </p>
+                    <p className="mkt-display mt-2 text-3xl">
+                      {plan.price}
+                      {plan.priceNote && (
+                        <span
+                          className={`ml-1 text-sm font-normal ${
+                            plan.highlighted ? "text-white/50" : "text-[var(--mkt-muted)]"
+                          }`}
+                          style={{ fontFamily: "var(--font-mkt-body)" }}
+                        >
+                          {plan.priceNote}
+                        </span>
+                      )}
+                    </p>
+                    <p
+                      className={`mt-3 text-sm ${
+                        plan.highlighted ? "text-white/70" : "text-[var(--mkt-muted)]"
+                      }`}
+                    >
+                      {plan.bookings} · {plan.barbers}
+                    </p>
+                  </div>
+                ))}
+            </div>
+
+            <Link
+              href="/pricing"
+              className="mt-10 inline-flex rounded-xl border border-[var(--mkt-line)] bg-white px-6 py-3.5 text-sm font-semibold text-[var(--mkt-ink)] transition hover:bg-[var(--mkt-fog)]"
+            >
+              Compară toate planurile
+            </Link>
+          </div>
+        </section>
+
+        {/* FINAL CTA */}
+        <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-ink)] px-6 py-24 text-center text-white">
+          <h2 className="mkt-display text-3xl sm:text-5xl">
+            Deschide-ți link-ul de programări azi
           </h2>
-
-          <div className="space-y-4 text-gray-600 text-left max-w-md mx-auto">
-            <p>❌ Ești în lucru și nu poți răspunde la telefon</p>
-            <p>❌ Clienții renunță când nu răspunzi la timp</p>
-            <p>❌ Programările pe hârtie sau în mesaje se pierd</p>
-            <p>❌ Nu știi sigur cine vine mâine și la ce oră</p>
+          <p className="mx-auto mt-4 max-w-lg text-white/65">
+            {LEGAL_PRICING.trialDays} zile Pro+ gratuit. Apoi alegi planul — sau
+            rămâi pe Free cu 80 de programări pe lună.
+          </p>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              href="/signup"
+              className="inline-flex min-w-[12rem] items-center justify-center rounded-xl bg-white px-8 py-4 text-sm font-semibold text-[var(--mkt-ink)] transition hover:bg-[var(--mkt-mist)]"
+            >
+              Creează cont gratuit
+            </Link>
+            <Link
+              href="/barbers"
+              className="inline-flex min-w-[12rem] items-center justify-center rounded-xl border border-white/25 px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
+            >
+              Vezi o pagină live
+            </Link>
           </div>
-        </div>
-      </section>
-
-      {/* BENEFICII */}
-      <section className="py-20 px-6">
-        <h2 className="text-3xl font-semibold text-center mb-12">
-          De ce aleg Frizeo
-        </h2>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-5xl mx-auto">
-          <div>
-            <p className="font-medium mb-1">Mai puține apeluri</p>
-            <p className="text-gray-600 text-sm">
-              Clienții se programează online, oricând.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium mb-1">Programare 24/7</p>
-            <p className="text-gray-600 text-sm">
-              Link-ul tău e activ și noaptea, și în weekend.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium mb-1">Calendar organizat</p>
-            <p className="text-gray-600 text-sm">
-              Toate programările într-un singur loc, pentru tine și echipă.
-            </p>
-          </div>
-
-          <div>
-            <p className="font-medium mb-1">Setup rapid</p>
-            <p className="text-gray-600 text-sm">
-              Servicii, program, link — gata în câteva minute.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA FINAL */}
-      <section className="bg-black text-white py-20 px-6 text-center">
-        <h2 className="text-3xl font-semibold mb-4">
-          Începe gratuit azi
-        </h2>
-
-        <p className="mb-8 text-gray-300 max-w-lg mx-auto">
-          {LEGAL_PRICING.trialDays} zile trial Pro+ gratuit. Apoi alegi planul
-          potrivit — sau rămâi pe Free.
-        </p>
-
-        <Link
-          href="/signup"
-          className="inline-block bg-white text-black px-8 py-4 rounded-xl hover:bg-gray-200 transition font-medium"
-        >
-          Creează cont gratuit
-        </Link>
-      </section>
-
-    </main>
+        </section>
+      </main>
     </>
   );
 }

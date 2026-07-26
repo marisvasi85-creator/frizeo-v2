@@ -10,13 +10,13 @@ export default function Footer() {
   const companyLine = companyFooterLine();
 
   return (
-    <footer className="border-t border-gray-200 bg-white mt-24">
+    <footer className="border-t border-gray-200 bg-white mt-0">
       <div className="max-w-6xl mx-auto px-6 py-12 grid md:grid-cols-4 gap-10 text-sm text-gray-600">
         <div>
           <p className="font-semibold text-black mb-4">Frizeo</p>
           <p>
-            Platformă simplă de programări online pentru frizerii,
-            barbershop-uri și saloane moderne.
+            Programări online pentru frizerii și barbershop-uri: link personal,
+            notificări automate, Marketing AI și vizibilitate locală.
           </p>
         </div>
 
