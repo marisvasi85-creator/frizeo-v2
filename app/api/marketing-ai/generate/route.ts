@@ -106,19 +106,27 @@ export async function POST(req: Request) {
 
     const { usedTemplateFallback, fallbackWarning, ...result } = generated;
     const providerConfig = getMarketingAIProviderConfig();
+    const countsTowardLimit =
+      providerConfig.provider !== "template" && !usedTemplateFallback;
 
-    await recordMarketingAIUsage({
+    const generationId = await recordMarketingAIUsage({
       tenantId: auth.tenantId,
       barberId,
       contentType,
-      provider: usedTemplateFallback ? "template-fallback" : providerConfig.provider,
-      countsTowardLimit: providerConfig.provider !== "template",
+      provider: usedTemplateFallback
+        ? "template-fallback"
+        : providerConfig.provider,
+      countsTowardLimit,
+      result,
+      serviceId: body.serviceId,
     });
 
     const usage = await getMarketingAIUsageStatus(auth.tenantId);
 
     return NextResponse.json({
       result,
+      generationId,
+      contentType,
       warning: fallbackWarning,
       usedTemplateFallback: usedTemplateFallback ?? false,
       usage,

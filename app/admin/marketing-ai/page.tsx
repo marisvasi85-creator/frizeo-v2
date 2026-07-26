@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-ai/generate";
+import { listMarketingAIHistory } from "@/lib/marketing-ai/history";
 import { getMarketingAIUsageStatus } from "@/lib/marketing-ai/usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import MarketingAIClient from "./MarketingAIClient";
@@ -12,8 +13,9 @@ export default async function MarketingAIPage() {
 
   const barber = session.barber;
   const role = session.role;
+  const historyBarberId = role === "barber" ? barber.id : undefined;
 
-  const [barbersRes, servicesRes, usage] = await Promise.all([
+  const [barbersRes, servicesRes, usage, initialHistory] = await Promise.all([
     supabaseAdmin
       .from("barbers")
       .select("id, display_name")
@@ -27,6 +29,11 @@ export default async function MarketingAIPage() {
       .eq("active", true)
       .order("sort_order", { ascending: true }),
     getMarketingAIUsageStatus(barber.tenant_id),
+    listMarketingAIHistory({
+      tenantId: barber.tenant_id,
+      barberId: historyBarberId,
+      limit: 20,
+    }),
   ]);
 
   const barberOptions = (barbersRes.data || []).map((item) => ({
@@ -53,8 +60,8 @@ export default async function MarketingAIPage() {
       <div>
         <h1 className="text-2xl font-semibold">Marketing AI</h1>
         <p className="text-white/60 mt-1">
-          Generează postări, reel-uri și promoții în câteva secunde — fără să
-          stai să scrii.
+          Generează, salvează și distribuie postări — text, card Story/feed, WhatsApp
+          și QR pentru programări.
         </p>
       </div>
 
@@ -71,6 +78,7 @@ export default async function MarketingAIPage() {
         diagnostics={aiStatus.diagnostics}
         usage={usage}
         initialSocialLinks={initialSocialLinks}
+        initialHistory={initialHistory}
       />
     </div>
   );

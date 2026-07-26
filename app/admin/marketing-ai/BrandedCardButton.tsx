@@ -4,13 +4,23 @@ import { useState } from "react";
 import AdminButton from "../components/AdminButton";
 import {
   downloadBrandedCard,
+  getBrandedCardFormatMeta,
   renderBrandedCardToBlob,
   type BrandedCardBranding,
+  type BrandedCardFormat,
 } from "@/lib/marketing-ai/brandedCard";
+import type { MarketingContentType } from "@/lib/marketing-ai/types";
+
+function defaultFormatForType(
+  contentType?: MarketingContentType | string | null,
+): BrandedCardFormat {
+  return contentType === "story" ? "story" : "square";
+}
 
 export default function BrandedCardButton({
   result,
   branding,
+  contentType,
   onBrandingNeeded,
 }: {
   result: {
@@ -19,14 +29,18 @@ export default function BrandedCardButton({
     callToAction: string;
   };
   branding: BrandedCardBranding | null;
+  contentType?: MarketingContentType | string | null;
   onBrandingNeeded: () => Promise<BrandedCardBranding | null>;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [loadingFormat, setLoadingFormat] = useState<BrandedCardFormat | null>(
+    null,
+  );
   const [error, setError] = useState("");
+  const preferred = defaultFormatForType(contentType);
 
-  async function handleDownload() {
+  async function handleDownload(format: BrandedCardFormat) {
     setError("");
-    setLoading(true);
+    setLoadingFormat(format);
 
     try {
       let cardBranding = branding;
@@ -43,31 +57,50 @@ export default function BrandedCardButton({
         title: result.title,
         content: result.content,
         callToAction: result.callToAction,
+        format,
       });
 
-      downloadBrandedCard(blob, cardBranding.salonName);
+      downloadBrandedCard(blob, cardBranding.salonName, format);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare la generarea imaginii");
     } finally {
-      setLoading(false);
+      setLoadingFormat(null);
     }
   }
+
+  const squareMeta = getBrandedCardFormatMeta("square");
+  const storyMeta = getBrandedCardFormatMeta("story");
 
   return (
     <div className="pt-2 border-t border-white/10 space-y-2">
       <p className="text-sm font-medium text-white/80">Imagine promo (gratuit)</p>
       <p className="text-xs text-white/50">
-        Card 1080×1080 cu logo salon, text și link programări — gata de postat pe Instagram.
+        Card cu logo, text și link programări — {squareMeta.label} pentru feed,{" "}
+        {storyMeta.label} pentru Stories.
+        {preferred === "story" && (
+          <> Pentru tipul Story, recomandăm formatul vertical.</>
+        )}
       </p>
-      <AdminButton
-        variant="secondary"
-        size="sm"
-        loading={loading}
-        loadingLabel="Se creează imaginea..."
-        onClick={handleDownload}
-      >
-        Descarcă card promo PNG
-      </AdminButton>
+      <div className="flex flex-wrap gap-2">
+        <AdminButton
+          variant={preferred === "square" ? "primary" : "secondary"}
+          size="sm"
+          loading={loadingFormat === "square"}
+          loadingLabel="Se creează imaginea..."
+          onClick={() => handleDownload("square")}
+        >
+          Descarcă post ({squareMeta.label})
+        </AdminButton>
+        <AdminButton
+          variant={preferred === "story" ? "primary" : "secondary"}
+          size="sm"
+          loading={loadingFormat === "story"}
+          loadingLabel="Se creează imaginea..."
+          onClick={() => handleDownload("story")}
+        >
+          Descarcă Story ({storyMeta.label})
+        </AdminButton>
+      </div>
       {error && <p className="text-red-400 text-xs">{error}</p>}
     </div>
   );

@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
 import { AdminSelect } from "../components/AdminInput";
 import type { MarketingContentType } from "@/lib/marketing-ai/types";
 import type { BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
+import type { MarketingAIHistoryItem } from "@/lib/marketing-ai/historyTypes";
+import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
+import { copyTextToClipboard } from "@/lib/marketing-ai/share";
 import BrandedCardButton from "./BrandedCardButton";
+import HistoryList from "./HistoryList";
+import ShareKit from "./ShareKit";
 import SocialLinksBar from "./SocialLinksBar";
 import type { SocialLinks } from "@/lib/social/normalizeSocialUrl";
 
@@ -65,6 +70,7 @@ export default function MarketingAIClient({
   diagnostics,
   usage: initialUsage,
   initialSocialLinks,
+  initialHistory,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -82,6 +88,7 @@ export default function MarketingAIClient({
   };
   usage: UsageStatus;
   initialSocialLinks: SocialLinks;
+  initialHistory: MarketingAIHistoryItem[];
 }) {
   const [usage, setUsage] = useState(initialUsage);
   const [selectedBarberId, setSelectedBarberId] = useState(defaultBarberId);
@@ -92,6 +99,12 @@ export default function MarketingAIClient({
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
   const [result, setResult] = useState<GeneratedResult | null>(null);
+  const [resultContentType, setResultContentType] = useState<
+    MarketingContentType | string | null
+  >(null);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
+  const [history, setHistory] = useState<MarketingAIHistoryItem[]>(initialHistory);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [branding, setBranding] = useState<BrandedCardBranding | null>(null);
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
@@ -117,6 +130,21 @@ export default function MarketingAIClient({
     return next;
   }
 
+  const refreshHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/marketing-ai/history?limit=20");
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.items)) {
+        setHistory(data.items);
+      }
+    } catch {
+      // keep existing list
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedBarberId === defaultBarberId) {
       setBarberServices(services);
@@ -131,11 +159,18 @@ export default function MarketingAIClient({
       .then((data) => {
         if (cancelled) return;
         setBarberServices(
-          (data.services || []).map((service: { id: string; display_name?: string; name: string; duration: number }) => ({
-            id: service.id,
-            name: service.display_name || service.name,
-            duration: service.duration,
-          })),
+          (data.services || []).map(
+            (service: {
+              id: string;
+              display_name?: string;
+              name: string;
+              duration: number;
+            }) => ({
+              id: service.id,
+              name: service.display_name || service.name,
+              duration: service.duration,
+            }),
+          ),
         );
         setSelectedServiceId("");
       })
@@ -198,23 +233,37 @@ export default function MarketingAIClient({
       }
 
       setResult(data.result);
+      setResultContentType(data.contentType || type);
+      setActiveHistoryId(data.generationId || null);
       if (data.warning) {
         setWarning(data.warning);
       }
       if (data.usage) {
         setUsage(data.usage);
       }
+      void refreshHistory();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Eroare la generare");
       setResult(null);
+      setResultContentType(null);
+      setActiveHistoryId(null);
     } finally {
       setLoadingType(null);
     }
   }
 
+  function handleSelectHistory(item: MarketingAIHistoryItem) {
+    setError("");
+    setWarning("");
+    setCopied(false);
+    setResult(historyItemToResult(item));
+    setResultContentType(item.contentType);
+    setActiveHistoryId(item.id);
+  }
+
   async function handleCopy() {
     if (!fullText) return;
-    await navigator.clipboard.writeText(fullText);
+    await copyTextToClipboard(fullText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
   }
@@ -268,12 +317,18 @@ export default function MarketingAIClient({
             <p className="text-xs text-white/60 mt-2">
               Generări AI azi — plan {usage.planLabel}
               {usage.remaining !== null && usage.remaining > 0 && (
-                <> · <span className="text-white/80">{usage.remaining} rămase</span></>
+                <>
+                  {" "}
+                  · <span className="text-white/80">{usage.remaining} rămase</span>
+                </>
               )}
               {usage.remaining === 0 && (
-                <> · <span className="text-red-300">limită atinsă</span></>
-              )}
-              {" "}— reset la miezul nopții
+                <>
+                  {" "}
+                  · <span className="text-red-300">limită atinsă</span>
+                </>
+              )}{" "}
+              — reset la miezul nopții
             </p>
           )}
 
@@ -312,6 +367,14 @@ export default function MarketingAIClient({
           )}
         </AdminCard>
       )}
+
+      <HistoryList
+        items={history}
+        loading={historyLoading}
+        activeId={activeHistoryId}
+        onSelect={handleSelectHistory}
+        onRefresh={() => void refreshHistory()}
+      />
 
       <AdminCard className="space-y-4">
         <p className="text-white/60 text-sm">
@@ -388,9 +451,7 @@ export default function MarketingAIClient({
         ))}
       </div>
 
-      {warning && (
-        <p className="text-amber-300 text-sm">{warning}</p>
-      )}
+      {warning && <p className="text-amber-300 text-sm">{warning}</p>}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
@@ -405,7 +466,9 @@ export default function MarketingAIClient({
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">{result.title}</h2>
-              <p className="text-white/50 text-sm mt-1">Conținut generat</p>
+              <p className="text-white/50 text-sm mt-1">
+                {activeHistoryId ? "Din istoric / generare salvată" : "Conținut generat"}
+              </p>
             </div>
             <AdminButton variant="secondary" size="sm" onClick={handleCopy}>
               {copied ? "Copiat ✔" : "Copiază"}
@@ -432,9 +495,16 @@ export default function MarketingAIClient({
             </div>
           )}
 
+          <ShareKit
+            result={result}
+            bookingUrl={branding?.bookingUrl}
+            salonName={branding?.salonName || "salon"}
+          />
+
           <BrandedCardButton
             result={result}
             branding={branding}
+            contentType={resultContentType}
             onBrandingNeeded={() => loadBranding(selectedBarberId)}
           />
         </AdminCard>
