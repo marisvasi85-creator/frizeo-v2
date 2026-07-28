@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import AdminButton from "./AdminButton";
 import {
+  canDismissSetupChecklist,
   dismissSetupChecklist,
   getSetupChecklistServerSnapshot,
   getSetupChecklistSnapshot,
@@ -13,13 +14,19 @@ import {
 
 type Props = {
   barberId: string;
+  /** ISO timestamp — used for first-24h soft lock on dismiss. */
+  createdAt?: string | null;
   /** Server-side gate: hide for accounts that already take bookings. */
   eligible: boolean;
 };
 
 const subscribeNoop = () => () => {};
 
-export default function SetupChecklist({ barberId, eligible }: Props) {
+export default function SetupChecklist({
+  barberId,
+  createdAt,
+  eligible,
+}: Props) {
   const mounted = useSyncExternalStore(
     subscribeNoop,
     () => true,
@@ -43,6 +50,7 @@ export default function SetupChecklist({ barberId, eligible }: Props) {
   const completedCount = SETUP_CHECKLIST_STEPS.filter(
     (step) => state.completed[step.id],
   ).length;
+  const canDismiss = canDismissSetupChecklist(state, createdAt);
 
   return (
     <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-5">
@@ -52,22 +60,28 @@ export default function SetupChecklist({ barberId, eligible }: Props) {
             Primii pași
           </h2>
           <p className="text-sm text-white/65 mt-1">
-            Contul e gata de rezervări. Personalizează serviciile, programul și
-            notificările — durează câteva minute.
+            Contul e gata de rezervări. Personalizează serviciile și programul,
+            apoi copiază linkul — fără el, clienții nu ajung la tine.
           </p>
           <p className="text-xs text-white/45 mt-2">
             {completedCount}/{SETUP_CHECKLIST_STEPS.length} completate
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => dismissSetupChecklist(barberId)}
-          className="shrink-0 text-sm text-white/50 hover:text-white transition"
-          aria-label="Închide checklist-ul de setup"
-        >
-          Închide
-        </button>
+        {canDismiss ? (
+          <button
+            type="button"
+            onClick={() => dismissSetupChecklist(barberId)}
+            className="shrink-0 text-sm text-white/50 hover:text-white transition"
+            aria-label="Închide checklist-ul de setup"
+          >
+            Închide
+          </button>
+        ) : (
+          <p className="shrink-0 max-w-[9rem] text-right text-xs text-emerald-200/70">
+            Copiază linkul ca să poți închide
+          </p>
+        )}
       </div>
 
       <ul className="mt-5 space-y-3">

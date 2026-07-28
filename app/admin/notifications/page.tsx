@@ -2,7 +2,6 @@ import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
-import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { planAllowsExtendedSms, planAllowsSms } from "@/lib/billing/plans";
 
@@ -11,7 +10,6 @@ export default async function NotificationsPage() {
   if (!session?.barber) return null;
 
   const tenantId = session.barber.tenant_id;
-  const barberId = session.barber.id;
 
   const [settingsRes, plan] = await Promise.all([
     supabaseAdmin
@@ -28,8 +26,6 @@ export default async function NotificationsPage() {
 
   return (
     <div className="space-y-6">
-      <SetupChecklistStepMarker barberId={barberId} step="notifications" />
-
       <h1 className="text-2xl font-semibold">Notificări</h1>
 
       <p className="text-sm text-white/60">
