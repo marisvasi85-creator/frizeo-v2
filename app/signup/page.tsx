@@ -14,10 +14,19 @@ import SignupAnalytics from "@/app/components/analytics/SignupAnalytics";
 
 export default function SignupPage() {
   const formRef = useRef<HTMLFormElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [actsAsBarber, setActsAsBarber] = useState<boolean | null>(null);
+
+  function showError(message: string) {
+    setError(message);
+    // Pe mobil formularul e lung — eroarea de sus nu e vizibilă lângă buton.
+    queueMicrotask(() => {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
 
   function getFormValues() {
     const form = formRef.current;
@@ -48,39 +57,39 @@ export default function SignupPage() {
     const form = getFormValues();
 
     if (!form.fullName || form.fullName.length < 2) {
-      setError("Introdu numele complet.");
+      showError("Introdu numele complet.");
       return;
     }
 
     if (!isValidEmail(form.email)) {
-      setError("Email invalid.");
+      showError("Email invalid.");
       return;
     }
 
     if (!form.phone || form.phone.replace(/\D/g, "").length < 6) {
-      setError("Introdu un număr de telefon valid.");
+      showError("Introdu un număr de telefon valid.");
       return;
     }
 
     if (!isValidPassword(form.password)) {
-      setError(PASSWORD_REQUIREMENTS_MESSAGE);
+      showError(PASSWORD_REQUIREMENTS_MESSAGE);
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setError("Parolele nu coincid.");
+      showError("Parolele nu coincid.");
       return;
     }
 
     if (!acceptedTerms) {
-      setError(
-        "Trebuie să accepți termenii și condițiile și politica de confidențialitate."
+      showError(
+        "Trebuie să accepți termenii și condițiile și politica de confidențialitate.",
       );
       return;
     }
 
     if (actsAsBarber === null) {
-      setError("Alege dacă ești și frizer sau doar administrezi salonul.");
+      showError("Alege dacă ești și frizer sau doar administrezi salonul.");
       return;
     }
 
@@ -101,10 +110,23 @@ export default function SignupPage() {
         }),
       });
 
-      const data = await res.json();
+      let data: { error?: string; redirect?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        showError("Răspuns invalid de la server. Încearcă din nou.");
+        return;
+      }
 
-      if (data.error) {
-        setError(data.error);
+      if (!res.ok || data.error) {
+        showError(data.error || "Nu s-a putut crea contul. Încearcă din nou.");
+        return;
+      }
+
+      if (!data.redirect) {
+        showError(
+          "Contul pare creat, dar redirecționarea a eșuat. Mergi la Autentificare.",
+        );
         return;
       }
 
@@ -114,7 +136,7 @@ export default function SignupPage() {
 
       window.location.href = data.redirect;
     } catch {
-      setError("Eroare server. Încearcă din nou.");
+      showError("Eroare server. Încearcă din nou.");
     } finally {
       setLoading(false);
     }
@@ -128,12 +150,6 @@ export default function SignupPage() {
           <h1 className="text-white text-2xl font-semibold">Frizeo</h1>
           <p className="text-zinc-400 text-sm mt-1">Creează cont salon</p>
         </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg p-3 text-center">
-            {error}
-          </div>
-        )}
 
         <form ref={formRef} onSubmit={handleSignup} className="space-y-3">
           <input
@@ -241,6 +257,16 @@ export default function SignupPage() {
               .
             </span>
           </label>
+
+          {error && (
+            <div
+              ref={errorRef}
+              role="alert"
+              className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg p-3 text-center"
+            >
+              {error}
+            </div>
+          )}
 
           <button
             type="submit"
