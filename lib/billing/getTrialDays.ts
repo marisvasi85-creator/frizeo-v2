@@ -1,8 +1,8 @@
-/** Trial length for new signups (days). Default 60 during beta. */
+/** Trial length for new signups (days). Default 30. Existing trials keep trial_ends_at. */
 export function getTrialDays(): number {
   const fromEnv = Number(process.env.TRIAL_DAYS);
   if (Number.isFinite(fromEnv) && fromEnv > 0) {
     return Math.min(Math.floor(fromEnv), 365);
   }
-  return 60;
+  return 30;
 }

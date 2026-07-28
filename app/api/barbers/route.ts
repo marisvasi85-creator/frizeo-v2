@@ -19,7 +19,8 @@ export async function GET() {
   phone,
   active,
   slug,
-  tenant_id
+  tenant_id,
+  user_id
 `)
       .eq("tenant_id", barber.tenant_id)
       .order("display_name");

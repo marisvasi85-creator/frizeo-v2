@@ -40,7 +40,7 @@ export type PricingPlan = {
 };
 
 export const LEGAL_PRICING = {
-  trialDays: 60,
+  trialDays: 30,
   includedNote:
     "Toate notificările sunt incluse. Fără credite. Fără reîncărcări. Fără costuri ascunse.",
   plans: [
@@ -49,7 +49,7 @@ export const LEGAL_PRICING = {
       name: "Free",
       price: "0 lei",
       priceNote: "/ lună",
-      barbers: "1 frizer",
+      barbers: "1 frizer activ",
       bookings: "80 programări / lună",
       sms: false,
       cta: { label: "Creează cont", href: "/signup" },
@@ -65,11 +65,11 @@ export const LEGAL_PRICING = {
       name: "Pro",
       price: "79 lei",
       priceNote: "/ lună",
-      barbers: "1 frizer",
+      barbers: "1 frizer activ",
       bookings: "Programări nelimitate",
       sms: true,
       highlighted: true,
-      cta: { label: "Începe trial 60 zile", href: "/signup" },
+      cta: { label: "Începe trial 30 zile", href: "/signup" },
       features: [
         "Tot din Free",
         "SMS reminder inclus",
@@ -83,14 +83,14 @@ export const LEGAL_PRICING = {
       name: "Pro+",
       price: "199 lei",
       priceNote: "/ lună",
-      barbers: "Până la 3 frizeri",
+      barbers: "Până la 3 frizeri activi",
       bookings: "Programări nelimitate",
       sms: true,
-      cta: { label: "Începe trial 60 zile", href: "/signup" },
+      cta: { label: "Începe trial 30 zile", href: "/signup" },
       features: [
         "Tot din Pro",
-        "Echipă până la 3 frizeri",
-        "Invitații frizeri",
+        "Echipă până la 3 frizeri activi",
+        "Invitații nelimitate (activare după locuri)",
         "Vizibilitate programări salon",
       ],
     },

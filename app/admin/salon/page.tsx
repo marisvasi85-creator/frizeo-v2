@@ -16,7 +16,7 @@ import { hasLocationMigration } from "@/lib/location/hasLocationMigration";
 export default async function SalonPage() {
   const session = await getAdminSession();
 
-  if (!session?.barber) {
+  if (!session?.tenantId) {
     redirect("/login");
   }
 
@@ -24,7 +24,7 @@ export default async function SalonPage() {
     redirect("/admin/dashboard");
   }
 
-  const tenantId = session.barber.tenant_id;
+  const tenantId = session.tenantId;
   const firstDayOfMonth = new Date();
   firstDayOfMonth.setDate(1);
   const monthStart = firstDayOfMonth.toISOString().split("T")[0];
