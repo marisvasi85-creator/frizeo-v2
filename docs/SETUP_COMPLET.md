@@ -126,6 +126,7 @@ După setare în Vercel, creează 3 job-uri HTTP GET (înlocuiește `SECRET`):
 | Reminder | `https://www.frizeo.ro/api/cron/reminder?secret=SECRET` | La 15 min (`*/15 * * * *`) |
 | Cleanup | `https://www.frizeo.ro/api/cron/cleanup?secret=SECRET` | La fiecare oră (`0 * * * *`) |
 | Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup?secret=SECRET` | Zilnic 03:00 UTC (`0 3 * * *`) |
+| Notion sync | `https://www.frizeo.ro/api/cron/notion-sync?secret=SECRET` | Zilnic 04:00 UTC (`0 4 * * *`) |
 
 Alternativ, header `Authorization: Bearer SECRET` (fără `?secret=`).
 
@@ -139,6 +140,21 @@ STRIPE_WEBHOOK_SECRET
 STRIPE_PRICE_PRO
 STRIPE_PRICE_PRO_PLUS
 ```
+
+### Notion command center (opțional)
+
+Sincronizează `sms_sends` → DB **SMS Usage** și tenants → DB **Saloane**.
+
+```
+NOTION_TOKEN=
+NOTION_SMS_USAGE_DATABASE_ID=2477479eba2f466a8e0a205f15d402e8
+NOTION_SALOANE_DATABASE_ID=4d7bcc0cbe4748018de1218aee4a3d02
+```
+
+1. Creează/folosește Internal Integration în Notion → copiază tokenul  
+2. Pe fiecare DB (SMS Usage, Saloane): **⋯ → Connections →** conectează integrarea  
+3. Setează variabilele în Vercel + cron `notion-sync`  
+4. Test: `GET /api/cron/notion-sync?secret=SECRET` (sau `?only=sms` / `?only=saloane`)
 
 ---
 
