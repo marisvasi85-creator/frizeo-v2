@@ -1,4 +1,5 @@
 import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { updateNotifications } from "./actions";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
@@ -8,6 +9,11 @@ import { planAllowsExtendedSms, planAllowsSms } from "@/lib/billing/plans";
 export default async function NotificationsPage() {
   const session = await getAdminSession();
   if (!session?.barber) return null;
+
+  // Setări SMS/email la nivel de salon — doar owner.
+  if (session.role !== "owner") {
+    redirect("/admin/dashboard");
+  }
 
   const tenantId = session.barber.tenant_id;
 

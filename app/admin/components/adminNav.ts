@@ -44,13 +44,16 @@ export const BARBER_WORKSTATION_ITEMS: AdminNavItem[] = [
   },
 ];
 
-/** Invited barber (non-owner). */
+/**
+ * Invited barber — workstation + own bookings/reports.
+ * Notificări / Salon / Billing / Frizeri = doar owner (setări de salon).
+ * Marketing AI + Assistant = da (promovare + ajutor programări).
+ */
 export const INVITED_BARBER_ITEMS: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
   { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   ...BARBER_WORKSTATION_ITEMS,
-  { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
 ];
