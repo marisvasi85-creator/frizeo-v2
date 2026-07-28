@@ -11,6 +11,7 @@ import {
   canInviteBarber,
   getBarberLimitState,
   inviteLimitReachedMessage,
+  invitesNotAvailableOnPlanMessage,
   INVITE_LIMIT_EXCEEDED_CODE,
 } from "@/lib/limits/checkBarberLimit";
 
@@ -48,16 +49,21 @@ export async function POST(req: Request) {
       .eq("accepted", false)
       .maybeSingle();
 
-    // Invitație nouă consumă un loc (activi + pending). Re-trimiterea pe același email nu.
+    // Invitație nouă: Free/Pro blocate; Pro+/trial/Custom consumă loc (activi + pending).
     if (!existingInvite) {
       const allowed = await canInviteBarber(tenantId);
       if (!allowed) {
         const state = await getBarberLimitState(tenantId);
         const limit = state?.limit ?? 0;
+        const error = !state?.invitesAllowed
+          ? invitesNotAvailableOnPlanMessage(state?.planName)
+          : inviteLimitReachedMessage(limit);
+
         return NextResponse.json(
           {
-            error: inviteLimitReachedMessage(limit),
+            error,
             code: INVITE_LIMIT_EXCEEDED_CODE,
+            invitesAllowed: state?.invitesAllowed ?? false,
             limit,
             activeCount: state?.activeCount ?? 0,
             pendingInviteCount: state?.pendingInviteCount ?? 0,
