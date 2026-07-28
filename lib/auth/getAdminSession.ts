@@ -15,6 +15,7 @@ export type AdminBarber = {
   tenant_id: string;
   user_id: string | null;
   display_name: string | null;
+  active?: boolean | null;
   [key: string]: unknown;
 };
 

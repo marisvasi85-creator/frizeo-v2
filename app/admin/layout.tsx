@@ -5,6 +5,7 @@ import MobileNav from "./components/MobileNav";
 import FloatingAssistant from "./components/FloatingAssistant";
 import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { sessionActsAsBarber } from "./components/adminNav";
 import {
   isAssistantLlmConfigured,
   isFrizeoAssistantEnabled,
@@ -41,6 +42,7 @@ export default async function AdminLayout({
     redirect("/login?error=access");
   }
 
+  const actsAsBarber = sessionActsAsBarber(session);
   const assistantEnabled = isFrizeoAssistantEnabled();
   const platformAssistantEnabled =
     isPlatformAssistantEnabled() &&
@@ -50,6 +52,7 @@ export default async function AdminLayout({
     <div className="flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-[#0B0B0C] text-white">
       <Sidebar
         role={session.role}
+        actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
       />
@@ -60,6 +63,7 @@ export default async function AdminLayout({
 
       <MobileNav
         role={session.role}
+        actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
       />

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { requireActsAsBarber } from "../lib/requireActsAsBarber";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
@@ -33,12 +33,9 @@ export default async function ProfilePage({
 }) {
   const supabase = await createSupabaseServerClient();
   const { google: googleStatus } = await searchParams;
-  const [session, barber] = await Promise.all([
-    getAdminSession(),
-    getCurrentBarberInTenant(),
-  ]);
-
-  if (!session?.user || !barber) {
+  await requireActsAsBarber();
+  const barber = await getCurrentBarberInTenant();
+  if (!barber) {
     redirect("/login");
   }
 
