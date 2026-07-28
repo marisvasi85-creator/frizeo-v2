@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import {
-  getCurrentBarberId,
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
@@ -8,6 +7,7 @@ import {
   isAssistantLlmConfigured,
   isFrizeoAssistantEnabled,
 } from "@/lib/assistant/config";
+import { buildAssistantToolContext } from "@/lib/assistant/buildToolContext";
 import { confirmAssistantAction } from "@/lib/assistant/runChat";
 
 export async function POST(req: Request) {
@@ -49,17 +49,16 @@ export async function POST(req: Request) {
 
   const accept = body.accept !== false && body.accept !== "false";
 
-  const barberId = await getCurrentBarberId(auth.user.id, auth.tenantId);
+  const toolContext = await buildAssistantToolContext({
+    tenantId: auth.tenantId,
+    userId: auth.user.id,
+    role: auth.role,
+  });
 
   try {
     const result = await confirmAssistantAction(
       confirmationId,
-      {
-        tenantId: auth.tenantId,
-        userId: auth.user.id,
-        role: auth.role,
-        barberId,
-      },
+      toolContext,
       accept,
     );
 
