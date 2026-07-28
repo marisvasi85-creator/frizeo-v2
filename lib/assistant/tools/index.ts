@@ -150,7 +150,7 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "subscription_status",
     description:
-      "Returnează statusul abonamentului Frizeo al salonului (plan, trial). Nu include încasări sau plăți de la clienți.",
+      "Returnează statusul abonamentului Frizeo al salonului (plan, trial, frizeri activi / maxim). Nu include încasări sau plăți de la clienți.",
     parameters: {
       type: "object",
       properties: {},

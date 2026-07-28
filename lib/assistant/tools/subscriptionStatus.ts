@@ -1,4 +1,5 @@
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
 
 export async function subscriptionStatusTool(
@@ -27,18 +28,37 @@ export async function subscriptionStatusTool(
     );
   }
 
-  // Fără date financiare / încasări — doar status plan Frizeo.
+  const { count: activeBarbers } = await supabaseAdmin
+    .from("barbers")
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", ctx.tenantId)
+    .eq("active", true);
+
+  const maxBarbers =
+    typeof (plan as { max_barbers?: number | null }).max_barbers === "number" ||
+    (plan as { max_barbers?: number | null }).max_barbers === null
+      ? ((plan as { max_barbers?: number | null }).max_barbers ?? null)
+      : null;
+
   const data = {
     plan_name: (plan as { name?: string }).name ?? null,
     plan_slug: (plan as { slug?: string }).slug ?? null,
     status: plan.status,
     trial_ends_at: trialEndsAt,
     trial_days_left: trialDaysLeft,
+    max_active_barbers: maxBarbers,
+    active_barbers: activeBarbers ?? 0,
+    owner_acts_as_barber: ctx.actsAsBarber ?? Boolean(ctx.barberId),
   };
+
+  const seats =
+    maxBarbers === null
+      ? `${data.active_barbers} frizeri activi (nelimitat / custom)`
+      : `${data.active_barbers} / ${maxBarbers} frizeri activi`;
 
   return {
     ok: true,
-    summary: `Plan: ${data.plan_name ?? "necunoscut"} (${data.status}).`,
+    summary: `Plan: ${data.plan_name ?? "necunoscut"} (${data.status}). ${seats}.`,
     data,
   };
 }
