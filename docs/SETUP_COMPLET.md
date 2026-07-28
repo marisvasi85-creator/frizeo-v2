@@ -220,21 +220,15 @@ NOTION_SALOANE_DATABASE_ID=4d7bcc0cbe4748018de1218aee4a3d02
 
 ---
 
-## Pentru acces public (fără listă test users)
+## Acces public Google Calendar (status)
 
-Când vrei ca **orice** frizer să conecteze Google fără să îi adaugi manual:
+**Done (iulie 2026):** OAuth App Verification aprobată pentru `.../auth/calendar` pe proiectul `frizeo` (`1036811262570`). Orice Gmail poate conecta Calendar din Profil — **nu** mai e nevoie de Test users.
 
-1. Google Cloud → OAuth consent screen → **Publish app**  
-2. Completează **verificarea Google** pentru scope `calendar`  
-3. Procesul poate dura 1–4 săptămâni
-
-Până atunci, adaugă fiecare Gmail în **Test users** (max 100).
-
-**Producție fără listă manuală:** vezi [GOOGLE_OAUTH_PRODUCTION.md](./GOOGLE_OAUTH_PRODUCTION.md)
+Detalii: [GOOGLE_OAUTH_PRODUCTION.md](./GOOGLE_OAUTH_PRODUCTION.md)
 
 ---
 
-## Adăugare testeri noi
+## Adăugare testeri (legacy — doar dacă revii la Testing)
 
 1. Editează `config/google-test-users.txt` (câte un Gmail pe linie)  
 2. Rulează `npm run beta:google-users`  

@@ -77,8 +77,13 @@ YouTube: **Unlisted**. Include Client ID visible in Google Cloud if possible.
 
 ---
 
+## Status
+
+**Aprobat (iulie 2026)** — Third Party Data Safety Team a verificat scope-ul `.../auth/calendar` pentru proiectul `frizeo` (`1036811262570`).
+
 ## După aprobare
 
 - Nu mai e nevoie de Test users pentru Calendar
 - Actualizează Branding dacă Google cere schimbări minore
 - Păstrează `/google-calendar-data` actualizat la orice schimbare de scope
+- Scope nou sau schimbări pe consent screen → **re-verificare**
