@@ -146,7 +146,7 @@ export default function TermsPage() {
       <h3>Free</h3>
       <ul>
         <li>0 lei / lună</li>
-        <li>1 frizer</li>
+        <li>1 frizer (fără invitații echipă)</li>
         <li>80 programări / lună</li>
         <li>fără SMS</li>
       </ul>
@@ -154,7 +154,7 @@ export default function TermsPage() {
       <h3>Pro</h3>
       <ul>
         <li>79 lei / lună</li>
-        <li>1 frizer</li>
+        <li>1 frizer (fără invitații echipă)</li>
         <li>programări nelimitate</li>
         <li>notificări email incluse</li>
         <li>SMS reminder inclus</li>
@@ -163,7 +163,7 @@ export default function TermsPage() {
       <h3>Pro+</h3>
       <ul>
         <li>199 lei / lună</li>
-        <li>până la 3 frizeri</li>
+        <li>până la 3 frizeri (cu invitații în limita locurilor)</li>
         <li>programări nelimitate</li>
         <li>notificări email incluse</li>
         <li>SMS reminder inclus</li>

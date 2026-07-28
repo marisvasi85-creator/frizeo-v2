@@ -3,6 +3,7 @@ import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
+import { planAllowsBarberInvites } from "@/lib/billing/plans";
 import BarbersClient from "./BarbersClient";
 
 export default async function BarbersPage({
@@ -45,6 +46,7 @@ export default async function BarbersPage({
       stripe_subscription_id,
       plan:plans (
         name,
+        slug,
         max_barbers
       )
     `,
@@ -76,13 +78,14 @@ export default async function BarbersPage({
   );
 
   const plan = subscription?.plan as
-    | { name?: string; max_barbers?: number | null }
+    | { name?: string; max_barbers?: number | null; slug?: string | null }
     | null
     | undefined;
 
   const activeBarbers = barbers.filter((b) => b.active).length;
   const pendingInvites = invitations.length;
   const maxBarbers = plan?.max_barbers ?? null;
+  const planSlug = plan?.slug ?? null;
   const ownerBarber = barbers.find((b) => b.user_id === session.user.id);
   const ownerActsAsBarber = Boolean(ownerBarber?.active);
   const isOverLimit =
@@ -91,6 +94,10 @@ export default async function BarbersPage({
   const isTrial =
     subscription?.status === "trialing" &&
     !subscription?.stripe_subscription_id;
+  const invitesAllowed = planAllowsBarberInvites({
+    slug: planSlug,
+    status: subscription?.status,
+  });
   const trialEnds = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at)
     : null;
@@ -108,6 +115,8 @@ export default async function BarbersPage({
           ? `Trial Pro+ (${trialDaysLeft} zile)`
           : (plan?.name ?? "Free")
       }
+      planSlug={planSlug}
+      invitesAllowed={invitesAllowed}
       activeBarbers={activeBarbers}
       pendingInvites={pendingInvites}
       maxBarbers={maxBarbers}

@@ -1,7 +1,11 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { planAllowsBarberInvites } from "@/lib/billing/plans";
 
 export type BarberLimitState = {
   limit: number | null;
+  planSlug: string | null;
+  planName: string | null;
+  status: string | null;
   activeCount: number;
   pendingInviteCount: number;
   /**
@@ -10,6 +14,8 @@ export type BarberLimitState = {
    */
   slotsUsed: number;
   invitesLeft: number | null;
+  /** Free/Pro = false; Pro+/trial/Custom = true */
+  invitesAllowed: boolean;
   unlimited: boolean;
 };
 
@@ -21,7 +27,7 @@ export async function getBarberLimitState(
 ): Promise<BarberLimitState | null> {
   const { data: sub } = await supabaseAdmin
     .from("subscriptions")
-    .select("plan_id")
+    .select("plan_id, status")
     .eq("tenant_id", tenantId)
     .single();
 
@@ -29,12 +35,19 @@ export async function getBarberLimitState(
 
   const { data: plan } = await supabaseAdmin
     .from("plans")
-    .select("max_barbers")
+    .select("max_barbers, slug, name")
     .eq("id", sub.plan_id)
     .single();
 
   const limit = plan?.max_barbers ?? null;
   const unlimited = limit === null;
+  const planSlug = plan?.slug ?? null;
+  const planName = plan?.name ?? null;
+  const status = sub.status ?? null;
+  const invitesAllowed = planAllowsBarberInvites({
+    slug: planSlug,
+    status,
+  });
 
   const { count: activeCount } = await supabaseAdmin
     .from("barbers")
@@ -51,14 +64,22 @@ export async function getBarberLimitState(
   const active = activeCount ?? 0;
   const pending = pendingInviteCount ?? 0;
   const slotsUsed = active + pending;
-  const invitesLeft = unlimited || limit === null ? null : Math.max(0, limit - slotsUsed);
+  const invitesLeft = !invitesAllowed
+    ? 0
+    : unlimited || limit === null
+      ? null
+      : Math.max(0, limit - slotsUsed);
 
   return {
     limit,
+    planSlug,
+    planName,
+    status,
     activeCount: active,
     pendingInviteCount: pending,
     slotsUsed,
     invitesLeft,
+    invitesAllowed,
     unlimited,
   };
 }
@@ -72,13 +93,15 @@ export async function canCreateBarber(tenantId: string): Promise<boolean> {
 }
 
 /**
- * Invitație nouă: consumă un loc din plan (împreună cu frizerii activi).
- * Pe Pro+/trial: admin-only → până la 3; admin+frizer → încă 2 (owner ocupă 1).
- * Custom (max_barbers null) → nelimitat.
+ * Invitație nouă:
+ * - Free / Pro: interzis (fără invitații echipă)
+ * - Pro+ / trial: consumă loc (activi + pending); admin-only → până la 3; admin+frizer → 2
+ * - Custom (max_barbers null) → nelimitat
  */
 export async function canInviteBarber(tenantId: string): Promise<boolean> {
   const state = await getBarberLimitState(tenantId);
   if (!state) return false;
+  if (!state.invitesAllowed) return false;
   if (state.unlimited) return true;
   return (state.invitesLeft ?? 0) > 0;
 }
@@ -123,7 +146,13 @@ export function activeBarberLimitReachedMessage(limit: number) {
   return `Ai atins limita de ${limit} frizeri activi pentru planul curent. Dezactivează un frizer sau fă upgrade.`;
 }
 
-/** Mesaj când nu mai poți trimite invitații (locuri ocupate de activi + pending). */
+/** Free/Pro: invitațiile de echipă nu sunt incluse. */
+export function invitesNotAvailableOnPlanMessage(planName?: string | null) {
+  const name = planName?.trim() || "curent";
+  return `Planul ${name} nu include invitații pentru echipă. Pentru invitații, upgrade la Pro+ (până la 3 frizeri) sau Custom.`;
+}
+
+/** Mesaj când Pro+/trial a atins locurile (activi + pending). */
 export function inviteLimitReachedMessage(limit: number) {
   return `Ai atins limita de ${limit} frizeri pentru planul curent (frizeri activi + invitații în așteptare). Dezactivează un frizer din listă, șterge o invitație în așteptare, sau fă upgrade la Custom pentru mai mulți frizeri.`;
 }

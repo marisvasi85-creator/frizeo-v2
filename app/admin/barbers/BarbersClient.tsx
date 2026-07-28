@@ -34,6 +34,8 @@ type Invitation = {
 
 export default function BarbersClient({
   currentPlan,
+  planSlug,
+  invitesAllowed,
   activeBarbers: initialActiveBarbers,
   pendingInvites,
   maxBarbers,
@@ -47,6 +49,8 @@ export default function BarbersClient({
   initialInvitations = [],
 }: {
   currentPlan: string;
+  planSlug: string | null;
+  invitesAllowed: boolean;
   activeBarbers: number;
   pendingInvites: number;
   maxBarbers: number | null;
@@ -249,17 +253,23 @@ export default function BarbersClient({
 
   const maxLabel = maxBarbers === null ? "∞" : String(maxBarbers);
   const inviteSlotsUsed = activeCount + pendingCount;
-  const invitesLeft =
-    maxBarbers === null ? null : Math.max(0, maxBarbers - inviteSlotsUsed);
-  const atInviteLimit = maxBarbers !== null && invitesLeft === 0;
+  const invitesLeft = !invitesAllowed
+    ? 0
+    : maxBarbers === null
+      ? null
+      : Math.max(0, maxBarbers - inviteSlotsUsed);
+  const atInviteLimit =
+    invitesAllowed && maxBarbers !== null && invitesLeft === 0;
+  const invitesBlockedByPlan = !invitesAllowed;
   const atActiveLimit =
     maxBarbers !== null && activeCount >= maxBarbers;
   const isOverLimit =
     maxBarbers !== null
       ? activeCount > maxBarbers
       : initialIsOverLimit;
-  const inviteQuotaHint =
-    maxBarbers === null
+  const inviteQuotaHint = invitesBlockedByPlan
+    ? "Planul Free/Pro nu include invitații pentru echipă — un singur frizer. Pentru invitații: Pro+ sau Custom."
+    : maxBarbers === null
       ? "Plan Custom: invitații în funcție de locurile configurate."
       : ownerActsAsBarber
         ? `Ești și frizer (ocupi 1 loc). Mai poți invita maxim ${Math.max(0, maxBarbers - 1)} frizeri pe acest plan.`
@@ -281,18 +291,26 @@ export default function BarbersClient({
               {activeCount} / {maxLabel}
             </div>
 
-            {pendingCount > 0 && (
+            {invitesAllowed && pendingCount > 0 && (
               <div className="text-xs text-white/50 mt-1">
                 {pendingCount} invitații în așteptare (ocupă locuri până la
                 acceptare sau ștergere)
               </div>
             )}
 
-            {maxBarbers !== null && (
+            {invitesAllowed && maxBarbers !== null && (
               <div className="text-xs text-white/50 mt-1">
                 Locuri pentru invitații noi:{" "}
                 {invitesLeft === null ? "∞" : invitesLeft} rămase (
                 {inviteSlotsUsed}/{maxBarbers} ocupate)
+              </div>
+            )}
+
+            {invitesBlockedByPlan && (
+              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+                Planul {planSlug === "pro" ? "Pro" : "Free"} nu include
+                invitații. Un singur frizer. Pentru echipă: upgrade la Pro+ sau
+                Custom.
               </div>
             )}
 
@@ -312,20 +330,22 @@ export default function BarbersClient({
               </div>
             )}
 
-            {(atActiveLimit || atInviteLimit) && !isOverLimit && (
+            {(invitesBlockedByPlan || atActiveLimit || atInviteLimit) &&
+              !isOverLimit && (
               <AdminButton
                 size="sm"
                 href="/admin/billing"
                 className="inline-block mt-4"
               >
-                Upgrade la Custom pentru mai mulți frizeri
+                {invitesBlockedByPlan
+                  ? "Upgrade la Pro+ sau Custom"
+                  : "Upgrade la Custom pentru mai mulți frizeri"}
               </AdminButton>
             )}
           </AdminCard>
         </div>
         <p className="text-white/60 mt-1">
-          Gestionează frizerii salonului. Invitațiile consumă locuri din plan
-          (împreună cu frizerii activi). {inviteQuotaHint}
+          Gestionează frizerii salonului. {inviteQuotaHint}
         </p>
       </div>
 
@@ -385,17 +405,20 @@ export default function BarbersClient({
         <h2 className="font-medium">Invită frizer</h2>
 
         <p className="text-sm text-white/60">
-          {maxBarbers === null
-            ? "Poți invita frizeri conform locurilor din planul Custom."
-            : ownerActsAsBarber
-              ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
-              : `Pe planul curent poți invita până la ${maxBarbers} frizeri (doar administrator = 0 locuri ocupate de tine).`}
+          {invitesBlockedByPlan
+            ? "Planul Free/Pro nu include invitații. Un singur frizer — fără echipă prin invitații. Upgrade la Pro+ sau Custom."
+            : maxBarbers === null
+              ? "Poți invita frizeri conform locurilor din planul Custom."
+              : ownerActsAsBarber
+                ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
+                : `Pe planul curent poți invita până la ${maxBarbers} frizeri (doar administrator = 0 locuri ocupate de tine).`}
         </p>
 
-        {atInviteLimit && (
+        {(invitesBlockedByPlan || atInviteLimit) && (
           <p className="text-sm text-amber-100/90">
-            Ai atins limita. Dezactivează un frizer actual, șterge o invitație
-            în așteptare, sau upgrade la Custom.
+            {invitesBlockedByPlan
+              ? "Invitațiile sunt disponibile pe Pro+ (trial inclus) și Custom."
+              : "Ai atins limita. Dezactivează un frizer actual, șterge o invitație în așteptare, sau upgrade la Custom."}
           </p>
         )}
 
@@ -406,7 +429,7 @@ export default function BarbersClient({
             setName(e.target.value);
             setMessage("");
           }}
-          disabled={atInviteLimit}
+          disabled={invitesBlockedByPlan || atInviteLimit}
         />
         <AdminInput
           placeholder="Email"
@@ -415,7 +438,7 @@ export default function BarbersClient({
             setEmail(e.target.value);
             setMessage("");
           }}
-          disabled={atInviteLimit}
+          disabled={invitesBlockedByPlan || atInviteLimit}
         />
         <AdminInput
           placeholder="Telefon"
@@ -424,12 +447,14 @@ export default function BarbersClient({
             setPhone(e.target.value);
             setMessage("");
           }}
-          disabled={atInviteLimit}
+          disabled={invitesBlockedByPlan || atInviteLimit}
         />
 
         <AdminButton
           onClick={addBarber}
-          disabled={loading || inviteSaved || atInviteLimit}
+          disabled={
+            loading || inviteSaved || invitesBlockedByPlan || atInviteLimit
+          }
           loading={loading}
           loadingLabel="Se trimite..."
           saved={inviteSaved}

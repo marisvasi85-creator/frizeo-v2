@@ -95,6 +95,15 @@ export default function BillingPlansSection({
                     : "Frizeri personalizat"}
                 </div>
                 <div>
+                  {plan.slug === "pro" || plan.slug === "free"
+                    ? "Fără invitații echipă"
+                    : plan.slug === "pro-plus"
+                      ? "Invitații în limita locurilor"
+                      : plan.slug === "custom"
+                        ? "Invitații configurabile"
+                        : null}
+                </div>
+                <div>
                   {plan.max_bookings_per_month
                     ? `${plan.max_bookings_per_month} programări / lună`
                     : "Programări nelimitate"}
