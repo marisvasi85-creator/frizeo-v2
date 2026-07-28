@@ -117,6 +117,7 @@ export default async function BarbersPage({
       }
       planSlug={planSlug}
       invitesAllowed={invitesAllowed}
+      isTrial={isTrial}
       activeBarbers={activeBarbers}
       pendingInvites={pendingInvites}
       maxBarbers={maxBarbers}

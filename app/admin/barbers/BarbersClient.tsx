@@ -36,6 +36,7 @@ export default function BarbersClient({
   currentPlan,
   planSlug,
   invitesAllowed,
+  isTrial = false,
   activeBarbers: initialActiveBarbers,
   pendingInvites,
   maxBarbers,
@@ -51,6 +52,7 @@ export default function BarbersClient({
   currentPlan: string;
   planSlug: string | null;
   invitesAllowed: boolean;
+  isTrial?: boolean;
   activeBarbers: number;
   pendingInvites: number;
   maxBarbers: number | null;
@@ -109,6 +111,13 @@ export default function BarbersClient({
   async function addBarber() {
     if (!name.trim() || !email.trim()) return;
 
+    if (isTrial) {
+      const ok = confirm(
+        "Important (trial):\n\nFrizerul invitat face parte din abonamentul salonului.\n\n• Dacă după trial alegi Pro+ / Custom, rămâne acoperit din planul salonului.\n• Dacă alegi Pro (1 frizer) sau Free, frizerii în plus trebuie dezactivați — nu rămân activi pe plan inferior.\n\nTrimiți invitația?",
+      );
+      if (!ok) return;
+    }
+
     setLoading(true);
     setMessage("");
     clearInviteSaved();
@@ -137,7 +146,9 @@ export default function BarbersClient({
 
         markInviteSaved();
         setMessage(
-          "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Invitația ocupă un loc din plan până la acceptare sau ștergere.",
+          isTrial
+            ? "Invitația a fost trimisă. Important: invitatul e acoperit din abonamentul salonului. Dacă după trial alegi Pro (1 frizer), frizerii în plus vor trebui dezactivați."
+            : "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Invitația ocupă un loc din plan până la acceptare sau ștergere.",
         );
 
         await loadBarbers();
@@ -413,6 +424,25 @@ export default function BarbersClient({
                 ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
                 : `Pe planul curent poți invita până la ${maxBarbers} frizeri (doar administrator = 0 locuri ocupate de tine).`}
         </p>
+
+        {isTrial && invitesAllowed && !atInviteLimit && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-50 space-y-2">
+            <p className="font-medium text-amber-100">Important pe trial</p>
+            <p>
+              Frizerul invitat face parte din abonamentul salonului. Nu e taxat
+              separat — e acoperit din planul tău (Pro+ pe trial).
+            </p>
+            <p>
+              Dacă după trial alegi un plan inferior (
+              <span className="font-medium">Pro</span> = 1 frizer, sau Free),
+              frizerii în plus trebuie dezactivați. Nu rămân activi pe Pro.
+            </p>
+            <p>
+              Dacă alegi Pro+ sau Custom, echipa rămâne activă în limita
+              locurilor planului.
+            </p>
+          </div>
+        )}
 
         {(invitesBlockedByPlan || atInviteLimit) && (
           <p className="text-sm text-amber-100/90">
