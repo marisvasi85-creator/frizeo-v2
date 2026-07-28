@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   alternates: { canonical: LEGAL_COMPANY.website },
   openGraph: { url: LEGAL_COMPANY.website },
   description:
-    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial Pro+ 60 zile.",
+    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial Pro+ 30 zile.",
 };
 
 function InlineCta({

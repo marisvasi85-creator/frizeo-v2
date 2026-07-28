@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [actsAsBarber, setActsAsBarber] = useState<boolean | null>(null);
 
   function getFormValues() {
     const form = formRef.current;
@@ -78,6 +79,11 @@ export default function SignupPage() {
       return;
     }
 
+    if (actsAsBarber === null) {
+      setError("Alege dacă ești și frizer sau doar administrezi salonul.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -91,6 +97,7 @@ export default function SignupPage() {
           phone: form.phone,
           password: form.password,
           acceptedTerms: true,
+          actsAsBarber,
         }),
       });
 
@@ -119,7 +126,7 @@ export default function SignupPage() {
       <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6">
         <div className="text-center">
           <h1 className="text-white text-2xl font-semibold">Frizeo</h1>
-          <p className="text-zinc-400 text-sm mt-1">Creează cont frizer</p>
+          <p className="text-zinc-400 text-sm mt-1">Creează cont salon</p>
         </div>
 
         {error && (
@@ -169,6 +176,43 @@ export default function SignupPage() {
           />
 
           <PasswordRequirementsField formRef={formRef} />
+
+          <fieldset className="space-y-2 rounded-lg border border-zinc-700 p-3">
+            <legend className="px-1 text-sm text-zinc-300">
+              Rolul tău în salon
+            </legend>
+            <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+              <input
+                type="radio"
+                name="actsAsBarber"
+                checked={actsAsBarber === true}
+                onChange={() => setActsAsBarber(true)}
+                className="mt-1 h-4 w-4 shrink-0"
+              />
+              <span>
+                <span className="text-white font-medium">Sunt și frizer</span>
+                <span className="block text-zinc-500 text-xs mt-0.5">
+                  Administrez salonul și apar la programări (ocupă 1 loc).
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+              <input
+                type="radio"
+                name="actsAsBarber"
+                checked={actsAsBarber === false}
+                onChange={() => setActsAsBarber(false)}
+                className="mt-1 h-4 w-4 shrink-0"
+              />
+              <span>
+                <span className="text-white font-medium">Doar administrez</span>
+                <span className="block text-zinc-500 text-xs mt-0.5">
+                  Nu apar la programări. Poți invita frizeri sau activa opțiunea
+                  mai târziu.
+                </span>
+              </span>
+            </label>
+          </fieldset>
 
           <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
             <input

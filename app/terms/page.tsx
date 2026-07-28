@@ -177,7 +177,7 @@ export default function TermsPage() {
 
       <h3>Trial</h3>
       <p>
-        Frizeo oferă o perioadă de test gratuit de 60 de zile, cu acces la
+        Frizeo oferă o perioadă de test gratuit de 30 de zile, cu acces la
         funcționalitățile planului Pro+, inclusiv SMS reminder.
       </p>
       <p>

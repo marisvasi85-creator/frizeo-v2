@@ -5,7 +5,11 @@ import {
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
+import {
+  activeBarberLimitReachedMessage,
+  canCreateBarber,
+  getBarberLimitState,
+} from "@/lib/limits/checkBarberLimit";
 
 export async function POST(req: Request) {
   try {
@@ -36,10 +40,12 @@ export async function POST(req: Request) {
       const allowed = await canCreateBarber(auth.tenantId);
 
       if (!allowed) {
+        const state = await getBarberLimitState(auth.tenantId);
+        const limit = state?.limit ?? 0;
         return NextResponse.json(
           {
-            error:
-              "Ai atins limita de frizeri pentru planul tău. Upgrade abonamentul pentru mai mulți frizeri.",
+            error: activeBarberLimitReachedMessage(limit),
+            code: "BARBER_LIMIT_EXCEEDED",
           },
           { status: 403 }
         );

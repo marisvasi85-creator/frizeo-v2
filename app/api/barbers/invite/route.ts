@@ -4,7 +4,6 @@ import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
-import { canInviteBarber } from "@/lib/limits/checkBarberLimit";
 
 import { sendEmail } from "@/lib/email/email";
 import { barberInvitationTemplate } from "@/lib/email/templates/barber-invitation";
@@ -51,19 +50,7 @@ export async function POST(req: Request) {
         .eq("accepted", false)
         .maybeSingle();
 
-    if (!existingInvite) {
-      const allowed = await canInviteBarber(tenantId);
-
-      if (!allowed) {
-        return NextResponse.json(
-          {
-            error:
-              "Ai atins limita de frizeri pentru planul tău. Upgrade abonamentul pentru mai mulți frizeri.",
-          },
-          { status: 403 }
-        );
-      }
-    }
+    // Invitațiile nu consumă locuri din plan — limita se verifică la accept / activare.
 
 if (existingInvite) {
   const { error } = await supabaseAdmin

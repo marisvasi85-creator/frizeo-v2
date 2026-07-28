@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { canCreateBarber } from "@/lib/limits/checkBarberLimit";
+import {
+  activeBarberLimitReachedMessage,
+  canCreateBarber,
+  getBarberLimitState,
+} from "@/lib/limits/checkBarberLimit";
 import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 import {
   isValidPassword,
@@ -105,16 +109,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const allowed =
-      await canCreateBarber(
-        invitation.tenant_id
-      );
+    const allowed = await canCreateBarber(invitation.tenant_id);
 
     if (!allowed) {
+      const state = await getBarberLimitState(invitation.tenant_id);
+      const limit = state?.limit ?? 0;
       return NextResponse.json(
         {
-          error:
-            "Salonul a atins limita planului curent",
+          error: activeBarberLimitReachedMessage(limit),
+          code: "BARBER_LIMIT_EXCEEDED",
         },
         { status: 403 }
       );
