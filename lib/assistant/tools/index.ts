@@ -150,7 +150,7 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "subscription_status",
     description:
-      "Status abonament Frizeo: plan, trial (zile rămase), frizeri activi/maxim, invitații în așteptare, dacă owner e frizer, și ghid scurt (invitații nelimitate, cum schimbă rolul, ce se întâmplă după trial). Folosește când userul întreabă de plan, trial, invitații, locuri sau rol admin/frizer.",
+      "Status abonament Frizeo: plan, trial (zile rămase), frizeri activi/maxim, invitații rămase (nu nelimitate), dacă owner e frizer, și ghid (admin=până la maxim, admin+frizer=maxim-1, upgrade Custom la limită). Folosește când userul întreabă de plan, trial, invitații, locuri sau rol admin/frizer.",
     parameters: {
       type: "object",
       properties: {},

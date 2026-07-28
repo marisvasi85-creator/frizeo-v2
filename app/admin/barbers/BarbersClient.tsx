@@ -133,7 +133,7 @@ export default function BarbersClient({
 
         markInviteSaved();
         setMessage(
-          "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Poate fi activat doar dacă ai un loc liber în plan.",
+          "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Invitația ocupă un loc din plan până la acceptare sau ștergere.",
         );
 
         await loadBarbers();
@@ -248,12 +248,22 @@ export default function BarbersClient({
   }
 
   const maxLabel = maxBarbers === null ? "∞" : String(maxBarbers);
+  const inviteSlotsUsed = activeCount + pendingCount;
+  const invitesLeft =
+    maxBarbers === null ? null : Math.max(0, maxBarbers - inviteSlotsUsed);
+  const atInviteLimit = maxBarbers !== null && invitesLeft === 0;
   const atActiveLimit =
     maxBarbers !== null && activeCount >= maxBarbers;
   const isOverLimit =
     maxBarbers !== null
       ? activeCount > maxBarbers
       : initialIsOverLimit;
+  const inviteQuotaHint =
+    maxBarbers === null
+      ? "Plan Custom: invitații în funcție de locurile configurate."
+      : ownerActsAsBarber
+        ? `Ești și frizer (ocupi 1 loc). Mai poți invita maxim ${Math.max(0, maxBarbers - 1)} frizeri pe acest plan.`
+        : `Ești doar administrator (0 locuri ocupate de tine). Poți invita până la ${maxBarbers} frizeri pe acest plan.`;
 
   return (
     <div className="space-y-8">
@@ -273,8 +283,16 @@ export default function BarbersClient({
 
             {pendingCount > 0 && (
               <div className="text-xs text-white/50 mt-1">
-                {pendingCount} invitații în așteptare (nu ocupă locuri până la
-                acceptare)
+                {pendingCount} invitații în așteptare (ocupă locuri până la
+                acceptare sau ștergere)
+              </div>
+            )}
+
+            {maxBarbers !== null && (
+              <div className="text-xs text-white/50 mt-1">
+                Locuri pentru invitații noi:{" "}
+                {invitesLeft === null ? "∞" : invitesLeft} rămase (
+                {inviteSlotsUsed}/{maxBarbers} ocupate)
               </div>
             )}
 
@@ -286,20 +304,28 @@ export default function BarbersClient({
               </div>
             )}
 
-            {atActiveLimit && !isOverLimit && (
+            {atInviteLimit && !isOverLimit && (
+              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+                Ai atins limita de {maxLabel} frizeri (activi + invitații).
+                Dezactivează un frizer, șterge o invitație în așteptare, sau fă
+                upgrade la Custom.
+              </div>
+            )}
+
+            {(atActiveLimit || atInviteLimit) && !isOverLimit && (
               <AdminButton
                 size="sm"
                 href="/admin/billing"
                 className="inline-block mt-4"
               >
-                Upgrade pentru mai mulți frizeri activi
+                Upgrade la Custom pentru mai mulți frizeri
               </AdminButton>
             )}
           </AdminCard>
         </div>
         <p className="text-white/60 mt-1">
-          Gestionează frizerii salonului. Invitațiile sunt nelimitate — doar
-          frizerii activi consumă locuri din plan.
+          Gestionează frizerii salonului. Invitațiile consumă locuri din plan
+          (împreună cu frizerii activi). {inviteQuotaHint}
         </p>
       </div>
 
@@ -359,10 +385,19 @@ export default function BarbersClient({
         <h2 className="font-medium">Invită frizer</h2>
 
         <p className="text-sm text-white/60">
-          Poți invita oricâți frizeri. Acceptarea / activarea e posibilă doar
-          dacă ai loc liber
-          {maxBarbers !== null ? ` (maxim ${maxBarbers} activi)` : ""}.
+          {maxBarbers === null
+            ? "Poți invita frizeri conform locurilor din planul Custom."
+            : ownerActsAsBarber
+              ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
+              : `Pe planul curent poți invita până la ${maxBarbers} frizeri (doar administrator = 0 locuri ocupate de tine).`}
         </p>
+
+        {atInviteLimit && (
+          <p className="text-sm text-amber-100/90">
+            Ai atins limita. Dezactivează un frizer actual, șterge o invitație
+            în așteptare, sau upgrade la Custom.
+          </p>
+        )}
 
         <AdminInput
           placeholder="Nume"
@@ -371,6 +406,7 @@ export default function BarbersClient({
             setName(e.target.value);
             setMessage("");
           }}
+          disabled={atInviteLimit}
         />
         <AdminInput
           placeholder="Email"
@@ -379,6 +415,7 @@ export default function BarbersClient({
             setEmail(e.target.value);
             setMessage("");
           }}
+          disabled={atInviteLimit}
         />
         <AdminInput
           placeholder="Telefon"
@@ -387,11 +424,12 @@ export default function BarbersClient({
             setPhone(e.target.value);
             setMessage("");
           }}
+          disabled={atInviteLimit}
         />
 
         <AdminButton
           onClick={addBarber}
-          disabled={loading || inviteSaved}
+          disabled={loading || inviteSaved || atInviteLimit}
           loading={loading}
           loadingLabel="Se trimite..."
           saved={inviteSaved}
