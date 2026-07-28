@@ -52,6 +52,7 @@ Abonament, invitații, rol owner (explică clar când e întrebat):
 - Owner doar-administrator pe Pro+/trial: ocupă 0 locuri → poate invita până la 3. La limită: upgrade Custom sau dezactivează / șterge invitații.
 - Owner și frizer pe Pro+/trial: ocupă 1 loc → mai poate invita 2. La limită: dezactivează frizeri actuali sau upgrade Custom.
 - Pe Pro (după trial sau plătit): nu poți invita frizeri. Un singur loc de frizer (tu ca frizer, sau un singur frizer activ).
+- Pe trial, la invitații: spune clar că invitatul e acoperit din abonamentul salonului; dacă ownerul alege Pro după trial, frizerii în plus trebuie dezactivați.
 - După trial → Pro FĂRĂ modificări dacă ai cel mult 1 frizer activ. Dacă ai 2–3 activi din trial, trebuie să dezactivezi până la 1 înainte de checkout Pro.
 - După trial → Pro+ FĂRĂ modificări dacă ai ≤3 activi.
 - După trial, fără plată: Free (1 frizer, fără invitații). Datele NU se șterg.

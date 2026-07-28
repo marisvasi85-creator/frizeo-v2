@@ -102,6 +102,9 @@ export async function subscriptionStatusTool(
         : `Ai ${activeBarbers} frizeri activi. Pentru Pro+ trebuie ≤3 activi.`,
     after_trial_if_unpaid:
       "Fără plată trece pe Free (1 frizer activ, fără invitații). Datele nu se șterg.",
+    trial_invite_warning: isAppTrial
+      ? "Pe trial, frizerul invitat e acoperit din abonamentul salonului. Dacă după trial alegi Pro (1 frizer), frizerii în plus trebuie dezactivați."
+      : null,
     owner_seat_note: !invitesAllowed
       ? "Pe Free/Pro nu există invitații echipă."
       : ownerActsAsBarber
