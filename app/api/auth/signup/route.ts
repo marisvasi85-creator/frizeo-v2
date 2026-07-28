@@ -21,7 +21,14 @@ export async function POST(req: Request) {
   let provisioningComplete = false;
 
   try {
-    const { email, password, fullName, phone, acceptedTerms } = await req.json();
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      acceptedTerms,
+      actsAsBarber,
+    } = await req.json();
     const limited = await enforceRateLimit(req, {
       bucket: "auth-signup",
       identifier: normalizeEmail(email || ""),
@@ -33,6 +40,8 @@ export async function POST(req: Request) {
     const name = (fullName || "").trim();
     const emailNorm = normalizeEmail(email || "");
     const phoneNorm = (phone || "").trim();
+    // Default true for backward-compatible clients; signup UI always sends the choice.
+    const ownerActsAsBarber = actsAsBarber !== false;
 
     if (!name || name.length < 2) {
       return NextResponse.json(
@@ -134,6 +143,7 @@ export async function POST(req: Request) {
     display_name: name,
     phone: phoneNorm,
     slug: barberSlug,
+    active: ownerActsAsBarber,
   })
   .select()
   .single();
