@@ -4,12 +4,17 @@ export type BarberLimitState = {
   limit: number | null;
   activeCount: number;
   pendingInviteCount: number;
-  /** Locuri ocupate de plan = doar frizeri activi (invitațiile nu consumă locuri). */
+  /**
+   * Locuri ocupate pentru invitații noi = frizeri activi + invitații pending.
+   * Owner frizer activ e inclus în activeCount (ocupă 1 loc).
+   */
   slotsUsed: number;
+  invitesLeft: number | null;
   unlimited: boolean;
 };
 
 export const BARBER_LIMIT_EXCEEDED_CODE = "BARBER_LIMIT_EXCEEDED" as const;
+export const INVITE_LIMIT_EXCEEDED_CODE = "INVITE_LIMIT_EXCEEDED" as const;
 
 export async function getBarberLimitState(
   tenantId: string
@@ -45,12 +50,15 @@ export async function getBarberLimitState(
 
   const active = activeCount ?? 0;
   const pending = pendingInviteCount ?? 0;
+  const slotsUsed = active + pending;
+  const invitesLeft = unlimited || limit === null ? null : Math.max(0, limit - slotsUsed);
 
   return {
     limit,
     activeCount: active,
     pendingInviteCount: pending,
-    slotsUsed: active,
+    slotsUsed,
+    invitesLeft,
     unlimited,
   };
 }
@@ -64,12 +72,15 @@ export async function canCreateBarber(tenantId: string): Promise<boolean> {
 }
 
 /**
- * Invitațiile nu sunt limitate de plan.
- * Limita se aplică doar la activarea / acceptarea unui frizer.
+ * Invitație nouă: consumă un loc din plan (împreună cu frizerii activi).
+ * Pe Pro+/trial: admin-only → până la 3; admin+frizer → încă 2 (owner ocupă 1).
+ * Custom (max_barbers null) → nelimitat.
  */
 export async function canInviteBarber(tenantId: string): Promise<boolean> {
   const state = await getBarberLimitState(tenantId);
-  return Boolean(state);
+  if (!state) return false;
+  if (state.unlimited) return true;
+  return (state.invitesLeft ?? 0) > 0;
 }
 
 export function isOverActiveBarberLimit(state: BarberLimitState): boolean {
@@ -110,4 +121,9 @@ export function barberLimitExceededMessage(activeCount: number, limit: number) {
 
 export function activeBarberLimitReachedMessage(limit: number) {
   return `Ai atins limita de ${limit} frizeri activi pentru planul curent. Dezactivează un frizer sau fă upgrade.`;
+}
+
+/** Mesaj când nu mai poți trimite invitații (locuri ocupate de activi + pending). */
+export function inviteLimitReachedMessage(limit: number) {
+  return `Ai atins limita de ${limit} frizeri pentru planul curent (frizeri activi + invitații în așteptare). Dezactivează un frizer din listă, șterge o invitație în așteptare, sau fă upgrade la Custom pentru mai mulți frizeri.`;
 }

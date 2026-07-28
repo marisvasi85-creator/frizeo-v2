@@ -61,25 +61,37 @@ export async function subscriptionStatusTool(
   const activeBarbers = activeRes.count ?? 0;
   const pendingInvites = pendingRes.count ?? 0;
   const ownerActsAsBarber = ctx.actsAsBarber ?? Boolean(ctx.barberId);
-  const seatsLeft =
-    maxBarbers === null ? null : Math.max(0, maxBarbers - activeBarbers);
+  const slotsUsed = activeBarbers + pendingInvites;
+  const invitesLeft =
+    maxBarbers === null ? null : Math.max(0, maxBarbers - slotsUsed);
+  const inviteCapacityIfOwnerBarber =
+    maxBarbers === null ? null : Math.max(0, maxBarbers - 1);
+  const inviteCapacityIfAdminOnly = maxBarbers;
 
   const guidance = {
-    invites_unlimited: true,
+    invites_unlimited: maxBarbers === null,
     invites_note:
-      "Poți trimite oricâte invitații. Locurile se ocupă doar când un frizer e activ (acceptat/activat).",
+      maxBarbers === null
+        ? "Plan Custom: locuri configurabile."
+        : ownerActsAsBarber
+          ? `Owner e și frizer (1 loc). Pe planul curent mai poate invita maxim ${inviteCapacityIfOwnerBarber} (dacă are locuri libere). Acum: ${invitesLeft} invitații rămase.`
+          : `Owner e doar administrator (0 locuri). Pe planul curent poate invita până la ${inviteCapacityIfAdminOnly}. Acum: ${invitesLeft} invitații rămase.`,
     change_owner_role_path: "/admin/barbers",
     change_owner_role_note:
       "Owner: în Frizeri → „Rolul tău: frizer sau doar admin?”. Activarea ca frizer ocupă 1 loc; doar-admin eliberează locul.",
+    at_invite_limit_message:
+      invitesLeft === 0 && maxBarbers !== null
+        ? `Ai atins limita de ${maxBarbers} frizeri (activi + invitații). Dezactivează un frizer, șterge o invitație, sau upgrade la Custom.`
+        : null,
     after_trial_if_unpaid:
       "Fără plată trece pe Free (1 frizer activ). Datele nu se șterg; frizerii peste limită rămân, dar nu pot fi toți activi până upgrade/reducere.",
     after_trial_choose_pro:
       "Pro = 1 frizer activ. Dacă ai mai mulți activi, trebuie să dezactivezi până la 1 înainte de activarea Pro.",
     after_trial_choose_pro_plus:
-      "Pro+ = până la 3 frizeri activi. Dacă ești deja pe trial Pro+ cu ≤3 activi, nu schimbi nimic la echipă.",
+      "Pro+ = până la 3 frizeri. Dacă ești deja pe trial Pro+ cu ≤3, nu schimbi nimic la echipă.",
     owner_seat_note: ownerActsAsBarber
-      ? "Owner e frizer activ → ocupă 1 loc din maxim."
-      : "Owner e doar administrator → ocupă 0 locuri; locurile sunt pentru frizerii invitați/activi.",
+      ? "Owner e frizer activ → ocupă 1 loc din maxim; pe Pro+/trial mai rămân 2 pentru invitații."
+      : "Owner e doar administrator → ocupă 0 locuri; pe Pro+/trial poate invita până la 3.",
   };
 
   const data = {
@@ -92,7 +104,8 @@ export async function subscriptionStatusTool(
     max_active_barbers: maxBarbers,
     active_barbers: activeBarbers,
     pending_invites: pendingInvites,
-    seats_left: seatsLeft,
+    slots_used_for_invites: slotsUsed,
+    invites_left: invitesLeft,
     owner_acts_as_barber: ownerActsAsBarber,
     guidance,
   };
@@ -100,7 +113,7 @@ export async function subscriptionStatusTool(
   const seats =
     maxBarbers === null
       ? `${activeBarbers} frizeri activi (nelimitat / custom)`
-      : `${activeBarbers} / ${maxBarbers} frizeri activi (${seatsLeft} locuri libere)`;
+      : `${activeBarbers} / ${maxBarbers} frizeri activi; ${invitesLeft} invitații rămase (${pendingInvites} pending)`;
 
   const trialBit = isAppTrial
     ? ` Trial Pro+: ${trialDaysLeft ?? "?"} zile rămase.`
@@ -108,7 +121,7 @@ export async function subscriptionStatusTool(
 
   return {
     ok: true,
-    summary: `Plan: ${data.plan_name ?? "necunoscut"} (${status}). ${seats}. Invitații nelimitate (${pendingInvites} în așteptare).${trialBit}`,
+    summary: `Plan: ${data.plan_name ?? "necunoscut"} (${status}). ${seats}.${trialBit}`,
     data,
   };
 }

@@ -89,8 +89,8 @@ export const LEGAL_PRICING = {
       cta: { label: "Începe trial 30 zile", href: "/signup" },
       features: [
         "Tot din Pro",
-        "Echipă până la 3 frizeri activi",
-        "Invitații nelimitate (activare după locuri)",
+        "Echipă până la 3 frizeri",
+        "Invitații în limita locurilor (admin 3 / admin+frizer 2)",
         "Vizibilitate programări salon",
       ],
     },
