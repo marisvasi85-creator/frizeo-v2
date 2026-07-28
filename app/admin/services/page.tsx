@@ -1,13 +1,12 @@
-import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { requireActsAsBarber } from "../lib/requireActsAsBarber";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import ServicesClient from "./ServicesClient";
 
 export default async function ServicesPage() {
-  const session = await getAdminSession();
-  const barber = session?.barber;
-
+  const session = await requireActsAsBarber();
+  const barber = session.barber;
   if (!barber) redirect("/login");
 
   const { data: services, error } = await supabaseAdmin

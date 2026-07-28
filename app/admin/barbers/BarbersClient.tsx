@@ -40,6 +40,7 @@ export default function BarbersClient({
   isOverLimit: initialIsOverLimit,
   ownerUserId,
   ownerActsAsBarber: initialOwnerActsAsBarber,
+  highlightOwnerRole = false,
   tenantSlug,
   appUrl,
   initialBarbers = [],
@@ -52,6 +53,7 @@ export default function BarbersClient({
   isOverLimit: boolean;
   ownerUserId: string;
   ownerActsAsBarber: boolean;
+  highlightOwnerRole?: boolean;
   tenantSlug: string;
   appUrl: string;
   initialBarbers?: Barber[];
@@ -162,7 +164,9 @@ export default function BarbersClient({
       } else {
         setOwnerActsAsBarber(Boolean(data.active));
         setOwnerRoleMessage(data.message || "Salvat.");
-        await loadBarbers();
+        // Meniul (Profil / Servicii / Program) depinde de rol — reload complet.
+        window.location.href = "/admin/barbers";
+        return;
       }
     } catch {
       setOwnerRoleMessage("Eroare server");
@@ -299,12 +303,27 @@ export default function BarbersClient({
         </p>
       </div>
 
-      <AdminCard className="space-y-4">
-        <h2 className="font-medium">Sunt și frizer</h2>
+      <AdminCard
+        id="owner-role"
+        className={`space-y-4 scroll-mt-24 ${
+          highlightOwnerRole || !ownerActsAsBarber
+            ? "border border-amber-500/30 bg-amber-500/5"
+            : ""
+        }`}
+      >
+        <h2 className="font-medium">Rolul tău: frizer sau doar admin?</h2>
         <p className="text-sm text-white/60">
-          Ca owner poți fi doar administrator, sau administrator + frizer. Dacă
-          ești frizer, ocupi unul dintre locurile active ale planului.
+          Aici schimbi rolul. Ca owner poți fi doar administrator, sau
+          administrator + frizer. Dacă ești frizer, ocupi unul dintre locurile
+          active ale planului și apar în meniu: Profil frizer, Servicii, Program,
+          Google Calendar.
         </p>
+
+        {!ownerActsAsBarber && (
+          <p className="text-sm text-amber-100/90">
+            Acum ești doar administrator — meniul nu include uneltele de frizer.
+          </p>
+        )}
 
         <div className="flex flex-wrap items-center gap-3">
           <span

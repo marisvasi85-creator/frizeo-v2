@@ -5,8 +5,13 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import BarbersClient from "./BarbersClient";
 
-export default async function BarbersPage() {
+export default async function BarbersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ role?: string }>;
+}) {
   const session = await getAdminSession();
+  const { role: roleHint } = await searchParams;
 
   if (!session?.tenantId) {
     redirect("/login");
@@ -109,6 +114,7 @@ export default async function BarbersPage() {
       isOverLimit={isOverLimit}
       ownerUserId={session.user.id}
       ownerActsAsBarber={ownerActsAsBarber}
+      highlightOwnerRole={roleHint === "admin-only"}
       tenantSlug={tenant?.slug ?? ""}
       appUrl={getAppUrl()}
       initialBarbers={barbers}
