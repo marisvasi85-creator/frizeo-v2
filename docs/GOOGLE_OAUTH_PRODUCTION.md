@@ -5,7 +5,7 @@
 | Ce | Trebuie configurat per frizer? |
 |----|-------------------------------|
 | **Cont Frizeo** (signup, login, dashboard, booking) | **Nu** — oricine se înregistrează liber |
-| **Google Calendar** (sync opțional din Profil) | **Da, în beta** (Test users) · **Nu, în producție** (după verificare Google) |
+| **Google Calendar** (sync opțional din Profil) | **Nu** — OAuth **verified** (iulie 2026) pentru `.../auth/calendar`; orice Gmail poate conecta |
 
 **Nu trebuie să adaugi manual fiecare frizer** pentru ca aplicația să funcționeze.  
 Limitarea există **doar** la conectarea Google Calendar, cât timp aplicația OAuth e în modul **Testing**.
@@ -100,9 +100,8 @@ Google Calendar e **opțional** — îmbunătățește fluxul (sloturi ocupate d
 ## Strategie recomandată
 
 ```
-Acum (beta)          →  Test users pentru testeri apropiați (max 100)
-În paralel           →  Pregătești video + documentație pentru Google
-După verificare      →  Publish App → orice frizer conectează Calendar singur
+Acum               →  OAuth verified (calendar) — orice frizer conectează Calendar
+Scope nou / schimbări consent → re-verificare Google
 ```
 
 ### Timeline orientativ
@@ -138,7 +137,7 @@ Nu — Frizeo folosește email/parolă (Supabase). OAuth Google e doar pentru Ca
 - [ ] Supabase: URL-uri auth, confirm email off
 - [ ] Vercel: toate env vars din `.env.example`
 - [ ] Google: Calendar API enabled
-- [ ] Google: OAuth app **Published** + **verified** pentru `calendar`
+- [x] Google: OAuth app **Published** + **verified** pentru `calendar` (aprobat iulie 2026, proiect `frizeo` / `1036811262570`)
 - [ ] Email SMTP + SMSO (opțional dar recomandat)
 - [ ] `CRON_SECRET` + job-uri cron externe (reminder, cleanup, trial)
 - [ ] Stripe live keys (când lansezi plăți reale)
