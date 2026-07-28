@@ -1,11 +1,11 @@
-export type SetupChecklistStep = "services" | "schedule" | "notifications";
+export type SetupChecklistStep = "services" | "schedule" | "share_link";
 
 export type SetupChecklistState = {
   dismissed: boolean;
   completed: Partial<Record<SetupChecklistStep, boolean>>;
 };
 
-const STORAGE_PREFIX = "frizeo-setup-checklist-v1";
+const STORAGE_PREFIX = "frizeo-setup-checklist-v2";
 
 export const SETUP_CHECKLIST_STEPS: {
   id: SetupChecklistStep;
@@ -31,12 +31,12 @@ export const SETUP_CHECKLIST_STEPS: {
     cta: "Deschide programul",
   },
   {
-    id: "notifications",
-    title: "Verifică notificările",
+    id: "share_link",
+    title: "Copiază linkul de programări",
     description:
-      "Confirmările pe email sunt deja active. Poți ajusta reminder-ele.",
-    href: "/admin/notifications",
-    cta: "Deschide notificările",
+      "Trimite-l pe WhatsApp sau pe Instagram — fără link, clienții nu pot rezerva.",
+    href: "/admin/dashboard#booking-link",
+    cta: "Copiază linkul",
   },
 ];
 
@@ -69,7 +69,7 @@ function readFromStorage(barberId: string): SetupChecklistState {
       completed: {
         services: Boolean(parsed.completed?.services),
         schedule: Boolean(parsed.completed?.schedule),
-        notifications: Boolean(parsed.completed?.notifications),
+        share_link: Boolean(parsed.completed?.share_link),
       },
     };
   } catch {
@@ -147,4 +147,19 @@ export function dismissSetupChecklist(barberId: string) {
 
 export function isSetupChecklistComplete(state: SetupChecklistState) {
   return SETUP_CHECKLIST_STEPS.every((step) => state.completed[step.id]);
+}
+
+/** Soft lock: first 24h, dismiss only after share link is copied. */
+export function canDismissSetupChecklist(
+  state: SetupChecklistState,
+  createdAt: string | null | undefined,
+) {
+  if (state.completed.share_link) return true;
+  if (!createdAt) return true;
+
+  const createdMs = new Date(createdAt).getTime();
+  if (Number.isNaN(createdMs)) return true;
+
+  const ageMs = Date.now() - createdMs;
+  return ageMs >= 24 * 60 * 60 * 1000;
 }

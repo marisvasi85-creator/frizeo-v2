@@ -99,9 +99,15 @@ export default async function DashboardPage() {
         <p className="text-white/60 mt-1">Panoul tău de control</p>
       </div>
 
-      <SetupChecklist barberId={barber.id} eligible={showSetupChecklist} />
+      <SetupChecklist
+        barberId={barber.id}
+        createdAt={
+          typeof barber.created_at === "string" ? barber.created_at : null
+        }
+        eligible={showSetupChecklist}
+      />
 
-      <BookingLinkCard initialUrl={bookingUrl} />
+      <BookingLinkCard initialUrl={bookingUrl} barberId={barber.id} />
 
       {role === "owner" && (
         <AdminCard>

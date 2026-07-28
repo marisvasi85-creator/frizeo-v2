@@ -4,24 +4,32 @@ import { useState } from "react";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 import { AdminInput } from "../components/AdminInput";
+import { markSetupChecklistStep } from "@/lib/setup-checklist/storage";
 
 export default function BookingLinkCard({
   initialUrl,
+  barberId,
 }: {
   initialUrl: string;
+  barberId?: string;
 }) {
   const [url] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
+
+  function markShared() {
+    if (barberId) markSetupChecklistStep(barberId, "share_link");
+  }
 
   async function copyLink() {
     if (!url) return;
     await navigator.clipboard.writeText(url);
     setCopied(true);
+    markShared();
     setTimeout(() => setCopied(false), 2000);
   }
 
   return (
-    <AdminCard padding="sm" className="mb-6">
+    <AdminCard id="booking-link" padding="sm" className="mb-6 scroll-mt-24">
       <p className="text-sm text-white/60 mb-2">Linkul tău de programări</p>
 
       <p className="text-xs text-white/40 mb-3">
@@ -58,6 +66,7 @@ export default function BookingLinkCard({
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1"
+              onClick={markShared}
             >
               Deschide
             </AdminButton>

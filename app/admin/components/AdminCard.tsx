@@ -5,14 +5,17 @@ export default function AdminCard({
   className,
   padding = "md",
   hoverable,
+  id,
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: "sm" | "md";
   hoverable?: boolean;
+  id?: string;
 }) {
   return (
     <div
+      id={id}
       className={cn(
         "bg-[#161618] border border-white/10 rounded-xl",
         padding === "sm" ? "p-4" : "p-6",
