@@ -85,9 +85,9 @@ export async function subscriptionStatusTool(
         : ownerActsAsBarber
           ? `Owner e și frizer (1 loc). Pe Pro+/trial mai poate invita maxim ${Math.max(0, maxBarbers - 1)}. Acum: ${invitesLeft} invitații rămase.`
           : `Owner e doar administrator (0 locuri). Pe Pro+/trial poate invita până la ${maxBarbers}. Acum: ${invitesLeft} invitații rămase.`,
-    change_owner_role_path: "/admin/barbers",
+    change_owner_role_path: "/admin/barbers#owner-role",
     change_owner_role_note:
-      "Owner: în Frizeri → „Rolul tău: frizer sau doar admin?”. Activarea ca frizer ocupă 1 loc; doar-admin eliberează locul.",
+      "Schimbarea rolului (frizer ↔ doar admin) se face DOAR în Frizeri, jos pe pagină: „Opțiune: apari și ca frizer”. Nu e pe Dashboard. Activarea ca frizer ocupă 1 loc; dezactivarea eliberează locul.",
     at_invite_limit_message:
       invitesAllowed && invitesLeft === 0 && maxBarbers !== null
         ? `Ai atins limita de ${maxBarbers} frizeri (activi + invitații). Dezactivează un frizer, șterge o invitație, sau upgrade la Custom.`
