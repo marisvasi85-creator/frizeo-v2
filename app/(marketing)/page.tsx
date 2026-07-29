@@ -79,8 +79,8 @@ export default function Page() {
             </p>
 
             <p className="mkt-rise mkt-rise-delay-2 mx-auto mt-4 max-w-xl text-base text-[var(--mkt-muted)] sm:text-lg">
-              Clienții aleg serviciul, ziua și ora. Calendarul, SMS-urile și
-              reminder-ele rulează fără să te întrerupă.
+              Clienții aleg serviciul, ziua și ora. Calendarul și reminder-ele
+              rulează fără să te întrerupă.
             </p>
 
             <div className="mkt-rise mkt-rise-delay-3 mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
