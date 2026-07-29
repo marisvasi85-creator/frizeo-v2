@@ -24,9 +24,15 @@ export function getMarketingAILimitForPlan(
   plan: PlanLike | null | undefined,
 ): MarketingAILimit {
   if (plan?.status === "trialing") {
+    const trialLabel =
+      plan.slug === PLAN_SLUGS.PRO
+        ? "Trial Pro"
+        : plan.slug === PLAN_SLUGS.PRO_PLUS
+          ? "Trial Pro+"
+          : "Trial";
     return {
       daily: envLimit("MARKETING_AI_DAILY_LIMIT_TRIAL", 50),
-      label: "Trial Pro+",
+      label: trialLabel,
     };
   }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
+import { enforcePlanSeatLimits } from "@/lib/billing/enforcePlanSeatLimits";
 import { PLAN_SLUGS } from "@/lib/billing/plans";
 
 export async function GET(req: Request) {
@@ -16,7 +17,7 @@ export async function GET(req: Request) {
     if (!freePlanId) {
       return NextResponse.json(
         { error: "Plan Free negăsit în baza de date." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -38,6 +39,7 @@ export async function GET(req: Request) {
       .update({
         status: "active",
         plan_id: freePlanId,
+        trial_ends_at: null,
       })
       .eq("status", "trialing")
       .is("stripe_subscription_id", null)
@@ -54,9 +56,21 @@ export async function GET(req: Request) {
       })
       .in("tenant_id", tenantIds);
 
+    let deactivated = 0;
+    let invitesDeleted = 0;
+    for (const tenantId of tenantIds) {
+      const result = await enforcePlanSeatLimits(tenantId, 1, {
+        clearPendingInvites: true,
+      });
+      deactivated += result.deactivatedBarberIds.length;
+      invitesDeleted += result.deletedPendingInvites;
+    }
+
     return NextResponse.json({
       success: true,
       updated: data?.length || 0,
+      deactivatedBarbers: deactivated,
+      deletedPendingInvites: invitesDeleted,
     });
   } catch (e) {
     console.error(e);

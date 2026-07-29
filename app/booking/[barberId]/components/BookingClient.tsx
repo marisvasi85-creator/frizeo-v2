@@ -304,7 +304,10 @@ export default function BookingClient({
         email: email.trim(),
       });
 
-      router.push(`/booking/confirmed/${createData.bookingId}`);
+      const tokenQs = createData.cancelToken
+        ? `?t=${encodeURIComponent(createData.cancelToken)}`
+        : "";
+      router.push(`/booking/confirmed/${createData.bookingId}${tokenQs}`);
     } catch {
       setBookingError("Eroare de conexiune. Încearcă din nou.");
     } finally {
