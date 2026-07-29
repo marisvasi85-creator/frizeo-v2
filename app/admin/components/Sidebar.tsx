@@ -28,14 +28,6 @@ export default function Sidebar({
       <div>
         <h2 className="text-xl font-semibold mb-8 tracking-wide">Frizeo</h2>
 
-        {role === "owner" && (
-          <p className="text-xs text-white/40 mb-4 px-1">
-            {actsAsBarber
-              ? "Mod: administrator + frizer"
-              : "Mod: doar administrator"}
-          </p>
-        )}
-
         <nav className="flex flex-col gap-2">
           {navItems.map((item) => {
             const active = pathname.startsWith(item.href);

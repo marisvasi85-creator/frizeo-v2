@@ -44,14 +44,7 @@ export default function MobileNav({
         <div className="p-6">
           <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
 
-          <h3 className="text-center text-lg font-semibold mb-2">Mai mult</h3>
-          {role === "owner" && (
-            <p className="text-center text-xs text-white/40 mb-6">
-              {actsAsBarber
-                ? "Mod: administrator + frizer"
-                : "Mod: doar administrator"}
-            </p>
-          )}
+          <h3 className="text-center text-lg font-semibold mb-6">Mai mult</h3>
 
           <div className="space-y-3">
             {moreItems.map((item) => (

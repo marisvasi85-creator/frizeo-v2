@@ -6,13 +6,8 @@ import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import { planAllowsBarberInvites } from "@/lib/billing/plans";
 import BarbersClient from "./BarbersClient";
 
-export default async function BarbersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ role?: string }>;
-}) {
+export default async function BarbersPage() {
   const session = await getAdminSession();
-  const { role: roleHint } = await searchParams;
 
   if (!session?.tenantId) {
     redirect("/login");
@@ -112,7 +107,7 @@ export default async function BarbersPage({
     <BarbersClient
       currentPlan={
         isTrial
-          ? `Trial Pro+ (${trialDaysLeft} zile)`
+          ? `Trial ${planSlug === "pro" ? "Pro" : "Pro+"} (${trialDaysLeft} zile)`
           : (plan?.name ?? "Free")
       }
       planSlug={planSlug}
@@ -124,7 +119,6 @@ export default async function BarbersPage({
       isOverLimit={isOverLimit}
       ownerUserId={session.user.id}
       ownerActsAsBarber={ownerActsAsBarber}
-      highlightOwnerRole={roleHint === "admin-only"}
       tenantSlug={tenant?.slug ?? ""}
       appUrl={getAppUrl()}
       initialBarbers={barbers}

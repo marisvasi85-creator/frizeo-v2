@@ -17,7 +17,7 @@ export async function requireActsAsBarber() {
   }
 
   if (!sessionActsAsBarber(session)) {
-    redirect("/admin/barbers?role=admin-only");
+    redirect("/admin/barbers#owner-role");
   }
 
   return session;

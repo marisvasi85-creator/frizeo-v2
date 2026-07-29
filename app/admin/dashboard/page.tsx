@@ -110,30 +110,8 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold">
           Salut, {barber.display_name} 👋
         </h1>
-        <p className="text-white/60 mt-1">
-          {actsAsBarber
-            ? "Panoul tău de control"
-            : "Panou administrator salon — nu apari la programări"}
-        </p>
+        <p className="text-white/60 mt-1">Panoul tău de control</p>
       </div>
-
-      {role === "owner" && !actsAsBarber && (
-        <AdminCard className="border border-amber-500/20 bg-amber-500/5">
-          <h2 className="font-medium text-amber-100">Doar administrator</h2>
-          <p className="text-sm text-white/60 mt-2">
-            Nu ai profil de frizer activ: fără Servicii, Program, Profil frizer
-            sau Google Calendar. Gestionezi echipa din Frizeri. Poți activa
-            „Sunt și frizer” oricând (dacă ai un loc liber pe plan).
-          </p>
-          <AdminButton
-            size="sm"
-            href="/admin/barbers"
-            className="inline-block mt-4"
-          >
-            Schimbă rolul în Frizeri
-          </AdminButton>
-        </AdminCard>
-      )}
 
       {actsAsBarber && (
         <SetupChecklist
