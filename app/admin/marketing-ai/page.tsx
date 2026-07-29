@@ -100,12 +100,8 @@ export default async function MarketingAIPage() {
         <>
           {role === "owner" && !actsAsBarber && (
             <p className="text-sm text-white/50">
-              Ești doar administrator — alege un frizer activ din listă. Linkurile
-              sociale se iau din{" "}
-              <Link href="/admin/barbers" className="underline text-white/70">
-                profilul frizerului
-              </Link>
-              .
+              Alege un frizer activ din listă. Linkurile sociale se iau din
+              profilul frizerului.
             </p>
           )}
           <MarketingAIClient

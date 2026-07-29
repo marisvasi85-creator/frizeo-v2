@@ -43,7 +43,6 @@ export default function BarbersClient({
   isOverLimit: initialIsOverLimit,
   ownerUserId,
   ownerActsAsBarber: initialOwnerActsAsBarber,
-  highlightOwnerRole = false,
   tenantSlug,
   appUrl,
   initialBarbers = [],
@@ -59,7 +58,6 @@ export default function BarbersClient({
   isOverLimit: boolean;
   ownerUserId: string;
   ownerActsAsBarber: boolean;
-  highlightOwnerRole?: boolean;
   tenantSlug: string;
   appUrl: string;
   initialBarbers?: Barber[];
@@ -284,7 +282,7 @@ export default function BarbersClient({
       ? "Plan Custom: invitații în funcție de locurile configurate."
       : ownerActsAsBarber
         ? `Ești și frizer (ocupi 1 loc). Mai poți invita maxim ${Math.max(0, maxBarbers - 1)} frizeri pe acest plan.`
-        : `Ești doar administrator (0 locuri ocupate de tine). Poți invita până la ${maxBarbers} frizeri pe acest plan.`;
+        : `Poți invita până la ${maxBarbers} frizeri pe acest plan.`;
 
   return (
     <div className="space-y-8">
@@ -360,58 +358,6 @@ export default function BarbersClient({
         </p>
       </div>
 
-      <AdminCard
-        id="owner-role"
-        className={`space-y-4 scroll-mt-24 ${
-          highlightOwnerRole || !ownerActsAsBarber
-            ? "border border-amber-500/30 bg-amber-500/5"
-            : ""
-        }`}
-      >
-        <h2 className="font-medium">Rolul tău: frizer sau doar admin?</h2>
-        <p className="text-sm text-white/60">
-          Aici schimbi rolul. Ca owner poți fi doar administrator, sau
-          administrator + frizer. Dacă ești frizer, ocupi unul dintre locurile
-          active ale planului și apar în meniu: Profil frizer, Servicii, Program,
-          Google Calendar.
-        </p>
-
-        {!ownerActsAsBarber && (
-          <p className="text-sm text-amber-100/90">
-            Acum ești doar administrator — meniul nu include uneltele de frizer.
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center gap-3">
-          <span
-            className={
-              ownerActsAsBarber ? "text-green-400 text-sm" : "text-white/60 text-sm"
-            }
-          >
-            {ownerActsAsBarber
-              ? "Activ: administrator + frizer"
-              : "Doar administrator"}
-          </span>
-
-          <AdminButton
-            size="sm"
-            variant="secondary"
-            disabled={ownerRoleLoading}
-            loading={ownerRoleLoading}
-            loadingLabel="Se salvează…"
-            onClick={() => toggleOwnerRole(!ownerActsAsBarber)}
-          >
-            {ownerActsAsBarber
-              ? "Treci pe doar administrator"
-              : "Activează-mă ca frizer"}
-          </AdminButton>
-        </div>
-
-        {ownerRoleMessage && (
-          <p className="text-sm text-white/70">{ownerRoleMessage}</p>
-        )}
-      </AdminCard>
-
       <AdminCard className="space-y-4">
         <h2 className="font-medium">Invită frizer</h2>
 
@@ -422,7 +368,7 @@ export default function BarbersClient({
               ? "Poți invita frizeri conform locurilor din planul Custom."
               : ownerActsAsBarber
                 ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
-                : `Pe planul curent poți invita până la ${maxBarbers} frizeri (doar administrator = 0 locuri ocupate de tine).`}
+                : `Pe planul curent poți invita până la ${maxBarbers} frizeri.`}
         </p>
 
         {isTrial && invitesAllowed && !atInviteLimit && (
@@ -645,6 +591,41 @@ export default function BarbersClient({
           </AdminCard>
         ))}
       </div>
+
+      <AdminCard id="owner-role" className="space-y-3 scroll-mt-24 mt-10">
+        <h2 className="font-medium text-white/80 text-sm">
+          Opțiune: apari și ca frizer
+        </h2>
+        <p className="text-sm text-white/45">
+          Schimbi rar. Dacă ești și frizer, ocupi 1 loc și ai Profil, Servicii și
+          Program în meniu.
+        </p>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-sm text-white/45">
+            {ownerActsAsBarber
+              ? "Activă — ești și frizer"
+              : "Dezactivată — doar admin"}
+          </span>
+
+          <AdminButton
+            size="sm"
+            variant="secondary"
+            disabled={ownerRoleLoading}
+            loading={ownerRoleLoading}
+            loadingLabel="Se salvează…"
+            onClick={() => toggleOwnerRole(!ownerActsAsBarber)}
+          >
+            {ownerActsAsBarber
+              ? "Dezactivează rolul de frizer"
+              : "Activează rolul de frizer"}
+          </AdminButton>
+        </div>
+
+        {ownerRoleMessage && (
+          <p className="text-sm text-white/70">{ownerRoleMessage}</p>
+        )}
+      </AdminCard>
     </div>
   );
 }
