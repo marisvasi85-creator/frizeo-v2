@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { sessionActsAsBarber } from "../components/adminNav";
 import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-ai/generate";
