@@ -137,7 +137,9 @@ export async function subscriptionStatusTool(
       : `${activeBarbers} / ${maxBarbers} frizeri activi; ${invitesLeft} invitații rămase (${pendingInvites} pending)`;
 
   const trialBit = isAppTrial
-    ? ` Trial Pro+: ${trialDaysLeft ?? "?"} zile rămase.`
+    ? planSlug === "pro"
+      ? ` Trial Pro: ${trialDaysLeft ?? "?"} zile rămase (1 frizer, fără invitații).`
+      : ` Trial Pro+: ${trialDaysLeft ?? "?"} zile rămase.`
     : "";
 
   return {

@@ -217,8 +217,9 @@ export default async function BillingPage({
                 🚀 Perioadă de probă activă
               </p>
               <p className="text-sm text-white/70 mt-1">
-                Ai acces Pro+ (3 frizeri, SMS reminder, programări nelimitate) încă{" "}
-                {trialDaysLeft} zile
+                {currentPlan?.slug === "pro"
+                  ? `Ai acces Pro (1 frizer, SMS reminder, programări nelimitate, fără invitații) încă ${trialDaysLeft} zile`
+                  : `Ai acces Pro+ (până la 3 frizeri, SMS reminder, programări nelimitate) încă ${trialDaysLeft} zile`}
                 {trialDaysConfigured
                   ? ` (trial ${trialDaysConfigured} zile)`
                   : ""}
