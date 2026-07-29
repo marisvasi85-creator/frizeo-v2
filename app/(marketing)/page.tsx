@@ -1,23 +1,50 @@
 import Link from "next/link";
-import type { Metadata } from "next";
 import JsonLd from "@/app/components/JsonLd";
-import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import { LEGAL_PRICING } from "@/lib/legal/company";
+import { FRIZEO_FAQS } from "@/lib/site/faqContent";
 import {
+  faqPageJsonLd,
   jsonLdGraph,
   organizationJsonLd,
   softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/lib/site/jsonLd";
+import { SITE_NAME, SITE_TAGLINE } from "@/lib/site/metadata";
+import { createPageMetadata } from "@/lib/site/pageMetadata";
 import BookingHeroVisual from "./components/BookingHeroVisual";
 import ProductScreens from "./components/ProductScreens";
 
 const LANDING_VIDEO_ID = "do-k1cNkCOg";
 
-export const metadata: Metadata = {
-  alternates: { canonical: LEGAL_COMPANY.website },
-  openGraph: { url: LEGAL_COMPANY.website },
-  description:
-    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial 30 zile (Pro sau Pro+, după tipul de activitate).",
+const homeTitle = `${SITE_NAME} — ${SITE_TAGLINE}`;
+const homeDescription =
+  "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial 30 zile (Pro sau Pro+, după tipul de activitate).";
+
+const homeMetadata = createPageMetadata({
+  title: homeTitle,
+  description: homeDescription,
+  path: "/",
+  keywords: [
+    "programări online frizerie România",
+    "programări salon România",
+    "calendar frizerie",
+    "barbershop programări",
+    "Frizeo",
+  ],
+});
+
+export const metadata = {
+  ...homeMetadata,
+  // Avoid "%s | Frizeo" doubling the brand on the homepage.
+  title: { absolute: homeTitle },
+  openGraph: {
+    ...homeMetadata.openGraph,
+    title: homeTitle,
+  },
+  twitter: {
+    ...homeMetadata.twitter,
+    title: homeTitle,
+  },
 };
 
 function InlineCta({
@@ -59,7 +86,11 @@ export default function Page() {
         data={jsonLdGraph(
           organizationJsonLd(),
           webSiteJsonLd(),
-          softwareApplicationJsonLd()
+          softwareApplicationJsonLd(),
+          faqPageJsonLd(FRIZEO_FAQS, {
+            path: "/",
+            name: "Întrebări frecvente — Frizeo",
+          })
         )}
       />
 
@@ -474,6 +505,61 @@ export default function Page() {
           </div>
         </section>
 
+        {/* FAQ — GEO / AI-citable answers */}
+        <section
+          id="intrebari-frecvente"
+          className="border-t border-[var(--mkt-line)] bg-white px-6 py-20"
+        >
+          <div className="mx-auto max-w-3xl">
+            <h2 className="mkt-display text-center text-3xl sm:text-4xl">
+              Întrebări frecvente
+            </h2>
+            <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
+              Răspunsuri scurte despre Frizeo, prețuri, SMS și cum funcționează
+              programările.
+            </p>
+
+            <div className="mt-12 divide-y divide-[var(--mkt-line)] border-y border-[var(--mkt-line)]">
+              {FRIZEO_FAQS.map((faq) => (
+                <details key={faq.question} className="group py-5">
+                  <summary className="cursor-pointer list-none marker:content-none">
+                    <h3 className="flex items-start justify-between gap-4 text-left text-lg font-semibold tracking-tight text-[var(--mkt-ink)]">
+                      <span>{faq.question}</span>
+                      <span
+                        className="mt-1 shrink-0 text-[var(--mkt-muted)] transition group-open:rotate-45"
+                        aria-hidden
+                      >
+                        +
+                      </span>
+                    </h3>
+                  </summary>
+                  <p className="mt-3 text-sm leading-relaxed text-[var(--mkt-muted)]">
+                    {faq.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+
+            <p className="mt-8 text-center text-sm text-[var(--mkt-muted)]">
+              Vezi și{" "}
+              <Link
+                href="/pricing"
+                className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
+              >
+                prețurile
+              </Link>{" "}
+              sau{" "}
+              <Link
+                href="/contact"
+                className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
+              >
+                contactează-ne
+              </Link>
+              .
+            </p>
+          </div>
+        </section>
+
         {/* PRICING TEASER */}
         <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20">
           <div className="mx-auto max-w-5xl text-center">
@@ -555,10 +641,10 @@ export default function Page() {
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <InlineCta href="/signup" label="Creează cont gratuit" dark />
             <Link
-              href="/barbers"
+              href="/frizerii"
               className="inline-flex min-w-[12rem] items-center justify-center rounded-xl border border-white/25 px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/10"
             >
-              Vezi o pagină live
+              Vezi frizerii pe hartă
             </Link>
           </div>
         </section>

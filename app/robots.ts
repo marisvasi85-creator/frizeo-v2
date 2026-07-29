@@ -18,6 +18,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/accept-invite/",
         "/booking/confirmed/",
         "/review/",
+        "/barbers",
       ],
     },
     sitemap: `${base}/sitemap.xml`,

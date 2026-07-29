@@ -13,7 +13,6 @@ const publicPaths: Array<{
   { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
   { path: "/signup", changeFrequency: "monthly", priority: 0.8 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
-  { path: "/barbers", changeFrequency: "daily", priority: 0.7 },
   { path: "/frizerii", changeFrequency: "daily", priority: 0.8 },
   { path: "/frizerii/harta", changeFrequency: "daily", priority: 0.75 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },

@@ -1,6 +1,12 @@
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import type { FaqItem } from "@/lib/site/faqContent";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site/metadata";
 import { pageUrl } from "@/lib/site/pageMetadata";
+
+function planOfferPrice(price: string): string | null {
+  const match = price.match(/(\d+)/);
+  return match ? match[1] : null;
+}
 
 export function organizationJsonLd() {
   return {
@@ -52,9 +58,55 @@ export function softwareApplicationJsonLd() {
     offers: paidPlans.map((plan) => ({
       "@type": "Offer",
       name: plan.name,
-      price: plan.price.replace(/[^\d]/g, "") || "0",
+      price: planOfferPrice(plan.price) || "0",
       priceCurrency: "RON",
       url: pageUrl("/pricing"),
+    })),
+  };
+}
+
+/** Offer-uri complete pentru pagina de prețuri (inclusiv Free / Custom). */
+export function pricingSoftwareApplicationJsonLd() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: SITE_NAME,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: pageUrl("/pricing"),
+    description: SITE_DESCRIPTION,
+    offers: LEGAL_PRICING.plans.map((plan) => {
+      const price = planOfferPrice(plan.price);
+      return {
+        "@type": "Offer",
+        name: plan.name,
+        description: [plan.barbers, plan.bookings, ...plan.features].join(". "),
+        url: pageUrl("/pricing"),
+        priceCurrency: "RON",
+        availability: "https://schema.org/InStock",
+        ...(price != null ? { price } : {}),
+      };
+    }),
+  };
+}
+
+export function faqPageJsonLd(
+  faqs: FaqItem[],
+  options?: { path?: string; name?: string }
+) {
+  const path = options?.path ?? "/";
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    name: options?.name ?? `Întrebări frecvente — ${SITE_NAME}`,
+    url: pageUrl(path),
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
     })),
   };
 }

@@ -66,7 +66,8 @@ export function createPageMetadata({
       ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
     twitter: {
-      card: ogImage ? "summary_large_image" : "summary",
+      // Root opengraph-image / twitter-image cover pages without a per-page image.
+      card: "summary_large_image",
       title: `${title} | ${SITE_NAME}`,
       description,
       ...(ogImage ? { images: [ogImage] } : {}),

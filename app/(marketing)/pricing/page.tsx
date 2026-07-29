@@ -2,7 +2,11 @@ import JsonLd from "@/app/components/JsonLd";
 import PricingAnalytics from "@/app/components/analytics/PricingAnalytics";
 import PricingPlanCta from "@/app/components/analytics/PricingPlanCta";
 import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
-import { breadcrumbJsonLd } from "@/lib/site/jsonLd";
+import {
+  breadcrumbJsonLd,
+  jsonLdGraph,
+  pricingSoftwareApplicationJsonLd,
+} from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 function parsePlanPrice(price: string): number | undefined {
@@ -25,10 +29,13 @@ export default function PricingPage() {
   return (
     <>
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Acasă", path: "/" },
-          { name: "Prețuri", path: "/pricing" },
-        ])}
+        data={jsonLdGraph(
+          breadcrumbJsonLd([
+            { name: "Acasă", path: "/" },
+            { name: "Prețuri", path: "/pricing" },
+          ]),
+          pricingSoftwareApplicationJsonLd()
+        )}
       />
       <PricingAnalytics />
       <main className="bg-white text-gray-900">
