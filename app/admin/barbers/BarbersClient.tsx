@@ -145,8 +145,8 @@ export default function BarbersClient({
         markInviteSaved();
         setMessage(
           isTrial
-            ? "Invitația a fost trimisă. Important: invitatul e acoperit din abonamentul salonului. Dacă după trial alegi Pro (1 frizer), frizerii în plus vor trebui dezactivați."
-            : "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Invitația ocupă un loc din plan până la acceptare sau ștergere.",
+            ? "Invitația a fost trimisă. Important: invitatul e acoperit din abonamentul salonului. Dacă după trial alegi Pro (1 frizer), frizerii în plus vor trebui dezactivați. Invitația expiră în 7 zile."
+            : "Invitația a fost trimisă. Frizerul va primi un email pentru activarea contului. Invitația ocupă un loc din plan până la acceptare, ștergere sau expirare (7 zile).",
         );
 
         await loadBarbers();
@@ -365,10 +365,10 @@ export default function BarbersClient({
           {invitesBlockedByPlan
             ? "Planul Free/Pro nu include invitații. Un singur frizer — fără echipă prin invitații. Upgrade la Pro+ sau Custom."
             : maxBarbers === null
-              ? "Poți invita frizeri conform locurilor din planul Custom."
+              ? "Poți invita frizeri conform locurilor din planul Custom. Invitațiile expiră în 7 zile."
               : ownerActsAsBarber
-                ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere).`
-                : `Pe planul curent poți invita până la ${maxBarbers} frizeri.`}
+                ? `Pe planul curent ai maxim ${maxBarbers} locuri. Tu ocupi 1 ca frizer — mai poți invita ${Math.max(0, maxBarbers - 1)} (dacă ai locuri libere). Invitațiile expiră în 7 zile.`
+                : `Pe planul curent poți invita până la ${maxBarbers} frizeri. Invitațiile expiră în 7 zile.`}
         </p>
 
         {isTrial && invitesAllowed && !atInviteLimit && (
