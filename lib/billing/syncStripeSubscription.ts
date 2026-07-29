@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { enforcePlanSeatLimits } from "./enforcePlanSeatLimits";
 import { getPlanIdBySlug } from "./getPlanIdBySlug";
 import { isCanonicalPlanSlug, PLAN_SLUGS, type PlanSlug } from "./plans";
 import { shouldApplyPlanFromStripeSubscription } from "./shouldApplyPlanFromStripe";
@@ -37,6 +38,7 @@ export async function downgradeTenantToFree(tenantId: string) {
     .eq("tenant_id", tenantId);
 
   await disableSmsForTenant(tenantId);
+  await enforcePlanSeatLimits(tenantId, 1, { clearPendingInvites: true });
 }
 
 function mapStripeStatus(status: Stripe.Subscription.Status): string {

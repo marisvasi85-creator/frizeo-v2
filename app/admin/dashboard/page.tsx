@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import {
   publicBookingUrl,
+  publicSalonUrl,
   stableBookingUrl,
 } from "@/lib/booking/publicBookingPath";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
@@ -14,6 +15,7 @@ import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 import SetupChecklist from "../components/SetupChecklist";
+import { sessionActsAsBarber } from "../components/adminNav";
 
 export default async function DashboardPage() {
   const session = await getAdminSession();
@@ -23,22 +25,30 @@ export default async function DashboardPage() {
   }
 
   const { user, role, barber } = session;
+  const actsAsBarber = sessionActsAsBarber(session);
   const today = new Date().toISOString().split("T")[0];
+  const tenantId = barber.tenant_id;
+
+  const bookingScope = actsAsBarber
+    ? { column: "barber_id" as const, value: barber.id }
+    : { column: "tenant_id" as const, value: tenantId };
 
   const [currentPlan, status, todayRes, upcomingRes, anyBookingRes, tenantRes] =
     await Promise.all([
-      getCurrentPlan(barber.tenant_id),
-      getDashboardStatus(user.id, barber.id),
+      getCurrentPlan(tenantId),
+      actsAsBarber
+        ? getDashboardStatus(user.id, barber.id)
+        : Promise.resolve({ step: "done" as const, completed: true }),
       supabaseAdmin
         .from("bookings")
         .select("id, client_name, start_time, end_time, date, status")
-        .eq("barber_id", barber.id)
+        .eq(bookingScope.column, bookingScope.value)
         .eq("date", today)
         .eq("status", "confirmed"),
       supabaseAdmin
         .from("bookings")
         .select("id, client_name, start_time, date, status")
-        .eq("barber_id", barber.id)
+        .eq(bookingScope.column, bookingScope.value)
         .eq("status", "confirmed")
         .gt("date", today)
         .order("date", { ascending: true })
@@ -47,16 +57,16 @@ export default async function DashboardPage() {
       supabaseAdmin
         .from("bookings")
         .select("id")
-        .eq("barber_id", barber.id)
+        .eq(bookingScope.column, bookingScope.value)
         .limit(1),
       supabaseAdmin
         .from("tenants")
         .select("id, name, slug")
-        .eq("id", barber.tenant_id)
+        .eq("id", tenantId)
         .single(),
     ]);
 
-  if (!status.completed) {
+  if (actsAsBarber && !status.completed) {
     if (status.step === "services") {
       redirect("/admin/services");
     }
@@ -69,12 +79,16 @@ export default async function DashboardPage() {
   const todayBookings = todayRes.data;
   const upcoming = upcomingRes.data;
   const appUrl = getAppUrl();
-  const stableUrl = stableBookingUrl(barber.id, appUrl);
-
-  let bookingUrl = stableUrl;
   const tenant = tenantRes.data;
-  if (tenant) {
-    const tenantSlug = await ensureTenantSlug(tenant);
+  const tenantSlug = tenant ? await ensureTenantSlug(tenant) : "";
+
+  let bookingUrl = stableBookingUrl(barber.id, appUrl);
+  let bookingLinkLabel = "Linkul tău de programări";
+
+  if (!actsAsBarber && tenantSlug) {
+    bookingUrl = publicSalonUrl(tenantSlug, appUrl);
+    bookingLinkLabel = "Linkul public al salonului";
+  } else if (tenantSlug) {
     const existingSlug =
       typeof barber.slug === "string" && barber.slug.trim()
         ? barber.slug
@@ -88,7 +102,7 @@ export default async function DashboardPage() {
     bookingUrl = publicBookingUrl(tenantSlug, barberSlug, appUrl);
   }
 
-  const showSetupChecklist = !anyBookingRes.data?.length;
+  const showSetupChecklist = actsAsBarber && !anyBookingRes.data?.length;
 
   return (
     <div className="space-y-8 min-w-0">
@@ -99,15 +113,21 @@ export default async function DashboardPage() {
         <p className="text-white/60 mt-1">Panoul tău de control</p>
       </div>
 
-      <SetupChecklist
-        barberId={barber.id}
-        createdAt={
-          typeof barber.created_at === "string" ? barber.created_at : null
-        }
-        eligible={showSetupChecklist}
-      />
+      {actsAsBarber && (
+        <SetupChecklist
+          barberId={barber.id}
+          createdAt={
+            typeof barber.created_at === "string" ? barber.created_at : null
+          }
+          eligible={showSetupChecklist}
+        />
+      )}
 
-      <BookingLinkCard initialUrl={bookingUrl} barberId={barber.id} />
+      <BookingLinkCard
+        initialUrl={bookingUrl}
+        barberId={actsAsBarber ? barber.id : undefined}
+        title={bookingLinkLabel}
+      />
 
       {role === "owner" && (
         <AdminCard>
@@ -136,10 +156,12 @@ export default async function DashboardPage() {
       {currentPlan?.status === "trialing" &&
         currentPlan?.trial_ends_at &&
         (() => {
+          // eslint-disable-next-line react-hooks/purity -- intentional per-request clock
+          const nowMs = Date.now();
           const daysLeft = Math.max(
             0,
             Math.ceil(
-              (new Date(currentPlan.trial_ends_at).getTime() - Date.now()) /
+              (new Date(currentPlan.trial_ends_at).getTime() - nowMs) /
                 (1000 * 60 * 60 * 24),
             ),
           );
@@ -149,7 +171,9 @@ export default async function DashboardPage() {
               <div className="font-semibold text-blue-300">🎁 Trial activ</div>
 
               <p className="text-white/70 mt-2">
-                Beneficiezi de acces Pro+ (SMS reminder, 3 frizeri, programări nelimitate).
+                {currentPlan?.slug === "pro"
+                  ? "Beneficiezi de acces Pro (SMS reminder, 1 frizer, programări nelimitate — fără invitații echipă)."
+                  : "Beneficiezi de acces Pro+ (SMS reminder, până la 3 frizeri, programări nelimitate)."}
               </p>
 
               <p className="text-white mt-3 font-medium">
@@ -173,7 +197,9 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <AdminCard padding="sm">
-          <p className="text-sm text-white/60">Programări azi</p>
+          <p className="text-sm text-white/60">
+            {actsAsBarber ? "Programări azi" : "Programări salon azi"}
+          </p>
           <p className="text-3xl font-bold mt-2">
             {todayBookings?.length || 0}
           </p>
@@ -214,13 +240,21 @@ export default async function DashboardPage() {
             Rapoarte
           </AdminButton>
 
-          <AdminButton size="sm" href="/admin/services">
-            Servicii
-          </AdminButton>
+          {actsAsBarber ? (
+            <>
+              <AdminButton size="sm" href="/admin/services">
+                Servicii
+              </AdminButton>
 
-          <AdminButton size="sm" href="/admin/settings">
-            Program
-          </AdminButton>
+              <AdminButton size="sm" href="/admin/settings">
+                Program
+              </AdminButton>
+            </>
+          ) : (
+            <AdminButton size="sm" href="/admin/barbers">
+              Frizeri / rol
+            </AdminButton>
+          )}
         </div>
       </AdminCard>
 

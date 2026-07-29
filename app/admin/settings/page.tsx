@@ -1,4 +1,4 @@
-import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { requireActsAsBarber } from "../lib/requireActsAsBarber";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -9,9 +9,8 @@ import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import { DEFAULT_MIN_BOOKING_NOTICE_HOURS } from "@/lib/bookings/bookingLeadTime";
 
 export default async function SettingsPage() {
-  const session = await getAdminSession();
-  const barber = session?.barber;
-
+  const session = await requireActsAsBarber();
+  const barber = session.barber;
   if (!barber) redirect("/login");
 
   const [scheduleRes, overridesRes] = await Promise.all([

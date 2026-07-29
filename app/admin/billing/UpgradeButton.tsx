@@ -51,6 +51,13 @@ export default function UpgradeButton({
         return;
       }
 
+      if (data.code === "BARBER_LIMIT_EXCEEDED") {
+        setError(
+          `${data.error || "Prea mulți frizeri activi pentru acest plan."} Mergi la Frizeri și dezactivează până la limita planului.`,
+        );
+        return;
+      }
+
       setError(data.error || "Plata nu a putut fi inițiată.");
     } catch {
       setError("Eroare de rețea. Încearcă din nou.");

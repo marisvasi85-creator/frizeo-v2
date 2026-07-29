@@ -4,10 +4,16 @@ import crypto from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { isAuthError, requireTenantAccess } from "@/lib/auth/requireTenantAccess";
-import { canInviteBarber } from "@/lib/limits/checkBarberLimit";
 
 import { sendEmail } from "@/lib/email/email";
 import { barberInvitationTemplate } from "@/lib/email/templates/barber-invitation";
+import {
+  canInviteBarber,
+  getBarberLimitState,
+  inviteLimitReachedMessage,
+  invitesNotAvailableOnPlanMessage,
+  INVITE_LIMIT_EXCEEDED_CODE,
+} from "@/lib/limits/checkBarberLimit";
 
 export async function POST(req: Request) {
   try {
@@ -19,17 +25,10 @@ export async function POST(req: Request) {
 
     const body = await req.json();
 
-    const {
-      full_name,
-      email,
-      phone,
-    } = body;
+    const { full_name, email, phone } = body;
 
     if (!full_name || !email) {
-      return NextResponse.json(
-        { error: "Date incomplete" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Date incomplete" }, { status: 400 });
     }
 
     const tenantId = auth.tenantId;
@@ -42,94 +41,92 @@ export async function POST(req: Request) {
 
     const token = crypto.randomUUID();
 
-    const { data: existingInvite } =
-      await supabaseAdmin
-        .from("barber_invitations")
-        .select("id")
-        .eq("tenant_id", tenantId)
-        .eq("email", email)
-        .eq("accepted", false)
-        .maybeSingle();
+    const { data: existingInvite } = await supabaseAdmin
+      .from("barber_invitations")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("email", email)
+      .eq("accepted", false)
+      .maybeSingle();
 
+    // Invitație nouă: Free/Pro blocate; Pro+/trial/Custom consumă loc (activi + pending).
     if (!existingInvite) {
       const allowed = await canInviteBarber(tenantId);
-
       if (!allowed) {
+        const state = await getBarberLimitState(tenantId);
+        const limit = state?.limit ?? 0;
+        const error = !state?.invitesAllowed
+          ? invitesNotAvailableOnPlanMessage(state?.planName)
+          : inviteLimitReachedMessage(limit);
+
         return NextResponse.json(
           {
-            error:
-              "Ai atins limita de frizeri pentru planul tău. Upgrade abonamentul pentru mai mulți frizeri.",
+            error,
+            code: INVITE_LIMIT_EXCEEDED_CODE,
+            invitesAllowed: state?.invitesAllowed ?? false,
+            limit,
+            activeCount: state?.activeCount ?? 0,
+            pendingInviteCount: state?.pendingInviteCount ?? 0,
           },
-          { status: 403 }
+          { status: 403 },
         );
       }
     }
 
-if (existingInvite) {
-  const { error } = await supabaseAdmin
-    .from("barber_invitations")
-    .update({
-      token,
-      full_name,
-      phone,
-    })
-    .eq("id", existingInvite.id);
+    if (existingInvite) {
+      const { error } = await supabaseAdmin
+        .from("barber_invitations")
+        .update({
+          token,
+          full_name,
+          phone,
+        })
+        .eq("id", existingInvite.id);
 
-  if (error) {
-    console.error(error);
+      if (error) {
+        console.error(error);
+        return NextResponse.json(
+          { error: "Nu s-a putut actualiza invitația" },
+          { status: 400 },
+        );
+      }
+    } else {
+      const { error } = await supabaseAdmin
+        .from("barber_invitations")
+        .insert({
+          tenant_id: tenantId,
+          full_name,
+          email,
+          phone,
+          token,
+        });
 
-    return NextResponse.json(
-      { error: "Nu s-a putut actualiza invitația" },
-      { status: 400 }
-    );
-  }
-} else {
-  const { error } = await supabaseAdmin
-    .from("barber_invitations")
-    .insert({
-      tenant_id: tenantId,
-      full_name,
-      email,
-      phone,
-      token,
-    });
-
-  if (error) {
-    console.error(error);
-
-    return NextResponse.json(
-      { error: "Nu s-a putut salva invitația" },
-      { status: 400 }
-    );
-  }
-}
+      if (error) {
+        console.error(error);
+        return NextResponse.json(
+          { error: "Nu s-a putut salva invitația" },
+          { status: 400 },
+        );
+      }
+    }
 
     const baseUrl = getAppUrl();
-
-    const inviteUrl =
-  `${baseUrl}/accept-invite/${token}`;
+    const inviteUrl = `${baseUrl}/accept-invite/${token}`;
 
     await sendEmail({
       to: email,
       subject: "Invitație Frizeo",
       html: barberInvitationTemplate({
         barberName: full_name,
-        salonName:
-          tenant?.name || "Salon",
+        salonName: tenant?.name || "Salon",
         inviteUrl,
       }),
     });
 
-    return NextResponse.json({
-      success: true,
-    });
-
+    return NextResponse.json({ success: true });
   } catch (err) {
     console.error(err);
 
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

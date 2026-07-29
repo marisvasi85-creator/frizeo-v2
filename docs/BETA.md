@@ -20,7 +20,7 @@ Aplicația este deschisă pentru înregistrare (`/signup`). Acest ghid listează
 **În cod (deja configurat pe branch-ul beta):**
 
 - Conturile noi sunt create cu **email confirmat automat** — nu e nevoie de link de confirmare.
-- Trial **Pro+** la înregistrare: **60 zile** (configurabil cu `TRIAL_DAYS` în Vercel).
+- Trial **Pro+** la înregistrare: **30 zile** (configurabil cu `TRIAL_DAYS` în Vercel).
 - Cookie-uri de sesiune corecte pe mobil.
 
 **În Supabase Dashboard → Authentication → URL Configuration:**
@@ -80,7 +80,7 @@ Google permite maxim **100 de test users**. Pentru acces public fără listă, t
 - Login la `/login` (inclusiv de pe telefon)
 - Dashboard, servicii, program, programări
 - Pagină publică de booking (link-ul din profil)
-- Trial Pro+ (60 zile): SMS, limite mai mari, Google Calendar după pasul 2
+- Trial Pro+ (30 zile): SMS, limite mai mari, Google Calendar după pasul 2
 
 ## 4. Opțional pentru experiență completă
 

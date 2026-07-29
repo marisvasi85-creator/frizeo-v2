@@ -8,7 +8,13 @@ type ConfirmMeta = {
   icsUrl: string | null;
 };
 
-export default function BookingConfirmed({ bookingId }: { bookingId: string }) {
+export default function BookingConfirmed({
+  bookingId,
+  cancelToken,
+}: {
+  bookingId: string;
+  cancelToken?: string | null;
+}) {
   const [meta, setMeta] = useState<ConfirmMeta>({
     reviewUrl: null,
     googleCalendarUrl: null,
@@ -16,10 +22,14 @@ export default function BookingConfirmed({ bookingId }: { bookingId: string }) {
   });
 
   useEffect(() => {
+    if (!cancelToken) return;
+
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/bookings/confirm-meta?id=${bookingId}`);
+        const res = await fetch(
+          `/api/bookings/confirm-meta?id=${encodeURIComponent(bookingId)}&t=${encodeURIComponent(cancelToken)}`,
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) {
@@ -36,7 +46,7 @@ export default function BookingConfirmed({ bookingId }: { bookingId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [bookingId]);
+  }, [bookingId, cancelToken]);
 
   const hasCalendar = Boolean(meta.googleCalendarUrl || meta.icsUrl);
 

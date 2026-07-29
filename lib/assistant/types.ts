@@ -10,6 +10,8 @@ export type AssistantToolContext = {
   userId: string;
   role: "owner" | "manager" | "barber";
   barberId: string | null;
+  /** Owner may be admin-only (false) or also an active barber (true). */
+  actsAsBarber?: boolean;
   /** Only the confirm endpoint may set this — blocks LLM from skipping UI chips. */
   allowConfirmed?: boolean;
 };

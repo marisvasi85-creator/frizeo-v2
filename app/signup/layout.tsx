@@ -3,9 +3,9 @@ import { createPageMetadata } from "@/lib/site/pageMetadata";
 export const metadata = createPageMetadata({
   title: "Creează cont",
   description:
-    "Înregistrează-ți salonul pe Frizeo. Trial Pro+ gratuit, link de programări și calendar online.",
+    "Înregistrează-te pe Frizeo: frizer independent (trial Pro) sau salon (trial Pro+). Link de programări și calendar online.",
   path: "/signup",
-  keywords: ["cont frizeo", "înregistrare salon frizerie"],
+  keywords: ["cont frizeo", "înregistrare salon frizerie", "frizer independent"],
 });
 
 export default function SignupLayout({

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   alternates: { canonical: LEGAL_COMPANY.website },
   openGraph: { url: LEGAL_COMPANY.website },
   description:
-    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial Pro+ 60 zile.",
+    "Programări online pentru frizerii și barbershop-uri. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar. Trial 30 zile (Pro sau Pro+, după tipul de activitate).",
 };
 
 function InlineCta({
@@ -95,7 +95,7 @@ export default function Page() {
 
             <p className="mkt-rise mkt-rise-delay-4 mt-5 text-sm text-[var(--mkt-muted)]">
               Construit împreună cu frizeri din România ·{" "}
-              {LEGAL_PRICING.trialDays} zile trial Pro+
+              {LEGAL_PRICING.trialDays} zile trial
             </p>
           </div>
 
@@ -437,8 +437,8 @@ export default function Page() {
             <dl className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 {
-                  dt: `${LEGAL_PRICING.trialDays} zile Pro+`,
-                  dd: "Trial lung, cu SMS reminder inclus — testezi pe bune, nu 2 săptămâni.",
+                  dt: `${LEGAL_PRICING.trialDays} zile trial`,
+                  dd: "Independent pe Pro, salon pe Pro+ — cu SMS reminder inclus.",
                 },
                 {
                   dt: "Free cu 80 programări",
@@ -450,7 +450,7 @@ export default function Page() {
                 },
                 {
                   dt: "Fără credite SMS",
-                  dd: "Notificările incluse în plan. Fără top-up, fără surprize la final de lună.",
+                  dd: "Email pe toate planurile; SMS reminder pe Pro / Pro+ / trial.",
                 },
                 {
                   dt: "Marketing AI inclus",
@@ -481,7 +481,7 @@ export default function Page() {
               Prețuri simple, fără costuri ascunse
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-muted)]">
-              {LEGAL_PRICING.trialDays} zile trial Pro+. Apoi Free, Pro, Pro+ sau
+              {LEGAL_PRICING.trialDays} zile trial. Apoi Free, Pro, Pro+ sau
               Custom — tu alegi.
             </p>
 
@@ -549,8 +549,8 @@ export default function Page() {
             Deschide-ți link-ul de programări azi
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-white/65">
-            {LEGAL_PRICING.trialDays} zile Pro+ gratuit. Apoi alegi planul — sau
-            rămâi pe Free cu 80 de programări pe lună.
+            {LEGAL_PRICING.trialDays} zile trial (Pro sau Pro+, după cum lucrezi).
+            Apoi alegi planul — sau rămâi pe Free cu 80 de programări pe lună.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <InlineCta href="/signup" label="Creează cont gratuit" dark />

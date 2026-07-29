@@ -87,3 +87,17 @@ export function isPlanDowngrade(
 
   return getPlanTier(targetSlug) < getPlanTier(currentSlug);
 }
+
+/**
+ * Invitații echipă: doar Pro+ și Custom.
+ * Trial pe Pro (frizer independent) = fără invitații.
+ * Trial pe Pro+ (salon) = cu invitații.
+ */
+export function planAllowsBarberInvites(
+  plan: PlanLike | null | undefined
+): boolean {
+  if (!plan) return false;
+
+  const slug = plan.slug ?? "";
+  return slug === PLAN_SLUGS.PRO_PLUS || slug === PLAN_SLUGS.CUSTOM;
+}

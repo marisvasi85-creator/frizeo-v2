@@ -89,7 +89,7 @@ După ce adaugi test user-ul, Razvan merge la **Profil → Conectează Google Ca
 | `NEXT_PUBLIC_APP_URL` | `https://www.frizeo.ro` |
 | `GOOGLE_CLIENT_ID` | Da (Calendar) |
 | `GOOGLE_CLIENT_SECRET` | Da (Calendar) |
-| `TRIAL_DAYS` | `60` (recomandat beta) |
+| `TRIAL_DAYS` | `30` (implicit în cod; override pe env) |
 
 ### Notificări email (confirmări, reminder-e)
 
@@ -213,7 +213,7 @@ NOTION_SALOANE_DATABASE_ID=4d7bcc0cbe4748018de1218aee4a3d02
 | Dashboard, servicii, program | Da |
 | Booking public | Da |
 | Google Calendar sync | Da (după pasul 2) |
-| Trial Pro+ 60 zile | Da |
+| Trial Pro+ 30 zile | Da |
 | Email confirmare client | Nu |
 | SMS reminder | Nu |
 | Reminder automat 2h | Nu (fără cron) |

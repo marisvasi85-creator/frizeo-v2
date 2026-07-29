@@ -387,6 +387,7 @@ ${serviceName}${bookingLocation?.formattedAddress ? `\n\n${bookingLocation.forma
     return NextResponse.json({
       success: true,
       bookingId: data.id,
+      cancelToken: tokens?.cancel_token ?? data.cancel_token ?? null,
     });
 
   } catch (err) {

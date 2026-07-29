@@ -2,54 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const ownerItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/admin/bookings", label: "Programări", icon: "📋" },
-  { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
-  { href: "/admin/services", label: "Servicii", icon: "✂️" },
-  { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
-  { href: "/admin/profile", label: "Profil", icon: "👤" },
-  { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
-  { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
-  { href: "/admin/salon", label: "Salon", icon: "🏪" },
-  { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
-  { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
-  { href: "/admin/platform-assistant", label: "Platform AI", icon: "🛠️" },
-  { href: "/admin/billing", label: "Abonament", icon: "💎" },
-];
-
-const barberItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/admin/bookings", label: "Programări", icon: "📋" },
-  { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
-  { href: "/admin/services", label: "Servicii", icon: "✂️" },
-  { href: "/admin/settings", label: "Program de lucru", icon: "🗓️" },
-  { href: "/admin/profile", label: "Profil", icon: "👤" },
-  { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
-  { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
-  { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
-];
+import { buildAdminNavItems } from "./adminNav";
 
 export default function Sidebar({
   role,
+  actsAsBarber = true,
   assistantEnabled = false,
   platformAssistantEnabled = false,
 }: {
   role: string | null;
+  actsAsBarber?: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
 }) {
   const pathname = usePathname();
-  const navItems = (role === "owner" ? ownerItems : barberItems).filter(
-    (item) => {
-      if (item.href === "/admin/assistant") return assistantEnabled;
-      if (item.href === "/admin/platform-assistant") {
-        return platformAssistantEnabled;
-      }
-      return true;
-    },
-  );
+  const navItems = buildAdminNavItems({
+    role,
+    actsAsBarber,
+    assistantEnabled,
+    platformAssistantEnabled,
+  });
 
   return (
     <aside className="hidden md:flex w-64 border-r border-white/10 p-6 flex-col justify-between">

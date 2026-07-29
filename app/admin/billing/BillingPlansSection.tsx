@@ -2,6 +2,7 @@
 
 import UpgradeButton from "./UpgradeButton";
 import { isPlanDowngrade } from "@/lib/billing/plans";
+import Link from "next/link";
 
 type Plan = {
   id: string;
@@ -17,6 +18,7 @@ type Props = {
   currentPlanId: string | undefined;
   currentPlanSlug: string | undefined;
   isTrial: boolean;
+  activeBarbers: number;
 };
 
 export default function BillingPlansSection({
@@ -24,13 +26,15 @@ export default function BillingPlansSection({
   currentPlanId,
   currentPlanSlug,
   isTrial,
+  activeBarbers,
 }: Props) {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
       <p className="text-sm text-white/60 mb-4">
         Alegi planul → completezi datele de facturare în Stripe → plătești.
-        Factura fiscală se emite pe baza datelor din Stripe (export pentru contabilitate).
+        Factura fiscală se emite pe baza datelor din Stripe (export pentru
+        contabilitate).
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -43,6 +47,10 @@ export default function BillingPlansSection({
             !isCurrent &&
             currentPlanSlug &&
             isPlanDowngrade(currentPlanSlug, plan.slug);
+          const exceedsBarberLimit =
+            plan.max_barbers !== null && activeBarbers > plan.max_barbers;
+          const needsBarberReduce =
+            isPaidPlan && exceedsBarberLimit && (isTrial || !isCurrent);
 
           return (
             <div
@@ -82,19 +90,25 @@ export default function BillingPlansSection({
 
               <div className="mt-6 space-y-2 text-sm">
                 <div>
-                  👥{" "}
                   {plan.max_barbers
-                    ? `${plan.max_barbers} frizeri`
+                    ? `${plan.max_barbers} frizeri activi`
                     : "Frizeri personalizat"}
                 </div>
                 <div>
-                  📅{" "}
+                  {plan.slug === "pro" || plan.slug === "free"
+                    ? "Fără invitații echipă"
+                    : plan.slug === "pro-plus"
+                      ? "Invitații în limita locurilor"
+                      : plan.slug === "custom"
+                        ? "Invitații configurabile"
+                        : null}
+                </div>
+                <div>
                   {plan.max_bookings_per_month
                     ? `${plan.max_bookings_per_month} programări / lună`
                     : "Programări nelimitate"}
                 </div>
                 <div>
-                  📱{" "}
                   {plan.slug === "free"
                     ? "Fără SMS"
                     : plan.slug === "custom"
@@ -122,6 +136,23 @@ export default function BillingPlansSection({
                     </button>
                     <p className="text-xs text-white/50 text-center">
                       Beneficiezi deja de un plan mai mare.
+                    </p>
+                  </div>
+                ) : needsBarberReduce ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                    >
+                      Redu frizerii activi
+                    </button>
+                    <p className="text-xs text-amber-200/90 text-center">
+                      Ai {activeBarbers} frizeri activi; acest plan permite{" "}
+                      {plan.max_barbers}.{" "}
+                      <Link href="/admin/barbers" className="underline">
+                        Gestionează frizerii
+                      </Link>
                     </p>
                   </div>
                 ) : isCurrent && !canPurchaseDuringTrial ? (

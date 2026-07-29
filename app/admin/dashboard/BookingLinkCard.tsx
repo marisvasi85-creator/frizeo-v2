@@ -9,9 +9,11 @@ import { markSetupChecklistStep } from "@/lib/setup-checklist/storage";
 export default function BookingLinkCard({
   initialUrl,
   barberId,
+  title = "Linkul tău de programări",
 }: {
   initialUrl: string;
   barberId?: string;
+  title?: string;
 }) {
   const [url] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
@@ -30,7 +32,7 @@ export default function BookingLinkCard({
 
   return (
     <AdminCard id="booking-link" padding="sm" className="mb-6 scroll-mt-24">
-      <p className="text-sm text-white/60 mb-2">Linkul tău de programări</p>
+      <p className="text-sm text-white/60 mb-2">{title}</p>
 
       <p className="text-xs text-white/40 mb-3">
         Linkul frumos se creează o singură dată (din numele salonului/frizerului)

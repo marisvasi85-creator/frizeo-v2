@@ -389,6 +389,7 @@ ${new_start_time}`,
     return NextResponse.json({
       success: true,
       bookingId: newBooking.id,
+      cancelToken: bookingWithTokens?.cancel_token ?? null,
     });
 
   } catch (err) {

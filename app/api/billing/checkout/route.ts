@@ -15,6 +15,11 @@ import { stripeErrorMessage } from "@/lib/stripe";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  BARBER_LIMIT_EXCEEDED_CODE,
+  barberLimitExceededMessage,
+  planFitsActiveBarbers,
+} from "@/lib/limits/checkBarberLimit";
 
 export const runtime = "nodejs";
 
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
 
     const { data: targetPlan, error: planError } = await supabaseAdmin
       .from("plans")
-      .select("id, slug, name")
+      .select("id, slug, name, max_barbers")
       .eq("id", planId)
       .single();
 
@@ -73,6 +78,23 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Acest plan nu poate fi achiziționat online." },
         { status: 400 }
+      );
+    }
+
+    const fit = await planFitsActiveBarbers(
+      tenant.tenant_id,
+      targetPlan.max_barbers ?? null
+    );
+
+    if (!fit.ok) {
+      return NextResponse.json(
+        {
+          error: barberLimitExceededMessage(fit.activeCount, fit.limit),
+          code: BARBER_LIMIT_EXCEEDED_CODE,
+          activeCount: fit.activeCount,
+          limit: fit.limit,
+        },
+        { status: 403 }
       );
     }
 

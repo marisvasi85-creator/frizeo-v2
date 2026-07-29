@@ -21,7 +21,15 @@ export async function POST(req: Request) {
   let provisioningComplete = false;
 
   try {
-    const { email, password, fullName, phone, acceptedTerms } = await req.json();
+    const {
+      email,
+      password,
+      fullName,
+      phone,
+      acceptedTerms,
+      actsAsBarber,
+      businessType,
+    } = await req.json();
     const limited = await enforceRateLimit(req, {
       bucket: "auth-signup",
       identifier: normalizeEmail(email || ""),
@@ -34,9 +42,32 @@ export async function POST(req: Request) {
     const emailNorm = normalizeEmail(email || "");
     const phoneNorm = (phone || "").trim();
 
+    // independent | salon — legacy clients without businessType stay on salon/Pro+.
+    const resolvedBusinessType =
+      businessType === "independent" || businessType === "salon"
+        ? businessType
+        : "salon";
+    const ownerActsAsBarber =
+      resolvedBusinessType === "independent"
+        ? true
+        : actsAsBarber !== false;
+    const signupPlanSlug =
+      resolvedBusinessType === "independent"
+        ? PLAN_SLUGS.PRO
+        : PLAN_SLUGS.PRO_PLUS;
+    const tenantDisplayName =
+      resolvedBusinessType === "independent" ? name : `${name} Salon`;
+
     if (!name || name.length < 2) {
       return NextResponse.json(
         { error: "Introdu numele complet." },
+        { status: 400 }
+      );
+    }
+
+    if (businessType != null && businessType !== "independent" && businessType !== "salon") {
+      return NextResponse.json(
+        { error: "Alege dacă ești frizer independent sau lucrezi într-un salon." },
         { status: 400 }
       );
     }
@@ -94,14 +125,14 @@ export async function POST(req: Request) {
     if (profileError) throw profileError;
 
     // Slug-uri stabile: se alocă o singură dată la creare, nu se rescriu la redenumire.
-    const tenantSlug = await allocateTenantSlug(`${name} Salon`);
+    const tenantSlug = await allocateTenantSlug(tenantDisplayName);
     // =========================
     // 🔥 TENANT
     // =========================
     const { data: tenant, error: tenantError } = await supabaseAdmin
   .from("tenants")
   .insert({
-    name: name + " Salon",
+    name: tenantDisplayName,
     slug: tenantSlug,
   })
   .select()
@@ -134,6 +165,7 @@ export async function POST(req: Request) {
     display_name: name,
     phone: phoneNorm,
     slug: barberSlug,
+    active: ownerActsAsBarber,
   })
   .select()
   .single();
@@ -153,11 +185,11 @@ export async function POST(req: Request) {
 const trialEnds = new Date();
 trialEnds.setDate(trialEnds.getDate() + getTrialDays());
 
-const proPlusPlanId =
-  (await getPlanIdBySlug(PLAN_SLUGS.PRO_PLUS)) ??
+const signupPlanId =
+  (await getPlanIdBySlug(signupPlanSlug)) ??
   (await getPlanIdBySlug(PLAN_SLUGS.FREE));
 
-if (!proPlusPlanId) {
+if (!signupPlanId) {
   return NextResponse.json(
     { error: "Configurare planuri incompletă. Contactează suportul." },
     { status: 500 }
@@ -168,7 +200,7 @@ const { error: subscriptionError } = await supabaseAdmin
   .from("subscriptions")
   .insert({
     tenant_id: tenant.id,
-    plan_id: proPlusPlanId,
+    plan_id: signupPlanId,
     status: "trialing",
     current_period_start: new Date().toISOString(),
     current_period_end: trialEnds.toISOString(),

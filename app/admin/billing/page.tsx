@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import BillingPlansSection from "./BillingPlansSection";
@@ -63,7 +64,7 @@ export default async function BillingPage({
 
   const adminSession = await getAdminSession();
 
-  if (!adminSession?.barber) {
+  if (!adminSession?.tenantId) {
     redirect("/login");
   }
 
@@ -71,7 +72,7 @@ export default async function BillingPage({
     redirect("/admin/dashboard");
   }
 
-  const tenantId = adminSession.barber.tenant_id;
+  const tenantId = adminSession.tenantId;
 
   if (checkoutStatus === "success" && sessionId) {
     await syncAfterCheckout(sessionId, tenantId);
@@ -111,11 +112,11 @@ export default async function BillingPage({
     ? new Date(subscription.trial_ends_at)
     : null;
 
+  // Server request time — countdown for admin display
+  // eslint-disable-next-line react-hooks/purity -- intentional per-request clock
+  const nowMs = Date.now();
   const trialDaysLeft = trialEnds
-    ? Math.max(
-        0,
-        Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      )
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - nowMs) / (1000 * 60 * 60 * 24)))
     : 0;
 
   const isPastDue = subscription?.status === "past_due";
@@ -126,6 +127,10 @@ export default async function BillingPage({
       ? currentPlan.max_bookings_per_month
       : null;
   const trialDaysConfigured = getTrialDays();
+  const maxBarbers = currentPlan?.max_barbers ?? null;
+  const activeBarberCount = activeBarbers ?? 0;
+  const isOverBarberLimit =
+    maxBarbers !== null && activeBarberCount > maxBarbers;
 
   return (
     <div className="space-y-8">
@@ -162,6 +167,17 @@ export default async function BillingPage({
         </div>
       )}
 
+      {isOverBarberLimit && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100 text-sm">
+          Ai {activeBarberCount} frizeri activi, dar planul permite maximum{" "}
+          {maxBarbers}.{" "}
+          <Link href="/admin/barbers" className="underline">
+            Dezactivează frizeri
+          </Link>{" "}
+          până la {maxBarbers}. Nu ștergem date — doar starea activă contează.
+        </div>
+      )}
+
       <AdminCard>
         <div className="space-y-3">
           <p className="text-white/60 text-sm">Plan curent</p>
@@ -184,9 +200,9 @@ export default async function BillingPage({
           </p>
 
           <p className="text-white/60">
-            Frizeri activi: {activeBarbers ?? 0}
+            Frizeri activi: {activeBarberCount}
             {" / "}
-            {currentPlan?.max_barbers ?? 1}
+            {maxBarbers ?? "∞"}
           </p>
 
           {freeBookingLimit != null && (
@@ -201,8 +217,9 @@ export default async function BillingPage({
                 🚀 Perioadă de probă activă
               </p>
               <p className="text-sm text-white/70 mt-1">
-                Ai acces Pro+ (3 frizeri, SMS reminder, programări nelimitate) încă{" "}
-                {trialDaysLeft} zile
+                {currentPlan?.slug === "pro"
+                  ? `Ai acces Pro (1 frizer, SMS reminder, programări nelimitate, fără invitații) încă ${trialDaysLeft} zile`
+                  : `Ai acces Pro+ (până la 3 frizeri, SMS reminder, programări nelimitate) încă ${trialDaysLeft} zile`}
                 {trialDaysConfigured
                   ? ` (trial ${trialDaysConfigured} zile)`
                   : ""}
@@ -228,6 +245,7 @@ export default async function BillingPage({
         currentPlanId={currentPlan?.id}
         currentPlanSlug={currentPlan?.slug}
         isTrial={isTrial}
+        activeBarbers={activeBarberCount}
       />
 
       <BillingInvoicesSection tenantId={tenantId} />

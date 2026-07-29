@@ -150,7 +150,12 @@ export default function RescheduleClient({ booking, token }: any) {
       return;
     }
 
-    router.push(`/booking/confirmed/${data.bookingId}?rescheduled=1`);
+    const tokenQs = data.cancelToken
+      ? `&t=${encodeURIComponent(data.cancelToken)}`
+      : "";
+    router.push(
+      `/booking/confirmed/${data.bookingId}?rescheduled=1${tokenQs}`,
+    );
   };
 
   return (

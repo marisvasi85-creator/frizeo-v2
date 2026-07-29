@@ -27,7 +27,8 @@ export async function listActiveBarbersForTenant(
  * Resolve which barber an owner/manager/barber action targets.
  * - Barber role: always self
  * - Explicit barber_id / barber_name: preferred
- * - Owner with own barber profile: self
+ * - Owner with active own barber profile: self
+ * - Admin-only owner (no active self): never auto-self; single active or needsChoice
  * - Single active barber: that one
  * - Multiple active barbers without choice: needsChoice
  */

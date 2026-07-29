@@ -8,7 +8,7 @@ export const LEGAL_COMPANY = {
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
   website: "https://www.frizeo.ro",
-  lastUpdated: "23 iulie 2026",
+  lastUpdated: "29 iulie 2026",
 };
 
 export const LEGAL_LINKS = {
@@ -40,16 +40,18 @@ export type PricingPlan = {
 };
 
 export const LEGAL_PRICING = {
-  trialDays: 60,
+  trialDays: 30,
   includedNote:
-    "Toate notificările sunt incluse. Fără credite. Fără reîncărcări. Fără costuri ascunse.",
+    "Email inclus pe toate planurile. SMS reminder pe Pro / Pro+ / trial. Fără credite și fără reîncărcări.",
+  trialNote:
+    "Trial 30 zile: frizer independent → Pro (1 loc, fără invitații); salon → Pro+ (până la 3 frizeri, cu invitații).",
   plans: [
     {
       slug: "free",
       name: "Free",
       price: "0 lei",
       priceNote: "/ lună",
-      barbers: "1 frizer",
+      barbers: "1 frizer activ",
       bookings: "80 programări / lună",
       sms: false,
       cta: { label: "Creează cont", href: "/signup" },
@@ -65,13 +67,14 @@ export const LEGAL_PRICING = {
       name: "Pro",
       price: "79 lei",
       priceNote: "/ lună",
-      barbers: "1 frizer",
+      barbers: "1 frizer (fără invitații)",
       bookings: "Programări nelimitate",
       sms: true,
       highlighted: true,
-      cta: { label: "Începe trial 60 zile", href: "/signup" },
+      cta: { label: "Începe trial 30 zile", href: "/signup" },
       features: [
         "Tot din Free",
+        "1 frizer — fără invitații echipă",
         "SMS reminder inclus",
         "Confirmare / anulare / reprogramare pe email",
         "Google Calendar",
@@ -83,14 +86,14 @@ export const LEGAL_PRICING = {
       name: "Pro+",
       price: "199 lei",
       priceNote: "/ lună",
-      barbers: "Până la 3 frizeri",
+      barbers: "Până la 3 frizeri + invitații",
       bookings: "Programări nelimitate",
       sms: true,
-      cta: { label: "Începe trial 60 zile", href: "/signup" },
+      cta: { label: "Începe trial 30 zile", href: "/signup" },
       features: [
         "Tot din Pro",
         "Echipă până la 3 frizeri",
-        "Invitații frizeri",
+        "Invitații în limita locurilor (admin 3 / admin+frizer 2)",
         "Vizibilitate programări salon",
       ],
     },

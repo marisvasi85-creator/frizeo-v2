@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { planAllowsExtendedSms, planAllowsSms } from "@/lib/billing/plans";
@@ -25,6 +26,11 @@ export async function updateNotifications(
 
     if (!barber) {
       return { success: false, error: "Nu ești autentificat." };
+    }
+
+    const role = await getCurrentRole();
+    if (role !== "owner") {
+      return { success: false, error: "Doar owner-ul poate modifica notificările." };
     }
 
     const plan = await getCurrentPlan(barber.tenant_id);

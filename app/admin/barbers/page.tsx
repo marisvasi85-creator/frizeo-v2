@@ -3,12 +3,13 @@ import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
+import { planAllowsBarberInvites } from "@/lib/billing/plans";
 import BarbersClient from "./BarbersClient";
 
 export default async function BarbersPage() {
   const session = await getAdminSession();
 
-  if (!session?.barber) {
+  if (!session?.tenantId) {
     redirect("/login");
   }
 
@@ -16,13 +17,13 @@ export default async function BarbersPage() {
     redirect("/admin/dashboard");
   }
 
-  const tenantId = session.barber.tenant_id;
+  const tenantId = session.tenantId;
 
   const [barbersRes, invitesRes, subscriptionRes, tenantRes] =
     await Promise.all([
       supabaseAdmin
         .from("barbers")
-        .select("id, display_name, phone, active, slug, tenant_id")
+        .select("id, display_name, phone, active, slug, tenant_id, user_id")
         .eq("tenant_id", tenantId)
         .order("display_name"),
       supabaseAdmin
@@ -37,8 +38,10 @@ export default async function BarbersPage() {
           `
       status,
       trial_ends_at,
+      stripe_subscription_id,
       plan:plans (
         name,
+        slug,
         max_barbers
       )
     `,
@@ -70,38 +73,52 @@ export default async function BarbersPage() {
   );
 
   const plan = subscription?.plan as
-    | { name?: string; max_barbers?: number | null }
+    | { name?: string; max_barbers?: number | null; slug?: string | null }
     | null
     | undefined;
 
   const activeBarbers = barbers.filter((b) => b.active).length;
   const pendingInvites = invitations.length;
   const maxBarbers = plan?.max_barbers ?? null;
-  const canInvite =
-    maxBarbers === null || activeBarbers + pendingInvites < maxBarbers;
+  const planSlug = plan?.slug ?? null;
+  const ownerBarber = barbers.find((b) => b.user_id === session.user.id);
+  const ownerActsAsBarber = Boolean(ownerBarber?.active);
+  const isOverLimit =
+    maxBarbers !== null && activeBarbers > maxBarbers;
 
-  const isTrial = subscription?.status === "trialing";
+  const isTrial =
+    subscription?.status === "trialing" &&
+    !subscription?.stripe_subscription_id;
+  const invitesAllowed = planAllowsBarberInvites({
+    slug: planSlug,
+    status: subscription?.status,
+  });
   const trialEnds = subscription?.trial_ends_at
     ? new Date(subscription.trial_ends_at)
     : null;
+  // Server request time — countdown for admin display
+  // eslint-disable-next-line react-hooks/purity -- intentional per-request clock
+  const nowMs = Date.now();
   const trialDaysLeft = trialEnds
-    ? Math.max(
-        0,
-        Math.ceil((trialEnds.getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      )
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - nowMs) / (1000 * 60 * 60 * 24)))
     : 0;
 
   return (
     <BarbersClient
       currentPlan={
         isTrial
-          ? `🚀 Trial Gratuit (${trialDaysLeft} zile)`
+          ? `Trial ${planSlug === "pro" ? "Pro" : "Pro+"} (${trialDaysLeft} zile)`
           : (plan?.name ?? "Free")
       }
+      planSlug={planSlug}
+      invitesAllowed={invitesAllowed}
+      isTrial={isTrial}
       activeBarbers={activeBarbers}
       pendingInvites={pendingInvites}
       maxBarbers={maxBarbers}
-      canInvite={canInvite}
+      isOverLimit={isOverLimit}
+      ownerUserId={session.user.id}
+      ownerActsAsBarber={ownerActsAsBarber}
       tenantSlug={tenant?.slug ?? ""}
       appUrl={getAppUrl()}
       initialBarbers={barbers}
