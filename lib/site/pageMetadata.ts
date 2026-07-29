@@ -34,7 +34,8 @@ export function createPageMetadata({
   pwa,
 }: PageMetadataOptions): Metadata {
   const url = pageUrl(path);
-  const ogImage = image?.trim() || undefined;
+  const ogImage = image?.trim() || pageUrl("/opengraph-image");
+  const twitterImage = image?.trim() || pageUrl("/twitter-image");
 
   return {
     title,
@@ -63,14 +64,13 @@ export function createPageMetadata({
       url,
       type: "website",
       locale: "ro_RO",
-      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
+      images: [{ url: ogImage }],
     },
     twitter: {
-      // Root opengraph-image / twitter-image cover pages without a per-page image.
       card: "summary_large_image",
       title: `${title} | ${SITE_NAME}`,
       description,
-      ...(ogImage ? { images: [ogImage] } : {}),
+      images: [twitterImage],
     },
     robots: noIndex
       ? { index: false, follow: false }

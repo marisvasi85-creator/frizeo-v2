@@ -36,7 +36,10 @@ export default function GoogleCalendarDataPage() {
   const c = LEGAL_COMPANY;
 
   return (
-    <LegalPageLayout title="Utilizarea datelor Google Calendar">
+    <LegalPageLayout
+      title="Utilizarea datelor Google Calendar"
+      path="/google-calendar-data"
+    >
       <p className="text-sm text-gray-500 mb-8">
         Ultima actualizare: {c.lastUpdated}
       </p>

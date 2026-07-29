@@ -64,6 +64,11 @@ const nextConfig: NextConfig = {
         destination: "https://www.frizeo.ro/:path*",
         permanent: true,
       },
+      {
+        source: "/barbers",
+        destination: "/frizerii",
+        permanent: true,
+      },
     ];
   },
   async headers() {

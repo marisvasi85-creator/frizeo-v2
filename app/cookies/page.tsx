@@ -14,7 +14,7 @@ export default function CookiesPage() {
   const c = LEGAL_COMPANY;
 
   return (
-    <LegalPageLayout title="Politica cookies">
+    <LegalPageLayout title="Politica cookies" path="/cookies">
       <p className="text-sm text-gray-500 mb-8">
         Ultima actualizare: {c.lastUpdated}
       </p>

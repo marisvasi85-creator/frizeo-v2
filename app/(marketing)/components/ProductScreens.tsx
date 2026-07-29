@@ -3,7 +3,10 @@ export default function ProductScreens() {
   return (
     <div className="mt-14 space-y-14">
       {/* Dashboard */}
-      <figure className="grid items-center gap-8 md:grid-cols-[1.15fr_0.85fr]">
+      <figure
+        className="grid items-center gap-8 md:grid-cols-[1.15fr_0.85fr]"
+        aria-label="Previzualizare dashboard Frizeo cu programările zilei"
+      >
         <div className="overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-[var(--mkt-ink)] text-white shadow-[0_20px_60px_-40px_rgba(11,11,12,0.55)]">
           <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
             <span className="h-2 w-2 rounded-full bg-white/20" />
@@ -53,7 +56,10 @@ export default function ProductScreens() {
       </figure>
 
       {/* Calendar */}
-      <figure className="grid items-center gap-8 md:grid-cols-[0.85fr_1.15fr]">
+      <figure
+        className="grid items-center gap-8 md:grid-cols-[0.85fr_1.15fr]"
+        aria-label="Previzualizare calendar Frizeo cu sync Google Calendar"
+      >
         <figcaption className="md:order-1 order-2">
           <p className="mkt-display text-xl">Calendar</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
@@ -124,7 +130,10 @@ export default function ProductScreens() {
       </figure>
 
       {/* Booking page */}
-      <figure className="grid items-center gap-8 md:grid-cols-[1.15fr_0.85fr]">
+      <figure
+        className="grid items-center gap-8 md:grid-cols-[1.15fr_0.85fr]"
+        aria-label="Previzualizare pagină publică de programări Frizeo"
+      >
         <div className="overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-white">
           <div className="border-b border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-4 py-3">
             <p className="text-xs uppercase tracking-[0.16em] text-[var(--mkt-muted)]">

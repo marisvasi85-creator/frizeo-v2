@@ -27,7 +27,7 @@ export default function TermsPage() {
   const c = LEGAL_COMPANY;
 
   return (
-    <LegalPageLayout title="Termeni și condiții">
+    <LegalPageLayout title="Termeni și condiții" path="/terms">
       <p className="text-sm text-gray-500 mb-8">
         Ultima actualizare: {c.lastUpdated}
       </p>

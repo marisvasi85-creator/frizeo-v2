@@ -61,6 +61,13 @@ export default function MarketingLayout({
             </Link>
 
             <Link
+              href="/contact"
+              className="text-sm text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)] hidden sm:inline transition"
+            >
+              Contact
+            </Link>
+
+            <Link
               href="/login"
               className="text-sm text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)] whitespace-nowrap transition"
             >

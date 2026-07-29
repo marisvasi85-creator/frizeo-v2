@@ -33,7 +33,7 @@ export default function PrivacyPage() {
   const c = LEGAL_COMPANY;
 
   return (
-    <LegalPageLayout title="Politica de confidențialitate">
+    <LegalPageLayout title="Politica de confidențialitate" path="/privacy">
       <p className="text-sm text-gray-500 mb-8">
         Ultima actualizare: {c.lastUpdated}
       </p>
