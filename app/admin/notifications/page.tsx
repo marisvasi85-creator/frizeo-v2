@@ -35,8 +35,8 @@ export default async function NotificationsPage() {
       <h1 className="text-2xl font-semibold">Notificări</h1>
 
       <p className="text-sm text-white/60">
-        Toate notificările sunt incluse. Fără credite. Fără reîncărcări. Fără
-        costuri ascunse.
+        Email pe toate planurile. SMS reminder pe Pro / Pro+ / trial. Fără
+        credite și fără reîncărcări.
       </p>
 
       {!reminderSmsAllowed && (
