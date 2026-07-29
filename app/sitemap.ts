@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
 import { listDirectoryCities } from "@/lib/seo/directorySalons";
+import { hasDirectoryListedMigration } from "@/lib/seo/hasDirectoryListedMigration";
 
 const publicPaths: Array<{
   path: string;
@@ -23,6 +24,7 @@ const publicPaths: Array<{
 
 type ActiveBarberRow = {
   slug: string | null;
+  tenant_id: string;
   tenant: { slug: string | null } | { slug: string | null }[] | null;
 };
 
@@ -36,7 +38,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified,
       changeFrequency,
       priority,
-    })
+    }),
   );
 
   const cities = await listDirectoryCities();
@@ -47,15 +49,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  const hasDirectoryFlag = await hasDirectoryListedMigration();
+  let listedTenantIds: Set<string> | null = null;
+
+  if (hasDirectoryFlag) {
+    const { data: listed, error: listedError } = await supabaseAdmin
+      .from("tenants")
+      .select("id")
+      .eq("directory_listed", true);
+
+    if (listedError) {
+      console.error("sitemap directory_listed:", listedError);
+      return [...staticEntries, ...cityEntries];
+    }
+
+    listedTenantIds = new Set((listed || []).map((t) => t.id as string));
+    if (listedTenantIds.size === 0) {
+      return [...staticEntries, ...cityEntries];
+    }
+  }
+
   const { data: activeBarbers, error } = await supabaseAdmin
     .from("barbers")
     .select(
       `
       slug,
+      tenant_id,
       tenant:tenants!inner (
         slug
       )
-    `
+    `,
     )
     .eq("active", true);
 
@@ -68,6 +91,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const barberEntries: MetadataRoute.Sitemap = [];
 
   for (const row of (activeBarbers || []) as ActiveBarberRow[]) {
+    if (listedTenantIds && !listedTenantIds.has(row.tenant_id)) continue;
+
     const tenantRel = row.tenant;
     const tenantSlug = Array.isArray(tenantRel)
       ? tenantRel[0]?.slug
@@ -96,7 +121,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: modified,
       changeFrequency: "daily" as const,
       priority: 0.85,
-    })
+    }),
   );
 
   return [

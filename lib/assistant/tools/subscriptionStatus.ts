@@ -1,5 +1,6 @@
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { planAllowsBarberInvites } from "@/lib/billing/plans";
+import { barberInviteValidSinceIso } from "@/lib/barbers/inviteExpiry";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
 
@@ -23,7 +24,8 @@ export async function subscriptionStatusTool(
       .from("barber_invitations")
       .select("*", { count: "exact", head: true })
       .eq("tenant_id", ctx.tenantId)
-      .eq("accepted", false),
+      .eq("accepted", false)
+      .gte("created_at", barberInviteValidSinceIso()),
   ]);
 
   if (!plan && !subRes.data) {

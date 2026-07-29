@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureBarberSlug } from "@/lib/barbers/ensureBarberSlug";
 import { planAllowsBarberInvites } from "@/lib/billing/plans";
+import { barberInviteValidSinceIso } from "@/lib/barbers/inviteExpiry";
 import BarbersClient from "./BarbersClient";
 
 export default async function BarbersPage() {
@@ -31,6 +32,7 @@ export default async function BarbersPage() {
         .select("id, full_name, email, phone, accepted, created_at")
         .eq("tenant_id", tenantId)
         .eq("accepted", false)
+        .gte("created_at", barberInviteValidSinceIso())
         .order("created_at", { ascending: false }),
       supabaseAdmin
         .from("subscriptions")
