@@ -46,7 +46,7 @@ function InlineCta({
 export default function Page() {
   const trustPoints = [
     `${LEGAL_PRICING.trialDays} zile trial`,
-    "SMS inclus",
+    "SMS reminder pe Pro/Pro+",
     "Google Calendar",
     "Fără comision",
     "Fără instalare",
