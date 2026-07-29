@@ -8,7 +8,7 @@ export const LEGAL_COMPANY = {
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
   website: "https://www.frizeo.ro",
-  lastUpdated: "23 iulie 2026",
+  lastUpdated: "29 iulie 2026",
 };
 
 export const LEGAL_LINKS = {
@@ -42,7 +42,9 @@ export type PricingPlan = {
 export const LEGAL_PRICING = {
   trialDays: 30,
   includedNote:
-    "Toate notificările sunt incluse. Fără credite. Fără reîncărcări. Fără costuri ascunse.",
+    "Email inclus pe toate planurile. SMS reminder pe Pro / Pro+ / trial. Fără credite și fără reîncărcări.",
+  trialNote:
+    "Trial 30 zile: frizer independent → Pro (1 loc, fără invitații); salon → Pro+ (până la 3 frizeri, cu invitații).",
   plans: [
     {
       slug: "free",
