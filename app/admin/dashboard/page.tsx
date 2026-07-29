@@ -193,8 +193,9 @@ export default async function DashboardPage() {
               <div className="font-semibold text-blue-300">🎁 Trial activ</div>
 
               <p className="text-white/70 mt-2">
-                Beneficiezi de acces Pro+ (SMS reminder, 3 frizeri, programări
-                nelimitate).
+                {currentPlan?.slug === "pro"
+                  ? "Beneficiezi de acces Pro (SMS reminder, 1 frizer, programări nelimitate — fără invitații echipă)."
+                  : "Beneficiezi de acces Pro+ (SMS reminder, până la 3 frizeri, programări nelimitate)."}
               </p>
 
               <p className="text-white mt-3 font-medium">
