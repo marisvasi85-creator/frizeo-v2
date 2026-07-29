@@ -119,16 +119,14 @@ Planul Vercel Free **nu** suportă cron-uri frecvente — folosim un **serviciu 
 |-----------|------|
 | `CRON_SECRET` | String random 32+ caractere — setat în Vercel |
 
-După setare în Vercel, creează 3 job-uri HTTP GET (înlocuiește `SECRET`):
+După setare în Vercel, creează job-uri HTTP GET. **Preferat:** header `Authorization: Bearer SECRET` (secretul nu apare în loguri URL). Alternativ `?secret=SECRET`.
 
 | Job | URL | Program |
 |-----|-----|---------|
-| Reminder | `https://www.frizeo.ro/api/cron/reminder?secret=SECRET` | La 15 min (`*/15 * * * *`) |
-| Cleanup | `https://www.frizeo.ro/api/cron/cleanup?secret=SECRET` | La fiecare oră (`0 * * * *`) |
-| Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup?secret=SECRET` | Zilnic 03:00 UTC (`0 3 * * *`) |
-| Notion sync | `https://www.frizeo.ro/api/cron/notion-sync?secret=SECRET` | Zilnic 04:00 UTC (`0 4 * * *`) |
-
-Alternativ, header `Authorization: Bearer SECRET` (fără `?secret=`).
+| Reminder | `https://www.frizeo.ro/api/cron/reminder` + Bearer | La 15 min (`*/15 * * * *`) |
+| Cleanup | `https://www.frizeo.ro/api/cron/cleanup` + Bearer | La fiecare oră (`0 * * * *`) |
+| Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup` + Bearer | Zilnic 03:00 UTC (`0 3 * * *`) |
+| Notion sync | `https://www.frizeo.ro/api/cron/notion-sync` + Bearer | Zilnic 04:00 UTC (`0 4 * * *`) |
 
 Endpoint-urile răspund `401` dacă `CRON_SECRET` lipsește sau e greșit.
 

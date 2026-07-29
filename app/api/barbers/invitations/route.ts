@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { barberInviteValidSinceIso } from "@/lib/barbers/inviteExpiry";
 
 export async function GET() {
   const barber = await getCurrentBarberInTenant();
@@ -28,13 +29,14 @@ export async function GET() {
     `)
     .eq("tenant_id", barber.tenant_id)
     .eq("accepted", false)
+    .gte("created_at", barberInviteValidSinceIso())
     .order("created_at", { ascending: false });
 
   if (error) {
     console.error("barbers/invitations:", error);
     return NextResponse.json(
       { invitations: [], error: error.message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 

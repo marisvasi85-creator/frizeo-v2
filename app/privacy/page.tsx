@@ -284,7 +284,10 @@ export default function PrivacyPage() {
         <li>Zoho sau furnizorul de email</li>
         <li>SMSO (notificări SMS)</li>
         <li>Stripe (procesare plăți)</li>
+        <li>FGO (emitere facturi fiscale, când este configurat)</li>
         <li>Google (Google Calendar și Google Analytics)</li>
+        <li>OpenAI și/sau Google Gemini (Marketing AI și Assistant, când sunt activate)</li>
+        <li>Notion (sincronizare internă operațională, când este configurată)</li>
         <li>Meta Platforms</li>
         <li>TikTok</li>
       </ul>
@@ -360,7 +363,7 @@ export default function PrivacyPage() {
         <li>acces restricționat la infrastructura backend;</li>
         <li>autentificare și autorizare pentru accesul la date;</li>
         <li>
-          monitorizarea și jurnalizarea accesului la serviciile critice.
+          autentificare și autorizare pentru accesul la date.
         </li>
       </ul>
 
@@ -382,6 +385,13 @@ export default function PrivacyPage() {
       </p>
 
       <h2>9. Inteligență Artificială (AI)</h2>
+      <p>
+        Frizeo poate folosi modele AI (OpenAI și/sau Google Gemini) pentru
+        funcții opționale precum Marketing AI și Assistant, pe baza datelor din
+        contul salonului (ex.: servicii, programări, mesaje din chat). Aceste
+        date sunt trimise către furnizorul AI doar pentru generarea răspunsului
+        / conținutului solicitat.
+      </p>
       <p>
         Frizeo nu utilizează datele Google Calendar sau alte informații
         obținute prin Google API pentru dezvoltarea, îmbunătățirea sau

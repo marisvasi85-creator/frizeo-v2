@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { planAllowsBarberInvites } from "@/lib/billing/plans";
+import { barberInviteValidSinceIso } from "@/lib/barbers/inviteExpiry";
 
 export type BarberLimitState = {
   limit: number | null;
@@ -59,7 +60,8 @@ export async function getBarberLimitState(
     .from("barber_invitations")
     .select("*", { count: "exact", head: true })
     .eq("tenant_id", tenantId)
-    .eq("accepted", false);
+    .eq("accepted", false)
+    .gte("created_at", barberInviteValidSinceIso());
 
   const active = activeCount ?? 0;
   const pending = pendingInviteCount ?? 0;

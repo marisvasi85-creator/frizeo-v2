@@ -48,16 +48,22 @@ export async function sendSms({
       return { ok: false, data: null };
     }
 
-    const sender = 4;
+    const sender = "4";
+    const body = new URLSearchParams({
+      sender,
+      to: formattedPhone,
+      body: message,
+    });
 
-    const url =
-      `https://app.smso.ro/api/v1/send` +
-      `?sender=${sender}` +
-      `&to=${encodeURIComponent(formattedPhone)}` +
-      `&body=${encodeURIComponent(message)}` +
-      `&apiKey=${process.env.SMSO_API_KEY}`;
-
-    const res = await fetch(url);
+    // SMSO: prefer X-Authorization header — never put apiKey in the URL.
+    const res = await fetch("https://app.smso.ro/api/v1/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-Authorization": process.env.SMSO_API_KEY,
+      },
+      body,
+    });
     const data = await res.json().catch(() => null);
     const status =
       typeof data === "object" &&

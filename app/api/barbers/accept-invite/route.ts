@@ -8,6 +8,10 @@ import {
 } from "@/lib/limits/checkBarberLimit";
 import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 import {
+  barberInviteExpiredMessage,
+  isBarberInviteExpired,
+} from "@/lib/barbers/inviteExpiry";
+import {
   isValidPassword,
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
@@ -37,7 +41,8 @@ export async function GET(req: Request) {
           full_name,
           email,
           phone,
-          accepted
+          accepted,
+          created_at
         `)
         .eq("token", token)
         .single();
@@ -49,8 +54,28 @@ export async function GET(req: Request) {
       );
     }
 
+    if (invitation.accepted) {
+      return NextResponse.json(
+        { error: "Invitația a fost deja acceptată" },
+        { status: 410 }
+      );
+    }
+
+    if (isBarberInviteExpired(invitation.created_at)) {
+      return NextResponse.json(
+        { error: barberInviteExpiredMessage() },
+        { status: 410 }
+      );
+    }
+
     return NextResponse.json({
-      invitation,
+      invitation: {
+        id: invitation.id,
+        full_name: invitation.full_name,
+        email: invitation.email,
+        phone: invitation.phone,
+        accepted: invitation.accepted,
+      },
     });
 
   } catch (err) {
@@ -106,6 +131,13 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Invitație invalidă" },
         { status: 400 }
+      );
+    }
+
+    if (isBarberInviteExpired(invitation.created_at)) {
+      return NextResponse.json(
+        { error: barberInviteExpiredMessage() },
+        { status: 410 }
       );
     }
 
