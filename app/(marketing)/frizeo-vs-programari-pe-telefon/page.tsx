@@ -66,6 +66,7 @@ export default function ComparisonPage() {
               "Clientul vede doar orele libere",
               "Programarea intră în calendarul tău",
               "Confirmări pe email; SMS reminder pe Pro / Pro+ / trial",
+              "Marketing AI: postări și oferte cu același link de booking",
               "Pe Pro+: până la 3 frizeri, cu invitații în limita locurilor",
             ]}
           />

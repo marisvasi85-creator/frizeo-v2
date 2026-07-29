@@ -73,10 +73,10 @@ function InlineCta({
 export default function Page() {
   const trustPoints = [
     `${LEGAL_PRICING.trialDays} zile trial`,
+    "Marketing AI inclus",
     "SMS reminder pe Pro/Pro+",
     "Google Calendar",
     "Fără comision",
-    "Fără instalare",
     "Factură în România",
   ];
 
@@ -159,6 +159,7 @@ export default function Page() {
                 "Programările stau în WhatsApp, pe hârtie sau „în cap”.",
                 "Nu știi sigur cine vine mâine, la ce oră și pentru ce serviciu.",
                 "No-show-urile mănâncă din zi fără reminder automat.",
+                "Vrei să postezi pe Instagram, dar tot amâni — și scaunul rămâne gol.",
               ].map((item) => (
                 <li
                   key={item}
@@ -309,49 +310,71 @@ export default function Page() {
         </section>
 
         {/* MARKETING AI */}
-        <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-ink)] px-6 py-20 text-white">
-          <div className="mx-auto max-w-5xl">
-            <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">
-              Marketing AI
-            </p>
-            <h2 className="mkt-display mt-3 max-w-3xl text-3xl sm:text-4xl md:text-5xl">
-              Conținut pentru Instagram, generat pentru salonul tău
-            </h2>
-            <p className="mt-4 max-w-2xl text-base text-white/65 sm:text-lg">
-              Postări, story-uri, scripturi pentru Reel și oferte — cu brandul
-              tău pe card. Nu mai stai blocat fără idei de promovare.
-            </p>
+        <section
+          id="marketing-ai"
+          className="border-t border-[var(--mkt-line)] bg-[var(--mkt-ink)] px-6 py-20 text-white"
+        >
+          <div className="mx-auto grid max-w-5xl items-start gap-12 lg:grid-cols-[1.15fr_0.85fr]">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/45">
+                Atu Frizeo · Marketing AI
+              </p>
+              <h2 className="mkt-display mt-3 max-w-3xl text-3xl sm:text-4xl md:text-5xl">
+                Promovezi salonul fără să angajezi un social media manager
+              </h2>
+              <p className="mt-4 max-w-2xl text-base text-white/65 sm:text-lg">
+                Generezi postări, story-uri, scripturi pentru Reel și oferte pe
+                serviciile tale — cu tonul brandului și link-ul de programări
+                inclus. Card vizual descărcabil, gata de Instagram.
+              </p>
 
-            <div className="mt-12 grid gap-8 sm:grid-cols-3">
-              {[
-                {
-                  title: "Post & Story",
-                  body: "Text gata de publicat + card vizual descărcabil.",
-                },
-                {
-                  title: "Promoții",
-                  body: "Oferte pe servicii, birthday și campanii sezoniere.",
-                },
-                {
-                  title: "Inclus în plan",
-                  body: "Limite zilnice pe Free / Pro / Pro+ — fără pachete separate.",
-                },
-              ].map((item) => (
-                <div key={item.title}>
-                  <h3 className="text-lg font-semibold">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-white/55">
-                    {item.body}
-                  </p>
-                </div>
-              ))}
+              <ul className="mt-8 space-y-3 text-sm text-white/70">
+                {[
+                  "Text + hashtag-uri + CTA cu link-ul tău Frizeo",
+                  "Promoții pe serviciu, birthday și campanii sezoniere",
+                  "Inclus în Free / Pro / Pro+ — limite zilnice, fără pachet separat",
+                ].map((line) => (
+                  <li key={line} className="flex gap-3">
+                    <span className="text-[var(--mkt-accent-soft)]" aria-hidden>
+                      →
+                    </span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <InlineCta href="/signup" label="Încearcă Marketing AI" dark />
+                <Link
+                  href="/marketing-ai"
+                  className="inline-flex min-w-[12rem] items-center justify-center rounded-xl border border-white/25 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Cum funcționează
+                </Link>
+              </div>
             </div>
 
-            <div className="mt-10">
-              <InlineCta
-                href="/signup"
-                label="Încearcă Marketing AI"
-                dark
-              />
+            <div className="rounded-2xl border border-white/15 bg-white/[0.04] p-6">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/45">
+                Exemplu generat
+              </p>
+              <div className="mt-4 rounded-xl border border-white/10 bg-[var(--mkt-ink-soft)] px-4 py-4 text-sm leading-relaxed">
+                <p className="font-semibold text-white">Fade fresh · locuri săptămâna asta</p>
+                <p className="mt-3 text-white/70">
+                  Ai nevoie de un refresh? Programează-te online — alegi ora în
+                  30 de secunde, fără telefon.
+                </p>
+                <p className="mt-3 text-white/45">
+                  #barbershop #fade #programacionline
+                </p>
+                <p className="mt-4 text-xs font-medium text-[var(--mkt-accent-soft)]">
+                  CTA → link-ul tău de booking
+                </p>
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-white/40">
+                Exemplu ilustrativ. Conținutul real folosește numele salonului,
+                serviciile și orașul tău.
+              </p>
             </div>
           </div>
         </section>
@@ -481,7 +504,7 @@ export default function Page() {
                 },
                 {
                   dt: "Marketing AI inclus",
-                  dd: "Promovezi salonul din același loc din care gestionezi programările.",
+                  dd: "Postări, story, Reel și oferte pe serviciile tale — fără tool separat de social media.",
                 },
                 {
                   dt: "Factură în România",

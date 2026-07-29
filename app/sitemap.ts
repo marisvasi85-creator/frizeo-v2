@@ -11,6 +11,7 @@ const publicPaths: Array<{
 }> = [
   { path: "", changeFrequency: "weekly", priority: 1 },
   { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/marketing-ai", changeFrequency: "monthly", priority: 0.85 },
   { path: "/programari-online-frizerie", changeFrequency: "monthly", priority: 0.85 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.8 },
   { path: "/ghid", changeFrequency: "monthly", priority: 0.75 },

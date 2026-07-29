@@ -16,12 +16,13 @@ function parsePlanPrice(price: string): number | undefined {
 
 export const metadata = createPageMetadata({
   title: "Prețuri",
-  description: `Planuri Free, Pro și Pro+ pentru programări online. ${LEGAL_PRICING.trialDays} zile trial: independent pe Pro, salon pe Pro+.`,
+  description: `Planuri Free, Pro și Pro+ pentru programări online, cu Marketing AI inclus. ${LEGAL_PRICING.trialDays} zile trial: independent pe Pro, salon pe Pro+.`,
   path: "/pricing",
   keywords: [
     "prețuri frizeo",
     "abonament programări frizerie",
     "plan pro frizerie",
+    "marketing ai frizerie",
   ],
 });
 
@@ -43,7 +44,8 @@ export default function PricingPage() {
           <h1 className="text-4xl font-semibold mb-4">Prețuri simple</h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
             {LEGAL_PRICING.trialNote} SMS reminder inclus pe trial / Pro / Pro+.
-            După trial rămâi pe Free sau treci la Pro / Pro+.
+            Marketing AI inclus pe toate planurile (limite zilnice). După trial
+            rămâi pe Free sau treci la Pro / Pro+.
           </p>
           <p className="text-gray-700 max-w-2xl mx-auto mt-4 text-sm font-medium">
             {LEGAL_PRICING.includedNote}

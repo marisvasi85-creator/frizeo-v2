@@ -17,6 +17,11 @@ export const metadata = createPageMetadata({
 
 const GUIDES = [
   {
+    href: "/marketing-ai",
+    title: "Marketing AI pentru frizerii",
+    body: "Postări, story, Reel și oferte generate pe serviciile tale — cu link de programări.",
+  },
+  {
     href: "/ghid/link-programari-instagram",
     title: "Link de programări pe Instagram",
     body: "Cum pui link-ul Frizeo în bio și în stories, fără DM-uri pentru fiecare oră.",

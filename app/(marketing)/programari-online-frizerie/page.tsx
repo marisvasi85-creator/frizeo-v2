@@ -55,7 +55,14 @@ export default function ProgramariOnlineFrizeriePage() {
             În loc să notezi pe hârtie, în Instagram DM sau pe telefon, dai
             clientului un link. El rezervă când îi e comod; tu primești
             programarea în Frizeo, cu confirmări și reminder-e pe email (și SMS
-            reminder pe planurile Pro / Pro+ / trial).
+            reminder pe planurile Pro / Pro+ / trial). Cu{" "}
+            <Link
+              href="/marketing-ai"
+              className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
+            >
+              Marketing AI
+            </Link>{" "}
+            promovezi aceleași servicii pe Instagram — din același cont.
           </p>
         </ContentSection>
 

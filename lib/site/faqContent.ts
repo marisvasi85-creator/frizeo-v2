@@ -45,6 +45,11 @@ export const FRIZEO_FAQS: FaqItem[] = [
       "Distribui link-ul tău (Instagram, WhatsApp, Google, afiș). Clientul alege serviciul, ziua și ora. Tu vezi programările în calendar; confirmările și reminder-ele pleacă automat, după setări și plan.",
   },
   {
+    question: "Ce este Marketing AI pe Frizeo?",
+    answer:
+      "Marketing AI generează conținut de promovare pentru frizerie: postări Instagram, story, scripturi Reel și oferte (inclusiv pe serviciu sau sezoniere), cu link-ul tău de programări. Este inclus în planuri, cu limite zilnice (Free 3, Pro 20, Pro+ 50; pe trial până la 50). Nu e un pachet separat de social media.",
+  },
+  {
     question: "Frizeo facturează în România?",
     answer: `Da. Operatorul este ${LEGAL_COMPANY.name} (CUI ${LEGAL_COMPANY.cui}), cu facturare fiscală în România. Contact: ${LEGAL_COMPANY.email}.`,
   },
