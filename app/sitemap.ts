@@ -11,6 +11,12 @@ const publicPaths: Array<{
 }> = [
   { path: "", changeFrequency: "weekly", priority: 1 },
   { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/programari-online-frizerie", changeFrequency: "monthly", priority: 0.85 },
+  { path: "/faq", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/ghid", changeFrequency: "monthly", priority: 0.75 },
+  { path: "/ghid/link-programari-instagram", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/ghid/programari-whatsapp", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/frizeo-vs-programari-pe-telefon", changeFrequency: "monthly", priority: 0.7 },
   { path: "/signup", changeFrequency: "monthly", priority: 0.8 },
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
   { path: "/frizerii", changeFrequency: "daily", priority: 0.8 },

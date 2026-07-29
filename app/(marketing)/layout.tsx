@@ -33,6 +33,13 @@ export default function MarketingLayout({
 
           <div className="flex items-center gap-2 sm:gap-5 min-w-0 flex-wrap justify-end">
             <Link
+              href="/faq"
+              className="text-sm text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)] hidden sm:inline transition"
+            >
+              FAQ
+            </Link>
+
+            <Link
               href="/frizerii"
               className="text-sm text-[var(--mkt-muted)] hover:text-[var(--mkt-ink)] hidden sm:inline transition"
             >

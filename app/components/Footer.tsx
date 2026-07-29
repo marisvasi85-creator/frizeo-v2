@@ -29,8 +29,18 @@ export default function Footer() {
               </Link>
             </li>
             <li>
-              <Link href="/#intrebari-frecvente" className="hover:text-black">
+              <Link href="/faq" className="hover:text-black">
                 Întrebări frecvente
+              </Link>
+            </li>
+            <li>
+              <Link href="/programari-online-frizerie" className="hover:text-black">
+                Programări online
+              </Link>
+            </li>
+            <li>
+              <Link href="/ghid" className="hover:text-black">
+                Ghiduri
               </Link>
             </li>
             <li>

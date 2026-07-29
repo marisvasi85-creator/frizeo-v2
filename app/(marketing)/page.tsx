@@ -1,9 +1,9 @@
 import Link from "next/link";
 import JsonLd from "@/app/components/JsonLd";
+import FaqList from "@/app/(marketing)/components/FaqList";
 import { LEGAL_PRICING } from "@/lib/legal/company";
 import { FRIZEO_FAQS } from "@/lib/site/faqContent";
 import {
-  faqPageJsonLd,
   jsonLdGraph,
   organizationJsonLd,
   softwareApplicationJsonLd,
@@ -86,11 +86,7 @@ export default function Page() {
         data={jsonLdGraph(
           organizationJsonLd(),
           webSiteJsonLd(),
-          softwareApplicationJsonLd(),
-          faqPageJsonLd(FRIZEO_FAQS, {
-            path: "/",
-            name: "Întrebări frecvente — Frizeo",
-          })
+          softwareApplicationJsonLd()
         )}
       />
 
@@ -519,41 +515,31 @@ export default function Page() {
               programările.
             </p>
 
-            <div className="mt-12 divide-y divide-[var(--mkt-line)] border-y border-[var(--mkt-line)]">
-              {FRIZEO_FAQS.map((faq) => (
-                <details key={faq.question} className="group py-5">
-                  <summary className="cursor-pointer list-none marker:content-none">
-                    <h3 className="flex items-start justify-between gap-4 text-left text-lg font-semibold tracking-tight text-[var(--mkt-ink)]">
-                      <span>{faq.question}</span>
-                      <span
-                        className="mt-1 shrink-0 text-[var(--mkt-muted)] transition group-open:rotate-45"
-                        aria-hidden
-                      >
-                        +
-                      </span>
-                    </h3>
-                  </summary>
-                  <p className="mt-3 text-sm leading-relaxed text-[var(--mkt-muted)]">
-                    {faq.answer}
-                  </p>
-                </details>
-              ))}
+            <div className="mt-12">
+              <FaqList faqs={FRIZEO_FAQS} headingLevel={3} />
             </div>
 
             <p className="mt-8 text-center text-sm text-[var(--mkt-muted)]">
-              Vezi și{" "}
+              Mai multe pe pagina de{" "}
+              <Link
+                href="/faq"
+                className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
+              >
+                întrebări frecvente
+              </Link>
+              , la{" "}
               <Link
                 href="/pricing"
                 className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
               >
-                prețurile
+                prețuri
               </Link>{" "}
               sau{" "}
               <Link
                 href="/contact"
                 className="font-medium text-[var(--mkt-ink)] underline-offset-2 hover:underline"
               >
-                contactează-ne
+                contact
               </Link>
               .
             </p>

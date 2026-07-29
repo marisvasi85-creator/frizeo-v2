@@ -111,6 +111,48 @@ export function faqPageJsonLd(
   };
 }
 
+export function howToJsonLd(input: {
+  name: string;
+  description: string;
+  path: string;
+  steps: Array<{ name: string; text: string }>;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name: input.name,
+    description: input.description,
+    url: pageUrl(input.path),
+    inLanguage: "ro-RO",
+    step: input.steps.map((step, index) => ({
+      "@type": "HowToStep",
+      position: index + 1,
+      name: step.name,
+      text: step.text,
+    })),
+  };
+}
+
+export function webPageJsonLd(input: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: input.name,
+    description: input.description,
+    url: pageUrl(input.path),
+    inLanguage: "ro-RO",
+    isPartOf: {
+      "@type": "WebSite",
+      name: SITE_NAME,
+      url: LEGAL_COMPANY.website,
+    },
+  };
+}
+
 export function breadcrumbJsonLd(
   items: Array<{ name: string; path: string }>
 ) {
