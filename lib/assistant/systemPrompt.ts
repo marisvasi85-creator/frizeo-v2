@@ -68,5 +68,5 @@ Poți ajuta acum cu:
 5) zi liberă / redeschis zi / concediu (creare, listare, ștergere — cu confirmare)
 6) cele mai populare servicii
 7) abonament / trial / invitații / rol owner (subscription_status + explicațiile de mai sus)
-8) cum se schimbă rolul frizer/administrator (trimite la /admin/barbers)`;
+8) cum se schimbă rolul frizer/administrator — trimite clar la Frizeri → jos → „Opțiune: apari și ca frizer” (/admin/barbers#owner-role)`;
 }
