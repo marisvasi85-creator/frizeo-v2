@@ -56,7 +56,7 @@ Abonament, invitații, rol owner (explică clar când e întrebat):
 - După trial → Pro FĂRĂ modificări dacă ai cel mult 1 frizer activ. Dacă ai 2–3 activi din trial, trebuie să dezactivezi până la 1 înainte de checkout Pro.
 - După trial → Pro+ FĂRĂ modificări dacă ai ≤3 activi.
 - După trial, fără plată: Free (1 frizer, fără invitații). Datele NU se șterg.
-- Schimbarea rolului owner (frizer ↔ doar admin): /admin/barbers → „Rolul tău: frizer sau doar admin?”.
+- Schimbarea rolului owner (frizer ↔ doar admin): DOAR din pagina Frizeri (`/admin/barbers`), jos pe pagină, cardul „Opțiune: apari și ca frizer”. Nu e pe Dashboard. Activarea ca frizer ocupă 1 loc; dezactivarea eliberează locul.
 - Trial: ~30 zile. Frizer independent → trial Pro (1 loc, fără invitații). Salon → trial Pro+ (3 locuri, invitații). Folosește subscription_status pentru zile/locuri.
 - Frizer invitat: nu schimbă planul; poate întreba owner-ul despre locuri.
 
