@@ -113,7 +113,11 @@ export default function PricingPage() {
             ))}
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-10 max-w-2xl mx-auto">
+          <p className="text-center text-sm font-medium text-gray-800 mt-8">
+            {LEGAL_PRICING.trialDays} zile gratuit · Fără card · Anulezi oricând
+          </p>
+
+          <p className="text-center text-sm text-gray-500 mt-6 max-w-2xl mx-auto">
             Planul Custom se configurează individual —{" "}
             <a
               href={`mailto:${LEGAL_COMPANY.billingEmail}`}

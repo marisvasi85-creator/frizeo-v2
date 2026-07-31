@@ -14,11 +14,11 @@ export default function BookingHeroVisual() {
       <div className="relative mx-auto grid max-w-6xl gap-0 px-4 py-8 sm:px-6 sm:py-10 md:grid-cols-[1.1fr_0.9fr] md:gap-10 md:py-12">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
-            Pagina ta de programări
+            Link-ul tău de programări
           </p>
           <p className="mkt-display mt-2 text-2xl sm:text-3xl">Studio Fade</p>
           <p className="mt-1 text-sm text-white/55">
-            Alege serviciul · ziua · ora — fără telefon
+            Clientul rezervă — tu nu mai răspunzi la telefon în timp ce tunzi
           </p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-3">
@@ -76,7 +76,7 @@ export default function BookingHeroVisual() {
 
         <div className="mt-8 border-t border-white/10 pt-6 md:mt-0 md:border-l md:border-t-0 md:pl-10 md:pt-0">
           <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
-            Confirmare automată
+            Mai puține programări uitate
           </p>
           <div className="mt-4 space-y-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3">
