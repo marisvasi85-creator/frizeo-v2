@@ -1,5 +1,6 @@
 "use client";
 
+import { ro } from "date-fns/locale";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 
@@ -31,6 +32,8 @@ export default function Calendar({
       <DayPicker
         className="mx-auto max-w-full"
         mode="single"
+        locale={ro}
+        weekStartsOn={1}
         defaultMonth={value ? parseLocalDate(value) : undefined}
         selected={value ? parseLocalDate(value) : undefined}
         onSelect={(date) => {

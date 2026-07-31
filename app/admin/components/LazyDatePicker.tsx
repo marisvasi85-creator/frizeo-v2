@@ -1,10 +1,15 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { ro } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 
 const ReactDatePicker = dynamic(
-  () => import("react-datepicker").then((mod) => mod.default as never),
+  () =>
+    import("react-datepicker").then((mod) => {
+      mod.registerLocale("ro", ro);
+      return mod.default as never;
+    }),
   {
     ssr: false,
     loading: () => (
@@ -17,5 +22,5 @@ export default function LazyDatePicker(props: Record<string, unknown>) {
   const DatePicker = ReactDatePicker as unknown as React.ComponentType<
     Record<string, unknown>
   >;
-  return <DatePicker {...props} />;
+  return <DatePicker {...props} locale="ro" calendarStartDay={1} />;
 }
