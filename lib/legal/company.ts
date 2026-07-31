@@ -57,8 +57,8 @@ export const LEGAL_PRICING = {
       cta: { label: "Creează cont", href: "/signup" },
       features: [
         "Link programări online",
+        "Pagină publică a salonului (pregătită pentru Google)",
         "Calendar și servicii",
-        "Vizibilitate programări salon",
         "Notificări email",
         "Marketing AI (3 generări / zi)",
         "Program săptămânal",
@@ -111,7 +111,6 @@ export const LEGAL_PRICING = {
       cta: { label: "Contactează-ne", href: "/contact" },
       features: [
         "Mai mulți frizeri / locații",
-        "Vizibilitate programări salon / echipă",
         "SMS extins (confirmare / anulare / reprogramare) la cerere",
         "Marketing AI cu limite personalizate",
         "Preț negociat",
