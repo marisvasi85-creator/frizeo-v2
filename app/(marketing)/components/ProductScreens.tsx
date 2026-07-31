@@ -47,10 +47,9 @@ export default function ProductScreens() {
           </div>
         </div>
         <figcaption>
-          <p className="mkt-display text-xl">Dashboard</p>
+          <p className="mkt-display text-xl">Știi ziua dintr-o privire</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Ziua ta dintr-o privire: câte programări ai, cine vine și ce e de
-            făcut — fără să cauți prin mesaje.
+            Cine vine, la ce oră, ce vrea — fără să cauți prin mesaje.
           </p>
         </figcaption>
       </figure>
@@ -61,10 +60,10 @@ export default function ProductScreens() {
         aria-label="Previzualizare calendar Frizeo cu sync Google Calendar"
       >
         <figcaption className="md:order-1 order-2">
-          <p className="mkt-display text-xl">Calendar</p>
+          <p className="mkt-display text-xl">Fără ore dublate</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Programările apar automat. Sync cu Google Calendar ca să nu se
-            dubleze orele ocupate.
+            Programările și Google Calendar rămân aliniate — eviți confuzia din
+            agendă.
           </p>
         </figcaption>
         <div className="order-1 overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-white md:order-2">
@@ -180,10 +179,10 @@ export default function ProductScreens() {
           </div>
         </div>
         <figcaption>
-          <p className="mkt-display text-xl">Pagina de booking</p>
+          <p className="mkt-display text-xl">Clienții rezervă singuri</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Link-ul pe care îl pui în bio. Clientul alege serviciul, ziua și ora
-            — tu nu mai răspunzi la telefon în timpul tunsului.
+            Link-ul din bio sau WhatsApp — tu nu mai răspunzi la telefon în timp
+            ce tunzi.
           </p>
         </figcaption>
       </figure>

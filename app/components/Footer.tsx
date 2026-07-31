@@ -15,8 +15,8 @@ export default function Footer() {
         <div>
           <p className="font-semibold text-black mb-4">Frizeo</p>
           <p>
-            Platforma online a salonului tău: programări, pagină publică,
-            notificări, Google Calendar, Asistent AI și Marketing AI.
+            Clienții te găsesc mai ușor, se programează online, iar tu nu mai
+            răspunzi la telefon în timp ce tunzi.
           </p>
         </div>
 
