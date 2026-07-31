@@ -98,9 +98,9 @@ export default function Page() {
             </p>
 
             <p className="mkt-rise mkt-rise-delay-2 mx-auto mt-4 max-w-xl text-base text-[var(--mkt-muted)] sm:text-lg">
-              Fie că lucrezi singur sau ai o echipă, Frizeo e aplicația pentru
-              programări care adună pagina ta, calendarul și notificările —
-              totul într-un singur loc.
+              Software pentru frizerii și saloane: programări online, promovare
+              și administrare. Tot ce are nevoie frizeria sau salonul tău —
+              într-un singur loc.
             </p>
 
             <div className="mkt-rise mkt-rise-delay-3 mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
