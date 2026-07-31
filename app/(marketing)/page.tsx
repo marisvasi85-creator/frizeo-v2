@@ -290,8 +290,9 @@ export default function Page() {
                 {[
                   "Vezi imediat cum evoluează veniturile estimate",
                   "Știi câte programări confirmate și anulate ai avut",
+                  "Înțelegi gradul de ocupare pe programul tău",
                   "Recunoști clienții unici care revin",
-                  "Înțelegi ce servicii umplu scaunul — și pe care le promovezi",
+                  "Vezi ce servicii umplu scaunul — și pe care le promovezi",
                 ].map((line) => (
                   <li key={line} className="flex gap-3">
                     <span className="text-[var(--mkt-accent)]" aria-hidden>
@@ -313,10 +314,11 @@ export default function Page() {
               <p className="mt-2 text-sm font-medium text-[var(--mkt-ink-soft)]">
                 Ultimele 30 de zile · Studio Fade
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {[
                   { label: "Venit estimat", value: "12.480 lei" },
                   { label: "Programări", value: "186" },
+                  { label: "Grad de ocupare", value: "78%" },
                   { label: "Clienți unici", value: "124" },
                   { label: "Top serviciu", value: "Fade clasic" },
                 ].map((metric) => (
@@ -335,7 +337,8 @@ export default function Page() {
               </div>
               <p className="mt-4 text-xs leading-relaxed text-[var(--mkt-muted)]">
                 Ilustrativ — pe baza statisticilor din contul tău: venit estimat,
-                programări, clienți unici și breakdown pe serviciu.
+                programări, grad de ocupare, clienți unici și breakdown pe
+                serviciu.
               </p>
             </aside>
           </div>
@@ -472,6 +475,10 @@ export default function Page() {
                 {
                   dt: "Echipă fără haos (Pro+)",
                   dd: "Până la 3 frizeri văd programările — mai puține „eu credeam că e liber”.",
+                },
+                {
+                  dt: "Vezi imediat cum evoluează salonul",
+                  dd: "Venituri estimate, programări, clienți unici și grad de ocupare pe programul tău.",
                 },
               ].map((item) => (
                 <div

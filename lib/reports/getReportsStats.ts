@@ -2,6 +2,11 @@ import type { TenantRole } from "@/lib/auth/tenantRole";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { ReportsRangePreset } from "@/lib/reports/dateRange";
 import { resolveReportsDateRange } from "@/lib/reports/dateRange";
+import {
+  computeOccupancyMetrics,
+  type OccupancyOverrideRow,
+  type OccupancyScheduleRow,
+} from "@/lib/reports/occupancy";
 
 export type ReportsBreakdownRow = {
   id: string;
@@ -25,6 +30,9 @@ export type ReportsStats = {
     pending: number;
     uniqueClients: number;
     estimatedRevenueRon: number | null;
+    occupancyPercent: number | null;
+    bookedMinutes: number;
+    availableMinutes: number;
   };
   byBarber: ReportsBreakdownRow[] | null;
   byService: ReportsBreakdownRow[];
@@ -38,6 +46,14 @@ type BookingRow = {
   client_phone: string | null;
   client_email: string | null;
   client_name: string | null;
+  start_time: string | null;
+  end_time: string | null;
+};
+
+const EMPTY_OCCUPANCY = {
+  occupancyPercent: null as number | null,
+  bookedMinutes: 0,
+  availableMinutes: 0,
 };
 
 function normalizePhone(phone: string | null | undefined): string | null {
@@ -120,6 +136,7 @@ export async function getReportsStats(params: {
           pending: 0,
           uniqueClients: 0,
           estimatedRevenueRon: null,
+          ...EMPTY_OCCUPANCY,
         },
         byBarber: salonWide ? [] : null,
         byService: [],
@@ -131,7 +148,7 @@ export async function getReportsStats(params: {
   let query = supabaseAdmin
     .from("bookings")
     .select(
-      "id, status, barber_id, barber_service_id, client_phone, client_email, client_name",
+      "id, status, barber_id, barber_service_id, client_phone, client_email, client_name, start_time, end_time",
     )
     .gte("date", from)
     .lte("date", to);
@@ -144,7 +161,27 @@ export async function getReportsStats(params: {
     query = query.eq("barber_id", barberIds[0]);
   }
 
-  const { data: bookings, error } = await query.limit(5000);
+  const [
+    { data: bookings, error },
+    { data: weeklyRows },
+    { data: overrideRows },
+  ] = await Promise.all([
+    query.limit(5000),
+    supabaseAdmin
+      .from("barber_weekly_schedule")
+      .select(
+        "barber_id, day_of_week, is_working, work_start, work_end, break_enabled, break_start, break_end",
+      )
+      .in("barber_id", barberIds),
+    supabaseAdmin
+      .from("barber_day_overrides")
+      .select(
+        "barber_id, date, is_closed, work_start, work_end, break_enabled, break_start, break_end",
+      )
+      .in("barber_id", barberIds)
+      .gte("date", from)
+      .lte("date", to),
+  ]);
 
   if (error) {
     console.error("getReportsStats:", error);
@@ -152,6 +189,14 @@ export async function getReportsStats(params: {
   }
 
   const rows = (bookings ?? []) as BookingRow[];
+  const occupancy = computeOccupancyMetrics({
+    from,
+    to,
+    barberIds,
+    weekly: (weeklyRows ?? []) as OccupancyScheduleRow[],
+    overrides: (overrideRows ?? []) as OccupancyOverrideRow[],
+    bookings: rows,
+  });
 
   const serviceIds = [
     ...new Set(
@@ -267,6 +312,9 @@ export async function getReportsStats(params: {
         pending,
         uniqueClients: unique.size,
         estimatedRevenueRon: hasPricedConfirmed ? estimatedRevenueRon : null,
+        occupancyPercent: occupancy.occupancyPercent,
+        bookedMinutes: occupancy.bookedMinutes,
+        availableMinutes: occupancy.availableMinutes,
       },
       byBarber: salonWide ? sortRows([...byBarberMap.values()]) : null,
       byService: sortRows([...byServiceMap.values()]),

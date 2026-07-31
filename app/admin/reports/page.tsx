@@ -10,6 +10,7 @@ import {
   REPORTS_RANGE_PRESETS,
 } from "@/lib/reports/dateRange";
 import { getReportsStats } from "@/lib/reports/getReportsStats";
+import { formatOccupancyHint } from "@/lib/reports/occupancy";
 import { cn } from "@/app/admin/components/cn";
 
 function formatRon(value: number): string {
@@ -151,7 +152,7 @@ export default async function AdminReportsPage({
             {stats.rangeLabel}
           </p>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
             <MetricCard label="Confirmate" value={stats.metrics.confirmed} />
             <MetricCard label="Anulate" value={stats.metrics.cancelled} />
             <MetricCard
@@ -176,6 +177,19 @@ export default async function AdminReportsPage({
                   : "—"
               }
               hint="din prețurile serviciilor confirmate"
+            />
+            <MetricCard
+              label="Grad de ocupare"
+              value={
+                stats.metrics.occupancyPercent != null
+                  ? `${stats.metrics.occupancyPercent}%`
+                  : "—"
+              }
+              hint={
+                stats.metrics.occupancyPercent != null
+                  ? formatOccupancyHint(stats.metrics)
+                  : "setează programul săptămânal"
+              }
             />
           </div>
 
