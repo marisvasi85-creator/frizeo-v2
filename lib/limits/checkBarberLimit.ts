@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { planHasActiveEntitlements } from "@/lib/billing/entitlements";
 import { planAllowsBarberInvites } from "@/lib/billing/plans";
 import { barberInviteValidSinceIso } from "@/lib/barbers/inviteExpiry";
 
@@ -40,11 +41,16 @@ export async function getBarberLimitState(
     .eq("id", sub.plan_id)
     .single();
 
-  const limit = plan?.max_barbers ?? null;
-  const unlimited = limit === null;
   const planSlug = plan?.slug ?? null;
   const planName = plan?.name ?? null;
   const status = sub.status ?? null;
+  const entitled = planHasActiveEntitlements({
+    status,
+  });
+
+  // past_due / unpaid: seat entitlements fall back to Free (1 active barber)
+  const limit = entitled ? (plan?.max_barbers ?? null) : 1;
+  const unlimited = entitled && limit === null;
   const invitesAllowed = planAllowsBarberInvites({
     slug: planSlug,
     status,

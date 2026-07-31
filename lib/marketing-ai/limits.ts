@@ -1,4 +1,5 @@
 import { PLAN_SLUGS, type PlanLike } from "@/lib/billing/plans";
+import { planHasActiveEntitlements } from "@/lib/billing/entitlements";
 
 export type MarketingAILimit = {
   daily: number | null;
@@ -23,6 +24,14 @@ function envLimit(key: string, fallback: number | null): number | null {
 export function getMarketingAILimitForPlan(
   plan: PlanLike | null | undefined,
 ): MarketingAILimit {
+  if (plan && !planHasActiveEntitlements(plan)) {
+    const base = DEFAULT_LIMITS[PLAN_SLUGS.FREE];
+    return {
+      daily: envLimit("MARKETING_AI_DAILY_LIMIT_FREE", base.daily),
+      label: "Free (plată restantă)",
+    };
+  }
+
   if (plan?.status === "trialing") {
     const trialLabel =
       plan.slug === PLAN_SLUGS.PRO

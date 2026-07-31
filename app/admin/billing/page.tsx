@@ -6,46 +6,13 @@ import BillingPlansSection from "./BillingPlansSection";
 import PayInvoiceButton from "./PayInvoiceButton";
 import ManageSubscriptionButton from "./ManageSubscriptionButton";
 import { BillingInvoicesSection } from "./BillingProfileSection";
-import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
-import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
+import { syncAfterCheckoutSession } from "@/lib/billing/syncAfterCheckoutSession";
 import { CANONICAL_PLAN_SLUGS, sortPlansByCanonicalOrder } from "@/lib/billing/plans";
-import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import AdminPageHeader from "../components/AdminPageHeader";
 import AdminCard from "../components/AdminCard";
 import BillingConversionTracker from "./BillingConversionTracker";
 import { getTrialDays } from "@/lib/billing/getTrialDays";
-
-async function syncAfterCheckout(sessionId: string, tenantId: string) {
-  try {
-    const session = await getStripe().checkout.sessions.retrieve(sessionId);
-
-    if (
-      session.mode !== "subscription" ||
-      typeof session.subscription !== "string"
-    ) {
-      return;
-    }
-
-    const subscription = await getStripe().subscriptions.retrieve(
-      session.subscription,
-    );
-
-    await syncStripeSubscription(
-      subscription,
-      session.metadata?.tenant_id ?? tenantId,
-    );
-
-    const customerId =
-      typeof session.customer === "string" ? session.customer : null;
-
-    if (customerId) {
-      await syncTenantBillingFromStripeCustomer(tenantId, customerId);
-    }
-  } catch (err) {
-    console.error("billing syncAfterCheckout:", err);
-  }
-}
 
 export default async function BillingPage({
   searchParams,
@@ -75,7 +42,7 @@ export default async function BillingPage({
   const tenantId = adminSession.tenantId;
 
   if (checkoutStatus === "success" && sessionId) {
-    await syncAfterCheckout(sessionId, tenantId);
+    await syncAfterCheckoutSession(sessionId, tenantId);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -160,8 +127,9 @@ export default async function BillingPage({
       {isPastDue && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
           <p>
-            Ultima plată nu a reușit. Finalizează plata ca să păstrezi planul
-            activ.
+            Ultima plată nu a reușit. Până la finalizarea plății, beneficiile
+            planului plătit (SMS, limite Pro, invitații echipă) sunt suspendate.
+            Finalizează plata ca să le reactivezi.
           </p>
           <PayInvoiceButton />
         </div>

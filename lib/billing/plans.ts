@@ -1,3 +1,5 @@
+import { planHasActiveEntitlements } from "./entitlements";
+
 export const PLAN_SLUGS = {
   FREE: "free",
   PRO: "pro",
@@ -35,11 +37,12 @@ export type PlanLike = {
 };
 
 /**
- * SMS reminder: trial + Pro / Pro+ / Custom.
+ * SMS reminder: trial + Pro / Pro+ / Custom (active only).
  * Confirmare / anulare / reprogramare SMS → vezi planAllowsExtendedSms.
  */
 export function planAllowsSms(plan: PlanLike | null | undefined): boolean {
   if (!plan) return false;
+  if (!planHasActiveEntitlements(plan)) return false;
   if (plan.status === "trialing") return true;
 
   const slug = plan.slug ?? "";
@@ -58,6 +61,7 @@ export function planAllowsExtendedSms(
   plan: PlanLike | null | undefined
 ): boolean {
   if (!plan) return false;
+  if (!planHasActiveEntitlements(plan)) return false;
   return (plan.slug ?? "") === PLAN_SLUGS.CUSTOM;
 }
 
@@ -89,7 +93,7 @@ export function isPlanDowngrade(
 }
 
 /**
- * Invitații echipă: doar Pro+ și Custom.
+ * Invitații echipă: doar Pro+ și Custom (active / trial).
  * Trial pe Pro (frizer independent) = fără invitații.
  * Trial pe Pro+ (salon) = cu invitații.
  */
@@ -97,6 +101,7 @@ export function planAllowsBarberInvites(
   plan: PlanLike | null | undefined
 ): boolean {
   if (!plan) return false;
+  if (!planHasActiveEntitlements(plan)) return false;
 
   const slug = plan.slug ?? "";
   return slug === PLAN_SLUGS.PRO_PLUS || slug === PLAN_SLUGS.CUSTOM;
