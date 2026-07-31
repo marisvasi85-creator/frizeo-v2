@@ -6,10 +6,10 @@ export const SITE_NAME = "Frizeo";
 export const SITE_URL = new URL(LEGAL_COMPANY.website);
 
 export const SITE_DESCRIPTION =
-  "Programări online pentru frizerii și barbershop-uri din România. Link personal, SMS și email automate, Marketing AI, director local și sync Google Calendar.";
+  "Programări online pentru frizerii, barbershop-uri și saloane din România. Aplicație pentru programări cu link personal, notificări, Marketing AI, director local și sync Google Calendar.";
 
 export const SITE_TAGLINE =
-  "Programări online pentru frizerii și barbershop-uri";
+  "Programări online pentru frizerii, barbershop-uri și saloane";
 
 /** Public default PWA — never admin dashboard (that sent home-screen installs to /login). */
 export const PUBLIC_PWA_MANIFEST_HREF =
@@ -25,10 +25,11 @@ export const siteMetadata: Metadata = {
   applicationName: SITE_NAME,
   manifest: PUBLIC_PWA_MANIFEST_HREF,
   keywords: [
-    "programări online frizerie România",
-    "programări salon România",
-    "calendar frizerie",
-    "barbershop programări",
+    "programări online frizerie",
+    "programări online barbershop",
+    "software pentru frizerii",
+    "software pentru saloane",
+    "aplicație pentru programări",
     "Frizeo",
   ],
   authors: [{ name: SITE_NAME, url: LEGAL_COMPANY.website }],

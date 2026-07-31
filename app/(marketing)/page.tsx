@@ -16,19 +16,20 @@ import ProductScreens from "./components/ProductScreens";
 
 const LANDING_VIDEO_ID = "do-k1cNkCOg";
 
-const homeTitle = `${SITE_NAME} — Platforma online a salonului tău`;
+const homeTitle = `${SITE_NAME} — Programări online pentru frizerii, barbershop-uri și saloane`;
 const homeDescription =
-  "Cu Frizeo, creezi contul și poți primi programări imediat. Clienții te găsesc mai ușor, se programează online, iar tu nu mai răspunzi la telefon în timp ce tunzi. Trial 30 zile, fără card.";
+  "Aplicație pentru programări online: pagină profesională, calendar, notificări și Marketing AI. Pentru frizeri independenți și saloane cu echipă. Trial 30 zile, fără card.";
 
 const homeMetadata = createPageMetadata({
   title: homeTitle,
   description: homeDescription,
   path: "/",
   keywords: [
-    "programări online frizerie România",
-    "programări salon România",
-    "calendar frizerie",
-    "barbershop programări",
+    "programări online frizerie",
+    "programări online barbershop",
+    "software pentru frizerii",
+    "software pentru saloane",
+    "aplicație pentru programări",
     "Frizeo",
   ],
 });
@@ -93,12 +94,13 @@ export default function Page() {
             </h1>
 
             <p className="mkt-rise mkt-rise-delay-1 mx-auto mt-6 max-w-2xl text-xl font-medium tracking-tight text-[var(--mkt-ink-soft)] sm:text-2xl md:text-[1.85rem]">
-              Platforma online a salonului tău.
+              Programări online pentru frizerii, barbershop-uri și saloane.
             </p>
 
             <p className="mkt-rise mkt-rise-delay-2 mx-auto mt-4 max-w-xl text-base text-[var(--mkt-muted)] sm:text-lg">
-              Primești programări online, pagina oficială a salonului, Google
-              Calendar, notificări și un asistent AI — totul într-un singur loc.
+              Fie că lucrezi singur sau ai o echipă, Frizeo e aplicația pentru
+              programări care adună pagina ta, calendarul și notificările —
+              totul într-un singur loc.
             </p>
 
             <div className="mkt-rise mkt-rise-delay-3 mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
@@ -128,10 +130,11 @@ export default function Page() {
         >
           <div className="mx-auto max-w-5xl">
             <h2 className="mkt-display text-center text-3xl sm:text-4xl">
-              Cum pornești salonul online
+              Cum pornești programările online
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
-              De la cont la prima programare — fără să alergi după mesaje.
+              De la cont la prima rezervare — fără să alergi după mesaje, indiferent
+              dacă ești frizer independent sau ai o locație cu colegi.
             </p>
 
             <ol className="mt-14 grid gap-10 md:grid-cols-3 md:gap-8">
@@ -144,7 +147,7 @@ export default function Page() {
                 {
                   step: "02",
                   title: "Clienții rezervă singuri",
-                  body: "Le trimiți un link pe WhatsApp, Instagram sau Facebook. Tu nu mai răspunzi la telefon în timp ce tunzi.",
+                  body: "Le trimiți pagina ta de programări pe WhatsApp, Instagram sau Facebook. Tu nu mai răspunzi la telefon în timp ce tunzi.",
                 },
                 {
                   step: "03",
@@ -175,7 +178,8 @@ export default function Page() {
               Cum arată ziua ta în Frizeo
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
-              Știi cine vine, ce vrea și când — fără să cauți prin mesaje.
+              Software pentru frizerii și saloane făcut să fie clar: știi cine
+              vine, ce vrea și când — fără să cauți prin mesaje.
             </p>
             <ProductScreens />
 
@@ -190,7 +194,7 @@ export default function Page() {
               <div className="relative mt-10 aspect-video w-full overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-black">
                 <iframe
                   src={`https://www.youtube-nocookie.com/embed/${LANDING_VIDEO_ID}?rel=0`}
-                  title="Frizeo — programări online pentru frizerii și saloane"
+                  title="Frizeo — programări online pentru frizerii, barbershop-uri și saloane"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                   loading="lazy"
@@ -215,16 +219,15 @@ export default function Page() {
                 Mai puțin timp pe postări. Mai mult timp pentru clienți.
               </h2>
               <p className="mt-4 max-w-2xl text-base text-white/65 sm:text-lg">
-                Frizeo nu doar gestionează programările — te ajută să atragi
-                clienți noi. Generezi conținut de promovare pe serviciile
-                salonului tău, cu link de rezervare, fără să stai ore pe
-                Instagram.
+                Frizeo nu doar gestionează programările — te ajută să crești
+                afacerea. Generezi conținut de promovare pe serviciile tale, cu
+                link de rezervare, fără să stai ore pe Instagram.
               </p>
 
               <ul className="mt-8 space-y-3 text-sm text-white/70">
                 {[
                   "Postări gata de folosit pe Instagram și Facebook",
-                  "Carduri promoționale cu brandul salonului",
+                  "Carduri promoționale cu brandul locației tale",
                   "Texte pentru oferte, story, Reel și campanii sezoniere",
                   "Economisești timp — anunți locurile libere și te întorci la scaun",
                 ].map((line) => (
@@ -269,7 +272,7 @@ export default function Page() {
               </div>
               <p className="mt-4 text-xs leading-relaxed text-white/40">
                 Exemplu ilustrativ. Conținutul real folosește numele și
-                serviciile salonului tău.
+                serviciile business-ului tău.
               </p>
             </div>
           </div>
@@ -280,7 +283,7 @@ export default function Page() {
           <div className="mx-auto grid max-w-5xl items-center gap-12 lg:grid-cols-2">
             <div>
               <h2 className="mkt-display text-3xl sm:text-4xl">
-                Vezi ce se întâmplă în salonul tău.
+                Vezi ce se întâmplă în afacerea ta.
               </h2>
               <p className="mt-4 text-[var(--mkt-muted)]">
                 Știi ce îți produce bani și unde mai ai loc de creștere — fără
@@ -344,11 +347,11 @@ export default function Page() {
           </div>
         </section>
 
-        {/* 6. PROMOVAREA SALONULUI + PAGINA PUBLICĂ */}
+        {/* 6. PROMOVAREA + PAGINA PUBLICĂ */}
         <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20">
           <div className="mx-auto max-w-5xl">
             <h2 className="mkt-display max-w-3xl text-3xl sm:text-4xl">
-              Primești automat pagina oficială a salonului tău.
+              Primești o pagină profesională pentru frizeria sau salonul tău.
             </h2>
             <p className="mt-4 max-w-2xl text-[var(--mkt-muted)]">
               Clienții te găsesc mai ușor și se programează online — pe Facebook,
@@ -384,10 +387,11 @@ export default function Page() {
                 </h3>
                 <p className="mt-3 max-w-xl text-[var(--mkt-muted)]">
                   Nu depinzi doar de cei care te au deja pe WhatsApp. Cine caută
-                  frizerie local poate ajunge la tine și rezervă direct.
+                  un frizer sau un barbershop local poate ajunge la tine și
+                  rezervă direct.
                 </p>
                 <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <InlineCta href="/signup" label="Vreau pagina salonului" />
+                  <InlineCta href="/signup" label="Vreau pagina mea" />
                   <Link
                     href="/frizerii"
                     className="text-sm font-semibold text-[var(--mkt-accent)] hover:underline"
@@ -431,7 +435,7 @@ export default function Page() {
                   </div>
                 </div>
                 <p className="mt-3 text-xs leading-relaxed text-[var(--mkt-muted)]">
-                  Ilustrativ — clientul caută, găsește salonul, rezervă. Fără
+                  Ilustrativ — clientul caută, găsește locația ta, rezervă. Fără
                   promisiuni de poziții în Google.
                 </p>
               </aside>
@@ -439,22 +443,22 @@ export default function Page() {
           </div>
         </section>
 
-        {/* 7. FUNCȚIONALITĂȚI — ce câștigă salonul */}
+        {/* 7. FUNCȚIONALITĂȚI */}
         <section className="border-t border-[var(--mkt-line)] bg-white px-6 py-20">
           <div className="mx-auto max-w-5xl">
             <h2 className="mkt-display text-center text-3xl sm:text-4xl">
-              Tot ce ai nevoie ca să rulezi salonul
+              Tot ce ai nevoie ca să rulezi business-ul
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
               Nu e o listă de butoane. E timpul, scaunul și clienții pe care îi
-              câștigi înapoi.
+              câștigi înapoi — ca frizer, barbershop sau salon.
             </p>
 
             <dl className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
               {[
                 {
                   dt: "Nu mai răspunzi la telefon în timp ce tunzi",
-                  dd: "Clienții rezervă singuri din link. Tu vezi agenda dintr-o privire.",
+                  dd: "Clienții rezervă singuri din pagina ta de programări. Tu vezi agenda dintr-o privire.",
                 },
                 {
                   dt: "Mai puține programări uitate",
@@ -477,7 +481,7 @@ export default function Page() {
                   dd: "Până la 3 frizeri văd programările — mai puține „eu credeam că e liber”.",
                 },
                 {
-                  dt: "Vezi imediat cum evoluează salonul",
+                  dt: "Vezi imediat cum evoluează afacerea",
                   dd: "Venituri estimate, programări, clienți unici și grad de ocupare pe programul tău.",
                 },
               ].map((item) => (
@@ -505,7 +509,7 @@ export default function Page() {
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
               Telefonul nu dispare. Ideea e să nu mai fii tu agenda pentru
-              fiecare oră.
+              fiecare oră — fie că ești frizer solo, fie că ai un salon.
             </p>
 
             <div className="mt-12 overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-white">
@@ -532,12 +536,12 @@ export default function Page() {
                 {
                   situation: "Clienți noi",
                   old: "Depinzi de WhatsApp și recomandări",
-                  neu: "Pagina salonului + promovare cu link de rezervare",
+                  neu: "Pagină profesională + promovare cu link de rezervare",
                 },
                 {
                   situation: "Decizii de business",
                   old: "Ghicești ce merge",
-                  neu: "Vezi imediat cum evoluează salonul",
+                  neu: "Vezi imediat cum evoluează afacerea",
                 },
                 {
                   situation: "Cost pe rezervare",
@@ -585,8 +589,8 @@ export default function Page() {
               Întrebări frecvente
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-center text-[var(--mkt-muted)]">
-              Răspunsuri scurte despre ce câștigi cu Frizeo, prețuri și cum
-              începi.
+              Răspunsuri scurte despre programările online cu Frizeo, prețuri și
+              cum începi.
             </p>
 
             <div className="mt-12">
@@ -614,7 +618,8 @@ export default function Page() {
             </h2>
             <p className="mx-auto mt-3 max-w-2xl text-[var(--mkt-muted)]">
               {LEGAL_PRICING.trialDays} zile gratuit, fără card. Apoi alegi Free,
-              Pro sau Pro+ — plătești doar ce folosești.
+              Pro sau Pro+ — pentru un frizer solo sau pentru un salon cu
+              echipă.
             </p>
 
             <div className="mt-12 grid gap-6 text-left sm:grid-cols-3">
@@ -663,8 +668,8 @@ export default function Page() {
                       {plan.slug === "free"
                         ? "Pornești fără presiune"
                         : plan.slug === "pro"
-                          ? "Nelimitat + mai puține no-show-uri"
-                          : "Echipă + mai puțin haos în programări"}
+                          ? "Ideal pentru frizer independent"
+                          : "Pentru barbershop sau salon cu echipă"}
                     </p>
                   </div>
                 ))}
@@ -690,7 +695,7 @@ export default function Page() {
             Creezi contul și poți primi programări imediat.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-base text-white/65">
-            Platforma online a salonului tău — programări, pagină publică,
+            Aplicație pentru programări online — pagină profesională, calendar,
             promovare și statistici, într-un singur loc.
           </p>
           <ul className="mx-auto mt-8 flex max-w-xl flex-col gap-3 text-left text-sm text-white/70 sm:text-base">

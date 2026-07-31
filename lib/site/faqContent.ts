@@ -10,12 +10,12 @@ export const FRIZEO_FAQS: FaqItem[] = [
   {
     question: "Ce este Frizeo?",
     answer:
-      "Frizeo este o platformă web de programări online pentru frizerii și barbershop-uri din România. Oferă link personal de booking, calendar, notificări email/SMS (în funcție de plan), Marketing AI, director local și sync Google Calendar.",
+      "Frizeo este un software pentru frizerii, barbershop-uri și saloane din România: aplicație pentru programări online cu link personal, calendar, notificări email/SMS (în funcție de plan), Marketing AI, director local și sync Google Calendar.",
   },
   {
     question: "Pentru cine este Frizeo?",
     answer:
-      "Pentru frizeri independenți și saloane / barbershop-uri din România care vor să reducă apelurile pentru programări și să gestioneze calendarul dintr-un singur loc.",
+      "Pentru frizeri independenți și pentru saloane sau barbershop-uri cu echipă. Fie că lucrezi singur sau ai mai mulți colegi, Frizeo se adaptează modului tău de lucru.",
   },
   {
     question: "Cât costă Frizeo?",
@@ -47,7 +47,7 @@ export const FRIZEO_FAQS: FaqItem[] = [
   {
     question: "Ce este Marketing AI pe Frizeo?",
     answer:
-      "Marketing AI generează conținut de promovare pentru frizerie: postări Instagram, story, scripturi Reel și oferte (inclusiv pe serviciu sau sezoniere), cu link-ul tău de programări. Este inclus în planuri, cu limite zilnice (Free 3, Pro 20, Pro+ 50; pe trial până la 50). Nu e un pachet separat de social media.",
+      "Marketing AI generează conținut de promovare pentru frizeria, barbershop-ul sau salonul tău: postări Instagram, story, scripturi Reel și oferte (inclusiv pe serviciu sau sezoniere), cu pagina ta de programări. Este inclus în planuri, cu limite zilnice (Free 3, Pro 20, Pro+ 50; pe trial până la 50). Nu e un pachet separat de social media.",
   },
   {
     question: "Frizeo facturează în România?",

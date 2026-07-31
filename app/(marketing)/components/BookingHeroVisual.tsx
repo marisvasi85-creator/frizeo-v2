@@ -14,11 +14,12 @@ export default function BookingHeroVisual() {
       <div className="relative mx-auto grid max-w-6xl gap-0 px-4 py-8 sm:px-6 sm:py-10 md:grid-cols-[1.1fr_0.9fr] md:gap-10 md:py-12">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
-            Link-ul tău de programări
+            Pagina ta de programări
           </p>
           <p className="mkt-display mt-2 text-2xl sm:text-3xl">Studio Fade</p>
           <p className="mt-1 text-sm text-white/55">
-            Clientul rezervă — tu nu mai răspunzi la telefon în timp ce tunzi
+            Clientul rezervă online — tu nu mai răspunzi la telefon în timp ce
+            tunzi
           </p>
 
           <div className="mt-6 grid gap-2 sm:grid-cols-3">

@@ -49,7 +49,8 @@ export default function ProductScreens() {
         <figcaption>
           <p className="mkt-display text-xl">Știi ziua dintr-o privire</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Cine vine, la ce oră, ce vrea — fără să cauți prin mesaje.
+            Cine vine, la ce oră, ce vrea — clar pentru frizerie sau salon, fără
+            să cauți prin mesaje.
           </p>
         </figcaption>
       </figure>
@@ -181,8 +182,8 @@ export default function ProductScreens() {
         <figcaption>
           <p className="mkt-display text-xl">Clienții rezervă singuri</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Link-ul din bio sau WhatsApp — tu nu mai răspunzi la telefon în timp
-            ce tunzi.
+            Pagina ta de programări din bio sau WhatsApp — tu nu mai răspunzi la
+            telefon în timp ce tunzi.
           </p>
         </figcaption>
       </figure>
