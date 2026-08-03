@@ -1,21 +1,21 @@
 # Meta ad — Agency cut (1080×1920)
 
-Reclamă premium SaaS (~23s) pentru Meta Reels / Instagram / TikTok / YouTube Shorts.
+Reclamă premium SaaS (~21s) pentru Meta Reels / Instagram / TikTok / YouTube Shorts.
 
 **Mesaj:** de la crearea contului la prima programare, în câteva minute — automat, inclusiv Google Calendar.
 
-## Scene
+## Scene (agency refine)
 
-| # | Durată VO | Text pe ecran |
-|---|-----------|----------------|
-| 1 Hook | 0.1–3.0s | Prima programare în doar câteva minute. |
-| 2 Signup | 3.0–4.8s | Creezi contul. |
-| 3 Google connect | 4.8–7.2s | Conectezi Google Calendar. |
-| 4 Link | 7.2–9.3s | Distribui linkul tău. |
-| 5 Booking | 9.3–11.8s | Clientul se programează online. |
-| 6 Instant Frizeo | 11.8–14.6s | Programarea apare **instant** în Frizeo. |
-| 7 Auto GCal | 14.6–17.8s | Se sincronizează **automat** în Google Calendar. |
-| 8 End | 17.8–22.4s | De la cont la prima programare. În doar câteva minute. |
+| # | Text pe ecran |
+|---|----------------|
+| 1 Hook | Prima programare poate veni în câteva minute. |
+| 2 Signup | ✓ Creezi cont |
+| 3 Google connect | ✓ Conectezi Google Calendar |
+| 4 Link | ✓ Distribui linkul |
+| 5 Booking | ✓ Clientul rezervă |
+| 6 Climax | ✓ Gata! (+ notificare, 0→1, highlight verde) |
+| 7 Auto GCal | Sincronizare **AUTOMATĂ** cu Google Calendar. |
+| 8 End | Creează cont gratuit. / Prima programare poate veni chiar astăzi. |
 
 ## Proiect (editabil)
 
