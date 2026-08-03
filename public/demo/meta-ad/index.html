@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Frizeo — Meta Ad Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0b0b0c;
+      --ink-soft: #161618;
+      --steel: #3d4a5c;
+      --fog: #f3f6fa;
+      --mist: #e8eef5;
+      --line: #d5dde8;
+      --accent: #1f6feb;
+      --accent-soft: #dbeafe;
+      --muted: #5b6573;
+      --gcal: #1a73e8;
+      --ok: #16a34a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      background: #050506;
+      font-family: "Figtree", ui-sans-serif, system-ui, sans-serif;
+      color: var(--ink);
+    }
+
+    .stage {
+      position: relative;
+      width: 1080px;
+      height: 1920px;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(31,111,235,0.18), transparent 55%),
+        linear-gradient(180deg, #0e1116 0%, #050506 40%, #0a0c10 100%);
+    }
+
+    .caption {
+      position: absolute;
+      left: 64px;
+      right: 64px;
+      top: 96px;
+      z-index: 40;
+      text-align: center;
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+    .caption.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .caption .brand-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .brand-mark {
+      width: 52px;
+      height: 52px;
+      background: #0B0B0C;
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: -0.04em;
+    }
+    .brand-name {
+      font-family: "Syne", sans-serif;
+      font-size: 42px;
+      color: #fff;
+      letter-spacing: -0.04em;
+      font-weight: 800;
+    }
+    .caption h1 {
+      font-family: "Syne", sans-serif;
+      font-size: 54px;
+      line-height: 1.08;
+      letter-spacing: -0.04em;
+      color: #fff;
+      font-weight: 800;
+    }
+    .caption p {
+      margin-top: 14px;
+      font-size: 28px;
+      color: rgba(255,255,255,0.62);
+      line-height: 1.35;
+    }
+
+    .phone-wrap {
+      position: absolute;
+      left: 50%;
+      top: 390px;
+      transform: translateX(-50%) scale(0.98);
+      width: 820px;
+      height: 1380px;
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .phone-wrap.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .phone {
+      width: 100%;
+      height: 100%;
+      border-radius: 64px;
+      border: 3px solid rgba(255,255,255,0.14);
+      background: #111;
+      box-shadow:
+        0 40px 120px rgba(0,0,0,0.55),
+        inset 0 0 0 1px rgba(255,255,255,0.05);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .notch {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 180px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 20;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .screen.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* —— Scene 1: Admin —— */
+    .admin {
+      background: #0B0B0C;
+      color: #fff;
+      padding: 72px 40px 40px;
+    }
+    .admin-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 36px;
+    }
+    .admin-top .hello {
+      font-size: 34px;
+      font-family: "Syne", sans-serif;
+      letter-spacing: -0.03em;
+    }
+    .admin-top .pill {
+      font-size: 18px;
+      color: rgba(255,255,255,0.45);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 16px;
+      border-radius: 999px;
+    }
+    .admin-card {
+      background: #161618;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 22px;
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+    .admin-card .label {
+      font-size: 22px;
+      color: rgba(255,255,255,0.55);
+      margin-bottom: 10px;
+    }
+    .admin-card .hint {
+      font-size: 18px;
+      color: rgba(255,255,255,0.35);
+      line-height: 1.4;
+      margin-bottom: 22px;
+    }
+    .link-box {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 22px;
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 18px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .btn-row { display: flex; gap: 14px; }
+    .btn {
+      flex: 1;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 16px;
+      font-size: 22px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
+    }
+    .btn.primary {
+      background: #fff;
+      color: #000;
+    }
+    .btn.primary.copied {
+      background: #16a34a;
+      color: #fff;
+    }
+    .btn.secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+    .btn.press { transform: scale(0.96); }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .stat {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      padding: 20px 16px;
+    }
+    .stat .k { font-size: 16px; color: rgba(255,255,255,0.4); }
+    .stat .v {
+      margin-top: 8px;
+      font-size: 40px;
+      font-family: "Syne", sans-serif;
+      letter-spacing: -0.04em;
+    }
+
+    .booking-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #161618;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      font-size: 20px;
+    }
+    .booking-row .t { color: rgba(255,255,255,0.45); }
+    .booking-row .s { color: rgba(255,255,255,0.45); }
+
+    /* —— Scene 2: Public booking —— */
+    .booking {
+      background: #fff;
+      padding: 72px 40px 40px;
+      color: var(--ink);
+    }
+    .booking .eyebrow {
+      text-align: center;
+      font-size: 16px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .booking h2 {
+      text-align: center;
+      font-size: 48px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .booking .sub {
+      text-align: center;
+      margin-top: 8px;
+      font-size: 24px;
+      color: #6b7280;
+      margin-bottom: 36px;
+    }
+    .booking .sub strong { color: #111; font-weight: 600; }
+    .step {
+      font-size: 20px;
+      color: #6b7280;
+      font-weight: 600;
+      margin: 22px 0 14px;
+    }
+    .service {
+      width: 100%;
+      text-align: left;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 18px;
+      padding: 22px 24px;
+      margin-bottom: 12px;
+      font-size: 26px;
+      font-family: inherit;
+      transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+    }
+    .service.selected {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+    }
+    .service .meta {
+      display: block;
+      margin-top: 6px;
+      font-size: 18px;
+      opacity: 0.55;
+    }
+    .days {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .day {
+      border: none;
+      border-radius: 14px;
+      padding: 16px 22px;
+      font-size: 20px;
+      font-weight: 600;
+      font-family: inherit;
+      background: var(--fog);
+      color: var(--steel);
+      transition: background 0.25s ease, color 0.25s ease, transform 0.15s ease;
+    }
+    .day.selected {
+      background: #111;
+      color: #fff;
+    }
+    .slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .slot {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 8px;
+      text-align: center;
+      font-size: 20px;
+      background: #fff;
+      font-family: inherit;
+      color: var(--steel);
+      transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
+    }
+    .slot.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .confirm {
+      width: 100%;
+      margin-top: 28px;
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 18px;
+      padding: 22px;
+      font-size: 26px;
+      font-weight: 700;
+      font-family: inherit;
+      opacity: 0.35;
+      transition: opacity 0.3s ease, transform 0.15s ease;
+    }
+    .confirm.ready { opacity: 1; }
+    .confirm.press { transform: scale(0.97); }
+
+    /* —— Scene 3: Confirmed —— */
+    .confirmed {
+      background: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 48px;
+    }
+    .check {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: #dcfce7;
+      color: var(--ok);
+      display: grid;
+      place-items: center;
+      font-size: 56px;
+      margin-bottom: 28px;
+      transform: scale(0.6);
+      opacity: 0;
+      transition: transform 0.45s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease;
+    }
+    .check.show {
+      transform: scale(1);
+      opacity: 1;
+    }
+    .confirmed h2 {
+      font-size: 44px;
+      color: var(--ok);
+      font-weight: 700;
+    }
+    .confirmed .msg {
+      margin-top: 14px;
+      font-size: 26px;
+      color: #4b5563;
+    }
+    .confirmed .hint {
+      margin-top: 8px;
+      font-size: 20px;
+      color: #9ca3af;
+    }
+    .cal-stack {
+      margin-top: 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      max-width: 620px;
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s;
+    }
+    .cal-stack.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cal-btn {
+      display: block;
+      width: 100%;
+      border: none;
+      border-radius: 18px;
+      padding: 22px;
+      font-size: 24px;
+      font-weight: 600;
+      font-family: inherit;
+      color: #fff;
+      transition: transform 0.15s ease;
+    }
+    .cal-btn.gcal { background: var(--gcal); }
+    .cal-btn.ics { background: #111; }
+    .cal-btn.press { transform: scale(0.97); }
+    .detail-chip {
+      margin-top: 36px;
+      background: var(--fog);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px 24px;
+      font-size: 22px;
+      color: var(--steel);
+      width: 100%;
+      max-width: 620px;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .detail-chip.show { opacity: 1; }
+    .detail-chip strong { color: var(--ink); }
+
+    /* —— End card —— */
+    .endcard {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px;
+      background:
+        radial-gradient(ellipse 70% 45% at 50% 30%, rgba(31,111,235,0.28), transparent 60%),
+        #0B0B0C;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.55s ease, visibility 0s linear 0.55s;
+    }
+    .endcard.show {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.55s ease, visibility 0s;
+    }
+    .endcard .logo {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 28px;
+      border-radius: 28px;
+    }
+    .endcard h2 {
+      font-family: "Syne", sans-serif;
+      font-size: 72px;
+      color: #fff;
+      letter-spacing: -0.04em;
+      font-weight: 800;
+    }
+    .endcard p {
+      margin-top: 18px;
+      font-size: 32px;
+      color: rgba(255,255,255,0.65);
+      max-width: 780px;
+      line-height: 1.35;
+    }
+    .endcard .cta {
+      margin-top: 48px;
+      background: #fff;
+      color: #000;
+      font-size: 28px;
+      font-weight: 700;
+      padding: 22px 42px;
+      border-radius: 18px;
+    }
+    .endcard .url {
+      margin-top: 22px;
+      font-size: 24px;
+      color: rgba(255,255,255,0.45);
+    }
+
+    .cursor {
+      position: absolute;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.92);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 8px rgba(31,111,235,0.25);
+      z-index: 30;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8);
+      transition: left 0.55s cubic-bezier(0.22,1,0.36,1), top 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease, transform 0.15s ease;
+    }
+    .cursor.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .cursor.click {
+      transform: translate(-50%, -50%) scale(0.75);
+    }
+
+    .progress {
+      position: absolute;
+      left: 80px;
+      right: 80px;
+      bottom: 56px;
+      height: 6px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 999px;
+      overflow: hidden;
+      z-index: 45;
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #1f6feb);
+      border-radius: inherit;
+      transition: width 0.2s linear;
+    }
+  </style>
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="caption" id="caption">
+      <div class="brand-row">
+        <div class="brand-mark">F</div>
+        <div class="brand-name">Frizeo</div>
+      </div>
+      <h1 id="capTitle">Distribuie linkul</h1>
+      <p id="capSub">Clienții rezervă singuri — tu rămâi la scaun</p>
+    </div>
+
+    <div class="phone-wrap" id="phoneWrap">
+      <div class="phone" id="phone">
+        <div class="notch"></div>
+
+        <!-- Scene 1 -->
+        <div class="screen admin active" id="scene1">
+          <div class="admin-top">
+            <div class="hello">Studio Fade</div>
+            <div class="pill">Dashboard</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat"><div class="k">Azi</div><div class="v">6</div></div>
+            <div class="stat"><div class="k">Săptămâna</div><div class="v">28</div></div>
+            <div class="stat"><div class="k">Confirmate</div><div class="v">24</div></div>
+          </div>
+          <div class="admin-card">
+            <div class="label">Linkul tău de programări</div>
+            <div class="hint">Trimite-l pe WhatsApp sau Instagram — fără link, clienții nu pot rezerva.</div>
+            <div class="link-box">frizeo.ro/booking/salon/studio-fade</div>
+            <div class="btn-row">
+              <button class="btn primary" id="copyBtn">Copiază</button>
+              <button class="btn secondary">Deschide</button>
+            </div>
+          </div>
+          <div class="booking-row"><span class="t">10:00</span><span>Andrei P.</span><span class="s">Fade clasic</span></div>
+          <div class="booking-row"><span class="t">11:30</span><span>Mihai R.</span><span class="s">Tuns + barbă</span></div>
+        </div>
+
+        <!-- Scene 2 -->
+        <div class="screen booking" id="scene2">
+          <div class="eyebrow">frizeo.ro/booking/…</div>
+          <h2>Programează-te</h2>
+          <p class="sub">la <strong>Studio Fade</strong></p>
+
+          <div class="step">1. Alege serviciul</div>
+          <button class="service" id="svc1">
+            Fade clasic
+            <span class="meta">45 min · 70 lei</span>
+          </button>
+          <button class="service" id="svc2">
+            Tuns + barbă
+            <span class="meta">60 min · 100 lei</span>
+          </button>
+
+          <div class="step">2. Alege data</div>
+          <div class="days">
+            <button class="day" id="day1">Mar 28</button>
+            <button class="day" id="day2">Mie 29</button>
+            <button class="day" id="day3">Joi 30</button>
+          </div>
+
+          <div class="step">3. Alege ora</div>
+          <div class="slots">
+            <button class="slot" id="slot1">10:00</button>
+            <button class="slot" id="slot2">11:30</button>
+            <button class="slot" id="slot3">13:00</button>
+            <button class="slot" id="slot4">15:30</button>
+          </div>
+
+          <button class="confirm" id="confirmBtn">Confirmă programarea</button>
+        </div>
+
+        <!-- Scene 3 -->
+        <div class="screen confirmed" id="scene3">
+          <div class="check" id="check">✔</div>
+          <h2>Programare confirmată</h2>
+          <p class="msg">Am trimis un email de confirmare.</p>
+          <p class="hint">Verifică inbox / spam.</p>
+          <div class="detail-chip" id="detailChip">
+            <strong>Fade clasic</strong> · marți 11:30 · Studio Fade
+          </div>
+          <div class="cal-stack" id="calStack">
+            <button class="cal-btn gcal" id="gcalBtn">Adaugă în Google Calendar</button>
+            <button class="cal-btn ics">Descarcă pentru Apple / Outlook</button>
+          </div>
+        </div>
+
+        <div class="cursor" id="cursor"></div>
+      </div>
+    </div>
+
+    <div class="progress"><i id="bar"></i></div>
+
+    <div class="endcard" id="endcard">
+      <img class="logo" src="frizeo-logo-512.png" alt="Frizeo" />
+      <h2>Frizeo</h2>
+      <p>Link personal. Programare online. Salvare în calendar.</p>
+      <div class="cta">Creează cont gratuit</div>
+      <div class="url">frizeo.ro</div>
+    </div>
+  </div>
+
+  <script>
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const $ = (id) => document.getElementById(id);
+
+    const TOTAL = 20000;
+    const started = performance.now();
+
+    function setProgress() {
+      const t = Math.min(1, (performance.now() - started) / TOTAL);
+      $("bar").style.width = `${t * 100}%`;
+      if (t < 1) requestAnimationFrame(setProgress);
+    }
+
+    function setCaption(title, sub) {
+      const cap = $("caption");
+      cap.classList.remove("show");
+      setTimeout(() => {
+        $("capTitle").textContent = title;
+        $("capSub").textContent = sub;
+        cap.classList.add("show");
+      }, 180);
+    }
+
+    function showScene(id) {
+      ["scene1", "scene2", "scene3"].forEach((s) => {
+        $(s).classList.toggle("active", s === id);
+      });
+    }
+
+    function phonePoint(el) {
+      const phone = $("phone").getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      return {
+        x: r.left + r.width / 2 - phone.left,
+        y: r.top + r.height / 2 - phone.top,
+      };
+    }
+
+    async function moveClick(el, { pressClass = "press", hold = 180 } = {}) {
+      const cursor = $("cursor");
+      const { x, y } = phonePoint(el);
+      cursor.classList.add("show");
+      cursor.style.left = `${x}px`;
+      cursor.style.top = `${y}px`;
+      await sleep(520);
+      cursor.classList.add("click");
+      el.classList.add(pressClass);
+      await sleep(hold);
+      cursor.classList.remove("click");
+      el.classList.remove(pressClass);
+      await sleep(120);
+    }
+
+    async function run() {
+      requestAnimationFrame(setProgress);
+
+      // Intro
+      $("caption").classList.add("show");
+      await sleep(900);
+      $("phoneWrap").classList.add("show");
+      await sleep(700);
+
+      // Scene 1 — copy link
+      await moveClick($("copyBtn"));
+      $("copyBtn").textContent = "Copiat!";
+      $("copyBtn").classList.add("copied");
+      await sleep(1400);
+
+      // Transition caption + booking
+      setCaption("Programare publică", "Clientul alege serviciul, ziua și ora");
+      await sleep(450);
+      showScene("scene2");
+      $("cursor").classList.remove("show");
+      await sleep(700);
+
+      await moveClick($("svc1"));
+      $("svc1").classList.add("selected");
+      await sleep(450);
+
+      await moveClick($("day1"));
+      $("day1").classList.add("selected");
+      await sleep(450);
+
+      await moveClick($("slot2"));
+      $("slot2").classList.add("selected");
+      $("confirmBtn").classList.add("ready");
+      await sleep(500);
+
+      await moveClick($("confirmBtn"));
+      await sleep(350);
+
+      // Scene 3 — calendar
+      setCaption("Salvează în calendar", "Un tap — și programarea e în Google Calendar");
+      showScene("scene3");
+      $("cursor").classList.remove("show");
+      await sleep(200);
+      $("check").classList.add("show");
+      $("detailChip").classList.add("show");
+      $("calStack").classList.add("show");
+      await sleep(900);
+
+      await moveClick($("gcalBtn"));
+      $("gcalBtn").textContent = "Adăugat în calendar ✓";
+      await sleep(1800);
+
+      // End card — hide product UI fully before CTA
+      $("cursor").classList.remove("show");
+      $("caption").classList.remove("show");
+      $("phoneWrap").classList.remove("show");
+      await sleep(520);
+      $("endcard").classList.add("show");
+      await sleep(2800);
+      document.body.dataset.done = "1";
+    }
+
+    // Expose for recorder
+    window.__FRIZEO_AD_READY__ = true;
+    window.__FRIZEO_AD_RUN__ = run;
+  </script>
+</body>
+</html>
