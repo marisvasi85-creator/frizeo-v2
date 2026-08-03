@@ -41,4 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .env.local
-.envpublic/demo/meta-ad/raw/
+.env
+
+# meta ad recording output
+public/demo/meta-ad/raw/
