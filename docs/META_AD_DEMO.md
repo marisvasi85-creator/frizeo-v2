@@ -1,14 +1,16 @@
-# Meta ad demo — cont → link → programare → calendar
+# Meta ad demo — cont → Google Calendar → programare
 
-Video vertical 9:16 (~26s) pentru Reels / Stories / Ads. Mesaj: **durează foarte puțin de la crearea contului până la prima programare**.
+Video vertical 9:16 (~32s) pentru Reels / Stories / Ads. Mesaj: **durează foarte puțin de la crearea contului până la prima programare**, inclusiv sync automat în Google Calendar.
 
 ## Flux
 
-1. **Creezi contul** — `/signup`: formular, tip activitate, „Creează cont”
-2. **Distribuie linkul** — dashboard: „Copiază” → „Copiat!”
-3. **Clientul se programează** — pagina publică: serviciu → dată → oră → confirmare
-4. **Salvează în calendar** — confirmare client: Google Calendar / Apple·Outlook
-5. **Apare în agenda frizerului** — „Programările de azi” + badge **Confirmată**
+1. **Creezi contul** — `/signup`
+2. **Conectezi Google Calendar** — Profil: „Conectează Google Calendar” → „Calendar conectat”
+3. **Distribuie linkul** — dashboard: „Copiază”
+4. **Clientul se programează** — pagina publică
+5. **Clientul salvează în calendar** — Google / Apple
+6. **Apare în agenda Frizeo** — „Programările de azi” + **Confirmată**
+7. **Apare automat în Google Calendar** — eveniment creat de Frizeo, fără acțiune din partea frizerului
 
 ## Surse
 
@@ -29,6 +31,6 @@ ffmpeg -y -i public/demo/meta-ad/raw/*.webm \
 ## Spec Meta
 
 - Format: **1080×1920** (9:16)
-- Durată: ~26s
-- Fără audio (voiceover / muzică în Ads Manager)
+- Durată: ~32s
+- Fără audio
 - CTA: **Creează cont gratuit** → `https://www.frizeo.ro`
