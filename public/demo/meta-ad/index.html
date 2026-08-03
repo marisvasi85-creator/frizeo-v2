@@ -13,10 +13,8 @@
       --ink-soft: #161618;
       --steel: #3d4a5c;
       --fog: #f3f6fa;
-      --mist: #e8eef5;
       --line: #d5dde8;
       --accent: #1f6feb;
-      --accent-soft: #dbeafe;
       --muted: #5b6573;
       --gcal: #1a73e8;
       --ok: #16a34a;
@@ -45,55 +43,52 @@
 
     .caption {
       position: absolute;
-      left: 64px;
-      right: 64px;
-      top: 96px;
+      left: 56px;
+      right: 56px;
+      top: 88px;
       z-index: 40;
       text-align: center;
       opacity: 0;
       transform: translateY(12px);
-      transition: opacity 0.45s ease, transform 0.45s ease;
+      transition: opacity 0.4s ease, transform 0.4s ease;
     }
-    .caption.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .caption.show { opacity: 1; transform: translateY(0); }
     .caption .brand-row {
       display: inline-flex;
       align-items: center;
       gap: 14px;
-      margin-bottom: 22px;
+      margin-bottom: 18px;
     }
     .brand-mark {
-      width: 52px;
-      height: 52px;
+      width: 48px;
+      height: 48px;
       background: #0B0B0C;
       border: 1px solid rgba(255,255,255,0.12);
       color: #fff;
       display: grid;
       place-items: center;
       font-weight: 700;
-      font-size: 26px;
+      font-size: 24px;
       letter-spacing: -0.04em;
     }
     .brand-name {
       font-family: "Syne", sans-serif;
-      font-size: 42px;
+      font-size: 38px;
       color: #fff;
       letter-spacing: -0.04em;
       font-weight: 800;
     }
     .caption h1 {
       font-family: "Syne", sans-serif;
-      font-size: 54px;
+      font-size: 50px;
       line-height: 1.08;
       letter-spacing: -0.04em;
       color: #fff;
       font-weight: 800;
     }
     .caption p {
-      margin-top: 14px;
-      font-size: 28px;
+      margin-top: 12px;
+      font-size: 26px;
       color: rgba(255,255,255,0.62);
       line-height: 1.35;
     }
@@ -101,12 +96,12 @@
     .phone-wrap {
       position: absolute;
       left: 50%;
-      top: 390px;
+      top: 370px;
       transform: translateX(-50%) scale(0.98);
       width: 820px;
-      height: 1380px;
+      height: 1400px;
       opacity: 0;
-      transition: opacity 0.5s ease, transform 0.5s ease;
+      transition: opacity 0.45s ease, transform 0.45s ease;
     }
     .phone-wrap.show {
       opacity: 1;
@@ -119,13 +114,10 @@
       border-radius: 64px;
       border: 3px solid rgba(255,255,255,0.14);
       background: #111;
-      box-shadow:
-        0 40px 120px rgba(0,0,0,0.55),
-        inset 0 0 0 1px rgba(255,255,255,0.05);
+      box-shadow: 0 40px 120px rgba(0,0,0,0.55);
       overflow: hidden;
       position: relative;
     }
-
     .notch {
       position: absolute;
       top: 18px;
@@ -143,32 +135,156 @@
       inset: 0;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.35s ease;
     }
-    .screen.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .screen.active { opacity: 1; pointer-events: auto; }
 
-    /* —— Scene 1: Admin —— */
+    /* —— Signup —— */
+    .signup {
+      background: #000;
+      padding: 72px 36px 36px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .signup-card {
+      width: 100%;
+      background: #18181b;
+      border-radius: 28px;
+      padding: 36px 32px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .signup-card .logo {
+      color: #fff;
+      font-size: 40px;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      text-align: center;
+    }
+    .signup-card .sub {
+      text-align: center;
+      color: #a1a1aa;
+      font-size: 24px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+    }
+    .signup-card .trial {
+      text-align: center;
+      color: #71717a;
+      font-size: 18px;
+      margin-bottom: 26px;
+      line-height: 1.35;
+    }
+    .field {
+      width: 100%;
+      background: #27272a;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      padding: 18px 20px;
+      font-size: 22px;
+      font-family: inherit;
+      margin-bottom: 12px;
+    }
+    .field.filled { color: #fff; }
+    .field::placeholder { color: #71717a; }
+    .biz-box {
+      border: 1px solid #3f3f46;
+      border-radius: 16px;
+      padding: 16px;
+      margin: 14px 0 18px;
+    }
+    .biz-box .legend {
+      font-size: 18px;
+      color: #a1a1aa;
+      margin-bottom: 12px;
+    }
+    .biz-opt {
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid #3f3f46;
+      border-radius: 14px;
+      padding: 16px 18px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 20px;
+      margin-bottom: 10px;
+      transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    }
+    .biz-opt:last-child { margin-bottom: 0; }
+    .biz-opt.selected {
+      border-color: #fff;
+      background: rgba(255,255,255,0.06);
+    }
+    .biz-opt small {
+      display: block;
+      margin-top: 4px;
+      font-size: 15px;
+      color: #71717a;
+    }
+    .terms {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      color: #a1a1aa;
+      font-size: 16px;
+      line-height: 1.35;
+      margin-bottom: 18px;
+    }
+    .terms .box {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 2px solid #52525b;
+      flex-shrink: 0;
+      margin-top: 2px;
+      display: grid;
+      place-items: center;
+      color: #000;
+      font-size: 16px;
+      font-weight: 700;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .terms .box.on {
+      background: #fff;
+      border-color: #fff;
+    }
+    .signup-cta {
+      width: 100%;
+      background: #fff;
+      color: #000;
+      border: none;
+      border-radius: 14px;
+      padding: 20px;
+      font-size: 24px;
+      font-weight: 600;
+      font-family: inherit;
+      transition: transform 0.15s ease, background 0.25s ease, color 0.25s ease;
+      white-space: nowrap;
+    }
+    .signup-cta.press { transform: scale(0.98); }
+    .signup-cta.done { background: #16a34a; color: #fff; }
+
+    /* —— Admin shared —— */
     .admin {
       background: #0B0B0C;
       color: #fff;
-      padding: 72px 40px 40px;
+      padding: 72px 36px 36px;
     }
     .admin-top {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 36px;
+      margin-bottom: 28px;
     }
     .admin-top .hello {
-      font-size: 34px;
+      font-size: 32px;
       font-family: "Syne", sans-serif;
       letter-spacing: -0.03em;
     }
     .admin-top .pill {
-      font-size: 18px;
+      font-size: 17px;
       color: rgba(255,255,255,0.45);
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.08);
@@ -179,74 +295,69 @@
       background: #161618;
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 22px;
-      padding: 28px;
-      margin-bottom: 22px;
+      padding: 26px;
+      margin-bottom: 18px;
     }
     .admin-card .label {
       font-size: 22px;
       color: rgba(255,255,255,0.55);
       margin-bottom: 10px;
     }
+    .admin-card h3 {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
     .admin-card .hint {
-      font-size: 18px;
+      font-size: 17px;
       color: rgba(255,255,255,0.35);
       line-height: 1.4;
-      margin-bottom: 22px;
+      margin-bottom: 18px;
     }
     .link-box {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 14px;
-      padding: 18px 20px;
-      font-size: 22px;
+      padding: 16px 18px;
+      font-size: 20px;
       color: rgba(255,255,255,0.85);
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .btn-row { display: flex; gap: 14px; }
+    .btn-row { display: flex; gap: 12px; }
     .btn {
       flex: 1;
       border: none;
       border-radius: 14px;
-      padding: 18px 16px;
-      font-size: 22px;
+      padding: 16px;
+      font-size: 21px;
       font-weight: 600;
       font-family: inherit;
-      cursor: pointer;
       transition: transform 0.15s ease, background 0.2s ease, color 0.2s ease;
     }
-    .btn.primary {
-      background: #fff;
-      color: #000;
-    }
-    .btn.primary.copied {
-      background: #16a34a;
-      color: #fff;
-    }
-    .btn.secondary {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
-    }
+    .btn.primary { background: #fff; color: #000; }
+    .btn.primary.copied { background: #16a34a; color: #fff; }
+    .btn.secondary { background: rgba(255,255,255,0.1); color: #fff; }
     .btn.press { transform: scale(0.96); }
 
     .stat-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 14px;
-      margin-bottom: 22px;
+      gap: 12px;
+      margin-bottom: 18px;
     }
     .stat {
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 18px;
-      padding: 20px 16px;
+      border-radius: 16px;
+      padding: 18px 14px;
     }
-    .stat .k { font-size: 16px; color: rgba(255,255,255,0.4); }
+    .stat .k { font-size: 15px; color: rgba(255,255,255,0.4); }
     .stat .v {
-      margin-top: 8px;
-      font-size: 40px;
+      margin-top: 6px;
+      font-size: 36px;
       font-family: "Syne", sans-serif;
       letter-spacing: -0.04em;
     }
@@ -255,104 +366,113 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #161618;
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 18px 20px;
-      margin-bottom: 12px;
+      background: #0F0F10;
+      border-radius: 14px;
+      padding: 16px 18px;
+      margin-bottom: 10px;
       font-size: 20px;
     }
-    .booking-row .t { color: rgba(255,255,255,0.45); }
-    .booking-row .s { color: rgba(255,255,255,0.45); }
+    .booking-row .meta { color: rgba(255,255,255,0.55); font-size: 17px; margin-top: 4px; }
+    .badge {
+      font-size: 14px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(34,197,94,0.2);
+      color: #4ade80;
+      font-weight: 600;
+    }
+    .booking-row.new {
+      outline: 2px solid rgba(31,111,235,0.85);
+      box-shadow: 0 0 0 6px rgba(31,111,235,0.18);
+      transform: translateY(10px);
+      opacity: 0;
+      transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22,1,0.36,1);
+    }
+    .booking-row.new.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .booking-row.new.pulse {
+      animation: pulseRow 0.9s ease;
+    }
+    @keyframes pulseRow {
+      0%, 100% { box-shadow: 0 0 0 6px rgba(31,111,235,0.18); }
+      50% { box-shadow: 0 0 0 14px rgba(31,111,235,0.08); }
+    }
+    .stat-bump .v { color: #60a5fa; transition: color 0.3s ease; }
 
-    /* —— Scene 2: Public booking —— */
+    /* —— Public booking —— */
     .booking {
       background: #fff;
-      padding: 72px 40px 40px;
+      padding: 72px 36px 36px;
       color: var(--ink);
     }
     .booking .eyebrow {
       text-align: center;
-      font-size: 16px;
+      font-size: 15px;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .booking h2 {
       text-align: center;
-      font-size: 48px;
+      font-size: 44px;
       font-weight: 700;
       letter-spacing: -0.03em;
     }
     .booking .sub {
       text-align: center;
-      margin-top: 8px;
-      font-size: 24px;
+      margin-top: 6px;
+      font-size: 22px;
       color: #6b7280;
-      margin-bottom: 36px;
+      margin-bottom: 28px;
     }
-    .booking .sub strong { color: #111; font-weight: 600; }
+    .booking .sub strong { color: #111; }
     .step {
-      font-size: 20px;
+      font-size: 18px;
       color: #6b7280;
       font-weight: 600;
-      margin: 22px 0 14px;
+      margin: 18px 0 12px;
     }
     .service {
       width: 100%;
       text-align: left;
       border: 1px solid var(--line);
       background: #fff;
-      border-radius: 18px;
-      padding: 22px 24px;
-      margin-bottom: 12px;
-      font-size: 26px;
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 10px;
+      font-size: 24px;
       font-family: inherit;
       transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease, transform 0.15s ease;
     }
-    .service.selected {
-      background: #111;
-      color: #fff;
-      border-color: #111;
-    }
-    .service .meta {
-      display: block;
-      margin-top: 6px;
-      font-size: 18px;
-      opacity: 0.55;
-    }
-    .days {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
+    .service.selected { background: #111; color: #fff; border-color: #111; }
+    .service .meta { display: block; margin-top: 4px; font-size: 16px; opacity: 0.55; }
+    .days { display: flex; gap: 10px; flex-wrap: wrap; }
     .day {
       border: none;
-      border-radius: 14px;
-      padding: 16px 22px;
-      font-size: 20px;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 18px;
       font-weight: 600;
       font-family: inherit;
       background: var(--fog);
       color: var(--steel);
       transition: background 0.25s ease, color 0.25s ease, transform 0.15s ease;
     }
-    .day.selected {
-      background: #111;
-      color: #fff;
-    }
+    .day.selected { background: #111; color: #fff; }
     .slots {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 10px;
     }
     .slot {
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 16px 8px;
+      border-radius: 12px;
+      padding: 14px 6px;
       text-align: center;
-      font-size: 20px;
+      font-size: 18px;
       background: #fff;
       font-family: inherit;
       color: var(--steel);
@@ -365,22 +485,25 @@
     }
     .confirm {
       width: 100%;
-      margin-top: 28px;
+      margin-top: 24px;
       background: #111;
       color: #fff;
       border: none;
-      border-radius: 18px;
-      padding: 22px;
-      font-size: 26px;
+      border-radius: 16px;
+      padding: 20px;
+      font-size: 24px;
       font-weight: 700;
       font-family: inherit;
       opacity: 0.35;
       transition: opacity 0.3s ease, transform 0.15s ease;
+      white-space: nowrap;
     }
     .confirm.ready { opacity: 1; }
-    .confirm.press { transform: scale(0.97); }
+    .confirm.press, .service.press, .day.press, .slot.press, .biz-opt.press, .btn.press, .cal-btn.press {
+      transform: scale(0.98);
+    }
 
-    /* —— Scene 3: Confirmed —— */
+    /* —— Confirmed —— */
     .confirmed {
       background: #fff;
       display: flex;
@@ -388,63 +511,45 @@
       align-items: center;
       justify-content: center;
       text-align: center;
-      padding: 80px 48px;
+      padding: 80px 44px;
     }
     .check {
-      width: 110px;
-      height: 110px;
+      width: 100px;
+      height: 100px;
       border-radius: 50%;
       background: #dcfce7;
       color: var(--ok);
       display: grid;
       place-items: center;
-      font-size: 56px;
-      margin-bottom: 28px;
+      font-size: 52px;
+      margin-bottom: 24px;
       transform: scale(0.6);
       opacity: 0;
       transition: transform 0.45s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease;
     }
-    .check.show {
-      transform: scale(1);
-      opacity: 1;
-    }
-    .confirmed h2 {
-      font-size: 44px;
-      color: var(--ok);
-      font-weight: 700;
-    }
-    .confirmed .msg {
-      margin-top: 14px;
-      font-size: 26px;
-      color: #4b5563;
-    }
-    .confirmed .hint {
-      margin-top: 8px;
-      font-size: 20px;
-      color: #9ca3af;
-    }
+    .check.show { transform: scale(1); opacity: 1; }
+    .confirmed h2 { font-size: 40px; color: var(--ok); font-weight: 700; }
+    .confirmed .msg { margin-top: 12px; font-size: 24px; color: #4b5563; }
+    .confirmed .hint { margin-top: 6px; font-size: 18px; color: #9ca3af; }
     .cal-stack {
-      margin-top: 48px;
+      margin-top: 40px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
       width: 100%;
-      max-width: 620px;
+      max-width: 600px;
       opacity: 0;
       transform: translateY(16px);
-      transition: opacity 0.4s ease 0.15s, transform 0.4s ease 0.15s;
+      transition: opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s;
     }
-    .cal-stack.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    .cal-stack.show { opacity: 1; transform: translateY(0); }
     .cal-btn {
       display: block;
       width: 100%;
       border: none;
-      border-radius: 18px;
-      padding: 22px;
-      font-size: 24px;
+      border-radius: 16px;
+      padding: 20px;
+      font-size: 22px;
       font-weight: 600;
       font-family: inherit;
       color: #fff;
@@ -454,22 +559,22 @@
     .cal-btn.ics { background: #111; }
     .cal-btn.press { transform: scale(0.97); }
     .detail-chip {
-      margin-top: 36px;
+      margin-top: 28px;
       background: var(--fog);
       border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 20px 24px;
-      font-size: 22px;
+      border-radius: 16px;
+      padding: 18px 22px;
+      font-size: 20px;
       color: var(--steel);
       width: 100%;
-      max-width: 620px;
+      max-width: 600px;
       opacity: 0;
       transition: opacity 0.4s ease;
     }
     .detail-chip.show { opacity: 1; }
     .detail-chip strong { color: var(--ink); }
 
-    /* —— End card —— */
+    /* —— End —— */
     .endcard {
       position: absolute;
       inset: 0;
@@ -494,66 +599,62 @@
       transition: opacity 0.55s ease, visibility 0s;
     }
     .endcard .logo {
-      width: 120px;
-      height: 120px;
-      margin-bottom: 28px;
-      border-radius: 28px;
+      width: 110px;
+      height: 110px;
+      margin-bottom: 24px;
+      border-radius: 26px;
     }
     .endcard h2 {
       font-family: "Syne", sans-serif;
-      font-size: 72px;
+      font-size: 64px;
       color: #fff;
       letter-spacing: -0.04em;
       font-weight: 800;
     }
     .endcard p {
-      margin-top: 18px;
-      font-size: 32px;
+      margin-top: 16px;
+      font-size: 30px;
       color: rgba(255,255,255,0.65);
-      max-width: 780px;
+      max-width: 820px;
       line-height: 1.35;
     }
     .endcard .cta {
-      margin-top: 48px;
+      margin-top: 42px;
       background: #fff;
       color: #000;
-      font-size: 28px;
+      font-size: 26px;
       font-weight: 700;
-      padding: 22px 42px;
-      border-radius: 18px;
+      padding: 20px 40px;
+      border-radius: 16px;
     }
     .endcard .url {
-      margin-top: 22px;
-      font-size: 24px;
+      margin-top: 18px;
+      font-size: 22px;
       color: rgba(255,255,255,0.45);
     }
 
     .cursor {
       position: absolute;
-      width: 44px;
-      height: 44px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.92);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 0 0 8px rgba(31,111,235,0.25);
+      background: rgba(59,130,246,0.28);
+      border: 2.5px solid rgba(255,255,255,0.95);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.25), 0 0 0 5px rgba(31,111,235,0.2);
       z-index: 30;
       pointer-events: none;
       opacity: 0;
       transform: translate(-50%, -50%) scale(0.8);
-      transition: left 0.55s cubic-bezier(0.22,1,0.36,1), top 0.55s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease, transform 0.15s ease;
+      transition: left 0.5s cubic-bezier(0.22,1,0.36,1), top 0.5s cubic-bezier(0.22,1,0.36,1), opacity 0.2s ease, transform 0.15s ease;
     }
-    .cursor.show {
-      opacity: 1;
-      transform: translate(-50%, -50%) scale(1);
-    }
-    .cursor.click {
-      transform: translate(-50%, -50%) scale(0.75);
-    }
+    .cursor.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    .cursor.click { transform: translate(-50%, -50%) scale(0.7); background: rgba(59,130,246,0.45); }
 
     .progress {
       position: absolute;
       left: 80px;
       right: 80px;
-      bottom: 56px;
+      bottom: 52px;
       height: 6px;
       background: rgba(255,255,255,0.1);
       border-radius: 999px;
@@ -566,8 +667,27 @@
       width: 0%;
       background: linear-gradient(90deg, #3b82f6, #1f6feb);
       border-radius: inherit;
-      transition: width 0.2s linear;
     }
+
+    .timer-chip {
+      position: absolute;
+      top: 300px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 42;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.75);
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      padding: 10px 18px;
+      border-radius: 999px;
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      white-space: nowrap;
+    }
+    .timer-chip.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -577,24 +697,59 @@
         <div class="brand-mark">F</div>
         <div class="brand-name">Frizeo</div>
       </div>
-      <h1 id="capTitle">Distribuie linkul</h1>
-      <p id="capSub">Clienții rezervă singuri — tu rămâi la scaun</p>
+      <h1 id="capTitle">Creezi contul</h1>
+      <p id="capSub">30 de zile gratuit · fără card</p>
     </div>
+
+    <div class="timer-chip" id="timerChip">0:00 → prima programare</div>
 
     <div class="phone-wrap" id="phoneWrap">
       <div class="phone" id="phone">
         <div class="notch"></div>
 
-        <!-- Scene 1 -->
-        <div class="screen admin active" id="scene1">
+        <!-- 0 Signup -->
+        <div class="screen signup active" id="scene0">
+          <div class="signup-card">
+            <div class="logo">Frizeo</div>
+            <div class="sub">Creează cont</div>
+            <div class="trial" id="trialHint">Alege tipul de activitate ca să vedem ce trial ți se potrivește.</div>
+
+            <input class="field" id="fName" placeholder="Nume complet" readonly value="" />
+            <input class="field" id="fEmail" placeholder="Email" readonly value="" />
+            <input class="field" id="fPhone" placeholder="Telefon" readonly value="" />
+            <input class="field" id="fPass" placeholder="Parolă" readonly value="" type="password" />
+
+            <div class="biz-box">
+              <div class="legend">Cum lucrezi?</div>
+              <button class="biz-opt" id="bizIndie">
+                Sunt frizer independent
+                <small>Lucrez pe cont propriu — dashboard Pro (1 loc, fără echipă).</small>
+              </button>
+              <button class="biz-opt" id="bizSalon">
+                Lucrez într-un salon
+                <small>Administrez un salon / o echipă — trial Pro+ (până la 3 frizeri).</small>
+              </button>
+            </div>
+
+            <div class="terms" id="termsRow">
+              <div class="box" id="termsBox"></div>
+              <div>Accept termenii și condițiile și politica de confidențialitate.</div>
+            </div>
+
+            <button class="signup-cta" id="signupBtn">Creează cont</button>
+          </div>
+        </div>
+
+        <!-- 1 Share link -->
+        <div class="screen admin" id="scene1">
           <div class="admin-top">
-            <div class="hello">Studio Fade</div>
+            <div class="hello">Salut, Alex 👋</div>
             <div class="pill">Dashboard</div>
           </div>
           <div class="stat-grid">
-            <div class="stat"><div class="k">Azi</div><div class="v">6</div></div>
-            <div class="stat"><div class="k">Săptămâna</div><div class="v">28</div></div>
-            <div class="stat"><div class="k">Confirmate</div><div class="v">24</div></div>
+            <div class="stat"><div class="k">Programări azi</div><div class="v">0</div></div>
+            <div class="stat"><div class="k">Status</div><div class="v" style="font-size:22px;margin-top:12px">Zi liberă</div></div>
+            <div class="stat"><div class="k">Trial</div><div class="v" style="font-size:22px;margin-top:12px">Pro</div></div>
           </div>
           <div class="admin-card">
             <div class="label">Linkul tău de programări</div>
@@ -605,11 +760,13 @@
               <button class="btn secondary">Deschide</button>
             </div>
           </div>
-          <div class="booking-row"><span class="t">10:00</span><span>Andrei P.</span><span class="s">Fade clasic</span></div>
-          <div class="booking-row"><span class="t">11:30</span><span>Mihai R.</span><span class="s">Tuns + barbă</span></div>
+          <div class="admin-card">
+            <h3 style="font-size:22px;margin:0;color:rgba(255,255,255,0.55)">Programările de azi</h3>
+            <p style="margin-top:14px;color:rgba(255,255,255,0.45);font-size:20px">Nu ai programări azi.</p>
+          </div>
         </div>
 
-        <!-- Scene 2 -->
+        <!-- 2 Public booking -->
         <div class="screen booking" id="scene2">
           <div class="eyebrow">frizeo.ro/booking/…</div>
           <h2>Programează-te</h2>
@@ -627,9 +784,9 @@
 
           <div class="step">2. Alege data</div>
           <div class="days">
-            <button class="day" id="day1">Mar 28</button>
-            <button class="day" id="day2">Mie 29</button>
-            <button class="day" id="day3">Joi 30</button>
+            <button class="day" id="day1">Azi</button>
+            <button class="day" id="day2">Mâine</button>
+            <button class="day" id="day3">Joi</button>
           </div>
 
           <div class="step">3. Alege ora</div>
@@ -643,18 +800,48 @@
           <button class="confirm" id="confirmBtn">Confirmă programarea</button>
         </div>
 
-        <!-- Scene 3 -->
+        <!-- 3 Client confirmed -->
         <div class="screen confirmed" id="scene3">
           <div class="check" id="check">✔</div>
           <h2>Programare confirmată</h2>
           <p class="msg">Am trimis un email de confirmare.</p>
           <p class="hint">Verifică inbox / spam.</p>
           <div class="detail-chip" id="detailChip">
-            <strong>Fade clasic</strong> · marți 11:30 · Studio Fade
+            <strong>Fade clasic</strong> · azi 11:30 · Studio Fade
           </div>
           <div class="cal-stack" id="calStack">
             <button class="cal-btn gcal" id="gcalBtn">Adaugă în Google Calendar</button>
             <button class="cal-btn ics">Descarcă pentru Apple / Outlook</button>
+          </div>
+        </div>
+
+        <!-- 4 Barber calendar -->
+        <div class="screen admin" id="scene4">
+          <div class="admin-top">
+            <div class="hello">Salut, Alex 👋</div>
+            <div class="pill">Programări</div>
+          </div>
+          <div class="stat-grid">
+            <div class="stat" id="statToday"><div class="k">Programări azi</div><div class="v" id="statCount">0</div></div>
+            <div class="stat"><div class="k">Status</div><div class="v" id="statStatus" style="font-size:20px;margin-top:12px">Zi liberă</div></div>
+            <div class="stat"><div class="k">Următoarea</div><div class="v" id="statNext" style="font-size:20px;margin-top:12px">—</div></div>
+          </div>
+          <div class="admin-card">
+            <h3>Programările de azi</h3>
+            <p id="emptyToday" style="color:rgba(255,255,255,0.45);font-size:20px">Nu ai programări azi.</p>
+            <div id="todayList"></div>
+            <div class="booking-row new" id="newBooking">
+              <div>
+                <p style="font-weight:600">Andrei P.</p>
+                <p class="meta">11:30 - 12:15 · Fade clasic</p>
+              </div>
+              <span class="badge">Confirmată</span>
+            </div>
+          </div>
+          <div class="admin-card" style="padding:20px 26px">
+            <div style="font-size:18px;color:rgba(255,255,255,0.4);margin-bottom:8px">Salvează și tu</div>
+            <div style="font-size:22px;font-weight:600">Sync Google Calendar activ</div>
+            <div style="font-size:17px;color:rgba(255,255,255,0.45);margin-top:6px">Slot blocat — fără ore dublate</div>
           </div>
         </div>
 
@@ -667,7 +854,7 @@
     <div class="endcard" id="endcard">
       <img class="logo" src="frizeo-logo-512.png" alt="Frizeo" />
       <h2>Frizeo</h2>
-      <p>Link personal. Programare online. Salvare în calendar.</p>
+      <p>De la cont la prima programare — în câteva minute.</p>
       <div class="cta">Creează cont gratuit</div>
       <div class="url">frizeo.ro</div>
     </div>
@@ -677,7 +864,7 @@
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     const $ = (id) => document.getElementById(id);
 
-    const TOTAL = 20000;
+    const TOTAL = 28000;
     const started = performance.now();
 
     function setProgress() {
@@ -693,11 +880,11 @@
         $("capTitle").textContent = title;
         $("capSub").textContent = sub;
         cap.classList.add("show");
-      }, 180);
+      }, 160);
     }
 
     function showScene(id) {
-      ["scene1", "scene2", "scene3"].forEach((s) => {
+      ["scene0", "scene1", "scene2", "scene3", "scene4"].forEach((s) => {
         $(s).classList.toggle("active", s === id);
       });
     }
@@ -711,84 +898,147 @@
       };
     }
 
-    async function moveClick(el, { pressClass = "press", hold = 180 } = {}) {
+    async function moveClick(el, { pressClass = "press", hold = 160, offsetX = 18, offsetY = 10 } = {}) {
       const cursor = $("cursor");
       const { x, y } = phonePoint(el);
+      // Offset like a real thumb — keeps button labels readable
       cursor.classList.add("show");
-      cursor.style.left = `${x}px`;
-      cursor.style.top = `${y}px`;
-      await sleep(520);
+      cursor.style.left = `${x + offsetX}px`;
+      cursor.style.top = `${y + offsetY}px`;
+      await sleep(480);
       cursor.classList.add("click");
       el.classList.add(pressClass);
       await sleep(hold);
       cursor.classList.remove("click");
       el.classList.remove(pressClass);
-      await sleep(120);
+      await sleep(80);
+      cursor.classList.remove("show");
+      await sleep(60);
+    }
+
+    async function typeField(el, text, step = 28) {
+      el.classList.add("filled");
+      el.value = "";
+      for (let i = 1; i <= text.length; i++) {
+        el.value = text.slice(0, i);
+        await sleep(step);
+      }
     }
 
     async function run() {
       requestAnimationFrame(setProgress);
-
-      // Intro
       $("caption").classList.add("show");
-      await sleep(900);
-      $("phoneWrap").classList.add("show");
       await sleep(700);
+      $("phoneWrap").classList.add("show");
+      $("timerChip").classList.add("show");
+      await sleep(500);
 
-      // Scene 1 — copy link
+      // —— Signup ——
+      await typeField($("fName"), "Alex Popescu", 22);
+      await typeField($("fEmail"), "alex@studiofade.ro", 18);
+      await typeField($("fPhone"), "0722123456", 20);
+      await typeField($("fPass"), "••••••••", 35);
+      await sleep(200);
+
+      await moveClick($("bizIndie"));
+      $("bizIndie").classList.add("selected");
+      $("trialHint").textContent = "Trial Pro — un frizer, SMS reminder, fără invitații echipă.";
+      await sleep(250);
+
+      await moveClick($("termsBox"));
+      $("termsBox").classList.add("on");
+      $("termsBox").textContent = "✓";
+      await sleep(250);
+
+      await moveClick($("signupBtn"), { offsetX: 28, offsetY: 8 });
+      $("signupBtn").textContent = "Se creează...";
+      await sleep(400);
+      $("signupBtn").classList.add("done");
+      $("signupBtn").textContent = "Cont creat ✓";
+      await sleep(750);
+
+      // —— Share link ——
+      setCaption("Distribuie linkul", "Pe WhatsApp sau Instagram — gata de rezervări");
+      $("timerChip").textContent = "0:20 → linkul e gata";
+      await sleep(350);
+      showScene("scene1");
+      $("cursor").classList.remove("show");
+      await sleep(600);
+
       await moveClick($("copyBtn"));
       $("copyBtn").textContent = "Copiat!";
       $("copyBtn").classList.add("copied");
-      await sleep(1400);
+      await sleep(900);
 
-      // Transition caption + booking
-      setCaption("Programare publică", "Clientul alege serviciul, ziua și ora");
-      await sleep(450);
+      // —— Public booking ——
+      setCaption("Clientul se programează", "Singur — tu nu răspunzi la telefon");
+      $("timerChip").textContent = "0:40 → clientul rezervă";
+      await sleep(350);
       showScene("scene2");
       $("cursor").classList.remove("show");
-      await sleep(700);
+      await sleep(550);
 
       await moveClick($("svc1"));
       $("svc1").classList.add("selected");
-      await sleep(450);
+      await sleep(320);
 
       await moveClick($("day1"));
       $("day1").classList.add("selected");
-      await sleep(450);
+      await sleep(320);
 
       await moveClick($("slot2"));
       $("slot2").classList.add("selected");
       $("confirmBtn").classList.add("ready");
-      await sleep(500);
-
-      await moveClick($("confirmBtn"));
       await sleep(350);
 
-      // Scene 3 — calendar
-      setCaption("Salvează în calendar", "Un tap — și programarea e în Google Calendar");
+      // Tap near the right edge — black button + solid cursor would hide the label
+      await moveClick($("confirmBtn"), { offsetX: 210, offsetY: 0, hold: 140 });
+      await sleep(280);
+
+      // —— Client calendar ——
+      setCaption("Salvează în calendar", "Clientul o are și el — un tap");
+      $("timerChip").textContent = "0:55 → confirmată";
       showScene("scene3");
       $("cursor").classList.remove("show");
-      await sleep(200);
+      await sleep(180);
       $("check").classList.add("show");
       $("detailChip").classList.add("show");
       $("calStack").classList.add("show");
-      await sleep(900);
+      await sleep(700);
 
       await moveClick($("gcalBtn"));
       $("gcalBtn").textContent = "Adăugat în calendar ✓";
-      await sleep(1800);
+      await sleep(1100);
 
-      // End card — hide product UI fully before CTA
+      // —— Barber calendar (payoff) ——
+      setCaption("Apare în agenda ta", "Prima programare — confirmată în Frizeo");
+      $("timerChip").textContent = "1:10 → în calendarul tău";
+      await sleep(300);
+      showScene("scene4");
+      $("cursor").classList.remove("show");
+      await sleep(450);
+
+      $("emptyToday").style.display = "none";
+      $("newBooking").classList.add("show");
+      await sleep(180);
+      $("newBooking").classList.add("pulse");
+      $("statCount").textContent = "1";
+      $("statToday").classList.add("stat-bump");
+      $("statStatus").textContent = "Ai clienți azi";
+      $("statNext").textContent = "11:30";
+      await sleep(3200);
+
+      // —— End ——
       $("cursor").classList.remove("show");
       $("caption").classList.remove("show");
+      $("timerChip").classList.remove("show");
       $("phoneWrap").classList.remove("show");
-      await sleep(520);
+      await sleep(450);
       $("endcard").classList.add("show");
-      await sleep(2800);
+      await sleep(2400);
       document.body.dataset.done = "1";
     }
 
-    // Expose for recorder
     window.__FRIZEO_AD_READY__ = true;
     window.__FRIZEO_AD_RUN__ = run;
   </script>
