@@ -45,6 +45,8 @@ next-env.d.ts
 
 # meta ad recording / large regenerable assets
 public/demo/meta-ad/raw/
+public/demo/meta-ad/**/raw/
 public/demo/meta-ad/*.mp4
 public/demo/meta-ad/assets/music.wav
 public/demo/meta-ad/assets/music-bed.wav
+public/demo/meta-ad/trust/music.wav
