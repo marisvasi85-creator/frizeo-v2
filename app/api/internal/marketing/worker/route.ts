@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   if (!isMarketingWorkerConfigured()) {
     return NextResponse.json(
       { error: "Marketing worker is not configured." },
@@ -19,13 +19,7 @@ export async function POST(request: Request) {
   }
 
   if (!isAuthorizedMarketingWorker(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      {
-        status: 401,
-        headers: { "WWW-Authenticate": "Bearer" },
-      },
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
