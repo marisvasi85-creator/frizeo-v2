@@ -89,6 +89,7 @@ export default function CampaignEditor({
   >(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [recipientFilter, setRecipientFilter] = useState("all");
 
   const audienceLabel =
     audiences.find((audience) => audience.kind === draft.audience_kind)?.label ||
@@ -98,8 +99,36 @@ export default function CampaignEditor({
       ? Math.min(100, Math.round((progress.sent / progress.total) * 100))
       : 0;
 
+  const rate = (value: number, base: number) =>
+    base > 0 ? `${((value / base) * 100).toFixed(1)}%` : "—";
+
+  const filteredRecipients = useMemo(
+    () =>
+      recipients.filter((recipient) => {
+        if (recipientFilter === "all") return true;
+        if (recipientFilter === "sent") return recipient.sent_at != null;
+        if (recipientFilter === "delivered") return recipient.delivered_at != null;
+        if (recipientFilter === "opened") {
+          return recipient.first_opened_at != null || recipient.opened_at != null;
+        }
+        if (recipientFilter === "clicked") {
+          return recipient.first_clicked_at != null || recipient.clicked_at != null;
+        }
+        if (recipientFilter === "bounced") return recipient.bounced_at != null;
+        if (recipientFilter === "complained") return recipient.complained_at != null;
+        if (recipientFilter === "unsubscribed") {
+          return recipient.unsubscribed_at != null;
+        }
+        if (recipientFilter === "delayed") {
+          return recipient.delivery_delayed_at != null;
+        }
+        return recipient.status === recipientFilter;
+      }),
+    [recipientFilter, recipients],
+  );
+
   useEffect(() => {
-    if (!["queued", "sending"].includes(campaignStatus)) return;
+    if (campaignStatus === "draft") return;
 
     let stopped = false;
     const poll = async () => {
@@ -116,15 +145,13 @@ export default function CampaignEditor({
         setProgress(data.progress as MarketingCampaignProgress);
         setSnapshotCount(Number(data.progress.total || 0));
 
-        if (!["queued", "sending"].includes(nextStatus)) {
-          const recipientsResponse = await fetch(
-            `/api/email/campaigns/${initialCampaign.id}/recipients`,
-            { cache: "no-store" },
-          );
-          const recipientsData = await recipientsResponse.json();
-          if (recipientsResponse.ok && !stopped) {
-            setRecipients(recipientsData.recipients || []);
-          }
+        const recipientsResponse = await fetch(
+          `/api/email/campaigns/${initialCampaign.id}/recipients`,
+          { cache: "no-store" },
+        );
+        const recipientsData = await recipientsResponse.json();
+        if (recipientsResponse.ok && !stopped) {
+          setRecipients(recipientsData.recipients || []);
         }
       } catch {
         // Polling is best-effort; the next interval retries without UI noise.
@@ -132,7 +159,7 @@ export default function CampaignEditor({
     };
 
     void poll();
-    const interval = window.setInterval(poll, 5_000);
+    const interval = window.setInterval(poll, 10_000);
     return () => {
       stopped = true;
       window.clearInterval(interval);
@@ -219,6 +246,12 @@ export default function CampaignEditor({
         pending: Number(data.recipient_count || 0),
         sending: 0,
         sent: 0,
+        delivered: 0,
+        opened: 0,
+        clicked: 0,
+        bounced: 0,
+        complained: 0,
+        unsubscribed: 0,
         failed: 0,
         skipped: 0,
       });
@@ -439,12 +472,16 @@ export default function CampaignEditor({
               style={{ width: `${sentPercent}%` }}
             />
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-9">
             {[
               ["Total", progress.total],
-              ["Pending", progress.pending],
-              ["Sending", progress.sending],
               ["Sent", progress.sent],
+              ["Delivered", progress.delivered],
+              ["Opened", progress.opened],
+              ["Clicked", progress.clicked],
+              ["Bounced", progress.bounced],
+              ["Complained", progress.complained],
+              ["Unsubscribed", progress.unsubscribed],
               ["Failed", progress.failed],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg bg-black/25 p-3">
@@ -455,6 +492,27 @@ export default function CampaignEditor({
               </div>
             ))}
           </dl>
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+            {[
+              ["Delivery rate", rate(progress.delivered, progress.sent)],
+              ["Open rate", rate(progress.opened, progress.delivered)],
+              ["Click rate", rate(progress.clicked, progress.delivered)],
+              ["Bounce rate", rate(progress.bounced, progress.sent)],
+              [
+                "Unsubscribe rate",
+                rate(progress.unsubscribed, progress.delivered),
+              ],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-white/5 p-3">
+                <dt className="text-xs text-white/40">{label}</dt>
+                <dd className="mt-1 font-medium tabular-nums">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-white/35">
+            Opened este orientativ: protecțiile de confidențialitate și proxy-urile
+            de imagini pot influența open tracking.
+          </p>
           {progress.skipped > 0 && (
             <p className="text-xs text-white/40">
               Skipped/suppressed: {progress.skipped}
@@ -775,41 +833,101 @@ export default function CampaignEditor({
       </div>
 
       <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-medium">Snapshot recipients</h2>
-          <p className="text-sm text-white/45">
-            Lista rămâne fixă după lansare; în draft o poți regenera controlat.
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 className="text-lg font-medium">Snapshot recipients</h2>
+            <p className="text-sm text-white/45">
+              Lista rămâne fixă după lansare; evenimentele actualizează livrarea.
+            </p>
+          </div>
+          <label className="text-xs text-white/45">
+            <span className="mb-1 block">Filter</span>
+            <select
+              value={recipientFilter}
+              onChange={(event) => setRecipientFilter(event.target.value)}
+              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+            >
+              <option value="all">All recipients</option>
+              <option value="sent">Sent</option>
+              <option value="delivered">Delivered</option>
+              <option value="opened">Opened</option>
+              <option value="clicked">Clicked</option>
+              <option value="delayed">Delivery delayed</option>
+              <option value="bounced">Bounced</option>
+              <option value="complained">Complained</option>
+              <option value="unsubscribed">Unsubscribed</option>
+              <option value="failed">Failed</option>
+            </select>
+          </label>
         </div>
         <div className="overflow-x-auto rounded-xl border border-white/10">
           <table className="min-w-full text-sm">
             <thead className="bg-white/[0.04] text-left text-white/50">
               <tr>
-                <th className="px-4 py-3 font-medium">Recipient</th>
+                <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Delivery</th>
+                <th className="px-4 py-3 font-medium">Opened</th>
+                <th className="px-4 py-3 font-medium">Clicked</th>
+                <th className="px-4 py-3 font-medium">Unsubscribed</th>
+                <th className="px-4 py-3 font-medium">Last event</th>
               </tr>
             </thead>
             <tbody>
               {recipients.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-white/40">
+                  <td colSpan={7} className="px-4 py-8 text-center text-white/40">
                     Nu există încă un snapshot pentru această campanie.
                   </td>
                 </tr>
+              ) : filteredRecipients.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-white/40">
+                    Niciun recipient nu corespunde filtrului selectat.
+                  </td>
+                </tr>
               ) : (
-                recipients.map((recipient) => (
+                filteredRecipients.map((recipient) => (
                   <tr key={recipient.id} className="border-t border-white/5">
                     <td className="px-4 py-3">
                       {[recipient.first_name, recipient.last_name]
                         .filter(Boolean)
                         .join(" ") || "—"}
                     </td>
-                    <td className="px-4 py-3 text-white/60">{recipient.email}</td>
+                    <td className="px-4 py-3 text-white/60">
+                      <a
+                        href={`mailto:${recipient.email}`}
+                        className="hover:text-white hover:underline"
+                      >
+                        {recipient.email}
+                      </a>
+                    </td>
                     <td className="px-4 py-3">
                       <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/60">
                         {recipient.status}
                       </span>
+                      {recipient.bounce_reason && (
+                        <div className="mt-1 max-w-64 text-[11px] text-amber-100/55">
+                          {recipient.bounce_type || "Bounce"}: {recipient.bounce_reason}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/50">
+                      {recipient.first_opened_at || recipient.opened_at ? "Yes" : "No"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/50">
+                      {recipient.first_clicked_at || recipient.clicked_at ? "Yes" : "No"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/50">
+                      {recipient.unsubscribed_at ? "Yes" : "No"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-white/50">
+                      <span className="block">{recipient.last_event_type || "—"}</span>
+                      {recipient.last_event_at && (
+                        <span className="block text-white/30">
+                          {new Date(recipient.last_event_at).toLocaleString("ro-RO")}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

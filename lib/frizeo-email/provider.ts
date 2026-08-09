@@ -136,6 +136,12 @@ export async function sendMarketingEmail(
         headers: {
           "X-Frizeo-Email-Type": input.kind,
         },
+        tags: [
+          {
+            name: "frizeo_email_type",
+            value: input.kind,
+          },
+        ],
       },
       input.idempotencyKey
         ? { idempotencyKey: input.idempotencyKey }

@@ -173,7 +173,7 @@ export default function ContactsClient({
       }
 
       setFormSuccess(
-        `Bulk consent: modificate ${data.changed}, neschimbate ${data.unchanged}, blocate de istoricul unsubscribe ${data.blocked}, lipsă ${data.missing}.`,
+        `Bulk consent: modificate ${data.changed}, neschimbate ${data.unchanged}, blocate unsubscribe ${data.blocked_unsubscribe || 0}, suprimate bounce/complaint ${data.blocked_suppressed || 0}, lipsă ${data.missing}.`,
       );
       setSelectedIds(new Set());
       startTransition(() => router.refresh());
@@ -652,6 +652,11 @@ export default function ContactsClient({
                       >
                         {c.status}
                       </span>
+                      {c.suppression_reason && (
+                        <div className="mt-1 max-w-56 text-[11px] text-white/35">
+                          {c.suppression_reason}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-white/60">
                       {c.marketing_consent ? "Yes" : "No"}

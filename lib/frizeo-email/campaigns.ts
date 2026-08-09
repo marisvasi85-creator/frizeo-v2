@@ -263,7 +263,7 @@ export async function listCampaignRecipients(
   const { data, error } = await supabaseAdmin
     .from("marketing_campaign_recipients")
     .select(
-      "id, campaign_id, contact_id, email, email_normalized, first_name, last_name, status, provider, provider_message_id, queued_at, sent_at, delivered_at, opened_at, clicked_at, bounced_at, failed_at, error_message, attempt_count, first_attempt_at, last_attempt_at, next_attempt_at, claimed_at, created_at, updated_at",
+      "id, campaign_id, contact_id, email, email_normalized, first_name, last_name, status, provider, provider_message_id, queued_at, sent_at, delivered_at, opened_at, clicked_at, first_opened_at, last_opened_at, first_clicked_at, last_clicked_at, delivery_delayed_at, bounced_at, complained_at, unsubscribed_at, bounce_type, bounce_subtype, bounce_reason, last_event_type, last_event_at, failed_at, error_message, attempt_count, first_attempt_at, last_attempt_at, next_attempt_at, claimed_at, created_at, updated_at",
     )
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: true })
@@ -341,46 +341,75 @@ export async function recordMarketingRecipientResult(input: {
 export async function getCampaignProgress(
   campaignId: string,
 ): Promise<MarketingCampaignProgress> {
-  const count = (statuses?: string[]) => {
-    let query = supabaseAdmin
+  const countStatuses = (statuses: string[]) =>
+    supabaseAdmin
       .from("marketing_campaign_recipients")
       .select("id", { count: "exact", head: true })
-      .eq("campaign_id", campaignId);
+      .eq("campaign_id", campaignId)
+      .in("status", statuses);
 
-    if (statuses) query = query.in("status", statuses);
-    return query;
-  };
-
-  const [total, pending, sending, sent, failed, skipped] = await Promise.all([
-    count(),
-    count(["pending", "queued"]),
-    count(["sending"]),
-    count(["sent", "delivered", "opened", "clicked"]),
-    count(["failed"]),
-    count(["skipped"]),
+  const [campaignResult, pending, sending, failed, skipped] = await Promise.all([
+    supabaseAdmin
+      .from("marketing_campaigns")
+      .select(
+        "recipient_count, sent_count, delivered_count, opened_count, clicked_count, bounced_count, complained_count, unsubscribed_count, failed_count",
+      )
+      .eq("id", campaignId)
+      .maybeSingle(),
+    countStatuses(["pending", "queued"]),
+    countStatuses(["sending"]),
+    countStatuses(["failed"]),
+    countStatuses(["skipped"]),
   ]);
 
-  const firstError =
-    total.error ||
+  const error =
+    campaignResult.error ||
     pending.error ||
     sending.error ||
-    sent.error ||
     failed.error ||
     skipped.error;
-  if (firstError) throw new Error(firstError.message);
+  if (error) throw new Error(error.message);
+
+  const campaign = campaignResult.data;
+  if (!campaign) {
+    return {
+      total: 0,
+      pending: 0,
+      sending: 0,
+      sent: 0,
+      delivered: 0,
+      opened: 0,
+      clicked: 0,
+      bounced: 0,
+      complained: 0,
+      unsubscribed: 0,
+      failed: 0,
+      skipped: 0,
+    };
+  }
 
   return {
-    total: total.count ?? 0,
+    total: Number(campaign.recipient_count || 0),
     pending: pending.count ?? 0,
     sending: sending.count ?? 0,
-    sent: sent.count ?? 0,
-    failed: failed.count ?? 0,
+    sent: Number(campaign.sent_count || 0),
+    delivered: Number(campaign.delivered_count || 0),
+    opened: Number(campaign.opened_count || 0),
+    clicked: Number(campaign.clicked_count || 0),
+    bounced: Number(campaign.bounced_count || 0),
+    complained: Number(campaign.complained_count || 0),
+    unsubscribed: Number(campaign.unsubscribed_count || 0),
+    failed: failed.count ?? Number(campaign.failed_count || 0),
     skipped: skipped.count ?? 0,
   };
 }
 
 export async function getCampaignDashboardData(): Promise<{
   emailsSent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  bounced: number;
   campaignsSent: number;
   recent: MarketingCampaign[];
 }> {
@@ -395,7 +424,7 @@ export async function getCampaignDashboardData(): Promise<{
 
   const { data: sentRows, error: sentError } = await supabaseAdmin
     .from("marketing_campaigns")
-    .select("sent_count")
+    .select("sent_count, delivered_count, opened_count, clicked_count, bounced_count")
     .in("status", ["sent", "partially_failed"]);
 
   if (sentError) throw new Error(sentError.message);
@@ -403,6 +432,22 @@ export async function getCampaignDashboardData(): Promise<{
   return {
     emailsSent: (sentRows ?? []).reduce(
       (total, row) => total + Number(row.sent_count || 0),
+      0,
+    ),
+    delivered: (sentRows ?? []).reduce(
+      (total, row) => total + Number(row.delivered_count || 0),
+      0,
+    ),
+    opened: (sentRows ?? []).reduce(
+      (total, row) => total + Number(row.opened_count || 0),
+      0,
+    ),
+    clicked: (sentRows ?? []).reduce(
+      (total, row) => total + Number(row.clicked_count || 0),
+      0,
+    ),
+    bounced: (sentRows ?? []).reduce(
+      (total, row) => total + Number(row.bounced_count || 0),
       0,
     ),
     campaignsSent: sentRows?.length ?? 0,

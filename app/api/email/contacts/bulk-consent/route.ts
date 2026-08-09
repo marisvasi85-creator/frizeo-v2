@@ -62,9 +62,13 @@ export async function POST(request: Request) {
     });
     const changed = results.filter((row) => row.result === "changed");
     const unchanged = results.filter((row) => row.result === "unchanged");
-    const blocked = results.filter(
+    const blockedUnsubscribe = results.filter(
       (row) => row.result === "blocked_unsubscribe_history",
     );
+    const blockedSuppressed = results.filter(
+      (row) => row.result === "blocked_suppressed_status",
+    );
+    const blocked = [...blockedUnsubscribe, ...blockedSuppressed];
 
     return NextResponse.json({
       success: true,
@@ -72,6 +76,8 @@ export async function POST(request: Request) {
       changed: changed.length,
       unchanged: unchanged.length,
       blocked: blocked.length,
+      blocked_unsubscribe: blockedUnsubscribe.length,
+      blocked_suppressed: blockedSuppressed.length,
       missing: contactIds.length - results.length,
       blocked_contact_ids: blocked.map((row) => row.changed_contact_id),
     });

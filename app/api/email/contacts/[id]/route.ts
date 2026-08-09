@@ -60,6 +60,17 @@ export async function PATCH(
       );
     }
 
+    if (result.result === "blocked_suppressed_status") {
+      return NextResponse.json(
+        {
+          error:
+            "Contactul este suprimat după bounce permanent sau complaint și nu poate fi reactivat din Edit Contact.",
+          code: "suppressed_contact",
+        },
+        { status: 409 },
+      );
+    }
+
     return NextResponse.json({
       success: true,
       result: result.result,

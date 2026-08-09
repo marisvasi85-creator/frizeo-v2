@@ -1,9 +1,13 @@
 import { getMarketingProviderStatus } from "@/lib/frizeo-email/provider";
 import { isMarketingWorkerConfigured } from "@/lib/frizeo-email/workerAuth";
+import { getAppUrl } from "@/lib/app/getAppUrl";
+import { isResendWebhookConfigured } from "@/lib/frizeo-email/webhooks";
 
 export default function EmailSettingsPage() {
   const provider = getMarketingProviderStatus();
   const workerConfigured = isMarketingWorkerConfigured();
+  const webhookConfigured = isResendWebhookConfigured();
+  const webhookUrl = `${getAppUrl()}/api/webhooks/resend/marketing`;
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -38,6 +42,36 @@ export default function EmailSettingsPage() {
         <p className="text-xs text-white/35">
           SMTP-ul de booking (`EMAIL_*`) rămâne separat și nu este folosit ca
           fallback.
+        </p>
+      </section>
+
+      <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-medium">Resend delivery webhooks</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Delivery, opens, clicks, bounces și complaints
+            </p>
+          </div>
+          <span
+            className={`rounded-md px-2.5 py-1 text-xs ${
+              webhookConfigured
+                ? "bg-emerald-500/15 text-emerald-200"
+                : "bg-amber-500/15 text-amber-200"
+            }`}
+          >
+            {webhookConfigured ? "Configured" : "Not configured"}
+          </span>
+        </div>
+        <div>
+          <p className="text-xs text-white/40">Webhook URL</p>
+          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+            {webhookUrl}
+          </code>
+        </div>
+        <p className="text-xs text-white/35">
+          Semnătura este verificată pe body-ul raw cu secretul dedicat
+          RESEND_WEBHOOK_SECRET. Secretul nu este afișat.
         </p>
       </section>
 

@@ -10,7 +10,8 @@ export const CONTACT_UUID_PATTERN =
 export type ConsentChangeResult =
   | "changed"
   | "unchanged"
-  | "blocked_unsubscribe_history";
+  | "blocked_unsubscribe_history"
+  | "blocked_suppressed_status";
 
 export type ConsentChangeRow = {
   changed_contact_id: string;

@@ -120,12 +120,41 @@ export async function unsubscribeByToken(
     ? createHash("sha256").update(meta.ip).digest("hex")
     : null;
 
-  await supabaseAdmin.from("marketing_unsubscribe_events").insert({
-    contact_id: contact.id,
-    token_id: tokenRow.id,
-    ip_hash: ipHash,
-    user_agent: meta?.userAgent?.slice(0, 500) || null,
-  });
+  const { data: unsubscribeEvent, error: unsubscribeEventError } =
+    await supabaseAdmin
+      .from("marketing_unsubscribe_events")
+      .insert({
+        contact_id: contact.id,
+        token_id: tokenRow.id,
+        ip_hash: ipHash,
+        user_agent: meta?.userAgent?.slice(0, 500) || null,
+      })
+      .select("id")
+      .single();
+
+  if (unsubscribeEventError || !unsubscribeEvent) {
+    console.error("[marketing-unsubscribe] audit event failed", {
+      contactId: contact.id,
+      message: unsubscribeEventError?.message || "Missing audit event id",
+    });
+  } else {
+    const { error: analyticsError } = await supabaseAdmin.rpc(
+      "record_marketing_unsubscribe_analytics",
+      {
+        p_unsubscribe_event_id: unsubscribeEvent.id,
+        p_unsubscribe_token: token,
+        p_event_timestamp: now,
+      },
+    );
+    if (analyticsError) {
+      // Unsubscribe already succeeded; analytics must never undo that action.
+      console.error("[marketing-unsubscribe] campaign analytics failed", {
+        contactId: contact.id,
+        unsubscribeEventId: unsubscribeEvent.id,
+        message: analyticsError.message,
+      });
+    }
+  }
 
   return {
     ok: true,

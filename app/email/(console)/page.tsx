@@ -24,6 +24,10 @@ export default async function EmailDashboardPage() {
   let loadError: string | null = null;
   let campaignData: Awaited<ReturnType<typeof getCampaignDashboardData>> = {
     emailsSent: 0,
+    delivered: 0,
+    opened: 0,
+    clicked: 0,
+    bounced: 0,
     campaignsSent: 0,
     recent: [],
   };
@@ -46,8 +50,8 @@ export default async function EmailDashboardPage() {
           Dashboard
         </h1>
         <p className="mt-2 text-white/55 text-sm max-w-2xl">
-          Sistem intern de email marketing Frizeo. Faza 2 permite pregătirea
-          campaniilor și snapshot-uri, fără trimitere în masă.
+          Sistem intern de email marketing Frizeo, cu livrare și engagement
+          actualizate din evenimentele verificate Resend.
         </p>
       </header>
 
@@ -60,8 +64,12 @@ export default async function EmailDashboardPage() {
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         <StatCard label="Total Contacts" value={stats.total} />
         <StatCard label="Subscribed" value={stats.subscribed} />
-        <StatCard label="Unsubscribed" value={stats.unsubscribed} />
         <StatCard label="Emails Sent" value={campaignData.emailsSent} />
+        <StatCard label="Delivered" value={campaignData.delivered} />
+        <StatCard label="Opened" value={campaignData.opened} />
+        <StatCard label="Clicked" value={campaignData.clicked} />
+        <StatCard label="Bounces" value={campaignData.bounced} />
+        <StatCard label="Unsubscribed" value={stats.unsubscribed} />
         <StatCard label="Campaigns Sent" value={campaignData.campaignsSent} />
       </section>
 
