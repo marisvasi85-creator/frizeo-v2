@@ -10,11 +10,13 @@ export default function MobileNav({
   actsAsBarber = true,
   assistantEnabled = false,
   platformAssistantEnabled = false,
+  frizeoEmailEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
+  frizeoEmailEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -25,6 +27,7 @@ export default function MobileNav({
     actsAsBarber,
     assistantEnabled,
     platformAssistantEnabled,
+    frizeoEmailEnabled,
   });
 
   return (

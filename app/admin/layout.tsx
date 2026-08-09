@@ -12,6 +12,7 @@ import {
 } from "@/lib/assistant/config";
 import { isPlatformAssistantEnabled } from "@/lib/platform-assistant/config";
 import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
+import { isPlatformAdminEmail } from "@/lib/auth/requirePlatformAdmin";
 import { pwaManifestHref } from "@/lib/pwa/manifestContent";
 import { SITE_NAME } from "@/lib/site/metadata";
 
@@ -47,6 +48,7 @@ export default async function AdminLayout({
   const platformAssistantEnabled =
     isPlatformAssistantEnabled() &&
     isPlatformCreatorEmail(session.user.email);
+  const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
 
   return (
     <div className="flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-[#0B0B0C] text-white">
@@ -55,6 +57,7 @@ export default async function AdminLayout({
         actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
+        frizeoEmailEnabled={frizeoEmailEnabled}
       />
 
       <main className="flex-1 min-w-0 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
@@ -66,6 +69,7 @@ export default async function AdminLayout({
         actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
+        frizeoEmailEnabled={frizeoEmailEnabled}
       />
       {assistantEnabled && (
         <FloatingAssistant

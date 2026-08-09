@@ -9,11 +9,13 @@ export default function Sidebar({
   actsAsBarber = true,
   assistantEnabled = false,
   platformAssistantEnabled = false,
+  frizeoEmailEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
+  frizeoEmailEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const navItems = buildAdminNavItems({
@@ -21,6 +23,7 @@ export default function Sidebar({
     actsAsBarber,
     assistantEnabled,
     platformAssistantEnabled,
+    frizeoEmailEnabled,
   });
 
   return (
@@ -30,7 +33,9 @@ export default function Sidebar({
 
         <nav className="flex flex-col gap-2">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const isExternalHandoff = item.href.startsWith("/api/");
+            const active =
+              !isExternalHandoff && pathname.startsWith(item.href);
 
             return (
               <Link
