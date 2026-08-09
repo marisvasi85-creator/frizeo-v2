@@ -3,6 +3,8 @@ import CampaignEditor from "./CampaignEditor";
 import {
   getAudienceSummaries,
   getCampaign,
+  getCampaignProgress,
+  listEligibleTestContacts,
   listCampaignRecipients,
 } from "@/lib/frizeo-email/campaigns";
 import { listEmailTemplates } from "@/lib/frizeo-email/templates";
@@ -17,18 +19,25 @@ export default async function CampaignPage({ params }: { params: Params }) {
   const campaign = await getCampaign(id);
   if (!campaign) notFound();
 
-  const [templates, audiences, recipients] = await Promise.all([
-    listEmailTemplates(),
-    getAudienceSummaries(),
-    listCampaignRecipients(id),
-  ]);
+  const [templates, audiences, testContacts, recipients, progress] =
+    await Promise.all([
+      listEmailTemplates(),
+      getAudienceSummaries(),
+      listEligibleTestContacts(),
+      campaign.audience_snapshot_at
+        ? listCampaignRecipients(id)
+        : Promise.resolve([]),
+      getCampaignProgress(id),
+    ]);
 
   return (
     <CampaignEditor
       initialCampaign={campaign}
       templates={templates}
       audiences={audiences}
+      testContacts={testContacts}
       initialRecipients={recipients}
+      initialProgress={progress}
     />
   );
 }

@@ -12,8 +12,10 @@ function statusClass(status: string): string {
   const colors: Record<string, string> = {
     draft: "bg-white/10 text-white/70",
     scheduled: "bg-blue-500/15 text-blue-200",
+    queued: "bg-sky-500/15 text-sky-200",
     sending: "bg-amber-500/15 text-amber-200",
     sent: "bg-emerald-500/15 text-emerald-200",
+    partially_failed: "bg-orange-500/15 text-orange-200",
     failed: "bg-red-500/15 text-red-200",
     cancelled: "bg-white/5 text-white/40",
   };
@@ -74,7 +76,7 @@ export default function CampaignsClient({
             Campaigns
           </h1>
           <p className="mt-2 text-sm text-white/55">
-            Drafturi, preview, Send Test și snapshot de audiență.
+            Drafturi, teste, snapshot de audiență și campanii reale în batch-uri.
           </p>
         </div>
         <div className="flex gap-2">
@@ -216,8 +218,8 @@ export default function CampaignsClient({
       </div>
 
       <p className="text-xs text-white/35">
-        Send Now și Schedule rămân blocate până la Faza 3, când adăugăm batch,
-        idempotency și webhook-uri.
+        Campaniile pornite continuă server-side prin workerul extern chiar dacă
+        închizi browserul. Tracking-ul și webhook-urile vor veni separat.
       </p>
     </div>
   );

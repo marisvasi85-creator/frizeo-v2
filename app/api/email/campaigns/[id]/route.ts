@@ -99,6 +99,21 @@ export async function PATCH(
     return NextResponse.json({ error: "Audiență invalidă." }, { status: 400 });
   }
 
+  const testContactIds = Array.isArray(body.test_contact_ids)
+    ? [...new Set(body.test_contact_ids)]
+    : [];
+  if (
+    testContactIds.length > 5 ||
+    testContactIds.some(
+      (value) => typeof value !== "string" || !UUID_PATTERN.test(value),
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Audiența de test acceptă maximum 5 contacte valide." },
+      { status: 400 },
+    );
+  }
+
   const templateId =
     typeof body.template_id === "string" && body.template_id.trim()
       ? body.template_id.trim()
@@ -115,6 +130,7 @@ export async function PATCH(
       reply_to: replyTo.value,
       template_id: templateId,
       audience_kind: audienceRaw as MarketingAudienceKind,
+      test_contact_ids: testContactIds as string[],
       ...content.value,
     });
     if (!campaign) {

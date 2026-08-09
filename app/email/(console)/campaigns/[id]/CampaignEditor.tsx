@@ -1,20 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { renderMarketingEmail } from "@/lib/frizeo-email/renderEmail";
 import type {
   MarketingAudienceSummary,
   MarketingCampaign,
+  MarketingCampaignProgress,
   MarketingCampaignRecipient,
   MarketingEmailTemplate,
+  MarketingTestContactOption,
 } from "@/lib/frizeo-email/types";
 
 type Props = {
   initialCampaign: MarketingCampaign;
   templates: MarketingEmailTemplate[];
   audiences: MarketingAudienceSummary[];
+  testContacts: MarketingTestContactOption[];
   initialRecipients: MarketingCampaignRecipient[];
+  initialProgress: MarketingCampaignProgress;
 };
 
 type CampaignDraft = Pick<
@@ -33,6 +37,7 @@ type CampaignDraft = Pick<
   | "cta_url"
   | "footer_text"
   | "audience_kind"
+  | "test_contact_ids"
 >;
 
 function campaignDraft(campaign: MarketingCampaign): CampaignDraft {
@@ -51,6 +56,7 @@ function campaignDraft(campaign: MarketingCampaign): CampaignDraft {
     cta_url: campaign.cta_url,
     footer_text: campaign.footer_text,
     audience_kind: campaign.audience_kind,
+    test_contact_ids: campaign.test_contact_ids || [],
   };
 }
 
@@ -58,11 +64,15 @@ export default function CampaignEditor({
   initialCampaign,
   templates,
   audiences,
+  testContacts,
   initialRecipients,
+  initialProgress,
 }: Props) {
-  const editable = initialCampaign.status === "draft";
+  const [campaignStatus, setCampaignStatus] = useState(initialCampaign.status);
+  const editable = campaignStatus === "draft";
   const [draft, setDraft] = useState(() => campaignDraft(initialCampaign));
   const [recipients, setRecipients] = useState(initialRecipients);
+  const [progress, setProgress] = useState(initialProgress);
   const [snapshotCount, setSnapshotCount] = useState(
     initialCampaign.recipient_count,
   );
@@ -73,9 +83,61 @@ export default function CampaignEditor({
     "desktop",
   );
   const [testEmail, setTestEmail] = useState("");
-  const [busy, setBusy] = useState<"save" | "snapshot" | "test" | null>(null);
+  const [showSendConfirmation, setShowSendConfirmation] = useState(false);
+  const [busy, setBusy] = useState<
+    "save" | "snapshot" | "test" | "queue" | "cancel" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const audienceLabel =
+    audiences.find((audience) => audience.kind === draft.audience_kind)?.label ||
+    draft.audience_kind;
+  const sentPercent =
+    progress.total > 0
+      ? Math.min(100, Math.round((progress.sent / progress.total) * 100))
+      : 0;
+
+  useEffect(() => {
+    if (!["queued", "sending"].includes(campaignStatus)) return;
+
+    let stopped = false;
+    const poll = async () => {
+      try {
+        const response = await fetch(
+          `/api/email/campaigns/${initialCampaign.id}/progress`,
+          { cache: "no-store" },
+        );
+        const data = await response.json();
+        if (!response.ok || stopped) return;
+
+        const nextStatus = data.campaign.status as MarketingCampaign["status"];
+        setCampaignStatus(nextStatus);
+        setProgress(data.progress as MarketingCampaignProgress);
+        setSnapshotCount(Number(data.progress.total || 0));
+
+        if (!["queued", "sending"].includes(nextStatus)) {
+          const recipientsResponse = await fetch(
+            `/api/email/campaigns/${initialCampaign.id}/recipients`,
+            { cache: "no-store" },
+          );
+          const recipientsData = await recipientsResponse.json();
+          if (recipientsResponse.ok && !stopped) {
+            setRecipients(recipientsData.recipients || []);
+          }
+        }
+      } catch {
+        // Polling is best-effort; the next interval retries without UI noise.
+      }
+    };
+
+    void poll();
+    const interval = window.setInterval(poll, 5_000);
+    return () => {
+      stopped = true;
+      window.clearInterval(interval);
+    };
+  }, [campaignStatus, initialCampaign.id]);
 
   const previewHtml = useMemo(
     () =>
@@ -152,11 +214,110 @@ export default function CampaignEditor({
       setSnapshotCount(Number(data.recipient_count || 0));
       setSnapshotAt(new Date().toISOString());
       await refreshRecipients();
+      setProgress({
+        total: Number(data.recipient_count || 0),
+        pending: Number(data.recipient_count || 0),
+        sending: 0,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+      });
       setMessage(
         `Snapshot creat: ${Number(data.recipient_count || 0)} destinatari eligibili.`,
       );
     } catch {
       setError("Eroare de rețea la generarea snapshot-ului.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const prepareSendCampaign = async () => {
+    const saved = await saveDraft(false);
+    if (!saved) return;
+
+    setBusy("snapshot");
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/email/campaigns/${initialCampaign.id}/snapshot`,
+        { method: "POST" },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Nu am putut verifica audiența.");
+        return;
+      }
+
+      const count = Number(data.recipient_count || 0);
+      setSnapshotCount(count);
+      setSnapshotAt(new Date().toISOString());
+      await refreshRecipients();
+      if (count === 0) {
+        setError("Audiența nu conține destinatari eligibili.");
+        return;
+      }
+      setShowSendConfirmation(true);
+    } catch {
+      setError("Eroare de rețea la verificarea audienței.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const confirmSendCampaign = async () => {
+    setBusy("queue");
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/email/campaigns/${initialCampaign.id}/queue`,
+        { method: "POST" },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Nu am putut porni campania.");
+        return;
+      }
+
+      setCampaignStatus(data.campaign.status);
+      setProgress(data.progress);
+      setSnapshotCount(Number(data.recipient_count || 0));
+      setShowSendConfirmation(false);
+      setMessage(
+        `Campania a fost pusă în coadă cu ${Number(data.recipient_count || 0)} destinatari. Poți închide browserul.`,
+      );
+    } catch {
+      setError("Eroare de rețea la pornirea campaniei.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const cancelSendCampaign = async () => {
+    if (!window.confirm("Oprești destinatarii care nu au fost încă trimiși?")) {
+      return;
+    }
+
+    setBusy("cancel");
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await fetch(
+        `/api/email/campaigns/${initialCampaign.id}/cancel`,
+        { method: "POST" },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Nu am putut anula campania.");
+        return;
+      }
+      setCampaignStatus(data.campaign.status);
+      setProgress(data.progress);
+      setMessage("Campania a fost anulată. Emailurile deja trimise rămân trimise.");
+    } catch {
+      setError("Eroare de rețea la anularea campaniei.");
     } finally {
       setBusy(null);
     }
@@ -224,24 +385,83 @@ export default function CampaignEditor({
               {draft.name}
             </h1>
             <span className="rounded-md bg-white/10 px-2 py-1 text-xs text-white/60">
-              {initialCampaign.status}
+              {campaignStatus}
             </span>
           </div>
           <p className="mt-2 text-sm text-white/50">
-            Faza 2 pregătește campania. Trimiterea reală rămâne blocată.
+            {editable
+              ? "Pregătește conținutul, verifică audiența și pornește trimiterea."
+              : "Conținutul și audiența sunt blocate după pornirea campaniei."}
           </p>
         </div>
-        {editable && (
-          <button
-            type="button"
-            onClick={() => saveDraft()}
-            disabled={busy !== null}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
-          >
-            {busy === "save" ? "Se salvează…" : "Save Draft"}
-          </button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {["queued", "sending"].includes(campaignStatus) && (
+            <button
+              type="button"
+              onClick={cancelSendCampaign}
+              disabled={busy !== null}
+              className="rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-200 disabled:opacity-50"
+            >
+              {busy === "cancel" ? "Se anulează…" : "Cancel Campaign"}
+            </button>
+          )}
+          {editable && (
+            <button
+              type="button"
+              onClick={() => saveDraft()}
+              disabled={busy !== null}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+            >
+              {busy === "save" ? "Se salvează…" : "Save Draft"}
+            </button>
+          )}
+        </div>
       </header>
+
+      {!editable && (
+        <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-medium">Campaign progress</h2>
+              <p className="mt-1 text-sm text-white/45">
+                {progress.sent} / {progress.total} sent
+              </p>
+            </div>
+            <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs text-white/65">
+              {campaignStatus === "sent"
+                ? "Campaign completed"
+                : campaignStatus.replaceAll("_", " ")}
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-emerald-400 transition-all"
+              style={{ width: `${sentPercent}%` }}
+            />
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+            {[
+              ["Total", progress.total],
+              ["Pending", progress.pending],
+              ["Sending", progress.sending],
+              ["Sent", progress.sent],
+              ["Failed", progress.failed],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg bg-black/25 p-3">
+                <dt className="text-xs text-white/40">{label}</dt>
+                <dd className="mt-1 text-lg font-semibold tabular-nums">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {progress.skipped > 0 && (
+            <p className="text-xs text-white/40">
+              Skipped/suppressed: {progress.skipped}
+            </p>
+          )}
+        </section>
+      )}
 
       {(error || message) && (
         <div className="space-y-2 text-sm">
@@ -401,7 +621,9 @@ export default function CampaignEditor({
                       onChange={() => field("audience_kind", audience.kind)}
                     />
                     <span className="text-lg font-semibold tabular-nums">
-                      {audience.count}
+                      {audience.kind === "controlled_test"
+                        ? draft.test_contact_ids.length
+                        : audience.count}
                     </span>
                   </div>
                   <p className="mt-2 text-sm font-medium">{audience.label}</p>
@@ -411,6 +633,57 @@ export default function CampaignEditor({
                 </label>
               ))}
             </div>
+            {draft.audience_kind === "controlled_test" && (
+              <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">Contacte de test eligibile</p>
+                  <span className="text-xs text-white/45">
+                    {draft.test_contact_ids.length}/5 selectate
+                  </span>
+                </div>
+                {testContacts.length === 0 ? (
+                  <p className="text-xs text-amber-200/80">
+                    Adaugă mai întâi contacte controlate cu consimțământ explicit.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {testContacts.map((contact) => {
+                      const checked = draft.test_contact_ids.includes(contact.id);
+                      const name = [contact.first_name, contact.last_name]
+                        .filter(Boolean)
+                        .join(" ");
+                      return (
+                        <label
+                          key={contact.id}
+                          className="flex items-start gap-2 rounded-md border border-white/10 p-2 text-xs"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={
+                              !editable ||
+                              (!checked && draft.test_contact_ids.length >= 5)
+                            }
+                            onChange={(event) => {
+                              const next = event.target.checked
+                                ? [...draft.test_contact_ids, contact.id]
+                                : draft.test_contact_ids.filter(
+                                    (id) => id !== contact.id,
+                                  );
+                              field("test_contact_ids", next);
+                            }}
+                          />
+                          <span>
+                            <span className="block text-white/80">{name || "—"}</span>
+                            <span className="block text-white/45">{contact.email}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -450,6 +723,23 @@ export default function CampaignEditor({
               Testul păstrează subiectul și conținutul campaniei, nu intră în
               snapshot și nu modifică statisticile.
             </p>
+          </EditorCard>
+
+          <EditorCard title="Send Campaign">
+            <div className="space-y-3">
+              <p className="text-sm text-white/55">
+                Lansarea recalculează atomic audiența eligibilă, fixează snapshot-ul
+                și mută campania în coada procesată de worker.
+              </p>
+              <button
+                type="button"
+                onClick={prepareSendCampaign}
+                disabled={!editable || busy !== null}
+                className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              >
+                {busy === "snapshot" ? "Se verifică audiența…" : "Send Campaign"}
+              </button>
+            </div>
           </EditorCard>
         </div>
 
@@ -529,11 +819,61 @@ export default function CampaignEditor({
         </div>
       </section>
 
-      <section className="rounded-xl border border-dashed border-white/15 p-4 text-sm text-white/45">
-        Send Now și Schedule se activează în Faza 3 după implementarea queue-ului,
-        idempotency și webhook-urilor. În Faza 2 nu există nicio cale de trimitere
-        către snapshot.
-      </section>
+      {showSendConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="send-campaign-title"
+            className="w-full max-w-lg space-y-5 rounded-2xl border border-white/15 bg-[#171719] p-6 shadow-2xl"
+          >
+            <div>
+              <h2 id="send-campaign-title" className="text-xl font-semibold">
+                Confirm campaign send
+              </h2>
+              <p className="mt-2 text-sm text-amber-100/75">
+                După pornire, conținutul, template-ul și audiența nu mai pot fi
+                editate.
+              </p>
+            </div>
+            <dl className="space-y-3 text-sm">
+              {[
+                ["Campaign", draft.name],
+                ["Subject", draft.subject],
+                ["Audience", audienceLabel],
+                ["Eligible recipients", String(snapshotCount)],
+                ["Sender", "Resend · mail.frizeo.ro (server-side)"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="grid gap-1 border-b border-white/10 pb-2 sm:grid-cols-[150px_1fr]"
+                >
+                  <dt className="text-white/40">{label}</dt>
+                  <dd className="break-words text-white/85">{value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setShowSendConfirmation(false)}
+                disabled={busy === "queue"}
+                className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50"
+              >
+                Înapoi
+              </button>
+              <button
+                type="button"
+                onClick={confirmSendCampaign}
+                disabled={busy === "queue"}
+                className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+              >
+                {busy === "queue" ? "Se pornește…" : "Confirm & Send"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

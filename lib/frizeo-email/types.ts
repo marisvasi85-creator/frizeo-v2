@@ -47,6 +47,7 @@ export const MARKETING_AUDIENCE_KINDS = [
   "all_subscribed",
   "leads",
   "registered_users",
+  "controlled_test",
 ] as const;
 
 export type MarketingAudienceKind =
@@ -55,8 +56,10 @@ export type MarketingAudienceKind =
 export const MARKETING_CAMPAIGN_STATUSES = [
   "draft",
   "scheduled",
+  "queued",
   "sending",
   "sent",
+  "partially_failed",
   "failed",
   "cancelled",
 ] as const;
@@ -110,6 +113,7 @@ export type MarketingCampaign = MarketingEmailContent & {
   reply_to: string | null;
   template_id: string | null;
   audience_kind: MarketingAudienceKind;
+  test_contact_ids: string[];
   status: MarketingCampaignStatus;
   recipient_count: number;
   sent_count: number;
@@ -120,6 +124,10 @@ export type MarketingCampaign = MarketingEmailContent & {
   failed_count: number;
   audience_snapshot_at: string | null;
   scheduled_at: string | null;
+  queued_at: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
   sent_at: string | null;
   created_by: string | null;
   created_at: string;
@@ -145,6 +153,11 @@ export type MarketingCampaignRecipient = {
   bounced_at: string | null;
   failed_at: string | null;
   error_message: string | null;
+  attempt_count: number;
+  first_attempt_at: string | null;
+  last_attempt_at: string | null;
+  next_attempt_at: string | null;
+  claimed_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -154,4 +167,20 @@ export type MarketingAudienceSummary = {
   label: string;
   description: string;
   count: number;
+};
+
+export type MarketingTestContactOption = {
+  id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+};
+
+export type MarketingCampaignProgress = {
+  total: number;
+  pending: number;
+  sending: number;
+  sent: number;
+  failed: number;
+  skipped: number;
 };

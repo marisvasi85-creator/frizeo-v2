@@ -16,10 +16,37 @@ export type SendMarketingTestInput = {
   text: string;
 };
 
-export type SendMarketingTestResult = {
+export type SendMarketingEmailInput = SendMarketingTestInput & {
+  kind: "marketing-test" | "marketing-campaign";
+  idempotencyKey?: string;
+};
+
+export type SendMarketingEmailResult = {
   provider: "resend";
   messageId: string;
 };
+
+export class MarketingProviderError extends Error {
+  readonly code: string;
+  readonly statusCode: number | null;
+  readonly temporary: boolean;
+  readonly retryAfterSeconds: number | null;
+
+  constructor(input: {
+    code: string;
+    message: string;
+    statusCode?: number | null;
+    temporary: boolean;
+    retryAfterSeconds?: number | null;
+  }) {
+    super(input.message);
+    this.name = "MarketingProviderError";
+    this.code = input.code;
+    this.statusCode = input.statusCode ?? null;
+    this.temporary = input.temporary;
+    this.retryAfterSeconds = input.retryAfterSeconds ?? null;
+  }
+}
 
 function readResendConfig() {
   return {
@@ -38,8 +65,8 @@ export function getMarketingProviderStatus(): MarketingProviderStatus {
     domain: "mail.frizeo.ro",
     configured,
     message: configured
-      ? "Resend este configurat pentru Send Test."
-      : "Lipsesc una sau mai multe variabile Resend necesare pentru Send Test.",
+      ? "Resend este configurat pentru teste și campanii."
+      : "Lipsesc una sau mai multe variabile Resend necesare pentru trimitere.",
   };
 }
 
@@ -62,13 +89,33 @@ function safeProviderError(error: unknown) {
   return { name: "ProviderError", message: "Unknown provider error" };
 }
 
+function parseRetryAfter(headers: Record<string, string> | null): number | null {
+  const value = Number(headers?.["retry-after"]);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.min(Math.ceil(value), 86_400);
+}
+
+function isTemporaryProviderError(input: {
+  name: string;
+  statusCode: number | null;
+}): boolean {
+  if (input.statusCode === null) return true;
+  if (input.statusCode === 429 || input.statusCode >= 500) return true;
+  return (
+    input.name === "rate_limit_exceeded" ||
+    input.name === "application_error" ||
+    input.name === "internal_server_error" ||
+    input.name === "concurrent_idempotent_requests"
+  );
+}
+
 /**
  * Dedicated marketing adapter. It deliberately never imports or falls back to
  * lib/email/email.ts, so booking/transactional delivery remains independent.
  */
-export async function sendMarketingTest(
-  input: SendMarketingTestInput,
-): Promise<SendMarketingTestResult> {
+export async function sendMarketingEmail(
+  input: SendMarketingEmailInput,
+): Promise<SendMarketingEmailResult> {
   const status = getMarketingProviderStatus();
   if (!status.configured) {
     throw new Error("marketing_provider_not_configured");
@@ -78,27 +125,41 @@ export async function sendMarketingTest(
 
   try {
     const resend = new Resend(config.apiKey);
-    const { data, error } = await resend.emails.send({
-      from: config.from,
-      to: input.to,
-      replyTo: config.replyTo,
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-      headers: {
-        "X-Frizeo-Email-Type": "marketing-test",
+    const { data, error, headers } = await resend.emails.send(
+      {
+        from: config.from,
+        to: input.to,
+        replyTo: config.replyTo,
+        subject: input.subject,
+        html: input.html,
+        text: input.text,
+        headers: {
+          "X-Frizeo-Email-Type": input.kind,
+        },
       },
-    });
+      input.idempotencyKey
+        ? { idempotencyKey: input.idempotencyKey }
+        : undefined,
+    );
 
     if (error || !data?.id) {
       console.error(
-        "[frizeo-email] Resend Send Test failed",
+        "[frizeo-email] Resend send failed",
         safeProviderError(error),
       );
-      throw new Error("marketing_provider_send_failed");
+      throw new MarketingProviderError({
+        code: error?.name || "missing_provider_message_id",
+        message: error?.message || "Resend did not return a message id.",
+        statusCode: error?.statusCode,
+        temporary: error
+          ? isTemporaryProviderError(error)
+          : true,
+        retryAfterSeconds: parseRetryAfter(headers),
+      });
     }
 
-    console.info("[frizeo-email] Resend Send Test accepted", {
+    console.info("[frizeo-email] Resend send accepted", {
+      kind: input.kind,
       messageId: data.id,
     });
 
@@ -107,17 +168,25 @@ export async function sendMarketingTest(
       messageId: data.id,
     };
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "marketing_provider_send_failed"
-    ) {
+    if (error instanceof MarketingProviderError) {
       throw error;
     }
 
     console.error(
-      "[frizeo-email] Resend Send Test failed",
+      "[frizeo-email] Resend send failed",
       safeProviderError(error),
     );
-    throw new Error("marketing_provider_send_failed");
+    throw new MarketingProviderError({
+      code: "network_error",
+      message:
+        error instanceof Error ? error.message : "Unknown provider error",
+      temporary: true,
+    });
   }
+}
+
+export async function sendMarketingTest(
+  input: SendMarketingTestInput,
+): Promise<SendMarketingEmailResult> {
+  return sendMarketingEmail({ ...input, kind: "marketing-test" });
 }

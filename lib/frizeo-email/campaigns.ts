@@ -4,8 +4,10 @@ import type {
   MarketingAudienceKind,
   MarketingAudienceSummary,
   MarketingCampaign,
+  MarketingCampaignProgress,
   MarketingCampaignRecipient,
   MarketingEmailContent,
+  MarketingTestContactOption,
 } from "@/lib/frizeo-email/types";
 
 export type CreateCampaignInput = {
@@ -20,6 +22,19 @@ export type UpdateCampaignInput = MarketingEmailContent & {
   reply_to: string | null;
   template_id: string | null;
   audience_kind: MarketingAudienceKind;
+  test_contact_ids: string[];
+};
+
+export type ClaimedMarketingRecipient = MarketingEmailContent & {
+  recipient_id: string;
+  campaign_id: string;
+  contact_id: string | null;
+  recipient_email: string;
+  first_name: string | null;
+  last_name: string | null;
+  unsubscribe_token: string | null;
+  attempt_count: number;
+  claim_token: string;
 };
 
 export function getMarketingSenderDefaults() {
@@ -92,6 +107,7 @@ export async function createCampaign(
       cta_url: template.cta_url,
       footer_text: template.footer_text,
       audience_kind: "all_subscribed",
+      test_contact_ids: [],
       status: "draft",
       created_by: createdBy,
     })
@@ -115,7 +131,11 @@ export async function updateCampaign(
     throw new Error("Doar campaniile draft pot fi editate.");
   }
 
-  const audienceChanged = current.audience_kind !== input.audience_kind;
+  const currentTestContactIds = [...(current.test_contact_ids || [])].sort();
+  const nextTestContactIds = [...input.test_contact_ids].sort();
+  const audienceChanged =
+    current.audience_kind !== input.audience_kind ||
+    currentTestContactIds.join(",") !== nextTestContactIds.join(",");
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .update({
@@ -131,12 +151,8 @@ export async function updateCampaign(
 
   if (error) throw new Error(error.message);
 
-  if (audienceChanged) {
-    const { error: recipientError } = await supabaseAdmin
-      .from("marketing_campaign_recipients")
-      .delete()
-      .eq("campaign_id", id);
-    if (recipientError) throw new Error(recipientError.message);
+  if (!data) {
+    throw new Error("Doar campaniile draft pot fi editate.");
   }
 
   return (data as MarketingCampaign | null) ?? null;
@@ -165,19 +181,22 @@ function eligibleContactsQuery() {
     .select("id", { count: "exact", head: true })
     .eq("status", "subscribed")
     .eq("marketing_consent", true)
+    .not("consent_at", "is", null)
     .is("unsubscribed_at", null);
 }
 
 export async function getAudienceSummaries(): Promise<
   MarketingAudienceSummary[]
 > {
-  const [all, leads, registered] = await Promise.all([
+  const [all, leads, registered, controlledTest] = await Promise.all([
     eligibleContactsQuery(),
     eligibleContactsQuery().is("user_id", null),
     eligibleContactsQuery().not("user_id", "is", null),
+    eligibleContactsQuery(),
   ]);
 
-  const firstError = all.error || leads.error || registered.error;
+  const firstError =
+    all.error || leads.error || registered.error || controlledTest.error;
   if (firstError) throw new Error(firstError.message);
 
   return [
@@ -199,7 +218,31 @@ export async function getAudienceSummaries(): Promise<
       description: "Contacte eligibile asociate unui cont Frizeo.",
       count: registered.count ?? 0,
     },
+    {
+      kind: "controlled_test",
+      label: "Test controlat",
+      description: "Selectează manual maximum 5 contacte eligibile.",
+      count: controlledTest.count ?? 0,
+    },
   ];
+}
+
+export async function listEligibleTestContacts(
+  limit = 100,
+): Promise<MarketingTestContactOption[]> {
+  const safeLimit = Math.min(Math.max(limit, 1), 200);
+  const { data, error } = await supabaseAdmin
+    .from("marketing_contacts")
+    .select("id, email, first_name, last_name")
+    .eq("status", "subscribed")
+    .eq("marketing_consent", true)
+    .not("consent_at", "is", null)
+    .is("unsubscribed_at", null)
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MarketingTestContactOption[];
 }
 
 export async function snapshotCampaignAudience(id: string): Promise<number> {
@@ -219,13 +262,121 @@ export async function listCampaignRecipients(
   const safeLimit = Math.min(Math.max(limit, 1), 1_000);
   const { data, error } = await supabaseAdmin
     .from("marketing_campaign_recipients")
-    .select("*")
+    .select(
+      "id, campaign_id, contact_id, email, email_normalized, first_name, last_name, status, provider, provider_message_id, queued_at, sent_at, delivered_at, opened_at, clicked_at, bounced_at, failed_at, error_message, attempt_count, first_attempt_at, last_attempt_at, next_attempt_at, claimed_at, created_at, updated_at",
+    )
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: true })
     .limit(safeLimit);
 
   if (error) throw new Error(error.message);
   return (data ?? []) as MarketingCampaignRecipient[];
+}
+
+export async function queueCampaign(id: string): Promise<number> {
+  const { data, error } = await supabaseAdmin.rpc("queue_marketing_campaign", {
+    p_campaign_id: id,
+  });
+
+  if (error) throw new Error(error.message);
+  return typeof data === "number" ? data : Number(data ?? 0);
+}
+
+export async function cancelCampaign(id: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.rpc(
+    "cancel_marketing_campaign",
+    { p_campaign_id: id },
+  );
+
+  if (error) throw new Error(error.message);
+  return data === true;
+}
+
+export async function claimMarketingRecipientBatch(input: {
+  batchSize: number;
+  leaseSeconds: number;
+  maxAttempts: number;
+}): Promise<ClaimedMarketingRecipient[]> {
+  const { data, error } = await supabaseAdmin.rpc(
+    "claim_marketing_recipient_batch",
+    {
+      p_batch_size: input.batchSize,
+      p_lease_seconds: input.leaseSeconds,
+      p_max_attempts: input.maxAttempts,
+    },
+  );
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as ClaimedMarketingRecipient[];
+}
+
+export async function recordMarketingRecipientResult(input: {
+  recipientId: string;
+  claimToken: string;
+  success: boolean;
+  providerMessageId?: string | null;
+  temporary?: boolean;
+  errorMessage?: string | null;
+  retryDelaySeconds?: number;
+  maxAttempts: number;
+}): Promise<boolean> {
+  const { data, error } = await supabaseAdmin.rpc(
+    "record_marketing_recipient_result",
+    {
+      p_recipient_id: input.recipientId,
+      p_claim_token: input.claimToken,
+      p_success: input.success,
+      p_provider_message_id: input.providerMessageId ?? null,
+      p_temporary: input.temporary ?? false,
+      p_error_message: input.errorMessage ?? null,
+      p_retry_delay_seconds: input.retryDelaySeconds ?? 60,
+      p_max_attempts: input.maxAttempts,
+    },
+  );
+
+  if (error) throw new Error(error.message);
+  return data === true;
+}
+
+export async function getCampaignProgress(
+  campaignId: string,
+): Promise<MarketingCampaignProgress> {
+  const count = (statuses?: string[]) => {
+    let query = supabaseAdmin
+      .from("marketing_campaign_recipients")
+      .select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId);
+
+    if (statuses) query = query.in("status", statuses);
+    return query;
+  };
+
+  const [total, pending, sending, sent, failed, skipped] = await Promise.all([
+    count(),
+    count(["pending", "queued"]),
+    count(["sending"]),
+    count(["sent", "delivered", "opened", "clicked"]),
+    count(["failed"]),
+    count(["skipped"]),
+  ]);
+
+  const firstError =
+    total.error ||
+    pending.error ||
+    sending.error ||
+    sent.error ||
+    failed.error ||
+    skipped.error;
+  if (firstError) throw new Error(firstError.message);
+
+  return {
+    total: total.count ?? 0,
+    pending: pending.count ?? 0,
+    sending: sending.count ?? 0,
+    sent: sent.count ?? 0,
+    failed: failed.count ?? 0,
+    skipped: skipped.count ?? 0,
+  };
 }
 
 export async function getCampaignDashboardData(): Promise<{
@@ -245,7 +396,7 @@ export async function getCampaignDashboardData(): Promise<{
   const { data: sentRows, error: sentError } = await supabaseAdmin
     .from("marketing_campaigns")
     .select("sent_count")
-    .eq("status", "sent");
+    .in("status", ["sent", "partially_failed"]);
 
   if (sentError) throw new Error(sentError.message);
 

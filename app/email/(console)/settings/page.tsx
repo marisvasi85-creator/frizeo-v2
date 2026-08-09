@@ -1,7 +1,9 @@
 import { getMarketingProviderStatus } from "@/lib/frizeo-email/provider";
+import { isMarketingWorkerConfigured } from "@/lib/frizeo-email/workerAuth";
 
 export default function EmailSettingsPage() {
   const provider = getMarketingProviderStatus();
+  const workerConfigured = isMarketingWorkerConfigured();
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -18,7 +20,9 @@ export default function EmailSettingsPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-medium">Marketing email provider</h2>
-            <p className="mt-1 text-sm text-white/45">Resend · Send Test</p>
+            <p className="mt-1 text-sm text-white/45">
+              Resend · teste și campanii
+            </p>
           </div>
           <span
             className={`rounded-md px-2.5 py-1 text-xs ${
@@ -34,6 +38,30 @@ export default function EmailSettingsPage() {
         <p className="text-xs text-white/35">
           SMTP-ul de booking (`EMAIL_*`) rămâne separat și nu este folosit ca
           fallback.
+        </p>
+      </section>
+
+      <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-medium">External campaign worker</h2>
+            <p className="mt-1 text-sm text-white/45">
+              Endpoint securizat pentru serviciul Cron Job extern
+            </p>
+          </div>
+          <span
+            className={`rounded-md px-2.5 py-1 text-xs ${
+              workerConfigured
+                ? "bg-emerald-500/15 text-emerald-200"
+                : "bg-amber-500/15 text-amber-200"
+            }`}
+          >
+            {workerConfigured ? "Configured" : "Not configured"}
+          </span>
+        </div>
+        <p className="text-xs text-white/35">
+          Secretul dedicat este verificat exclusiv server-side și nu este afișat
+          sau reutilizat pentru Resend ori Supabase.
         </p>
       </section>
 
@@ -56,9 +84,8 @@ export default function EmailSettingsPage() {
       </section>
 
       <section className="rounded-xl border border-dashed border-white/15 p-5 text-sm text-white/50">
-        Test Provider Connection și providerul de producție pentru batch-uri se
-        finalizează în Faza 3. În această fază conexiunea este folosită numai de
-        butonul Send Test.
+        Workerul procesează batch-uri mici, iar progresul campaniei se
+        actualizează automat în interfață. Nu este folosit Vercel Cron.
       </section>
     </div>
   );
