@@ -6,8 +6,11 @@ function hashToken(rawToken: string): string {
   return createHash("sha256").update(rawToken).digest("hex");
 }
 
-export function buildUnsubscribeUrl(rawToken: string): string {
-  return `${getEmailAppUrl()}/unsubscribe/${encodeURIComponent(rawToken)}`;
+export function buildUnsubscribeUrl(
+  rawToken: string,
+  emailAppUrl = getEmailAppUrl(),
+): string {
+  return `${emailAppUrl.replace(/\/$/, "")}/unsubscribe/${encodeURIComponent(rawToken)}`;
 }
 
 /** Create (or reuse) an active unsubscribe token; returns the raw token once. */

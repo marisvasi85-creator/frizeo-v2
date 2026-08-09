@@ -5,6 +5,7 @@ import {
   buildUnsubscribeUrl,
   ensureUnsubscribeToken,
 } from "@/lib/frizeo-email/unsubscribe";
+import { getEmailAppUrlForRequest } from "@/lib/frizeo-email/config";
 
 type Params = Promise<{ id: string }>;
 
@@ -13,7 +14,7 @@ const UUID_PATTERN =
 
 /** Generate a fresh public unsubscribe link for platform-admin testing. */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Params },
 ) {
   const auth = await assertEmailApiAccess();
@@ -42,7 +43,10 @@ export async function POST(
 
   try {
     const token = await ensureUnsubscribeToken(contact.id);
-    return NextResponse.json({ url: buildUnsubscribeUrl(token) });
+    const emailAppUrl = getEmailAppUrlForRequest(request.url);
+    return NextResponse.json({
+      url: buildUnsubscribeUrl(token, emailAppUrl),
+    });
   } catch (tokenError) {
     console.error(
       "[email-unsubscribe-link] generation failed:",

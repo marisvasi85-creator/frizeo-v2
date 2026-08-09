@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/auth/requirePlatformAdmin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { getEmailAppUrl, getFrizeoAppUrl } from "@/lib/frizeo-email/config";
+import {
+  getEmailAppUrlForRequest,
+  getFrizeoAppUrl,
+} from "@/lib/frizeo-email/config";
 
 /**
  * Start SSO handoff: www.frizeo.ro → email.frizeo.ro
  * Uses a one-time Supabase magiclink hash (no email sent).
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const auth = await requirePlatformAdmin();
   if (!auth.ok) {
     const login = new URL("/login", getFrizeoAppUrl());
@@ -15,11 +18,15 @@ export async function GET() {
     return NextResponse.redirect(login);
   }
 
-  const emailAppUrl = getEmailAppUrl();
+  const emailAppUrl = getEmailAppUrlForRequest(req.nextUrl);
+  const emailApp = new URL(emailAppUrl);
 
   // Same-origin path mode (local/preview): no token exchange needed.
-  if (emailAppUrl.includes("/email")) {
-    return NextResponse.redirect(new URL(emailAppUrl));
+  if (
+    emailApp.pathname === "/email" ||
+    emailApp.pathname.startsWith("/email/")
+  ) {
+    return NextResponse.redirect(emailApp);
   }
 
   const { data, error } = await supabaseAdmin.auth.admin.generateLink({
