@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketingContact } from "@/lib/frizeo-email/types";
 
@@ -32,8 +32,8 @@ export default function ContactsClient({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [contacts] = useState(initialContacts);
-  const [total] = useState(initialTotal);
+  const contacts = initialContacts;
+  const total = initialTotal;
   const [q, setQ] = useState(initialQuery.q);
   const [status, setStatus] = useState(initialQuery.status);
   const [source, setSource] = useState(initialQuery.source);
@@ -44,6 +44,12 @@ export default function ContactsClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
   const [importResult, setImportResult] = useState<string | null>(null);
+  const [unsubscribeLoadingId, setUnsubscribeLoadingId] = useState<
+    string | null
+  >(null);
+  const [unsubscribeLinks, setUnsubscribeLinks] = useState<
+    Record<string, string>
+  >({});
 
   const [addForm, setAddForm] = useState({
     email: "",
@@ -133,7 +139,33 @@ export default function ContactsClient({
     startTransition(() => router.refresh());
   };
 
-  const empty = useMemo(() => contacts.length === 0, [contacts.length]);
+  const createUnsubscribeTestLink = async (contactId: string) => {
+    setFormError(null);
+    setUnsubscribeLoadingId(contactId);
+
+    try {
+      const res = await fetch(
+        `/api/email/contacts/${encodeURIComponent(contactId)}/unsubscribe-link`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || "Nu am putut genera linkul de test.");
+        return;
+      }
+
+      setUnsubscribeLinks((current) => ({
+        ...current,
+        [contactId]: String(data.url),
+      }));
+    } catch {
+      setFormError("Eroare de rețea la generarea linkului de test.");
+    } finally {
+      setUnsubscribeLoadingId(null);
+    }
+  };
+
+  const empty = contacts.length === 0;
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -362,13 +394,14 @@ export default function ContactsClient({
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Consent</th>
               <th className="px-4 py-3 font-medium">Created</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {empty ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-4 py-10 text-center text-white/40"
                 >
                   Niciun contact. Adaugă manual, importă CSV sau sync Frizeo.
@@ -409,6 +442,41 @@ export default function ContactsClient({
                     </td>
                     <td className="px-4 py-3 text-white/50">
                       {new Date(c.created_at).toLocaleDateString("ro-RO")}
+                    </td>
+                    <td className="px-4 py-3">
+                      {unsubscribeLinks[c.id] ? (
+                        <div className="flex min-w-40 flex-col items-start gap-2">
+                          <a
+                            href={unsubscribeLinks[c.id]}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
+                          >
+                            Deschide unsubscribe
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startTransition(() => router.refresh())
+                            }
+                            disabled={pending}
+                            className="text-xs text-white/45 underline underline-offset-2 hover:text-white/75 disabled:opacity-50"
+                          >
+                            Actualizează statusul
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => createUnsubscribeTestLink(c.id)}
+                          disabled={unsubscribeLoadingId === c.id}
+                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10 disabled:opacity-50"
+                        >
+                          {unsubscribeLoadingId === c.id
+                            ? "Se generează…"
+                            : "Testează unsubscribe"}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

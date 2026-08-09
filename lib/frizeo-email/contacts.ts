@@ -62,7 +62,9 @@ export async function getContactStats(): Promise<DashboardContactStats> {
   };
 
   for (const row of rows) {
-    if (row.status === "subscribed") stats.subscribed += 1;
+    if (row.status === "subscribed" && row.marketing_consent) {
+      stats.subscribed += 1;
+    }
     if (row.status === "unsubscribed") stats.unsubscribed += 1;
     if (row.status === "bounced") stats.bounced += 1;
     if (row.status === "complained") stats.complained += 1;

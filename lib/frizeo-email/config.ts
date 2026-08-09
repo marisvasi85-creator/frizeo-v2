@@ -2,6 +2,13 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 
 /** Public base URL for Frizeo Email (no trailing slash). */
 export function getEmailAppUrl(): string {
+  // Vercel Preview must always stay on the preview origin. The production
+  // subdomain may be configured for both environments in Vercel, but sending
+  // a preview session there would land on the production deployment.
+  if (process.env.VERCEL_ENV === "preview") {
+    return `${getAppUrl()}/email`;
+  }
+
   const fromEnv = process.env.NEXT_PUBLIC_EMAIL_APP_URL?.replace(/\/$/, "");
   if (fromEnv) return fromEnv;
 
