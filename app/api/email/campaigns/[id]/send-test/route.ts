@@ -57,13 +57,6 @@ export async function POST(
         { status: 400 },
       );
     }
-    if (!campaign.sender_name.trim() || !campaign.sender_email.trim()) {
-      return NextResponse.json(
-        { error: "Completează identitatea expeditorului înainte de test." },
-        { status: 400 },
-      );
-    }
-
     const unsubscribeUrl = `${getEmailAppUrlForRequest(request.url).replace(/\/$/, "")}/unsubscribe/test-preview`;
     const renderInput = { ...campaign, unsubscribeUrl };
     const result = await sendMarketingTest({
@@ -71,9 +64,6 @@ export async function POST(
       subject: campaign.subject,
       html: renderMarketingEmail(renderInput),
       text: renderMarketingEmailText(renderInput),
-      senderName: campaign.sender_name,
-      senderEmail: campaign.sender_email,
-      replyTo: campaign.reply_to,
     });
 
     return NextResponse.json({
@@ -89,7 +79,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Providerul de marketing nu este configurat. Completează variabilele MARKETING_EMAIL_* în Vercel Preview.",
+            "Resend nu este configurat pentru acest environment. Verifică RESEND_API_KEY, MARKETING_EMAIL_FROM și MARKETING_EMAIL_REPLY_TO în Vercel.",
         },
         { status: 503 },
       );

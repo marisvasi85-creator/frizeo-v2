@@ -1,7 +1,10 @@
-import nodemailer from "nodemailer";
+import "server-only";
+
+import { Resend } from "resend";
 
 export type MarketingProviderStatus = {
-  provider: "smtp";
+  provider: "resend";
+  domain: "mail.frizeo.ro";
   configured: boolean;
   message: string;
 };
@@ -11,46 +14,52 @@ export type SendMarketingTestInput = {
   subject: string;
   html: string;
   text: string;
-  senderName: string;
-  senderEmail: string;
-  replyTo: string | null;
 };
 
 export type SendMarketingTestResult = {
-  provider: "smtp";
+  provider: "resend";
   messageId: string;
 };
 
-function readMarketingSmtpConfig() {
-  const host = process.env.MARKETING_EMAIL_HOST?.trim() || "";
-  const port = Number(process.env.MARKETING_EMAIL_PORT || 587);
-  const user = process.env.MARKETING_EMAIL_USER?.trim() || "";
-  const pass = process.env.MARKETING_EMAIL_PASS || "";
-  const secureFromEnv = process.env.MARKETING_EMAIL_SECURE?.trim().toLowerCase();
-  const secure =
-    secureFromEnv === "true" ||
-    (secureFromEnv !== "false" && Number.isFinite(port) && port === 465);
-
-  return { host, port, user, pass, secure };
+function readResendConfig() {
+  return {
+    apiKey: process.env.RESEND_API_KEY?.trim() || "",
+    from: process.env.MARKETING_EMAIL_FROM?.trim() || "",
+    replyTo: process.env.MARKETING_EMAIL_REPLY_TO?.trim() || "",
+  };
 }
 
 export function getMarketingProviderStatus(): MarketingProviderStatus {
-  const config = readMarketingSmtpConfig();
-  const configured = Boolean(
-    config.host &&
-      Number.isFinite(config.port) &&
-      config.port > 0 &&
-      config.user &&
-      config.pass,
-  );
+  const config = readResendConfig();
+  const configured = Boolean(config.apiKey && config.from && config.replyTo);
 
   return {
-    provider: "smtp",
+    provider: "resend",
+    domain: "mail.frizeo.ro",
     configured,
     message: configured
-      ? "Providerul SMTP de marketing este configurat pentru Send Test."
-      : "Lipsesc variabilele MARKETING_EMAIL_*; emailurile tranzacționale nu sunt folosite ca fallback.",
+      ? "Resend este configurat pentru Send Test."
+      : "Lipsesc una sau mai multe variabile Resend necesare pentru Send Test.",
   };
+}
+
+function safeProviderError(error: unknown) {
+  if (error instanceof Error) {
+    return { name: error.name, message: error.message };
+  }
+
+  if (error && typeof error === "object") {
+    const value = error as { name?: unknown; message?: unknown };
+    return {
+      name: typeof value.name === "string" ? value.name : "ProviderError",
+      message:
+        typeof value.message === "string"
+          ? value.message
+          : "Unknown provider error",
+    };
+  }
+
+  return { name: "ProviderError", message: "Unknown provider error" };
 }
 
 /**
@@ -65,34 +74,50 @@ export async function sendMarketingTest(
     throw new Error("marketing_provider_not_configured");
   }
 
-  const config = readMarketingSmtpConfig();
-  const transporter = nodemailer.createTransport({
-    host: config.host,
-    port: config.port,
-    secure: config.secure,
-    auth: {
-      user: config.user,
-      pass: config.pass,
-    },
-  });
+  const config = readResendConfig();
 
-  const result = await transporter.sendMail({
-    from: {
-      name: input.senderName,
-      address: input.senderEmail,
-    },
-    to: input.to,
-    replyTo: input.replyTo || undefined,
-    subject: input.subject,
-    html: input.html,
-    text: input.text,
-    headers: {
-      "X-Frizeo-Email-Type": "marketing-test",
-    },
-  });
+  try {
+    const resend = new Resend(config.apiKey);
+    const { data, error } = await resend.emails.send({
+      from: config.from,
+      to: input.to,
+      replyTo: config.replyTo,
+      subject: input.subject,
+      html: input.html,
+      text: input.text,
+      headers: {
+        "X-Frizeo-Email-Type": "marketing-test",
+      },
+    });
 
-  return {
-    provider: "smtp",
-    messageId: result.messageId,
-  };
+    if (error || !data?.id) {
+      console.error(
+        "[frizeo-email] Resend Send Test failed",
+        safeProviderError(error),
+      );
+      throw new Error("marketing_provider_send_failed");
+    }
+
+    console.info("[frizeo-email] Resend Send Test accepted", {
+      messageId: data.id,
+    });
+
+    return {
+      provider: "resend",
+      messageId: data.id,
+    };
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "marketing_provider_send_failed"
+    ) {
+      throw error;
+    }
+
+    console.error(
+      "[frizeo-email] Resend Send Test failed",
+      safeProviderError(error),
+    );
+    throw new Error("marketing_provider_send_failed");
+  }
 }

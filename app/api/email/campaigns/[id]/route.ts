@@ -12,7 +12,6 @@ import {
 import {
   parseEmailContent,
   parseOptionalEmail,
-  parseRequiredEmail,
   UUID_PATTERN,
 } from "@/lib/frizeo-email/validation";
 
@@ -78,7 +77,7 @@ export async function PATCH(
     );
   }
 
-  const senderEmail = parseRequiredEmail(body.sender_email, "Sender email");
+  const senderEmail = parseOptionalEmail(body.sender_email, "Sender email");
   if (!senderEmail.ok) {
     return NextResponse.json({ error: senderEmail.error }, { status: 400 });
   }
@@ -112,7 +111,7 @@ export async function PATCH(
     const campaign = await updateCampaign(id, {
       name,
       sender_name: senderName,
-      sender_email: senderEmail.value,
+      sender_email: senderEmail.value || "",
       reply_to: replyTo.value,
       template_id: templateId,
       audience_kind: audienceRaw as MarketingAudienceKind,

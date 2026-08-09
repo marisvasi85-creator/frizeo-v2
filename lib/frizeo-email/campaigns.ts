@@ -24,9 +24,9 @@ export type UpdateCampaignInput = MarketingEmailContent & {
 
 export function getMarketingSenderDefaults() {
   return {
-    senderName: process.env.MARKETING_EMAIL_SENDER_NAME?.trim() || "Frizeo",
-    senderEmail: process.env.MARKETING_EMAIL_SENDER_EMAIL?.trim() || "",
-    replyTo: process.env.MARKETING_EMAIL_REPLY_TO?.trim() || null,
+    senderName: "Frizeo",
+    senderEmail: "",
+    replyTo: null,
   };
 }
 

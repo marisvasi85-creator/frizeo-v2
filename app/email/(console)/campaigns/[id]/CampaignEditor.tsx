@@ -307,7 +307,7 @@ export default function CampaignEditor({
                 onChange={(value) => field("sender_name", value)}
               />
               <TextField
-                label="Sender email *"
+                label="Sender email (campaign metadata)"
                 type="email"
                 value={draft.sender_email}
                 disabled={!editable}
@@ -315,12 +315,16 @@ export default function CampaignEditor({
               />
             </div>
             <TextField
-              label="Reply-To"
+              label="Reply-To (campaign metadata)"
               type="email"
               value={draft.reply_to || ""}
               disabled={!editable}
               onChange={(value) => field("reply_to", value || null)}
             />
+            <p className="text-xs text-white/35">
+              Send Test folosește adresele From și Reply-To configurate
+              server-side în Vercel; valorile nu sunt afișate în interfață.
+            </p>
           </EditorCard>
 
           <EditorCard title="Email content">
