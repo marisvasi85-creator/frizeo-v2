@@ -50,6 +50,12 @@ export default function ContactsClient({
   const [unsubscribeLinks, setUnsubscribeLinks] = useState<
     Record<string, string>
   >({});
+  const [editContact, setEditContact] = useState<MarketingContact | null>(null);
+  const [editConsent, setEditConsent] = useState<"yes" | "no">("no");
+  const [editSaving, setEditSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkConsent, setBulkConsent] = useState<"yes" | "no">("yes");
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   const [addForm, setAddForm] = useState({
     email: "",
@@ -65,9 +71,117 @@ export default function ContactsClient({
     if (status !== "all") params.set("status", status);
     if (source !== "all") params.set("source", source);
     if (consent !== "all") params.set("consent", consent);
+    setSelectedIds(new Set());
     startTransition(() => {
       router.push(`/email/contacts?${params.toString()}`);
     });
+  };
+
+  const openEditContact = (contact: MarketingContact) => {
+    setFormError(null);
+    setFormSuccess(null);
+    setEditContact(contact);
+    setEditConsent(contact.marketing_consent ? "yes" : "no");
+  };
+
+  const onEditContact = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editContact) return;
+
+    setEditSaving(true);
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      const res = await fetch(
+        `/api/email/contacts/${encodeURIComponent(editContact.id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ marketing_consent: editConsent === "yes" }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || "Nu am putut actualiza contactul.");
+        return;
+      }
+
+      setFormSuccess(
+        data.result === "unchanged"
+          ? "Consimțământul era deja setat la valoarea selectată."
+          : `Consimțământ actualizat la ${editConsent === "yes" ? "Yes" : "No"}.`,
+      );
+      setEditContact(null);
+      startTransition(() => router.refresh());
+    } catch {
+      setFormError("Eroare de rețea la actualizarea contactului.");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const toggleContact = (contactId: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(contactId)) next.delete(contactId);
+      else next.add(contactId);
+      return next;
+    });
+  };
+
+  const allVisibleSelected =
+    contacts.length > 0 &&
+    contacts.every((contact) => selectedIds.has(contact.id));
+
+  const toggleAllVisible = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allVisibleSelected) {
+        contacts.forEach((contact) => next.delete(contact.id));
+      } else {
+        contacts.forEach((contact) => next.add(contact.id));
+      }
+      return next;
+    });
+  };
+
+  const applyBulkConsent = async () => {
+    if (selectedIds.size === 0) return;
+
+    const valueLabel = bulkConsent === "yes" ? "Yes" : "No";
+    const confirmed = window.confirm(
+      `Confirmi schimbarea consimțământului la ${valueLabel} pentru ${selectedIds.size} contacte selectate? Modificarea va fi înregistrată în audit.`,
+    );
+    if (!confirmed) return;
+
+    setBulkSaving(true);
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      const res = await fetch("/api/email/contacts/bulk-consent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contact_ids: [...selectedIds],
+          marketing_consent: bulkConsent === "yes",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setFormError(data.error || "Actualizarea bulk a eșuat.");
+        return;
+      }
+
+      setFormSuccess(
+        `Bulk consent: modificate ${data.changed}, neschimbate ${data.unchanged}, blocate de istoricul unsubscribe ${data.blocked}, lipsă ${data.missing}.`,
+      );
+      setSelectedIds(new Set());
+      startTransition(() => router.refresh());
+    } catch {
+      setFormError("Eroare de rețea la actualizarea bulk.");
+    } finally {
+      setBulkSaving(false);
+    }
   };
 
   const onAdd = async (e: React.FormEvent) => {
@@ -229,6 +343,72 @@ export default function ContactsClient({
         </div>
       )}
 
+      {editContact && (
+        <form
+          onSubmit={onEditContact}
+          className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-medium">Edit Contact</h2>
+              <p className="mt-1 text-sm text-white/50">{editContact.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditContact(null)}
+              className="text-sm text-white/50 hover:text-white"
+            >
+              Închide
+            </button>
+          </div>
+
+          <label className="block max-w-xs">
+            <span className="mb-1 block text-xs text-white/50">
+              Marketing consent
+            </span>
+            <select
+              value={editConsent}
+              onChange={(e) => setEditConsent(e.target.value as "yes" | "no")}
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            >
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </label>
+
+          {editConsent === "yes" && (
+            <p className="text-xs text-amber-200/80">
+              Setează Yes numai dacă ai dovada consimțământului. Contactele cu
+              istoric de dezabonare vor fi blocate automat.
+            </p>
+          )}
+
+          {editContact.unsubscribed_at && (
+            <p className="text-xs text-red-200">
+              Acest contact s-a dezabonat explicit. Reactivarea la Yes este
+              blocată și necesită o acțiune separată de reconsimțire.
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={editSaving}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+            >
+              {editSaving ? "Se salvează…" : "Salvează"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditContact(null)}
+              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/70"
+            >
+              Anulează
+            </button>
+          </div>
+        </form>
+      )}
+
       {showAdd && (
         <form
           onSubmit={onAdd}
@@ -385,10 +565,43 @@ export default function ContactsClient({
         </button>
       </div>
 
+      <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center">
+        <span className="text-sm text-white/60">
+          {selectedIds.size} contacte selectate
+        </span>
+        <label className="flex items-center gap-2 text-sm text-white/70">
+          <span>Set marketing consent</span>
+          <select
+            value={bulkConsent}
+            onChange={(e) => setBulkConsent(e.target.value as "yes" | "no")}
+            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+          >
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={applyBulkConsent}
+          disabled={selectedIds.size === 0 || bulkSaving}
+          className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-40"
+        >
+          {bulkSaving ? "Se aplică…" : "Aplică selecției"}
+        </button>
+      </div>
+
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="min-w-full text-sm">
           <thead className="bg-white/[0.04] text-white/50 text-left">
             <tr>
+              <th className="w-10 px-4 py-3 font-medium">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleAllVisible}
+                  aria-label="Selectează toate contactele vizibile"
+                />
+              </th>
               <th className="px-4 py-3 font-medium">Contact</th>
               <th className="px-4 py-3 font-medium">Source</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -401,7 +614,7 @@ export default function ContactsClient({
             {empty ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-10 text-center text-white/40"
                 >
                   Niciun contact. Adaugă manual, importă CSV sau sync Frizeo.
@@ -417,6 +630,14 @@ export default function ContactsClient({
                     key={c.id}
                     className="border-t border-white/5 hover:bg-white/[0.02]"
                   >
+                    <td className="px-4 py-3 align-top">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleContact(c.id)}
+                        aria-label={`Selectează ${c.email}`}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <div className="font-medium">{name || "—"}</div>
                       <div className="text-white/50">{c.email}</div>
@@ -434,9 +655,12 @@ export default function ContactsClient({
                     </td>
                     <td className="px-4 py-3 text-white/60">
                       {c.marketing_consent ? "Yes" : "No"}
-                      {c.consent_at && (
+                      {(c.consent_source || c.consent_at) && (
                         <div className="text-[11px] text-white/35">
-                          {new Date(c.consent_at).toLocaleDateString("ro-RO")}
+                          {c.consent_source || "sursă necunoscută"}
+                          {c.consent_at
+                            ? ` · ${new Date(c.consent_at).toLocaleDateString("ro-RO")}`
+                            : ""}
                         </div>
                       )}
                     </td>
@@ -444,39 +668,48 @@ export default function ContactsClient({
                       {new Date(c.created_at).toLocaleDateString("ro-RO")}
                     </td>
                     <td className="px-4 py-3">
-                      {unsubscribeLinks[c.id] ? (
-                        <div className="flex min-w-40 flex-col items-start gap-2">
-                          <a
-                            href={unsubscribeLinks[c.id]}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
-                          >
-                            Deschide unsubscribe
-                          </a>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              startTransition(() => router.refresh())
-                            }
-                            disabled={pending}
-                            className="text-xs text-white/45 underline underline-offset-2 hover:text-white/75 disabled:opacity-50"
-                          >
-                            Actualizează statusul
-                          </button>
-                        </div>
-                      ) : (
+                      <div className="flex min-w-40 flex-col items-start gap-2">
                         <button
                           type="button"
-                          onClick={() => createUnsubscribeTestLink(c.id)}
-                          disabled={unsubscribeLoadingId === c.id}
-                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10 disabled:opacity-50"
+                          onClick={() => openEditContact(c)}
+                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10"
                         >
-                          {unsubscribeLoadingId === c.id
-                            ? "Se generează…"
-                            : "Testează unsubscribe"}
+                          Edit Contact
                         </button>
-                      )}
+                        {unsubscribeLinks[c.id] ? (
+                          <>
+                            <a
+                              href={unsubscribeLinks[c.id]}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/20"
+                            >
+                              Deschide unsubscribe
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                startTransition(() => router.refresh())
+                              }
+                              disabled={pending}
+                              className="text-xs text-white/45 underline underline-offset-2 hover:text-white/75 disabled:opacity-50"
+                            >
+                              Actualizează statusul
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => createUnsubscribeTestLink(c.id)}
+                            disabled={unsubscribeLoadingId === c.id}
+                            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10 disabled:opacity-50"
+                          >
+                            {unsubscribeLoadingId === c.id
+                              ? "Se generează…"
+                              : "Testează unsubscribe"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
