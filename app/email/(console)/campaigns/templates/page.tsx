@@ -1,22 +1,16 @@
-import CampaignsClient from "./CampaignsClient";
-import { listCampaigns } from "@/lib/frizeo-email/campaigns";
+import TemplatesClient from "./TemplatesClient";
 import { listEmailTemplates } from "@/lib/frizeo-email/templates";
 
-export default async function CampaignsPage() {
-  let campaigns: Awaited<ReturnType<typeof listCampaigns>> = [];
+export default async function TemplatesPage() {
   let templates: Awaited<ReturnType<typeof listEmailTemplates>> = [];
   let error: string | null = null;
-
   try {
-    [campaigns, templates] = await Promise.all([
-      listCampaigns(),
-      listEmailTemplates(),
-    ]);
+    templates = await listEmailTemplates();
   } catch (loadError) {
     error =
       loadError instanceof Error
         ? loadError.message
-        : "Nu am putut încărca Faza 2. Verifică migrarea Supabase.";
+        : "Nu am putut încărca template-urile.";
   }
 
   return (
@@ -26,7 +20,7 @@ export default async function CampaignsPage() {
           {error}
         </div>
       )}
-      <CampaignsClient campaigns={campaigns} templates={templates} />
+      <TemplatesClient initialTemplates={templates} />
     </div>
   );
 }

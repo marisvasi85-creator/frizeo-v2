@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getContactStats } from "@/lib/frizeo-email/contacts";
+import { getCampaignDashboardData } from "@/lib/frizeo-email/campaigns";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -21,8 +22,16 @@ export default async function EmailDashboardPage() {
   };
 
   let loadError: string | null = null;
+  let campaignData: Awaited<ReturnType<typeof getCampaignDashboardData>> = {
+    emailsSent: 0,
+    campaignsSent: 0,
+    recent: [],
+  };
   try {
-    stats = await getContactStats();
+    [stats, campaignData] = await Promise.all([
+      getContactStats(),
+      getCampaignDashboardData(),
+    ]);
   } catch (e) {
     loadError =
       e instanceof Error
@@ -37,8 +46,8 @@ export default async function EmailDashboardPage() {
           Dashboard
         </h1>
         <p className="mt-2 text-white/55 text-sm max-w-2xl">
-          Sistem intern de email marketing Frizeo. Campaniile și automatizările
-          apar în fazele următoare.
+          Sistem intern de email marketing Frizeo. Faza 2 permite pregătirea
+          campaniilor și snapshot-uri, fără trimitere în masă.
         </p>
       </header>
 
@@ -52,8 +61,8 @@ export default async function EmailDashboardPage() {
         <StatCard label="Total Contacts" value={stats.total} />
         <StatCard label="Subscribed" value={stats.subscribed} />
         <StatCard label="Unsubscribed" value={stats.unsubscribed} />
-        <StatCard label="Emails Sent" value={0} />
-        <StatCard label="Campaigns Sent" value={0} />
+        <StatCard label="Emails Sent" value={campaignData.emailsSent} />
+        <StatCard label="Campaigns Sent" value={campaignData.campaignsSent} />
       </section>
 
       <section className="space-y-3">
@@ -61,7 +70,7 @@ export default async function EmailDashboardPage() {
           <div>
             <h2 className="text-lg font-medium">Recent Campaigns</h2>
             <p className="text-sm text-white/45">
-              Nicio campanie încă — Phase 2.
+              Drafturi și campanii recente.
             </p>
           </div>
           <Link
@@ -86,14 +95,49 @@ export default async function EmailDashboardPage() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-10 text-center text-white/40"
-                >
-                  Nu există campanii recente.
-                </td>
-              </tr>
+              {campaignData.recent.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-4 py-10 text-center text-white/40"
+                  >
+                    Nu există campanii recente.
+                  </td>
+                </tr>
+              ) : (
+                campaignData.recent.map((campaign) => (
+                  <tr key={campaign.id} className="border-t border-white/5">
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/email/campaigns/${campaign.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {campaign.name}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-white/60">
+                      {campaign.status}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {campaign.recipient_count}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {campaign.sent_count}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {campaign.delivered_count}
+                    </td>
+                    <td className="px-4 py-3 tabular-nums">
+                      {campaign.clicked_count}
+                    </td>
+                    <td className="px-4 py-3 text-white/50">
+                      {new Date(
+                        campaign.sent_at || campaign.created_at,
+                      ).toLocaleDateString("ro-RO")}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
