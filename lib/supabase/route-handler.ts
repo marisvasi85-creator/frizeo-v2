@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
 
 /**
  * Supabase client for Route Handlers that attaches session cookies to the
@@ -10,12 +11,13 @@ export async function createSupabaseRouteHandlerClient(
   buildResponse: () => NextResponse = () => NextResponse.next()
 ) {
   const cookieStore = await cookies();
-  let response = buildResponse();
+  const response = buildResponse();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getAuthCookieOptions(),
       cookies: {
         getAll() {
           return cookieStore.getAll();

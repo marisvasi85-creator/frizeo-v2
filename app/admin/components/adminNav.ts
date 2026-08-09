@@ -19,6 +19,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
   { href: "/admin/platform-assistant", label: "Platform AI", icon: "🛠️" },
+  { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
 ];
 
@@ -63,12 +64,14 @@ export function buildAdminNavItems(options: {
   actsAsBarber: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
+  frizeoEmailEnabled?: boolean;
 }): AdminNavItem[] {
   const {
     role,
     actsAsBarber,
     assistantEnabled = false,
     platformAssistantEnabled = false,
+    frizeoEmailEnabled = false,
   } = options;
 
   let items: AdminNavItem[];
@@ -86,6 +89,7 @@ export function buildAdminNavItems(options: {
     if (item.href === "/admin/platform-assistant") {
       return platformAssistantEnabled;
     }
+    if (item.href === "/api/email/sso") return frizeoEmailEnabled;
     if (item.requiresBarber && !actsAsBarber) return false;
     return true;
   });
@@ -140,6 +144,7 @@ export function buildMobileMoreItems(options: {
   actsAsBarber: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
+  frizeoEmailEnabled?: boolean;
 }): AdminNavItem[] {
   const mainHrefs = new Set(
     buildMobileMainItems(options).map((i) => i.href),
