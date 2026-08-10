@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import type {
   MarketingCampaign,
   MarketingEmailTemplate,
+  MarketingSegmentSummary,
 } from "@/lib/frizeo-email/types";
 
 function statusClass(status: string): string {
@@ -25,9 +26,11 @@ function statusClass(status: string): string {
 export default function CampaignsClient({
   campaigns,
   templates,
+  segments,
 }: {
   campaigns: MarketingCampaign[];
   templates: MarketingEmailTemplate[];
+  segments: MarketingSegmentSummary[];
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -253,7 +256,9 @@ export default function CampaignsClient({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-white/60">
-                    {campaign.audience_kind}
+                    {campaign.segment_name_snapshot ||
+                      segments.find((segment) => segment.id === campaign.segment_id)?.name ||
+                      campaign.audience_kind}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-white/70">
                     {campaign.recipient_count}

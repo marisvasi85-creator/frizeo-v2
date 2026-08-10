@@ -13,6 +13,7 @@ import type {
   MarketingCampaignProgress,
   MarketingCampaignRecipient,
   MarketingEmailTemplate,
+  MarketingSegmentSummary,
   MarketingTestContactOption,
 } from "@/lib/frizeo-email/types";
 
@@ -20,6 +21,7 @@ type Props = {
   initialCampaign: MarketingCampaign;
   templates: MarketingEmailTemplate[];
   audiences: MarketingAudienceSummary[];
+  segments: MarketingSegmentSummary[];
   testContacts: MarketingTestContactOption[];
   initialRecipients: MarketingCampaignRecipient[];
   initialProgress: MarketingCampaignProgress;
@@ -41,6 +43,7 @@ type CampaignDraft = Pick<
   | "cta_url"
   | "footer_text"
   | "audience_kind"
+  | "segment_id"
   | "test_contact_ids"
 >;
 
@@ -60,6 +63,7 @@ function campaignDraft(campaign: MarketingCampaign): CampaignDraft {
     cta_url: campaign.cta_url,
     footer_text: campaign.footer_text,
     audience_kind: campaign.audience_kind,
+    segment_id: campaign.segment_id,
     test_contact_ids: campaign.test_contact_ids || [],
   };
 }
@@ -68,6 +72,7 @@ export default function CampaignEditor({
   initialCampaign,
   templates,
   audiences,
+  segments,
   testContacts,
   initialRecipients,
   initialProgress,
@@ -96,8 +101,21 @@ export default function CampaignEditor({
   const [recipientFilter, setRecipientFilter] = useState("all");
 
   const audienceLabel =
-    audiences.find((audience) => audience.kind === draft.audience_kind)?.label ||
-    draft.audience_kind;
+    draft.audience_kind === "segment"
+      ? segments.find((segment) => segment.id === draft.segment_id)?.name ||
+        initialCampaign.segment_name_snapshot ||
+        "Segment indisponibil"
+      : audiences.find((audience) => audience.kind === draft.audience_kind)?.label ||
+        draft.audience_kind;
+  const systemSegments = segments.filter((segment) => segment.is_system_segment);
+  const customSegments = segments.filter((segment) => !segment.is_system_segment);
+  const selectedTemplate = templates.find((template) => template.id === draft.template_id);
+  const recommendedSegment = selectedTemplate?.recommended_audience
+    ? systemSegments.find(
+        (segment) => segment.segment_key === selectedTemplate.recommended_audience,
+      ) ?? null
+    : null;
+  const selectedSegment = segments.find((segment) => segment.id === draft.segment_id) ?? null;
   const sentPercent =
     progress.total > 0
       ? Math.min(100, Math.round((progress.sent / progress.total) * 100))
@@ -189,6 +207,29 @@ export default function CampaignEditor({
     key: K,
     value: CampaignDraft[K],
   ) => setDraft((current) => ({ ...current, [key]: value }));
+
+  const selectSegment = (segmentId: string) => {
+    setDraft((current) => ({
+      ...current,
+      audience_kind: "segment",
+      segment_id: segmentId,
+      test_contact_ids: [],
+    }));
+    setSnapshotAt(null);
+    setSnapshotCount(0);
+    setRecipients([]);
+  };
+
+  const selectBaseAudience = (kind: MarketingCampaign["audience_kind"]) => {
+    setDraft((current) => ({
+      ...current,
+      audience_kind: kind,
+      segment_id: null,
+    }));
+    setSnapshotAt(null);
+    setSnapshotCount(0);
+    setRecipients([]);
+  };
 
   const saveDraft = async (showConfirmation = true): Promise<boolean> => {
     setBusy("save");
@@ -671,8 +712,36 @@ export default function CampaignEditor({
           </EditorCard>
 
           <EditorCard title="Audience">
-            <div className="grid gap-3 md:grid-cols-3">
-              {audiences.map((audience) => (
+            {recommendedSegment && (
+              <div className="flex flex-col gap-3 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-emerald-100">
+                    Recommended audience: {recommendedSegment.name}
+                  </p>
+                  <p className="mt-1 text-xs text-emerald-100/60">
+                    {recommendedSegment.contacts_count} contacte eligibile acum. Segmentul nu este selectat fără confirmarea ta.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => selectSegment(recommendedSegment.id)}
+                  disabled={!editable || selectedSegment?.id === recommendedSegment.id}
+                  className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
+                >
+                  {selectedSegment?.id === recommendedSegment.id
+                    ? "Recommended segment selected"
+                    : "Use recommended segment"}
+                </button>
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
+              {audiences
+                .filter(
+                  (audience) =>
+                    ["all_subscribed", "controlled_test"].includes(audience.kind) ||
+                    audience.kind === draft.audience_kind,
+                )
+                .map((audience) => (
                 <label
                   key={audience.kind}
                   className={`cursor-pointer rounded-lg border p-3 ${
@@ -688,7 +757,7 @@ export default function CampaignEditor({
                       value={audience.kind}
                       checked={draft.audience_kind === audience.kind}
                       disabled={!editable}
-                      onChange={() => field("audience_kind", audience.kind)}
+                      onChange={() => selectBaseAudience(audience.kind)}
                     />
                     <span className="text-lg font-semibold tabular-nums">
                       {audience.kind === "controlled_test"
@@ -702,6 +771,50 @@ export default function CampaignEditor({
                   </p>
                 </label>
               ))}
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment?.is_system_segment ? "border-white/40 bg-white/10" : "border-white/10 bg-black/20"}`}>
+                <span className="flex items-center justify-between text-sm font-medium">
+                  System Segments
+                  <span className="tabular-nums text-white/55">
+                    {selectedSegment?.is_system_segment ? selectedSegment.contacts_count : "—"}
+                  </span>
+                </span>
+                <select
+                  value={selectedSegment?.is_system_segment ? selectedSegment.id : ""}
+                  disabled={!editable}
+                  onChange={(event) => event.target.value && selectSegment(event.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                >
+                  <option value="">Choose a system segment</option>
+                  {systemSegments.map((segment) => (
+                    <option key={segment.id} value={segment.id}>
+                      {segment.name} — {segment.contacts_count}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment && !selectedSegment.is_system_segment ? "border-white/40 bg-white/10" : "border-white/10 bg-black/20"}`}>
+                <span className="flex items-center justify-between text-sm font-medium">
+                  Custom Segments
+                  <span className="tabular-nums text-white/55">
+                    {selectedSegment && !selectedSegment.is_system_segment ? selectedSegment.contacts_count : "—"}
+                  </span>
+                </span>
+                <select
+                  value={selectedSegment && !selectedSegment.is_system_segment ? selectedSegment.id : ""}
+                  disabled={!editable || customSegments.length === 0}
+                  onChange={(event) => event.target.value && selectSegment(event.target.value)}
+                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm disabled:opacity-50"
+                >
+                  <option value="">{customSegments.length ? "Choose a custom segment" : "No custom segments"}</option>
+                  {customSegments.map((segment) => (
+                    <option key={segment.id} value={segment.id}>
+                      {segment.name} — {segment.contacts_count}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
             {draft.audience_kind === "controlled_test" && (
               <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3">

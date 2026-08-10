@@ -2,6 +2,11 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmailTemplate, listEmailTemplates } from "@/lib/frizeo-email/templates";
 import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
 import { marketingCtaUrl } from "@/lib/frizeo-email/templateVariables";
+import {
+  getMarketingSegment,
+  listMarketingSegments,
+  previewMarketingSegment,
+} from "@/lib/frizeo-email/segments";
 import type {
   MarketingAudienceKind,
   MarketingAudienceSummary,
@@ -16,6 +21,7 @@ export type CreateCampaignInput = {
   name: string;
   templateId?: string | null;
   blank?: boolean;
+  segmentId?: string | null;
 };
 
 export type UpdateCampaignInput = MarketingEmailContent & {
@@ -25,6 +31,7 @@ export type UpdateCampaignInput = MarketingEmailContent & {
   reply_to: string | null;
   template_id: string | null;
   audience_kind: MarketingAudienceKind;
+  segment_id: string | null;
   test_contact_ids: string[];
 };
 
@@ -95,13 +102,15 @@ export async function createCampaign(
   const ctaUrl = template
     ? marketingCtaUrl(template.cta_url_type, appUrl) ?? template.cta_url
     : null;
-  const recommendedAudience = template?.recommended_audience;
-  const audienceKind: MarketingAudienceKind =
-    recommendedAudience === "leads"
-      ? "leads"
-      : recommendedAudience
-        ? "registered_users"
-        : "all_subscribed";
+  const selectedSegment = input.segmentId
+    ? await getMarketingSegment(input.segmentId)
+    : null;
+  if (input.segmentId && !selectedSegment) {
+    throw new Error("Segmentul selectat nu există.");
+  }
+  const audienceKind: MarketingAudienceKind = selectedSegment
+    ? "segment"
+    : "all_subscribed";
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .insert({
@@ -122,6 +131,7 @@ export async function createCampaign(
         template?.footer_text ??
         "Frizeo · Programări online pentru frizeri și saloane.",
       audience_kind: audienceKind,
+      segment_id: selectedSegment?.id ?? null,
       test_contact_ids: [],
       status: "draft",
       created_by: createdBy,
@@ -145,18 +155,31 @@ export async function updateCampaign(
   if (current.status !== "draft") {
     throw new Error("Doar campaniile draft pot fi editate.");
   }
+  if (input.audience_kind === "segment") {
+    if (!input.segment_id || !(await getMarketingSegment(input.segment_id))) {
+      throw new Error("Alege un segment dinamic valid.");
+    }
+  }
 
   const currentTestContactIds = [...(current.test_contact_ids || [])].sort();
   const nextTestContactIds = [...input.test_contact_ids].sort();
   const audienceChanged =
     current.audience_kind !== input.audience_kind ||
+    current.segment_id !== input.segment_id ||
     currentTestContactIds.join(",") !== nextTestContactIds.join(",");
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .update({
       ...input,
+      segment_id: input.audience_kind === "segment" ? input.segment_id : null,
       ...(audienceChanged
-        ? { recipient_count: 0, audience_snapshot_at: null }
+        ? {
+            recipient_count: 0,
+            audience_snapshot_at: null,
+            segment_key_snapshot: null,
+            segment_name_snapshot: null,
+            segment_definition_snapshot: null,
+          }
         : {}),
     })
     .eq("id", id)
@@ -213,7 +236,12 @@ export async function duplicateCampaign(
       cta_url: source.cta_url,
       cta_url_type: source.cta_url_type,
       footer_text: source.footer_text,
-      audience_kind: source.audience_kind,
+      audience_kind:
+        source.audience_kind === "segment" && !source.segment_id
+          ? "all_subscribed"
+          : source.audience_kind,
+      segment_id:
+        source.audience_kind === "segment" ? source.segment_id : null,
       test_contact_ids: source.test_contact_ids,
       status: "draft",
       created_by: createdBy,
@@ -226,55 +254,47 @@ export async function duplicateCampaign(
   return data as MarketingCampaign;
 }
 
-function eligibleContactsQuery() {
-  return supabaseAdmin
-    .from("marketing_contacts")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "subscribed")
-    .eq("marketing_consent", true)
-    .not("consent_at", "is", null)
-    .is("unsubscribed_at", null)
-    .is("deleted_at", null);
-}
-
 export async function getAudienceSummaries(): Promise<
   MarketingAudienceSummary[]
 > {
-  const [all, leads, registered, controlledTest] = await Promise.all([
-    eligibleContactsQuery(),
-    eligibleContactsQuery().is("user_id", null),
-    eligibleContactsQuery().not("user_id", "is", null),
-    eligibleContactsQuery(),
+  const [all, segments] = await Promise.all([
+    previewMarketingSegment(
+      {
+        version: 1,
+        logic: "AND",
+        conditions: [{ field: "consent_status", operator: "yes" }],
+      },
+      1,
+    ),
+    listMarketingSegments(),
   ]);
-
-  const firstError =
-    all.error || leads.error || registered.error || controlledTest.error;
-  if (firstError) throw new Error(firstError.message);
+  const countFor = (key: string) =>
+    segments.find((segment) => segment.segment_key === key)?.contacts_count ?? 0;
 
   return [
     {
       kind: "all_subscribed",
       label: "Toate contactele eligibile",
       description: "Subscribed + consimțământ, fără dezabonare.",
-      count: all.count ?? 0,
+      count: all.total,
     },
     {
       kind: "leads",
       label: "Lead-uri",
       description: "Contacte eligibile fără cont Frizeo.",
-      count: leads.count ?? 0,
+      count: countFor("leads"),
     },
     {
       kind: "registered_users",
       label: "Utilizatori înregistrați",
       description: "Contacte eligibile asociate unui cont Frizeo.",
-      count: registered.count ?? 0,
+      count: countFor("registered_users"),
     },
     {
       kind: "controlled_test",
       label: "Test controlat",
       description: "Selectează manual maximum 5 contacte eligibile.",
-      count: controlledTest.count ?? 0,
+      count: all.total,
     },
   ];
 }
@@ -283,19 +303,20 @@ export async function listEligibleTestContacts(
   limit = 100,
 ): Promise<MarketingTestContactOption[]> {
   const safeLimit = Math.min(Math.max(limit, 1), 200);
-  const { data, error } = await supabaseAdmin
-    .from("marketing_contacts")
-    .select("id, email, first_name, last_name")
-    .eq("status", "subscribed")
-    .eq("marketing_consent", true)
-    .not("consent_at", "is", null)
-    .is("unsubscribed_at", null)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(safeLimit);
-
-  if (error) throw new Error(error.message);
-  return (data ?? []) as MarketingTestContactOption[];
+  const preview = await previewMarketingSegment(
+    {
+      version: 1,
+      logic: "AND",
+      conditions: [{ field: "consent_status", operator: "yes" }],
+    },
+    safeLimit,
+  );
+  return preview.members.map((member) => ({
+    id: member.contact_id,
+    email: member.email,
+    first_name: member.first_name,
+    last_name: member.last_name,
+  }));
 }
 
 export async function snapshotCampaignAudience(id: string): Promise<number> {

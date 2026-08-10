@@ -99,6 +99,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Audiență invalidă." }, { status: 400 });
   }
 
+  const segmentId =
+    typeof body.segment_id === "string" && body.segment_id.trim()
+      ? body.segment_id.trim()
+      : null;
+  if (segmentId && !UUID_PATTERN.test(segmentId)) {
+    return NextResponse.json({ error: "Segment invalid." }, { status: 400 });
+  }
+  if (audienceRaw === "segment" && !segmentId) {
+    return NextResponse.json(
+      { error: "Alege un segment dinamic." },
+      { status: 400 },
+    );
+  }
+
   const testContactIds = Array.isArray(body.test_contact_ids)
     ? [...new Set(body.test_contact_ids)]
     : [];
@@ -130,6 +144,7 @@ export async function PATCH(
       reply_to: replyTo.value,
       template_id: templateId,
       audience_kind: audienceRaw as MarketingAudienceKind,
+      segment_id: segmentId,
       test_contact_ids: testContactIds as string[],
       ...content.value,
     });

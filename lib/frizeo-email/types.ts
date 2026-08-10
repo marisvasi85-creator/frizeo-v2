@@ -65,6 +65,7 @@ export const MARKETING_AUDIENCE_KINDS = [
   "leads",
   "registered_users",
   "controlled_test",
+  "segment",
 ] as const;
 
 export type MarketingAudienceKind =
@@ -137,6 +138,10 @@ export type MarketingCampaign = MarketingEmailContent & {
   template_id: string | null;
   cta_url_type: MarketingCtaUrlType;
   audience_kind: MarketingAudienceKind;
+  segment_id: string | null;
+  segment_key_snapshot: string | null;
+  segment_name_snapshot: string | null;
+  segment_definition_snapshot: MarketingSegmentDefinition | null;
   test_contact_ids: string[];
   status: MarketingCampaignStatus;
   recipient_count: number;
@@ -207,6 +212,94 @@ export type MarketingAudienceSummary = {
   label: string;
   description: string;
   count: number;
+};
+
+export const MARKETING_SEGMENT_FIELDS = [
+  "source",
+  "contact_status",
+  "account_status",
+  "subscription_plan",
+  "subscription_status",
+  "trial_status",
+  "trial_end_date",
+  "bookings_count",
+  "bookings_count_bucket",
+  "created_at",
+  "last_activity",
+  "activity_status",
+  "consent_status",
+  "is_paid",
+] as const;
+
+export type MarketingSegmentField = (typeof MARKETING_SEGMENT_FIELDS)[number];
+
+export const MARKETING_SEGMENT_OPERATORS = [
+  "equals",
+  "not_equals",
+  "in",
+  "greater_than",
+  "less_than",
+  "before",
+  "after",
+  "yes",
+  "no",
+] as const;
+
+export type MarketingSegmentOperator =
+  (typeof MARKETING_SEGMENT_OPERATORS)[number];
+
+export type MarketingSegmentCondition = {
+  field: MarketingSegmentField;
+  operator: MarketingSegmentOperator;
+  value?: string | string[] | number;
+};
+
+export type MarketingSegmentDefinition = {
+  version: 1;
+  logic: "AND";
+  conditions: MarketingSegmentCondition[];
+};
+
+export type MarketingSegment = {
+  id: string;
+  segment_key: string | null;
+  name: string;
+  description: string;
+  category: string;
+  definition: MarketingSegmentDefinition;
+  is_system_segment: boolean;
+  created_by: string | null;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketingSegmentSummary = MarketingSegment & {
+  contacts_count: number;
+  evaluated_at: string;
+};
+
+export type MarketingSegmentMember = {
+  contact_id: string;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  source: string;
+  contact_status: string;
+  account_status: string;
+  subscription_plan: string;
+  subscription_status: string;
+  is_paid: boolean;
+  trial_status: string;
+  trial_end_date: string | null;
+  bookings_count: number;
+  bookings_count_bucket: string;
+  created_at: string;
+  last_activity: string | null;
+  activity_status: string;
+  consent_status: boolean;
+  total_count: number;
 };
 
 export type MarketingTestContactOption = {

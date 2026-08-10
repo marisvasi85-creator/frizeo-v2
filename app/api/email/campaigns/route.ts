@@ -55,9 +55,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const segmentId =
+    typeof body.segment_id === "string" && body.segment_id.trim()
+      ? body.segment_id.trim()
+      : null;
+  if (segmentId && !UUID_PATTERN.test(segmentId)) {
+    return NextResponse.json({ error: "Segment invalid." }, { status: 400 });
+  }
+
   try {
     const campaign = await createCampaign(
-      { name, templateId, blank },
+      { name, templateId, blank, segmentId },
       auth.userId,
     );
     return NextResponse.json({ campaign }, { status: 201 });

@@ -8,6 +8,7 @@ import {
   listCampaignRecipients,
 } from "@/lib/frizeo-email/campaigns";
 import { listEmailTemplates } from "@/lib/frizeo-email/templates";
+import { listMarketingSegments } from "@/lib/frizeo-email/segments";
 import { UUID_PATTERN } from "@/lib/frizeo-email/validation";
 
 type Params = Promise<{ id: string }>;
@@ -19,10 +20,11 @@ export default async function CampaignPage({ params }: { params: Params }) {
   const campaign = await getCampaign(id);
   if (!campaign) notFound();
 
-  const [templates, audiences, testContacts, recipients, progress] =
+  const [templates, audiences, segments, testContacts, recipients, progress] =
     await Promise.all([
       listEmailTemplates(),
       getAudienceSummaries(),
+      listMarketingSegments(),
       listEligibleTestContacts(),
       campaign.audience_snapshot_at
         ? listCampaignRecipients(id)
@@ -35,6 +37,7 @@ export default async function CampaignPage({ params }: { params: Params }) {
       initialCampaign={campaign}
       templates={templates}
       audiences={audiences}
+      segments={segments}
       testContacts={testContacts}
       initialRecipients={recipients}
       initialProgress={progress}

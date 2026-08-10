@@ -1,16 +1,19 @@
 import CampaignsClient from "./CampaignsClient";
 import { listCampaigns } from "@/lib/frizeo-email/campaigns";
 import { listEmailTemplates } from "@/lib/frizeo-email/templates";
+import { listMarketingSegments } from "@/lib/frizeo-email/segments";
 
 export default async function CampaignsPage() {
   let campaigns: Awaited<ReturnType<typeof listCampaigns>> = [];
   let templates: Awaited<ReturnType<typeof listEmailTemplates>> = [];
+  let segments: Awaited<ReturnType<typeof listMarketingSegments>> = [];
   let error: string | null = null;
 
   try {
-    [campaigns, templates] = await Promise.all([
+    [campaigns, templates, segments] = await Promise.all([
       listCampaigns(),
       listEmailTemplates(),
+      listMarketingSegments(),
     ]);
   } catch (loadError) {
     error =
@@ -26,7 +29,7 @@ export default async function CampaignsPage() {
           {error}
         </div>
       )}
-      <CampaignsClient campaigns={campaigns} templates={templates} />
+      <CampaignsClient campaigns={campaigns} templates={templates} segments={segments} />
     </div>
   );
 }

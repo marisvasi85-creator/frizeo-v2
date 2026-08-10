@@ -31,6 +31,12 @@ function queueError(message: string): { error: string; status: number } {
       status: 400,
     };
   }
+  if (message.includes("campaign_segment_invalid")) {
+    return {
+      error: "Segmentul selectat nu mai există sau nu mai este disponibil.",
+      status: 400,
+    };
+  }
   if (message.includes("campaign_not_found")) {
     return { error: "Campanie inexistentă.", status: 404 };
   }

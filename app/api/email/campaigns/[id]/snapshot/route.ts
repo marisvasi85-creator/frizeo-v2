@@ -34,6 +34,13 @@ export async function POST(
     const recipientCount = await snapshotCampaignAudience(id);
     return NextResponse.json({ success: true, recipient_count: recipientCount });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("campaign_segment_invalid")) {
+      return NextResponse.json(
+        { error: "Segmentul selectat nu mai există sau nu mai este disponibil." },
+        { status: 400 },
+      );
+    }
     console.error("[email-campaign-snapshot] failed", error);
     return NextResponse.json(
       { error: "Nu am putut genera snapshot-ul audienței." },
