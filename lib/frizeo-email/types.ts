@@ -35,9 +35,23 @@ export type MarketingContact = {
   user_id: string | null;
   tenant_id: string | null;
   notes: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
+  deleted_email_hash?: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export const MARKETING_CTA_URL_TYPES = [
+  "custom",
+  "register",
+  "marketing",
+  "dashboard",
+  "booking_link",
+  "plans",
+] as const;
+
+export type MarketingCtaUrlType = (typeof MARKETING_CTA_URL_TYPES)[number];
 
 export type ContactListFilters = {
   q?: string;
@@ -102,6 +116,12 @@ export type MarketingEmailContent = {
 export type MarketingEmailTemplate = MarketingEmailContent & {
   id: string;
   name: string;
+  template_key: string | null;
+  category: string | null;
+  recommended_audience: string | null;
+  automation_key: string | null;
+  cta_url_type: MarketingCtaUrlType;
+  is_system_template: boolean;
   is_default: boolean;
   created_by: string | null;
   created_at: string;
@@ -115,6 +135,7 @@ export type MarketingCampaign = MarketingEmailContent & {
   sender_email: string;
   reply_to: string | null;
   template_id: string | null;
+  cta_url_type: MarketingCtaUrlType;
   audience_kind: MarketingAudienceKind;
   test_contact_ids: string[];
   status: MarketingCampaignStatus;
@@ -135,6 +156,8 @@ export type MarketingCampaign = MarketingEmailContent & {
   failed_at: string | null;
   sent_at: string | null;
   created_by: string | null;
+  deleted_at: string | null;
+  deleted_by: string | null;
   created_at: string;
   updated_at: string;
 };

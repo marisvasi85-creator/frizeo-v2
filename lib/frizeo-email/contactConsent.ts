@@ -25,10 +25,19 @@ export async function setMarketingContactConsent(input: {
   actionSource: "manual_admin" | "bulk_admin";
   changedBy: string;
 }): Promise<ConsentChangeRow[]> {
+  const { data: activeContacts, error: lookupError } = await supabaseAdmin
+    .from("marketing_contacts")
+    .select("id")
+    .in("id", input.contactIds)
+    .is("deleted_at", null);
+  if (lookupError) throw new Error(lookupError.message);
+  const activeIds = (activeContacts ?? []).map((contact) => contact.id);
+  if (activeIds.length === 0) return [];
+
   const { data, error } = await supabaseAdmin.rpc(
     "set_marketing_contact_consent",
     {
-      p_contact_ids: input.contactIds,
+      p_contact_ids: activeIds,
       p_marketing_consent: input.marketingConsent,
       p_action_source: input.actionSource,
       p_changed_by: input.changedBy,

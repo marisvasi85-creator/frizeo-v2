@@ -15,6 +15,7 @@ function optionalString(value: unknown): string | null {
 
 export function isSafePublicUrl(value: string | null): boolean {
   if (!value) return true;
+  if (value === "{{booking_link}}") return true;
   try {
     const url = new URL(value);
     return url.protocol === "https:" || url.protocol === "http:";

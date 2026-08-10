@@ -4,6 +4,7 @@ import {
   CONTACT_UUID_PATTERN,
   setMarketingContactConsent,
 } from "@/lib/frizeo-email/contactConsent";
+import { deleteMarketingContacts } from "@/lib/frizeo-email/contacts";
 
 type Params = Promise<{ id: string }>;
 
@@ -83,6 +84,32 @@ export async function PATCH(
     );
     return NextResponse.json(
       { error: "Nu am putut actualiza consimțământul." },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Params },
+) {
+  const auth = await assertEmailApiAccess();
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  if (!CONTACT_UUID_PATTERN.test(id)) {
+    return NextResponse.json({ error: "Contact invalid." }, { status: 400 });
+  }
+
+  try {
+    const deleted = await deleteMarketingContacts([id], auth.userId);
+    if (deleted === 0) {
+      return NextResponse.json({ error: "Contact inexistent sau deja șters." }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, deleted });
+  } catch (error) {
+    console.error("[email-contact] delete failed", error);
+    return NextResponse.json(
+      { error: "Nu am putut șterge contactul." },
       { status: 500 },
     );
   }

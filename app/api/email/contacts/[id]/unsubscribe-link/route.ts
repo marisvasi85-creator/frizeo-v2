@@ -29,6 +29,7 @@ export async function POST(
     .from("marketing_contacts")
     .select("id")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {

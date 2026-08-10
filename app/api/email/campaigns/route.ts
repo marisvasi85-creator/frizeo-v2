@@ -47,10 +47,17 @@ export async function POST(request: Request) {
   if (templateId && !UUID_PATTERN.test(templateId)) {
     return NextResponse.json({ error: "Template invalid." }, { status: 400 });
   }
+  const blank = body.mode === "blank";
+  if (!blank && !templateId) {
+    return NextResponse.json(
+      { error: "Alege un template Frizeo sau Blank Campaign." },
+      { status: 400 },
+    );
+  }
 
   try {
     const campaign = await createCampaign(
-      { name, templateId },
+      { name, templateId, blank },
       auth.userId,
     );
     return NextResponse.json({ campaign }, { status: 201 });

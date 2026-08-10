@@ -56,6 +56,8 @@ export default function ContactsClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkConsent, setBulkConsent] = useState<"yes" | "no">("yes");
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const [addForm, setAddForm] = useState({
     email: "",
@@ -181,6 +183,74 @@ export default function ContactsClient({
       setFormError("Eroare de rețea la actualizarea bulk.");
     } finally {
       setBulkSaving(false);
+    }
+  };
+
+  const deleteContact = async (contact: MarketingContact) => {
+    const name = [contact.first_name, contact.last_name].filter(Boolean).join(" ") || "—";
+    if (
+      !window.confirm(
+        `Ștergi definitiv acest contact?\n\n${name}\n${contact.email}\n\nAceastă acțiune nu poate fi anulată.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(contact.id);
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      const response = await fetch(`/api/email/contacts/${contact.id}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setFormError(data.error || "Nu am putut șterge contactul.");
+        return;
+      }
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(contact.id);
+        return next;
+      });
+      setFormSuccess("Contact șters și datele personale anonimizate. Istoricul campaniilor a fost păstrat.");
+      startTransition(() => router.refresh());
+    } catch {
+      setFormError("Eroare de rețea la ștergerea contactului.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (
+      !window.confirm(
+        `Ștergi definitiv ${selectedIds.size} contacte selectate?\n\nDatele personale active vor fi anonimizate. Această acțiune nu poate fi anulată.`,
+      )
+    ) {
+      return;
+    }
+    setBulkDeleting(true);
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      const response = await fetch("/api/email/contacts/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contact_ids: [...selectedIds] }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setFormError(data.error || "Nu am putut șterge contactele selectate.");
+        return;
+      }
+      setFormSuccess(`${data.deleted} contacte șterse și anonimizate. Istoricul campaniilor a fost păstrat.`);
+      setSelectedIds(new Set());
+      startTransition(() => router.refresh());
+    } catch {
+      setFormError("Eroare de rețea la ștergerea contactelor.");
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -588,6 +658,14 @@ export default function ContactsClient({
         >
           {bulkSaving ? "Se aplică…" : "Aplică selecției"}
         </button>
+        <button
+          type="button"
+          onClick={deleteSelected}
+          disabled={selectedIds.size === 0 || bulkDeleting || bulkSaving}
+          className="rounded-lg border border-red-500/30 px-4 py-2 text-sm text-red-200 hover:bg-red-500/10 disabled:opacity-40"
+        >
+          {bulkDeleting ? "Se șterg…" : `Delete selected (${selectedIds.size})`}
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-white/10">
@@ -680,6 +758,14 @@ export default function ContactsClient({
                           className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10"
                         >
                           Edit Contact
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteContact(c)}
+                          disabled={deletingId === c.id || bulkDeleting}
+                          className="rounded-md border border-red-500/25 px-2.5 py-1.5 text-xs text-red-200 hover:bg-red-500/10 disabled:opacity-40"
+                        >
+                          {deletingId === c.id ? "Se șterge…" : "Delete Contact"}
                         </button>
                         {unsubscribeLinks[c.id] ? (
                           <>

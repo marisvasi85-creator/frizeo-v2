@@ -69,6 +69,16 @@ export async function PATCH(
   }
 
   try {
+    const current = await getEmailTemplate(id);
+    if (!current) {
+      return NextResponse.json({ error: "Template inexistent." }, { status: 404 });
+    }
+    if (current.is_system_template) {
+      return NextResponse.json(
+        { error: "Template-urile Frizeo System nu pot fi modificate direct. Folosește Duplicate & Edit." },
+        { status: 409 },
+      );
+    }
     const template = await updateEmailTemplate(id, {
       name,
       ...content.value,
@@ -105,9 +115,9 @@ export async function DELETE(
     if (result === "not_found") {
       return NextResponse.json({ error: "Template inexistent." }, { status: 404 });
     }
-    if (result === "default_protected") {
+    if (result === "protected") {
       return NextResponse.json(
-        { error: "Template-ul implicit Frizeo nu poate fi șters." },
+        { error: "Template-urile Frizeo System nu pot fi șterse." },
         { status: 409 },
       );
     }

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertEmailApiAccess } from "@/lib/frizeo-email/access";
 import { getCampaign } from "@/lib/frizeo-email/campaigns";
-import { getEmailAppUrlForRequest } from "@/lib/frizeo-email/config";
+import {
+  getEmailAppUrlForRequest,
+  getFrizeoAppUrl,
+} from "@/lib/frizeo-email/config";
 import {
   renderMarketingEmail,
   renderMarketingEmailText,
@@ -12,6 +15,7 @@ import {
   UUID_PATTERN,
 } from "@/lib/frizeo-email/validation";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
+import { resolveMarketingTemplateVariables } from "@/lib/frizeo-email/templateVariables";
 
 type Params = Promise<{ id: string }>;
 
@@ -58,10 +62,13 @@ export async function POST(
       );
     }
     const unsubscribeUrl = `${getEmailAppUrlForRequest(request.url).replace(/\/$/, "")}/unsubscribe/test-preview`;
-    const renderInput = { ...campaign, unsubscribeUrl };
+    const resolvedContent = resolveMarketingTemplateVariables(campaign, {
+      app_url: getFrizeoAppUrl(),
+    });
+    const renderInput = { ...resolvedContent, unsubscribeUrl };
     const result = await sendMarketingTest({
       to: recipient.value,
-      subject: campaign.subject,
+      subject: resolvedContent.subject,
       html: renderMarketingEmail(renderInput),
       text: renderMarketingEmailText(renderInput),
     });

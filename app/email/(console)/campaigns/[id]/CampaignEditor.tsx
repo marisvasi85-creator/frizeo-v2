@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { renderMarketingEmail } from "@/lib/frizeo-email/renderEmail";
+import {
+  marketingCtaUrl,
+  resolveMarketingTemplateVariables,
+} from "@/lib/frizeo-email/templateVariables";
 import type {
   MarketingAudienceSummary,
   MarketingCampaign,
@@ -169,7 +173,13 @@ export default function CampaignEditor({
   const previewHtml = useMemo(
     () =>
       renderMarketingEmail({
-        ...draft,
+        ...resolveMarketingTemplateVariables(draft, {
+          first_name: "Maria",
+          app_url:
+            typeof window === "undefined"
+              ? "https://staging.frizeo.ro"
+              : window.location.origin,
+        }),
         unsubscribeUrl: "https://email.frizeo.ro/unsubscribe/preview",
       }),
     [draft],
@@ -388,6 +398,7 @@ export default function CampaignEditor({
   const applyTemplate = (templateId: string) => {
     const template = templates.find((item) => item.id === templateId);
     if (!template) return;
+    const appUrl = window.location.origin;
     setDraft((current) => ({
       ...current,
       template_id: template.id,
@@ -397,7 +408,8 @@ export default function CampaignEditor({
       body_text: template.body_text,
       image_url: template.image_url,
       cta_text: template.cta_text,
-      cta_url: template.cta_url,
+      cta_url:
+        marketingCtaUrl(template.cta_url_type, appUrl) ?? template.cta_url,
       footer_text: template.footer_text,
     }));
     setMessage(`Template „${template.name}” aplicat local. Apasă Save Draft.`);

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { isValidEmail, normalizeEmail } from "@/lib/auth/credentials";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type {
@@ -44,10 +45,15 @@ function splitName(fullName: string | null | undefined): {
   };
 }
 
+function deletedEmailHash(email: string): string {
+  return createHash("sha256").update(email).digest("hex");
+}
+
 export async function getContactStats(): Promise<DashboardContactStats> {
   const { data, error } = await supabaseAdmin
     .from("marketing_contacts")
-    .select("status, marketing_consent");
+    .select("status, marketing_consent")
+    .is("deleted_at", null);
 
   if (error) throw new Error(error.message);
 
@@ -84,6 +90,7 @@ export async function listContacts(
   let query = supabaseAdmin
     .from("marketing_contacts")
     .select("*", { count: "exact" })
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
@@ -151,7 +158,13 @@ export async function createContact(
     .eq("email_normalized", email)
     .maybeSingle();
 
-  if (existing) {
+  const { data: deletedContact } = await supabaseAdmin
+    .from("marketing_contacts")
+    .select("id")
+    .eq("deleted_email_hash", deletedEmailHash(email))
+    .maybeSingle();
+
+  if (existing || deletedContact) {
     return {
       ok: false,
       error: "Există deja un contact cu acest email.",
@@ -203,6 +216,14 @@ export async function upsertContactSoft(
     .select("*")
     .eq("email_normalized", email)
     .maybeSingle();
+
+  const { data: deletedContact } = await supabaseAdmin
+    .from("marketing_contacts")
+    .select("id")
+    .eq("deleted_email_hash", deletedEmailHash(email))
+    .maybeSingle();
+
+  if (deletedContact) return "duplicate";
 
   if (!existing) {
     const created = await createContact(input);
@@ -300,10 +321,24 @@ export function canReceiveMarketing(contact: {
   status: string;
   marketing_consent: boolean;
   unsubscribed_at: string | null;
+  deleted_at?: string | null;
 }): boolean {
   return (
     contact.status === "subscribed" &&
     contact.marketing_consent === true &&
-    contact.unsubscribed_at == null
+    contact.unsubscribed_at == null &&
+    contact.deleted_at == null
   );
+}
+
+export async function deleteMarketingContacts(
+  contactIds: string[],
+  deletedBy: string,
+): Promise<number> {
+  const { data, error } = await supabaseAdmin.rpc("delete_marketing_contacts", {
+    p_contact_ids: contactIds,
+    p_deleted_by: deletedBy,
+  });
+  if (error) throw new Error(error.message);
+  return Number(data ?? 0);
 }

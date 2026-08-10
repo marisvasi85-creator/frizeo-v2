@@ -161,17 +161,17 @@ export async function DELETE(
   }
 
   try {
-    const result = await deleteCampaign(id);
+    const result = await deleteCampaign(id, auth.userId);
     if (result === "not_found") {
       return NextResponse.json({ error: "Campanie inexistentă." }, { status: 404 });
     }
-    if (result === "not_draft") {
+    if (result === "active_protected") {
       return NextResponse.json(
-        { error: "Doar campaniile draft pot fi șterse." },
+        { error: "Campania este activă. Anuleaz-o înainte de a o arhiva." },
         { status: 409 },
       );
     }
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, result });
   } catch (error) {
     console.error("[email-campaign] delete failed", error);
     return NextResponse.json(

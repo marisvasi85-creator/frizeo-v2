@@ -13,6 +13,10 @@ import {
   renderMarketingEmailText,
 } from "@/lib/frizeo-email/renderEmail";
 import { buildUnsubscribeUrl } from "@/lib/frizeo-email/unsubscribe";
+import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
+import { resolveMarketingTemplateVariables } from "@/lib/frizeo-email/templateVariables";
+import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const DEFAULT_BATCH_SIZE = 5;
 const MAX_BATCH_SIZE = 10;
@@ -60,6 +64,26 @@ export type MarketingWorkerResult = {
   staleResults: number;
 };
 
+async function recipientBookingLink(
+  contactId: string | null,
+  appUrl: string,
+): Promise<string | null> {
+  if (!contactId) return null;
+  const { data: contact } = await supabaseAdmin
+    .from("marketing_contacts")
+    .select("tenant_id")
+    .eq("id", contactId)
+    .is("deleted_at", null)
+    .maybeSingle();
+  if (!contact?.tenant_id) return null;
+  const { data: tenant } = await supabaseAdmin
+    .from("tenants")
+    .select("slug")
+    .eq("id", contact.tenant_id)
+    .maybeSingle();
+  return tenant?.slug ? publicSalonUrl(tenant.slug, appUrl) : null;
+}
+
 export async function processMarketingBatch(input: {
   emailAppUrl: string;
 }): Promise<MarketingWorkerResult> {
@@ -100,12 +124,18 @@ export async function processMarketingBatch(input: {
         recipient.unsubscribe_token,
         input.emailAppUrl,
       );
-      const renderInput = { ...recipient, unsubscribeUrl };
+      const appUrl = getFrizeoAppUrl();
+      const resolvedContent = resolveMarketingTemplateVariables(recipient, {
+        first_name: recipient.first_name,
+        app_url: appUrl,
+        booking_link: await recipientBookingLink(recipient.contact_id, appUrl),
+      });
+      const renderInput = { ...resolvedContent, unsubscribeUrl };
       const providerResult = await sendMarketingEmail({
         kind: "marketing-campaign",
         idempotencyKey: `frizeo-campaign/${recipient.campaign_id}/${recipient.recipient_id}`,
         to: recipient.recipient_email,
-        subject: recipient.subject,
+        subject: resolvedContent.subject,
         html: renderMarketingEmail(renderInput),
         text: renderMarketingEmailText(renderInput),
       });

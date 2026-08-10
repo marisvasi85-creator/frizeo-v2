@@ -1,5 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmailTemplate, listEmailTemplates } from "@/lib/frizeo-email/templates";
+import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
+import { marketingCtaUrl } from "@/lib/frizeo-email/templateVariables";
 import type {
   MarketingAudienceKind,
   MarketingAudienceSummary,
@@ -13,6 +15,7 @@ import type {
 export type CreateCampaignInput = {
   name: string;
   templateId?: string | null;
+  blank?: boolean;
 };
 
 export type UpdateCampaignInput = MarketingEmailContent & {
@@ -50,6 +53,7 @@ export async function listCampaigns(limit = 100): Promise<MarketingCampaign[]> {
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(safeLimit);
 
@@ -62,6 +66,7 @@ export async function getCampaign(id: string): Promise<MarketingCampaign | null>
     .from("marketing_campaigns")
     .select("*")
     .eq("id", id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
@@ -80,33 +85,43 @@ export async function createCampaign(
     throw new Error("Template-ul selectat nu există.");
   }
 
-  if (!template) {
+  if (!template && !input.blank) {
     const templates = await listEmailTemplates();
     template = templates.find((item) => item.is_default) ?? templates[0] ?? null;
   }
 
-  if (!template) {
-    throw new Error("Nu există niciun template. Creează unul înainte.");
-  }
-
   const sender = getMarketingSenderDefaults();
+  const appUrl = getFrizeoAppUrl();
+  const ctaUrl = template
+    ? marketingCtaUrl(template.cta_url_type, appUrl) ?? template.cta_url
+    : null;
+  const recommendedAudience = template?.recommended_audience;
+  const audienceKind: MarketingAudienceKind =
+    recommendedAudience === "leads"
+      ? "leads"
+      : recommendedAudience
+        ? "registered_users"
+        : "all_subscribed";
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .insert({
       name: input.name,
-      subject: template.subject,
-      preview_text: template.preview_text,
+      subject: template?.subject ?? "",
+      preview_text: template?.preview_text ?? "",
       sender_name: sender.senderName,
       sender_email: sender.senderEmail,
       reply_to: sender.replyTo,
-      template_id: template.id,
-      heading: template.heading,
-      body_text: template.body_text,
-      image_url: template.image_url,
-      cta_text: template.cta_text,
-      cta_url: template.cta_url,
-      footer_text: template.footer_text,
-      audience_kind: "all_subscribed",
+      template_id: template?.id ?? null,
+      heading: template?.heading ?? "",
+      body_text: template?.body_text ?? "",
+      image_url: template?.image_url ?? null,
+      cta_text: template?.cta_text ?? null,
+      cta_url: ctaUrl,
+      cta_url_type: template?.cta_url_type ?? "custom",
+      footer_text:
+        template?.footer_text ??
+        "Frizeo · Programări online pentru frizeri și saloane.",
+      audience_kind: audienceKind,
       test_contact_ids: [],
       status: "draft",
       created_by: createdBy,
@@ -160,19 +175,55 @@ export async function updateCampaign(
 
 export async function deleteCampaign(
   id: string,
-): Promise<"deleted" | "not_found" | "not_draft"> {
-  const campaign = await getCampaign(id);
-  if (!campaign) return "not_found";
-  if (campaign.status !== "draft") return "not_draft";
-
-  const { error } = await supabaseAdmin
-    .from("marketing_campaigns")
-    .delete()
-    .eq("id", id)
-    .eq("status", "draft");
-
+  deletedBy: string,
+): Promise<"deleted" | "archived" | "not_found" | "active_protected"> {
+  const { data, error } = await supabaseAdmin.rpc("delete_marketing_campaign", {
+    p_campaign_id: id,
+    p_deleted_by: deletedBy,
+  });
   if (error) throw new Error(error.message);
-  return "deleted";
+  return String(data) as
+    | "deleted"
+    | "archived"
+    | "not_found"
+    | "active_protected";
+}
+
+export async function duplicateCampaign(
+  id: string,
+  createdBy: string,
+): Promise<MarketingCampaign | null> {
+  const source = await getCampaign(id);
+  if (!source) return null;
+  const copyName = `${source.name} — copie`.slice(0, 160);
+  const { data, error } = await supabaseAdmin
+    .from("marketing_campaigns")
+    .insert({
+      name: copyName,
+      subject: source.subject,
+      preview_text: source.preview_text,
+      sender_name: source.sender_name,
+      sender_email: source.sender_email,
+      reply_to: source.reply_to,
+      template_id: source.template_id,
+      heading: source.heading,
+      body_text: source.body_text,
+      image_url: source.image_url,
+      cta_text: source.cta_text,
+      cta_url: source.cta_url,
+      cta_url_type: source.cta_url_type,
+      footer_text: source.footer_text,
+      audience_kind: source.audience_kind,
+      test_contact_ids: source.test_contact_ids,
+      status: "draft",
+      created_by: createdBy,
+    })
+    .select("*")
+    .single();
+  if (error || !data) {
+    throw new Error(error?.message || "Nu am putut duplica campania.");
+  }
+  return data as MarketingCampaign;
 }
 
 function eligibleContactsQuery() {
@@ -182,7 +233,8 @@ function eligibleContactsQuery() {
     .eq("status", "subscribed")
     .eq("marketing_consent", true)
     .not("consent_at", "is", null)
-    .is("unsubscribed_at", null);
+    .is("unsubscribed_at", null)
+    .is("deleted_at", null);
 }
 
 export async function getAudienceSummaries(): Promise<
@@ -238,6 +290,7 @@ export async function listEligibleTestContacts(
     .eq("marketing_consent", true)
     .not("consent_at", "is", null)
     .is("unsubscribed_at", null)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(safeLimit);
 
@@ -416,6 +469,7 @@ export async function getCampaignDashboardData(): Promise<{
   const { data, error } = await supabaseAdmin
     .from("marketing_campaigns")
     .select("*")
+    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(8);
 
