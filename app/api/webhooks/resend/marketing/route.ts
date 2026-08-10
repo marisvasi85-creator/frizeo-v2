@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  isMarketingCampaignEvent,
+  isRetryableUnmatchedMarketingEvent,
   isResendWebhookConfigured,
   processVerifiedResendWebhook,
   verifyResendWebhook,
@@ -68,11 +68,11 @@ export async function POST(request: Request) {
         type: event.type,
       });
 
-      // A tagged campaign event can race the worker's provider_message_id write.
-      // Returning non-2xx asks Resend to retry; unrelated/test events are ignored.
-      if (isMarketingCampaignEvent(event)) {
+      // Tagged campaign/automation events can race the worker's
+      // provider_message_id write. Non-2xx asks Resend to retry.
+      if (isRetryableUnmatchedMarketingEvent(event)) {
         return NextResponse.json(
-          { error: "Campaign message not ready for matching." },
+          { error: "Marketing message not ready for matching." },
           { status: 503 },
         );
       }

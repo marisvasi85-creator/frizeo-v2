@@ -93,9 +93,21 @@ export default function EmailSettingsPage() {
             {workerConfigured ? "Configured" : "Not configured"}
           </span>
         </div>
+        <div>
+          <p className="text-xs text-white/40">Campaign worker URL</p>
+          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+            {`${getAppUrl()}/api/internal/marketing/worker?secret=…`}
+          </code>
+        </div>
+        <div>
+          <p className="text-xs text-white/40">Automations worker URL</p>
+          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+            {`${getAppUrl()}/api/internal/marketing/automations?secret=…`}
+          </code>
+        </div>
         <p className="text-xs text-white/35">
-          Secretul dedicat este verificat exclusiv server-side și nu este afișat
-          sau reutilizat pentru Resend ori Supabase.
+          Ambele folosesc `MARKETING_WORKER_SECRET` (același worker intern
+          marketing). Nu folosi Vercel Cron.
         </p>
       </section>
 

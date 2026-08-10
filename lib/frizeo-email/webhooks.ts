@@ -29,6 +29,8 @@ export type MarketingWebhookResult = {
   event_id?: string;
   recipient_id?: string;
   campaign_id?: string;
+  automation_run_id?: string;
+  contact_id?: string;
 };
 
 export function isResendWebhookConfigured(): boolean {
@@ -91,6 +93,19 @@ export function isMarketingCampaignEvent(event: WebhookEventPayload): boolean {
   return event.data.tags?.frizeo_email_type === "marketing-campaign";
 }
 
+export function isMarketingAutomationEvent(
+  event: WebhookEventPayload,
+): boolean {
+  if (!("email_id" in event.data) || !("tags" in event.data)) return false;
+  return event.data.tags?.frizeo_email_type === "marketing-automation";
+}
+
+export function isRetryableUnmatchedMarketingEvent(
+  event: WebhookEventPayload,
+): boolean {
+  return isMarketingCampaignEvent(event) || isMarketingAutomationEvent(event);
+}
+
 export async function processVerifiedResendWebhook(input: {
   providerEventId: string;
   event: WebhookEventPayload;
@@ -106,20 +121,22 @@ export async function processVerifiedResendWebhook(input: {
   }
 
   const bounce = event.type === "email.bounced" ? event.data.bounce : null;
+  const payload = {
+    p_provider: "resend",
+    p_provider_event_id: input.providerEventId,
+    p_provider_message_id: event.data.email_id,
+    p_type: RESEND_EVENT_TYPES[event.type],
+    p_event_timestamp: eventTimestamp.toISOString(),
+    p_metadata: safeMetadata(event),
+    p_bounce_type: bounce?.type ?? null,
+    p_bounce_subtype: bounce?.subType ?? null,
+    p_bounce_reason: bounce?.message ?? null,
+    p_permanent_bounce: bounce?.type.toLowerCase() === "permanent",
+  };
+
   const { data, error } = await supabaseAdmin.rpc(
     "process_marketing_email_event",
-    {
-      p_provider: "resend",
-      p_provider_event_id: input.providerEventId,
-      p_provider_message_id: event.data.email_id,
-      p_type: RESEND_EVENT_TYPES[event.type],
-      p_event_timestamp: eventTimestamp.toISOString(),
-      p_metadata: safeMetadata(event),
-      p_bounce_type: bounce?.type ?? null,
-      p_bounce_subtype: bounce?.subType ?? null,
-      p_bounce_reason: bounce?.message ?? null,
-      p_permanent_bounce: bounce?.type.toLowerCase() === "permanent",
-    },
+    payload,
   );
 
   if (error) throw new Error(error.message);
@@ -127,5 +144,21 @@ export async function processVerifiedResendWebhook(input: {
     throw new Error("invalid_marketing_webhook_result");
   }
 
-  return data as MarketingWebhookResult;
+  const campaignResult = data as MarketingWebhookResult;
+  if (campaignResult.result !== "unmatched") {
+    return campaignResult;
+  }
+
+  const { data: automationData, error: automationError } =
+    await supabaseAdmin.rpc(
+      "process_marketing_automation_email_event",
+      payload,
+    );
+
+  if (automationError) throw new Error(automationError.message);
+  if (!automationData || typeof automationData !== "object") {
+    throw new Error("invalid_marketing_automation_webhook_result");
+  }
+
+  return automationData as MarketingWebhookResult;
 }

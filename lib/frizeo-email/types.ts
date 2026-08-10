@@ -323,3 +323,88 @@ export type MarketingCampaignProgress = {
   failed: number;
   skipped: number;
 };
+
+export const MARKETING_AUTOMATION_TRIGGER_TYPES = [
+  "user_signed_up",
+  "trial_started",
+  "trial_ending_7_days",
+  "trial_ending_3_days",
+  "trial_last_day",
+  "trial_expired",
+  "subscription_activated",
+] as const;
+
+export type MarketingAutomationTriggerType =
+  (typeof MARKETING_AUTOMATION_TRIGGER_TYPES)[number];
+
+export const MARKETING_AUTOMATION_RUN_STATUSES = [
+  "pending",
+  "scheduled",
+  "processing",
+  "sent",
+  "skipped",
+  "failed",
+  "cancelled",
+] as const;
+
+export type MarketingAutomationRunStatus =
+  (typeof MARKETING_AUTOMATION_RUN_STATUSES)[number];
+
+export type MarketingAutomation = {
+  id: string;
+  automation_key: string;
+  name: string;
+  description: string;
+  trigger_type: MarketingAutomationTriggerType;
+  delay_minutes: number;
+  template_id: string;
+  conditions: Record<string, unknown>;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MarketingAutomationSummary = MarketingAutomation & {
+  template_name: string | null;
+  template_key: string | null;
+  sent_count: number;
+  skipped_count: number;
+  failed_count: number;
+  last_run_at: string | null;
+};
+
+export type MarketingAutomationRun = {
+  id: string;
+  automation_id: string;
+  contact_id: string;
+  user_id: string | null;
+  tenant_id: string | null;
+  trigger_key: string;
+  trigger_reference: string;
+  status: MarketingAutomationRunStatus;
+  scheduled_for: string;
+  started_at: string | null;
+  sent_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  attempt_count: number;
+  next_attempt_at: string | null;
+  provider: string | null;
+  provider_message_id: string | null;
+  skip_reason: string | null;
+  last_error: string | null;
+  is_test: boolean;
+  delivered_at: string | null;
+  opened_at: string | null;
+  clicked_at: string | null;
+  bounced_at: string | null;
+  complained_at: string | null;
+  last_event_type: string | null;
+  last_event_at: string | null;
+  created_at: string;
+  updated_at: string;
+  contact_email?: string | null;
+  contact_first_name?: string | null;
+  contact_last_name?: string | null;
+};

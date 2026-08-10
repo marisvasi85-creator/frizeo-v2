@@ -1,13 +1,27 @@
-export default function AutomationsPage() {
+import AutomationsClient from "./AutomationsClient";
+import { listAutomationsWithStats } from "@/lib/frizeo-email/automations";
+
+export default async function AutomationsPage() {
+  let automations: Awaited<ReturnType<typeof listAutomationsWithStats>> = [];
+  let error: string | null = null;
+
+  try {
+    automations = await listAutomationsWithStats();
+  } catch (e) {
+    error =
+      e instanceof Error
+        ? e.message
+        : "Nu am putut încărca automations. Verifică migrarea Phase 6.";
+  }
+
   return (
-    <div className="max-w-2xl space-y-3">
-      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
-        Automations
-      </h1>
-      <p className="text-sm text-white/55">
-        Trigger-e simple (signup, trial, onboarding) — Phase 5, după campaniile
-        manuale.
-      </p>
+    <div className="space-y-4">
+      {error && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          {error}
+        </div>
+      )}
+      <AutomationsClient initialAutomations={automations} />
     </div>
   );
 }

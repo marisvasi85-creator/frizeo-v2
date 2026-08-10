@@ -17,7 +17,7 @@ export type SendMarketingTestInput = {
 };
 
 export type SendMarketingEmailInput = SendMarketingTestInput & {
-  kind: "marketing-test" | "marketing-campaign";
+  kind: "marketing-test" | "marketing-campaign" | "marketing-automation";
   idempotencyKey?: string;
 };
 
@@ -65,7 +65,7 @@ export function getMarketingProviderStatus(): MarketingProviderStatus {
     domain: "mail.frizeo.ro",
     configured,
     message: configured
-      ? "Resend este configurat pentru teste și campanii."
+      ? "Resend este configurat pentru teste, campanii și automations."
       : "Lipsesc una sau mai multe variabile Resend necesare pentru trimitere.",
   };
 }
