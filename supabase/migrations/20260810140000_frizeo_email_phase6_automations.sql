@@ -781,7 +781,7 @@ BEGIN
     RETURNING run.*
   ),
   persist_tokens AS (
-    INSERT INTO public.marketing_unsubscribe_tokens (contact_id, token_hash)
+    INSERT INTO public.marketing_unsubscribe_tokens AS unsub (contact_id, token_hash)
     SELECT
       claimed.contact_id,
       encode(extensions.digest(claimed.unsubscribe_token, 'sha256'), 'hex')
@@ -789,7 +789,7 @@ BEGIN
     WHERE claimed.contact_id IS NOT NULL
       AND claimed.unsubscribe_token IS NOT NULL
     ON CONFLICT (token_hash) DO NOTHING
-    RETURNING contact_id
+    RETURNING unsub.contact_id
   )
   SELECT
     claimed.id,
