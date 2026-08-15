@@ -14,6 +14,7 @@ import {
 } from "@/lib/frizeo-email/renderEmail";
 import { buildUnsubscribeUrl } from "@/lib/frizeo-email/unsubscribe";
 import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
+import { maybeWrapCtaWithAttribution } from "@/lib/frizeo-email/attribution";
 import { resolveMarketingTemplateVariables } from "@/lib/frizeo-email/templateVariables";
 import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -130,6 +131,16 @@ export async function processMarketingBatch(input: {
         app_url: appUrl,
         booking_link: await recipientBookingLink(recipient.contact_id, appUrl),
       });
+      const wrappedCta = await maybeWrapCtaWithAttribution({
+        ctaUrl: resolvedContent.cta_url,
+        sourceKind: "campaign",
+        campaignId: recipient.campaign_id,
+        recipientId: recipient.recipient_id,
+        contactId: recipient.contact_id,
+        utmCampaign: recipient.campaign_id,
+        isTest: false,
+      });
+      if (wrappedCta) resolvedContent.cta_url = wrappedCta;
       const renderInput = { ...resolvedContent, unsubscribeUrl };
       const providerResult = await sendMarketingEmail({
         kind: "marketing-campaign",

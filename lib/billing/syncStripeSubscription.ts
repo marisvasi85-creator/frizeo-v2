@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { recordPaidSubscriptionConversion } from "@/lib/frizeo-email/attribution";
 import { enforcePlanSeatLimits } from "./enforcePlanSeatLimits";
 import { getPlanIdBySlug } from "./getPlanIdBySlug";
 import { isCanonicalPlanSlug, PLAN_SLUGS, type PlanSlug } from "./plans";
@@ -158,5 +159,14 @@ export async function syncStripeSubscription(
   if (error) {
     console.error("syncStripeSubscription update:", error);
     throw error;
+  }
+
+  // Non-blocking paid conversion attribution (idempotent).
+  if (mappedStatus === "active" && applyPlan) {
+    void recordPaidSubscriptionConversion({
+      tenantId,
+      planId: (update.plan_id as string | undefined) ?? planId,
+      stripePrice: stripeSub.items.data[0]?.price ?? null,
+    });
   }
 }

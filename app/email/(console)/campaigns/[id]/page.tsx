@@ -7,6 +7,7 @@ import {
   listEligibleTestContacts,
   listCampaignRecipients,
 } from "@/lib/frizeo-email/campaigns";
+import { getConversionStatsForCampaign } from "@/lib/frizeo-email/attribution";
 import { listEmailTemplates } from "@/lib/frizeo-email/templates";
 import { listMarketingSegments } from "@/lib/frizeo-email/segments";
 import { UUID_PATTERN } from "@/lib/frizeo-email/validation";
@@ -32,6 +33,20 @@ export default async function CampaignPage({ params }: { params: Params }) {
       getCampaignProgress(id),
     ]);
 
+  const conversions = await getConversionStatsForCampaign(
+    id,
+    progress.sent || Number(campaign.sent_count || 0),
+  ).catch(() => ({
+    signups: 0,
+    trials: 0,
+    paid: 0,
+    signup_rate: null as number | null,
+    trial_rate: null as number | null,
+    paid_rate: null as number | null,
+    attributed_mrr: 0,
+    currency: "RON",
+  }));
+
   return (
     <CampaignEditor
       initialCampaign={campaign}
@@ -41,6 +56,7 @@ export default async function CampaignPage({ params }: { params: Params }) {
       testContacts={testContacts}
       initialRecipients={recipients}
       initialProgress={progress}
+      initialConversions={conversions}
     />
   );
 }

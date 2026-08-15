@@ -6,6 +6,7 @@ import type {
   MarketingAutomation,
   MarketingAutomationRun,
   MarketingAutomationRunStatus,
+  MarketingConversionStats,
 } from "@/lib/frizeo-email/types";
 
 const STATUS_FILTERS: Array<MarketingAutomationRunStatus | "all"> = [
@@ -21,11 +22,13 @@ export default function AutomationDetailClient({
   initialRuns,
   templateName,
   templateKey,
+  conversions,
 }: {
   automation: MarketingAutomation;
   initialRuns: MarketingAutomationRun[];
   templateName: string | null;
   templateKey: string | null;
+  conversions: MarketingConversionStats;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -159,6 +162,43 @@ export default function AutomationDetailClient({
           )}
         </div>
       )}
+
+      <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+        <div>
+          <h2 className="font-medium">Conversions</h2>
+          <p className="text-xs text-white/40 mt-1">
+            Acquisition + lifecycle · last click 30 zile · fără Send Test
+          </p>
+        </div>
+        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            ["Signups", conversions.signups],
+            ["Trials", conversions.trials],
+            ["Paid", conversions.paid],
+            [
+              "Signup rate",
+              conversions.signup_rate == null
+                ? "—"
+                : `${conversions.signup_rate}%`,
+            ],
+            [
+              "Paid rate",
+              conversions.paid_rate == null ? "—" : `${conversions.paid_rate}%`,
+            ],
+            [
+              "Attributed MRR",
+              `${conversions.attributed_mrr.toFixed(0)} ${conversions.currency}`,
+            ],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-lg bg-black/25 p-3">
+              <dt className="text-xs text-white/40">{label}</dt>
+              <dd className="mt-1 text-lg font-semibold tabular-nums">
+                {value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <section className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
         <h2 className="font-medium">Run Test</h2>

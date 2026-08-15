@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getContactStats } from "@/lib/frizeo-email/contacts";
 import { getCampaignDashboardData } from "@/lib/frizeo-email/campaigns";
+import { getConversionStatsLastDays } from "@/lib/frizeo-email/attribution";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -31,10 +32,21 @@ export default async function EmailDashboardPage() {
     campaignsSent: 0,
     recent: [],
   };
+  let conversions = {
+    signups: 0,
+    trials: 0,
+    paid: 0,
+    signup_rate: null as number | null,
+    trial_rate: null as number | null,
+    paid_rate: null as number | null,
+    attributed_mrr: 0,
+    currency: "RON",
+  };
   try {
-    [stats, campaignData] = await Promise.all([
+    [stats, campaignData, conversions] = await Promise.all([
       getContactStats(),
       getCampaignDashboardData(),
+      getConversionStatsLastDays(30),
     ]);
   } catch (e) {
     loadError =
@@ -71,6 +83,24 @@ export default async function EmailDashboardPage() {
         <StatCard label="Bounces" value={campaignData.bounced} />
         <StatCard label="Unsubscribed" value={stats.unsubscribed} />
         <StatCard label="Campaigns Sent" value={campaignData.campaignsSent} />
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-medium">Conversions — Last 30 days</h2>
+          <p className="text-sm text-white/45">
+            Last Frizeo Email click attribution
+          </p>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard label="Signups" value={conversions.signups} />
+          <StatCard label="Trials" value={conversions.trials} />
+          <StatCard label="Paid" value={conversions.paid} />
+          <StatCard
+            label="Attributed MRR"
+            value={`${conversions.attributed_mrr.toFixed(0)} ${conversions.currency}`}
+          />
+        </div>
       </section>
 
       <section className="space-y-3">

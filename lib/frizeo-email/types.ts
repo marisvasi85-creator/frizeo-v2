@@ -324,6 +324,17 @@ export type MarketingCampaignProgress = {
   skipped: number;
 };
 
+export type MarketingConversionStats = {
+  signups: number;
+  trials: number;
+  paid: number;
+  signup_rate: number | null;
+  trial_rate: number | null;
+  paid_rate: number | null;
+  attributed_mrr: number;
+  currency: string;
+};
+
 export const MARKETING_AUTOMATION_TRIGGER_TYPES = [
   "user_signed_up",
   "trial_started",

@@ -12,6 +12,7 @@ import type {
   MarketingCampaign,
   MarketingCampaignProgress,
   MarketingCampaignRecipient,
+  MarketingConversionStats,
   MarketingEmailTemplate,
   MarketingSegmentSummary,
   MarketingTestContactOption,
@@ -25,6 +26,7 @@ type Props = {
   testContacts: MarketingTestContactOption[];
   initialRecipients: MarketingCampaignRecipient[];
   initialProgress: MarketingCampaignProgress;
+  initialConversions: MarketingConversionStats;
 };
 
 type CampaignDraft = Pick<
@@ -76,12 +78,14 @@ export default function CampaignEditor({
   testContacts,
   initialRecipients,
   initialProgress,
+  initialConversions,
 }: Props) {
   const [campaignStatus, setCampaignStatus] = useState(initialCampaign.status);
   const editable = campaignStatus === "draft";
   const [draft, setDraft] = useState(() => campaignDraft(initialCampaign));
   const [recipients, setRecipients] = useState(initialRecipients);
   const [progress, setProgress] = useState(initialProgress);
+  const conversions = initialConversions;
   const [snapshotCount, setSnapshotCount] = useState(
     initialCampaign.recipient_count,
   );
@@ -571,6 +575,43 @@ export default function CampaignEditor({
               Skipped/suppressed: {progress.skipped}
             </p>
           )}
+
+          <div className="border-t border-white/10 pt-4">
+            <h3 className="font-medium">Conversions</h3>
+            <p className="mt-1 text-xs text-white/40">
+              Last Frizeo Email click · fereastră 30 zile · fără Send Test
+            </p>
+            <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
+              {[
+                ["Signups", conversions.signups],
+                ["Trials", conversions.trials],
+                ["Paid", conversions.paid],
+                [
+                  "Signup rate",
+                  conversions.signup_rate == null
+                    ? "—"
+                    : `${conversions.signup_rate}%`,
+                ],
+                [
+                  "Paid rate",
+                  conversions.paid_rate == null
+                    ? "—"
+                    : `${conversions.paid_rate}%`,
+                ],
+                [
+                  "Attributed MRR",
+                  `${conversions.attributed_mrr.toFixed(0)} ${conversions.currency}`,
+                ],
+              ].map(([label, value]) => (
+                <div key={String(label)} className="rounded-lg bg-black/25 p-3">
+                  <dt className="text-xs text-white/40">{label}</dt>
+                  <dd className="mt-1 text-lg font-semibold tabular-nums">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         </section>
       )}
 

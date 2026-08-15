@@ -4,6 +4,7 @@ import {
   getAutomation,
   listAutomationRuns,
 } from "@/lib/frizeo-email/automations";
+import { getConversionStatsForAutomation } from "@/lib/frizeo-email/attribution";
 import { getEmailTemplate } from "@/lib/frizeo-email/templates";
 import AutomationDetailClient from "./AutomationDetailClient";
 
@@ -23,6 +24,22 @@ export default async function AutomationDetailPage({
     getEmailTemplate(automation.template_id),
   ]);
 
+  const sentCount = runs.filter((run) => run.status === "sent" && !run.is_test)
+    .length;
+  const conversions = await getConversionStatsForAutomation(
+    id,
+    sentCount,
+  ).catch(() => ({
+    signups: 0,
+    trials: 0,
+    paid: 0,
+    signup_rate: null as number | null,
+    trial_rate: null as number | null,
+    paid_rate: null as number | null,
+    attributed_mrr: 0,
+    currency: "RON",
+  }));
+
   return (
     <div className="space-y-4 max-w-6xl">
       <Link
@@ -36,6 +53,7 @@ export default async function AutomationDetailPage({
         initialRuns={runs}
         templateName={template?.name ?? null}
         templateKey={template?.template_key ?? null}
+        conversions={conversions}
       />
     </div>
   );

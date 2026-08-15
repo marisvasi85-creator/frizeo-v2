@@ -16,6 +16,7 @@ import {
   renderMarketingEmailText,
 } from "@/lib/frizeo-email/renderEmail";
 import { buildUnsubscribeUrl } from "@/lib/frizeo-email/unsubscribe";
+import { maybeWrapCtaWithAttribution } from "@/lib/frizeo-email/attribution";
 import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
 import {
   marketingCtaUrl,
@@ -191,6 +192,17 @@ export async function processAutomationDiscoverAndExecute(input: {
         booking_link: bookingLink,
         trial_end_date: trialEndDate,
       });
+
+      const wrappedCta = await maybeWrapCtaWithAttribution({
+        ctaUrl: resolvedContent.cta_url,
+        sourceKind: "automation",
+        automationId: run.automation_id,
+        automationRunId: run.run_id,
+        contactId: run.contact_id,
+        utmCampaign: run.automation_key,
+        isTest: false,
+      });
+      if (wrappedCta) resolvedContent.cta_url = wrappedCta;
 
       const unsubscribeUrl = buildUnsubscribeUrl(
         run.unsubscribe_token,

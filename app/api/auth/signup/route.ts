@@ -14,6 +14,7 @@ import { PLAN_SLUGS } from "@/lib/billing/plans";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import { allocateTenantSlug } from "@/lib/tenant/allocateTenantSlug";
 import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
+import { recordSignupAndTrialConversions } from "@/lib/frizeo-email/attribution";
 
 export async function POST(req: Request) {
   let createdUserId: string | null = null;
@@ -347,6 +348,13 @@ const { error: scheduleError } = await supabaseAdmin
   ]);
     if (scheduleError) throw scheduleError;
     provisioningComplete = true;
+
+    // Non-blocking: marketing attribution must never fail signup.
+    void recordSignupAndTrialConversions({
+      userId,
+      tenantId: tenant.id,
+      email: emailNorm,
+    });
 
     const { supabase, getResponse } = await createSupabaseRouteHandlerClient(
       () =>
