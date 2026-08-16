@@ -30,16 +30,56 @@ export type PwaIconSize = 180 | 192 | 512;
 const STABLE_BOOKING_PATH =
   /^\/booking\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const CONFIRMED_BOOKING_PATH = /^\/booking\/confirmed\/[^/]+$/;
+/**
+ * Strip query/hash and trailing slash (except root).
+ * Used for stable PWA id / scope identity.
+ */
+export function normalizePwaPath(path: string): string {
+  const bare = path.trim().split("?")[0].split("#")[0] || "/";
+  if (bare.length > 1 && bare.endsWith("/")) {
+    return bare.slice(0, -1);
+  }
+  return bare;
+}
 
+/**
+ * Installable start URLs only — never `/`.
+ * A root start_url + scope `/` makes Chrome treat the whole origin as one app
+ * ("Această aplicație este instalată deja").
+ */
 export function isAllowedPwaStartPath(path: string): boolean {
+  const normalized = normalizePwaPath(path);
   return (
-    path === "/" ||
-    path === "/admin/dashboard" ||
-    path.startsWith("/booking/salon/") ||
-    CONFIRMED_BOOKING_PATH.test(path) ||
-    STABLE_BOOKING_PATH.test(path)
+    normalized === "/admin/dashboard" ||
+    normalized.startsWith("/booking/salon/") ||
+    STABLE_BOOKING_PATH.test(normalized)
   );
+}
+
+/**
+ * Non-overlapping scopes so Frizeo admin and salon/barber installs stay distinct.
+ * Admin owns `/admin/*` only; each public booking page owns its own path prefix.
+ */
+export function pwaScopeFor(options: {
+  startUrl: string;
+  variant: PwaManifestVariant;
+}): string {
+  if (options.variant === "admin") {
+    return "/admin/";
+  }
+
+  return normalizePwaPath(options.startUrl);
+}
+
+export function pwaIdFor(options: {
+  startUrl: string;
+  variant: PwaManifestVariant;
+}): string {
+  if (options.variant === "admin") {
+    return "/admin";
+  }
+
+  return normalizePwaPath(options.startUrl);
 }
 
 export function pwaIconHref(options: {
@@ -108,7 +148,7 @@ export type PwaManifestOptions = {
 
 export function pwaManifestHref(options: PwaManifestOptions): string {
   const params = new URLSearchParams({
-    start: options.startUrl,
+    start: normalizePwaPath(options.startUrl),
     variant: options.variant,
   });
 
@@ -125,6 +165,7 @@ export function pwaManifestHref(options: PwaManifestOptions): string {
 }
 
 export function buildWebManifest(options: PwaManifestOptions) {
+  const startUrl = normalizePwaPath(options.startUrl);
   const bookingLabel = options.label?.trim();
 
   const name =
@@ -146,11 +187,8 @@ export function buildWebManifest(options: PwaManifestOptions) {
       ? SITE_DESCRIPTION
       : "Programează-te rapid la frizer, direct de pe ecranul Acasă.";
 
-  // Distinct ids so admin and public booking installs don't collide as one PWA.
-  const id =
-    options.variant === "admin"
-      ? "/?pwa=admin"
-      : `/?pwa=booking&start=${encodeURIComponent(options.startUrl)}`;
+  const id = pwaIdFor({ startUrl, variant: options.variant });
+  const scope = pwaScopeFor({ startUrl, variant: options.variant });
 
   const icons =
     options.variant === "booking"
@@ -162,8 +200,8 @@ export function buildWebManifest(options: PwaManifestOptions) {
     name,
     short_name: shortName,
     description,
-    start_url: options.startUrl,
-    scope: "/",
+    start_url: startUrl,
+    scope,
     display: "standalone" as const,
     orientation: "portrait" as const,
     background_color: options.variant === "admin" ? "#0B0B0C" : "#FFFFFF",

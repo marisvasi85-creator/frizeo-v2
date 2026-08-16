@@ -62,12 +62,17 @@ export function usePwaManifest({
     upsertLink("manifest", href);
 
     if (variant === "booking" && (label?.trim() || logo?.trim())) {
-      const appleIcon = pwaIconHref({
-        size: 180,
-        label,
-        logo,
-      });
-      upsertLink("apple-touch-icon", appleIcon);
+      upsertLink(
+        "apple-touch-icon",
+        pwaIconHref({
+          size: 180,
+          label,
+          logo,
+        }),
+      );
+    } else if (variant === "admin") {
+      // Keep Frizeo mark — do not inherit a salon apple-touch-icon from prior navigation.
+      upsertLink("apple-touch-icon", "/apple-icon");
     }
   }, [startPath, variant, label, logo]);
 }

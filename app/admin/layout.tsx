@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     title: SITE_NAME,
     statusBarStyle: "black-translucent",
   },
+  icons: {
+    apple: "/apple-icon",
+    icon: [{ url: "/pwa-icon-192", sizes: "192x192", type: "image/png" }],
+  },
 };
 
 export default async function AdminLayout({
