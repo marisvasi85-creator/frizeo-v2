@@ -469,32 +469,31 @@ export default function OverrideManager({
         </EmptyState>
       )}
 
-      {!isSelective &&
-        vacationPeriods.map((period) => (
-          <AdminCard
-            key={period.id}
-            padding="sm"
-            className="flex justify-between items-start gap-4"
-          >
-            <div>
-              <div className="font-medium">
-                {formatVacationPeriodRO(period)}
-              </div>
-              <div className="text-sm text-blue-300">Concediu</div>
-              <div className="text-sm text-white/60 mt-1">
-                {period.dayCount} {period.dayCount === 1 ? "zi" : "zile"} ·
-                închis
-              </div>
+      {vacationPeriods.map((period) => (
+        <AdminCard
+          key={period.id}
+          padding="sm"
+          className="flex justify-between items-start gap-4"
+        >
+          <div>
+            <div className="font-medium">
+              {formatVacationPeriodRO(period)}
             </div>
+            <div className="text-sm text-blue-300">Concediu</div>
+            <div className="text-sm text-white/60 mt-1">
+              {period.dayCount} {period.dayCount === 1 ? "zi" : "zile"} ·
+              închis
+            </div>
+          </div>
 
-            <button
-              onClick={() => deleteVacation(period.id)}
-              className="text-red-400 hover:text-red-300 text-sm shrink-0"
-            >
-              Șterge
-            </button>
-          </AdminCard>
-        ))}
+          <button
+            onClick={() => deleteVacation(period.id)}
+            className="text-red-400 hover:text-red-300 text-sm shrink-0"
+          >
+            Șterge
+          </button>
+        </AdminCard>
+      ))}
 
       {singleOverrides.map((item) => {
         const info = describeOverride(item, isSelective);
@@ -540,11 +539,73 @@ export default function OverrideManager({
           <h2 className="text-lg font-semibold">Zile de lucru</h2>
           <p className="text-sm text-white/60 mt-1">
             Alege o zi → Lucrez sau Închis → setează orele → salvează. Zilele
-            apar mai jos, cu opțiune de editare.
+            apar mai jos, cu opțiune de editare. Rămân valabile și dacă revii
+            la program săptămânal.
           </p>
         </div>
 
         {dayForm}
+
+        <AdminCard padding="sm" className="space-y-4">
+          <div>
+            <h3 className="font-medium">Concediu</h3>
+            <p className="text-sm text-white/50 mt-1">
+              Opțional: închide mai multe zile odată.
+            </p>
+          </div>
+
+          <div className="relative w-full">
+            <LazyDatePicker
+              selectsRange
+              startDate={vacationStart}
+              endDate={vacationEnd}
+              onChange={(dates: [Date | null, Date | null] | Date | null) => {
+                const [start, end] = (Array.isArray(dates)
+                  ? dates
+                  : [dates, null]) as [Date | null, Date | null];
+                setVacationStart(start);
+                setVacationEnd(end ?? null);
+              }}
+              dateFormat="dd.MM.yyyy"
+              placeholderText="De la – Până la"
+              minDate={new Date()}
+              className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+            />
+            <CalendarDays
+              size={18}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+            />
+          </div>
+
+          {vacationError && (
+            <p className="text-sm text-red-400">{vacationError}</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <AdminButton
+              onClick={saveVacation}
+              disabled={
+                !vacationStart ||
+                !vacationEnd ||
+                vacationLoading ||
+                vacationSaved
+              }
+              loading={vacationLoading}
+              loadingLabel="Se salvează..."
+              saved={vacationSaved}
+              savedLabel="Salvat ✔"
+            >
+              Salvează concediu
+            </AdminButton>
+
+            {(vacationStart || vacationEnd) && (
+              <AdminButton variant="secondary" onClick={resetVacationForm}>
+                Anulează
+              </AdminButton>
+            )}
+          </div>
+        </AdminCard>
+
         {daysList}
       </div>
     );

@@ -89,12 +89,12 @@ export default function ScheduleModePicker({
       {mode === "weekly" ? (
         <p className="text-sm text-white/50">
           Lucrezi după orarul săptămânal. Zilele speciale / concediile rămân
-          excepții.
+          excepții și se păstrează dacă treci pe selectiv.
         </p>
       ) : (
         <p className="text-sm text-amber-200/80">
-          Orarul săptămânal nu mai deschide sloturi. Clienții văd disponibilitate
-          doar pe zilele pe care le setezi mai jos (o zi sau pe perioadă).
+          Orarul săptămânal nu mai deschide sloturi. Zilele setate și
+          concediile rămân în listă și dacă revii la săptămânal.
         </p>
       )}
 
