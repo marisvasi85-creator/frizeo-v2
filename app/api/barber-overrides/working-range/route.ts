@@ -8,9 +8,23 @@ import {
 } from "@/lib/auth/requireTenantAccess";
 import { enumerateDateRange } from "@/lib/schedule/vacationPeriods";
 import { getTodayInBookingTimezone } from "@/lib/bookings/bookingTimezone";
-import { toDBTime } from "@/lib/schedule/time";
+import { jsDayToScheduleDay, toDBTime } from "@/lib/schedule/time";
 
 const MAX_WORKING_RANGE_DAYS = 62;
+const MAX_CALENDAR_SPAN_DAYS = 93;
+
+function parseWeekdays(raw: unknown): number[] | null {
+  if (raw == null) return null; // null = all days
+  if (!Array.isArray(raw)) return null;
+  const days = [
+    ...new Set(
+      raw
+        .map((value) => Number(value))
+        .filter((day) => Number.isInteger(day) && day >= 1 && day <= 7),
+    ),
+  ].sort((a, b) => a - b);
+  return days.length > 0 ? days : null;
+}
 
 async function assertBarberScheduleAccess(barberId: string) {
   const auth = await requireTenantAccess(["owner", "manager", "barber"]);
@@ -54,6 +68,7 @@ export async function POST(req: NextRequest) {
       break_enabled,
       break_start,
       break_end,
+      weekdays,
     } = body ?? {};
 
     if (!barber_id || !date_from || !date_to || !work_start || !work_end) {
@@ -78,14 +93,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const dates = enumerateDateRange(date_from, date_to);
-    if (dates.length === 0) {
+    const selectedWeekdays = parseWeekdays(weekdays);
+    const allDates = enumerateDateRange(date_from, date_to);
+    if (allDates.length === 0) {
       return NextResponse.json({ error: "Perioadă invalidă." }, { status: 400 });
+    }
+    if (allDates.length > MAX_CALENDAR_SPAN_DAYS) {
+      return NextResponse.json(
+        {
+          error: `Perioada calendaristică poate avea maxim ${MAX_CALENDAR_SPAN_DAYS} zile.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const dates = selectedWeekdays
+      ? allDates.filter((date) =>
+          selectedWeekdays.includes(jsDayToScheduleDay(date)),
+        )
+      : allDates;
+
+    if (dates.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "Nicio zi din perioadă nu se potrivește cu zilele săptămânii alese.",
+        },
+        { status: 400 },
+      );
     }
     if (dates.length > MAX_WORKING_RANGE_DAYS) {
       return NextResponse.json(
         {
-          error: `Poți seta maxim ${MAX_WORKING_RANGE_DAYS} zile odată.`,
+          error: `Poți seta maxim ${MAX_WORKING_RANGE_DAYS} zile de lucru odată.`,
         },
         { status: 400 },
       );
@@ -164,6 +204,7 @@ export async function POST(req: NextRequest) {
       days: dates.length,
       date_from,
       date_to,
+      weekdays: selectedWeekdays,
     });
   } catch (err) {
     console.error("working-range POST:", err);

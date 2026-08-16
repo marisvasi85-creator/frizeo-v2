@@ -94,12 +94,22 @@ export default function OverrideManager({
   const [rangeBreakEnabled, setRangeBreakEnabled] = useState(false);
   const [rangeBreakStart, setRangeBreakStart] = useState("13:00");
   const [rangeBreakEnd, setRangeBreakEnd] = useState("14:00");
+  const [rangeWeekdays, setRangeWeekdays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [rangeLoading, setRangeLoading] = useState(false);
   const [rangeError, setRangeError] = useState("");
   const { saved: rangeSaved, markSaved: markRangeSaved, clearSaved: clearRangeSaved } =
     useSavedFeedback();
 
   const isSelective = scheduleMode === "selective";
+  const WEEKDAY_OPTIONS = [
+    { id: 1, label: "L" },
+    { id: 2, label: "Ma" },
+    { id: 3, label: "Mi" },
+    { id: 4, label: "J" },
+    { id: 5, label: "V" },
+    { id: 6, label: "S" },
+    { id: 7, label: "D" },
+  ] as const;
 
   const vacationPeriods = useMemo(
     () => groupVacationPeriods(overrides),
@@ -219,6 +229,10 @@ export default function OverrideManager({
       setRangeError("Selectează perioada (de la – până la).");
       return;
     }
+    if (rangeWeekdays.length === 0) {
+      setRangeError("Alege cel puțin o zi din săptămână.");
+      return;
+    }
     if (!rangeWorkStart || !rangeWorkEnd) {
       setRangeError("Completează orele de lucru.");
       return;
@@ -261,6 +275,7 @@ export default function OverrideManager({
         break_enabled: rangeBreakEnabled,
         break_start: rangeBreakStart,
         break_end: rangeBreakEnd,
+        weekdays: rangeWeekdays,
       }),
     });
     const data = await res.json();
@@ -387,8 +402,8 @@ export default function OverrideManager({
           <div>
             <h3 className="font-medium">Program pe perioadă</h3>
             <p className="text-sm text-white/50 mt-1">
-              Aplică aceleași ore pe mai multe zile (ex. o săptămână sau o lună,
-              maxim 62 zile).
+              Alege perioada, zilele din săptămână și intervalul orar (ex. L–V,
+              09:00–18:00, pe o lună).
             </p>
           </div>
 
@@ -415,25 +430,73 @@ export default function OverrideManager({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm text-white/60">
-              De la
-              <input
-                type="time"
-                value={rangeWorkStart}
-                onChange={(e) => setRangeWorkStart(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
-              />
-            </label>
-            <label className="text-sm text-white/60">
-              Până la
-              <input
-                type="time"
-                value={rangeWorkEnd}
-                onChange={(e) => setRangeWorkEnd(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
-              />
-            </label>
+          <div>
+            <p className="text-sm text-white/60 mb-2">Zile din săptămână</p>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAY_OPTIONS.map((day) => {
+                const active = rangeWeekdays.includes(day.id);
+                return (
+                  <button
+                    key={day.id}
+                    type="button"
+                    onClick={() => {
+                      setRangeWeekdays((prev) =>
+                        prev.includes(day.id)
+                          ? prev.filter((id) => id !== day.id)
+                          : [...prev, day.id].sort((a, b) => a - b),
+                      );
+                    }}
+                    className={`h-9 min-w-9 rounded-lg px-2 text-sm border ${
+                      active
+                        ? "bg-amber-400 text-black border-amber-300"
+                        : "bg-[#0F0F10] text-white/60 border-white/10"
+                    }`}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <button
+                type="button"
+                className="text-white/50 hover:text-white"
+                onClick={() => setRangeWeekdays([1, 2, 3, 4, 5])}
+              >
+                Doar L–V
+              </button>
+              <button
+                type="button"
+                className="text-white/50 hover:text-white"
+                onClick={() => setRangeWeekdays([1, 2, 3, 4, 5, 6, 7])}
+              >
+                Toate
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-white/60 mb-2">Interval orar / zi</p>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-white/60">
+                Început
+                <input
+                  type="time"
+                  value={rangeWorkStart}
+                  onChange={(e) => setRangeWorkStart(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+                />
+              </label>
+              <label className="text-sm text-white/60">
+                Sfârșit
+                <input
+                  type="time"
+                  value={rangeWorkEnd}
+                  onChange={(e) => setRangeWorkEnd(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+                />
+              </label>
+            </div>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-white/70">
