@@ -10,6 +10,7 @@
     "beta:google-users": "node scripts/print-google-test-users.mjs"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.70.0",
     "@supabase/ssr": "^0.8.0",
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
@@ -39,5 +40,8 @@
     "postcss": "^8.5.8",
     "tailwindcss": "^3.4.19",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@sentry/cli@2.58.6": true
   }
 }

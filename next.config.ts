@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 function supabaseHostname(): string | null {
   const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
@@ -93,4 +94,37 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const sentryAuthToken = process.env.SENTRY_AUTH_TOKEN?.trim();
+const sentryOrg = process.env.SENTRY_ORG?.trim();
+const sentryProject = process.env.SENTRY_PROJECT?.trim();
+const sentrySourceMapsEnabled = Boolean(
+  sentryAuthToken && sentryOrg && sentryProject,
+);
+
+export default withSentryConfig(nextConfig, {
+  org: sentryOrg,
+  project: sentryProject,
+  authToken: sentryAuthToken,
+  silent: !process.env.CI,
+  // Do not send Sentry build-plugin telemetry.
+  telemetry: false,
+  // Better client stack traces when source maps upload is enabled.
+  widenClientFileUpload: true,
+  // Avoid failing CI/local builds when source-map credentials are absent.
+  sourcemaps: {
+    disable: !sentrySourceMapsEnabled,
+    deleteSourcemapsAfterUpload: true,
+  },
+  errorHandler: (err) => {
+    console.warn("[sentry] build plugin warning:", err.message);
+  },
+  // Tunnel helps client events past ad blockers; keep a fixed path.
+  tunnelRoute: "/monitoring",
+  // No Vercel Cron monitor auto-create (unused / Free plan).
+  webpack: {
+    automaticVercelMonitors: false,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});

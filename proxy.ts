@@ -116,6 +116,6 @@ export const config = {
      * Broad matcher so email.frizeo.ro root paths (/contacts, etc.) are rewritten.
      * Skips Next internals / common static files.
      */
-    "/((?!_next/static|_next/image|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
