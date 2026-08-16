@@ -1,0 +1,110 @@
+"use client";
+
+import { useState } from "react";
+import type { ScheduleMode } from "@/lib/schedule/resolveDaySchedule";
+import AdminButton from "../../components/AdminButton";
+import AdminCard from "../../components/AdminCard";
+import { useSavedFeedback } from "../../components/useSavedFeedback";
+
+export default function ScheduleModePicker({
+  barberId,
+  initialMode,
+  onModeChange,
+}: {
+  barberId: string;
+  initialMode: ScheduleMode;
+  onModeChange?: (mode: ScheduleMode) => void;
+}) {
+  const [mode, setMode] = useState<ScheduleMode>(initialMode);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { saved, markSaved, clearSaved } = useSavedFeedback();
+
+  async function save(next: ScheduleMode) {
+    if (next === mode) return;
+    setLoading(true);
+    setError("");
+    clearSaved();
+    try {
+      const res = await fetch("/api/barbers/schedule-mode", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barber_id: barberId, schedule_mode: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Nu am putut schimba modul.");
+        return;
+      }
+      setMode(next);
+      onModeChange?.(next);
+      markSaved();
+    } catch {
+      setError("Eroare de rețea.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <AdminCard padding="sm" className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Tip program</h2>
+        <p className="text-sm text-white/55 mt-1">
+          Implicit rămâne programul săptămânal. Programul selectiv e opțional:
+          deschizi doar zilele pe care le setezi tu în calendar.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void save("weekly")}
+          className={`px-3 py-2 rounded-lg text-sm border ${
+            mode === "weekly"
+              ? "bg-white text-black border-white"
+              : "bg-[#0F0F10] text-white/70 border-white/10"
+          }`}
+        >
+          Program săptămânal
+        </button>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => void save("selective")}
+          className={`px-3 py-2 rounded-lg text-sm border ${
+            mode === "selective"
+              ? "bg-amber-400 text-black border-amber-300"
+              : "bg-[#0F0F10] text-white/70 border-white/10"
+          }`}
+        >
+          Program selectiv
+        </button>
+        {saved && (
+          <span className="self-center text-sm text-emerald-300">Salvat ✔</span>
+        )}
+      </div>
+
+      {mode === "weekly" ? (
+        <p className="text-sm text-white/50">
+          Lucrezi după orarul săptămânal. Zilele speciale / concediile rămân
+          excepții.
+        </p>
+      ) : (
+        <p className="text-sm text-amber-200/80">
+          Orarul săptămânal nu mai deschide sloturi. Clienții văd disponibilitate
+          doar pe zilele pe care le setezi mai jos (o zi sau pe perioadă).
+        </p>
+      )}
+
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
+      {loading && (
+        <AdminButton disabled loading loadingLabel="Se salvează...">
+          Se salvează...
+        </AdminButton>
+      )}
+    </AdminCard>
+  );
+}

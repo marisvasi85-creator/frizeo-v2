@@ -131,21 +131,30 @@ if (!limit.allowed) {
     // =========================
     const day = jsDayToScheduleDay(booking.date);
 
-    const { data: schedule } = await supabase
-      .from("barber_weekly_schedule")
-      .select("*")
-      .eq("barber_id", booking.barber_id)
-      .eq("day_of_week", day)
-      .maybeSingle();
+    const [{ data: schedule }, { data: override }, { data: barberRow }] =
+      await Promise.all([
+        supabase
+          .from("barber_weekly_schedule")
+          .select("*")
+          .eq("barber_id", booking.barber_id)
+          .eq("day_of_week", day)
+          .maybeSingle(),
+        supabase
+          .from("barber_day_overrides")
+          .select("*")
+          .eq("barber_id", booking.barber_id)
+          .eq("date", booking.date)
+          .maybeSingle(),
+        supabase
+          .from("barbers")
+          .select("schedule_mode")
+          .eq("id", booking.barber_id)
+          .maybeSingle(),
+      ]);
 
-    const { data: override } = await supabase
-      .from("barber_day_overrides")
-      .select("*")
-      .eq("barber_id", booking.barber_id)
-      .eq("date", booking.date)
-      .maybeSingle();
-
-    const resolved = resolveDaySchedule(schedule, override);
+    const scheduleMode =
+      barberRow?.schedule_mode === "selective" ? "selective" : "weekly";
+    const resolved = resolveDaySchedule(schedule, override, scheduleMode);
 
     if (!resolved.isWorking) {
       return NextResponse.json(

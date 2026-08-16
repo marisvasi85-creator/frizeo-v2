@@ -165,6 +165,7 @@ export async function getReportsStats(params: {
     { data: bookings, error },
     { data: weeklyRows },
     { data: overrideRows },
+    { data: barberModeRows },
   ] = await Promise.all([
     query.limit(5000),
     supabaseAdmin
@@ -181,12 +182,25 @@ export async function getReportsStats(params: {
       .in("barber_id", barberIds)
       .gte("date", from)
       .lte("date", to),
+    supabaseAdmin
+      .from("barbers")
+      .select("id, schedule_mode")
+      .in("id", barberIds),
   ]);
 
   if (error) {
     console.error("getReportsStats:", error);
     return { stats: null, error: "Nu am putut încărca statisticile." };
   }
+
+  const scheduleModes = new Map(
+    (barberModeRows ?? []).map((row) => [
+      row.id,
+      row.schedule_mode === "selective"
+        ? ("selective" as const)
+        : ("weekly" as const),
+    ]),
+  );
 
   const rows = (bookings ?? []) as BookingRow[];
   const occupancy = computeOccupancyMetrics({
@@ -196,6 +210,7 @@ export async function getReportsStats(params: {
     weekly: (weeklyRows ?? []) as OccupancyScheduleRow[],
     overrides: (overrideRows ?? []) as OccupancyOverrideRow[],
     bookings: rows,
+    scheduleModes,
   });
 
   const serviceIds = [

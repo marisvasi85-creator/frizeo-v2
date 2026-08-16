@@ -297,7 +297,7 @@ export async function createBookingTool(
 
   const { data: barberRow } = await supabaseAdmin
     .from("barbers")
-    .select("display_name")
+    .select("display_name, schedule_mode")
     .eq("id", target.barberId)
     .maybeSingle();
 
@@ -355,7 +355,9 @@ export async function createBookingTool(
         .in("status", ["confirmed", "pending"]),
     ]);
 
-  const resolved = resolveDaySchedule(schedule, override);
+  const scheduleMode =
+    barberRow?.schedule_mode === "selective" ? "selective" : "weekly";
+  const resolved = resolveDaySchedule(schedule, override, scheduleMode);
   if (!resolved.isWorking) {
     return {
       ok: false,

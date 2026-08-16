@@ -19,6 +19,8 @@ export type DayOverrideRow = {
   slot_duration?: number | null;
 };
 
+export type ScheduleMode = "weekly" | "selective";
+
 export type ResolvedDaySchedule = {
   isWorking: boolean;
   workStart: string | null;
@@ -34,9 +36,23 @@ function normTime(t: string | null | undefined): string | null {
   return t.slice(0, 5);
 }
 
+export function normalizeScheduleMode(
+  value: string | null | undefined,
+): ScheduleMode {
+  return value === "selective" ? "selective" : "weekly";
+}
+
+/**
+ * Resolve whether a barber works on a calendar day.
+ *
+ * - weekly (default): weekly template + day overrides
+ * - selective: only day overrides with custom hours open the day;
+ *   the weekly template never opens slots
+ */
 export function resolveDaySchedule(
   weekly: WeeklyScheduleRow | null | undefined,
-  override: DayOverrideRow | null | undefined
+  override: DayOverrideRow | null | undefined,
+  scheduleMode: ScheduleMode = "weekly",
 ): ResolvedDaySchedule {
   const closed: ResolvedDaySchedule = {
     isWorking: false,
@@ -67,6 +83,10 @@ export function resolveDaySchedule(
     };
   }
 
+  if (scheduleMode === "selective") {
+    return closed;
+  }
+
   if (!weekly?.is_working) return closed;
 
   const breakEnabled = override?.break_enabled ?? weekly.break_enabled;
@@ -89,7 +109,7 @@ export function resolveDaySchedule(
 }
 
 export function hasCustomOverrideHours(
-  override: DayOverrideRow | null | undefined
+  override: DayOverrideRow | null | undefined,
 ): boolean {
   return !!(override?.work_start && override?.work_end && !override?.is_closed);
 }

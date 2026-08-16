@@ -78,7 +78,7 @@ export async function updateBookingTool(
   }
 
   const day = jsDayToScheduleDay(date);
-  const [{ data: schedule }, { data: override }, { data: existing }] =
+  const [{ data: schedule }, { data: override }, { data: existing }, { data: barberRow }] =
     await Promise.all([
       supabaseAdmin
         .from("barber_weekly_schedule")
@@ -99,9 +99,16 @@ export async function updateBookingTool(
         .eq("barber_id", booking.barber_id)
         .neq("id", booking.id)
         .in("status", ["confirmed", "pending"]),
+      supabaseAdmin
+        .from("barbers")
+        .select("schedule_mode")
+        .eq("id", booking.barber_id)
+        .maybeSingle(),
     ]);
 
-  const daySchedule = resolveDaySchedule(schedule, override);
+  const scheduleMode =
+    barberRow?.schedule_mode === "selective" ? "selective" : "weekly";
+  const daySchedule = resolveDaySchedule(schedule, override, scheduleMode);
   if (!daySchedule.isWorking) {
     return {
       ok: false,

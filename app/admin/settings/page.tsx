@@ -2,11 +2,11 @@ import { requireActsAsBarber } from "../lib/requireActsAsBarber";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-import WeeklyScheduleEditor from "./components/WeeklyScheduleEditor";
-import OverrideManager from "./components/OverrideManager";
 import BookingRulesForm from "./components/BookingRulesForm";
+import ScheduleSettingsClient from "./components/ScheduleSettingsClient";
 import SetupChecklistStepMarker from "../components/SetupChecklistStepMarker";
 import { DEFAULT_MIN_BOOKING_NOTICE_HOURS } from "@/lib/bookings/bookingLeadTime";
+import { normalizeScheduleMode } from "@/lib/schedule/resolveDaySchedule";
 
 export default async function SettingsPage() {
   const session = await requireActsAsBarber();
@@ -29,20 +29,20 @@ export default async function SettingsPage() {
     (barber.min_booking_notice_hours as number | null | undefined) ??
     DEFAULT_MIN_BOOKING_NOTICE_HOURS;
 
+  const scheduleMode = normalizeScheduleMode(
+    barber.schedule_mode as string | null | undefined,
+  );
+
   return (
     <div className="space-y-8">
       <SetupChecklistStepMarker barberId={barber.id} step="schedule" />
 
       <BookingRulesForm minBookingNoticeHours={minBookingNoticeHours} />
 
-      <div>
-        <h1 className="text-2xl font-semibold mb-4">Program de lucru</h1>
-
-        <WeeklyScheduleEditor initialData={scheduleRes.data ?? []} />
-      </div>
-
-      <OverrideManager
+      <ScheduleSettingsClient
         barberId={barber.id}
+        initialMode={scheduleMode}
+        initialWeekly={scheduleRes.data ?? []}
         initialOverrides={overridesRes.data ?? []}
       />
     </div>

@@ -85,12 +85,17 @@ export async function findSlotsTool(
         .in("status", ["confirmed", "pending"]),
       supabaseAdmin
         .from("barbers")
-        .select("id, display_name")
+        .select("id, display_name, schedule_mode")
         .eq("id", target.barberId)
         .maybeSingle(),
     ]);
 
-  const resolved = resolveDaySchedule(schedule, override);
+  const scheduleMode =
+    (barber as { schedule_mode?: string | null } | null)?.schedule_mode ===
+    "selective"
+      ? "selective"
+      : "weekly";
+  const resolved = resolveDaySchedule(schedule, override, scheduleMode);
   if (!resolved.isWorking) {
     return {
       ok: true,

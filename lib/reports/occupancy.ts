@@ -2,6 +2,7 @@ import { addDaysToDateString } from "@/lib/bookings/bookingTimezone";
 import {
   resolveDaySchedule,
   type DayOverrideRow,
+  type ScheduleMode,
   type WeeklyScheduleRow,
 } from "@/lib/schedule/resolveDaySchedule";
 import { jsDayToScheduleDay, timeToMinutes } from "@/lib/schedule/time";
@@ -86,6 +87,7 @@ export function computeOccupancyMetrics(input: {
   weekly: OccupancyScheduleRow[];
   overrides: OccupancyOverrideRow[];
   bookings: OccupancyBookingRow[];
+  scheduleModes?: Map<string, ScheduleMode> | Record<string, ScheduleMode>;
 }): OccupancyMetrics {
   const barberIdSet = new Set(input.barberIds);
   const dates = eachDateInclusive(input.from, input.to);
@@ -102,13 +104,21 @@ export function computeOccupancyMetrics(input: {
     overrideByBarberDate.set(`${row.barber_id}:${row.date}`, row);
   }
 
+  const modeFor = (barberId: string): ScheduleMode => {
+    if (!input.scheduleModes) return "weekly";
+    if (input.scheduleModes instanceof Map) {
+      return input.scheduleModes.get(barberId) ?? "weekly";
+    }
+    return input.scheduleModes[barberId] ?? "weekly";
+  };
+
   let availableMinutes = 0;
   for (const barberId of input.barberIds) {
     for (const date of dates) {
       const dayOfWeek = jsDayToScheduleDay(date);
       const weekly = weeklyByBarberDay.get(`${barberId}:${dayOfWeek}`);
       const override = overrideByBarberDate.get(`${barberId}:${date}`);
-      const resolved = resolveDaySchedule(weekly, override);
+      const resolved = resolveDaySchedule(weekly, override, modeFor(barberId));
       availableMinutes += workingMinutesFromSchedule(resolved);
     }
   }

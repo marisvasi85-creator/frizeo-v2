@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CalendarDays } from "lucide-react";
 import LazyDatePicker from "../../components/LazyDatePicker";
 import type { Override, OverrideMode } from "@/types/override";
+import type { ScheduleMode } from "@/lib/schedule/resolveDaySchedule";
 import {
   formatVacationPeriodRO,
   groupVacationPeriods,
@@ -57,13 +58,17 @@ function describeOverride(item: Override) {
 export default function OverrideManager({
   barberId,
   initialOverrides = [],
+  scheduleMode = "weekly",
 }: {
   barberId: string;
   initialOverrides?: Override[];
+  scheduleMode?: ScheduleMode;
 }) {
   const [date, setDate] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [mode, setMode] = useState<OverrideMode>("closed");
+  const [mode, setMode] = useState<OverrideMode>(
+    scheduleMode === "selective" ? "custom" : "closed",
+  );
   const [workStart, setWorkStart] = useState("09:00");
   const [workEnd, setWorkEnd] = useState("18:00");
   const [breakEnabled, setBreakEnabled] = useState(false);
@@ -81,6 +86,20 @@ export default function OverrideManager({
     useSavedFeedback();
   const { saved: daySaved, markSaved: markDaySaved, clearSaved: clearDaySaved } =
     useSavedFeedback();
+
+  const [rangeStart, setRangeStart] = useState<Date | null>(null);
+  const [rangeEnd, setRangeEnd] = useState<Date | null>(null);
+  const [rangeWorkStart, setRangeWorkStart] = useState("09:00");
+  const [rangeWorkEnd, setRangeWorkEnd] = useState("18:00");
+  const [rangeBreakEnabled, setRangeBreakEnabled] = useState(false);
+  const [rangeBreakStart, setRangeBreakStart] = useState("13:00");
+  const [rangeBreakEnd, setRangeBreakEnd] = useState("14:00");
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [rangeError, setRangeError] = useState("");
+  const { saved: rangeSaved, markSaved: markRangeSaved, clearSaved: clearRangeSaved } =
+    useSavedFeedback();
+
+  const isSelective = scheduleMode === "selective";
 
   const vacationPeriods = useMemo(
     () => groupVacationPeriods(overrides),
@@ -195,6 +214,69 @@ export default function OverrideManager({
     setVacationLoading(false);
   }
 
+  async function saveWorkingRange() {
+    if (!rangeStart || !rangeEnd) {
+      setRangeError("Selectează perioada (de la – până la).");
+      return;
+    }
+    if (!rangeWorkStart || !rangeWorkEnd) {
+      setRangeError("Completează orele de lucru.");
+      return;
+    }
+    if (rangeWorkStart >= rangeWorkEnd) {
+      setRangeError("Ora de început trebuie să fie înainte de ora de final.");
+      return;
+    }
+    if (rangeBreakEnabled) {
+      if (!rangeBreakStart || !rangeBreakEnd) {
+        setRangeError("Completează pauza.");
+        return;
+      }
+      if (rangeBreakStart >= rangeBreakEnd) {
+        setRangeError("Pauza este invalidă.");
+        return;
+      }
+      if (
+        rangeBreakStart < rangeWorkStart ||
+        rangeBreakEnd > rangeWorkEnd
+      ) {
+        setRangeError("Pauza trebuie să fie în intervalul programului.");
+        return;
+      }
+    }
+
+    setRangeLoading(true);
+    setRangeError("");
+    clearRangeSaved();
+
+    const res = await fetch("/api/barber-overrides/working-range", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        barber_id: barberId,
+        date_from: toLocalDateString(rangeStart),
+        date_to: toLocalDateString(rangeEnd),
+        work_start: rangeWorkStart,
+        work_end: rangeWorkEnd,
+        break_enabled: rangeBreakEnabled,
+        break_start: rangeBreakStart,
+        break_end: rangeBreakEnd,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setRangeError(data.error || "Nu s-a putut salva perioada.");
+      setRangeLoading(false);
+      return;
+    }
+
+    setRangeStart(null);
+    setRangeEnd(null);
+    await loadOverrides();
+    markRangeSaved();
+    setRangeLoading(false);
+  }
+
   async function deleteVacation(periodId: string) {
     const ok = confirm("Ștergi întreaga perioadă de concediu?");
     if (!ok) return;
@@ -290,12 +372,116 @@ export default function OverrideManager({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Zile speciale</h2>
+        <h2 className="text-lg font-semibold">
+          {isSelective ? "Zile de lucru" : "Zile speciale"}
+        </h2>
         <p className="text-sm text-white/60 mt-1">
-          Concedii pe perioadă, zile libere sau program diferit față de cel
-          săptămânal.
+          {isSelective
+            ? "Setează în avans zilele în care lucrezi. Fără aceste zile, clienții nu văd sloturi."
+            : "Concedii pe perioadă, zile libere sau program diferit față de cel săptămânal."}
         </p>
       </div>
+
+      {isSelective && (
+        <AdminCard padding="sm" className="space-y-4">
+          <div>
+            <h3 className="font-medium">Program pe perioadă</h3>
+            <p className="text-sm text-white/50 mt-1">
+              Aplică aceleași ore pe mai multe zile (ex. o săptămână sau o lună,
+              maxim 62 zile).
+            </p>
+          </div>
+
+          <div className="relative w-full">
+            <LazyDatePicker
+              selectsRange
+              startDate={rangeStart}
+              endDate={rangeEnd}
+              onChange={(dates: [Date | null, Date | null] | Date | null) => {
+                const [start, end] = (Array.isArray(dates)
+                  ? dates
+                  : [dates, null]) as [Date | null, Date | null];
+                setRangeStart(start);
+                setRangeEnd(end ?? null);
+              }}
+              dateFormat="dd.MM.yyyy"
+              placeholderText="De la – Până la"
+              minDate={new Date()}
+              className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+            />
+            <CalendarDays
+              size={18}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm text-white/60">
+              De la
+              <input
+                type="time"
+                value={rangeWorkStart}
+                onChange={(e) => setRangeWorkStart(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+              />
+            </label>
+            <label className="text-sm text-white/60">
+              Până la
+              <input
+                type="time"
+                value={rangeWorkEnd}
+                onChange={(e) => setRangeWorkEnd(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+              />
+            </label>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-white/70">
+            <input
+              type="checkbox"
+              checked={rangeBreakEnabled}
+              onChange={(e) => setRangeBreakEnabled(e.target.checked)}
+            />
+            Pauză
+          </label>
+
+          {rangeBreakEnabled && (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-white/60">
+                Pauză de la
+                <input
+                  type="time"
+                  value={rangeBreakStart}
+                  onChange={(e) => setRangeBreakStart(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+                />
+              </label>
+              <label className="text-sm text-white/60">
+                Pauză până la
+                <input
+                  type="time"
+                  value={rangeBreakEnd}
+                  onChange={(e) => setRangeBreakEnd(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white"
+                />
+              </label>
+            </div>
+          )}
+
+          {rangeError && <p className="text-sm text-red-400">{rangeError}</p>}
+
+          <AdminButton
+            onClick={saveWorkingRange}
+            disabled={!rangeStart || !rangeEnd || rangeLoading || rangeSaved}
+            loading={rangeLoading}
+            loadingLabel="Se salvează..."
+            saved={rangeSaved}
+            savedLabel="Salvat ✔"
+          >
+            Salvează perioada de lucru
+          </AdminButton>
+        </AdminCard>
+      )}
 
       <AdminCard padding="sm" className="space-y-4">
         <div>
@@ -355,9 +541,13 @@ export default function OverrideManager({
 
       <AdminCard padding="sm" className="space-y-4">
         <div>
-          <h3 className="font-medium">O singură zi</h3>
+          <h3 className="font-medium">
+            {isSelective ? "O singură zi de lucru / liberă" : "O singură zi"}
+          </h3>
           <p className="text-sm text-white/50 mt-1">
-            Pentru o zi liberă sau program special (nu concediu pe perioadă).
+            {isSelective
+              ? "Adaugă sau ajustează o zi individuală."
+              : "Pentru o zi liberă sau program special (nu concediu pe perioadă)."}
           </p>
         </div>
 

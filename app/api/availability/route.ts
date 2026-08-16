@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       });
     }
 
-    const [weeklyRes, overridesRes, serviceRes] = await Promise.all([
+    const [weeklyRes, overridesRes, serviceRes, barberRes] = await Promise.all([
       supabaseAdmin
         .from("barber_weekly_schedule")
         .select("*")
@@ -59,11 +59,18 @@ export async function GET(req: Request) {
             .eq("id", serviceId)
             .maybeSingle()
         : Promise.resolve({ data: null as { duration: number } | null }),
+      supabaseAdmin
+        .from("barbers")
+        .select("schedule_mode")
+        .eq("id", barberId)
+        .maybeSingle(),
     ]);
 
     const weekly = weeklyRes.data;
     const overrides = overridesRes.data;
     const duration = serviceRes.data?.duration ?? null;
+    const scheduleMode =
+      barberRes.data?.schedule_mode === "selective" ? "selective" : "weekly";
 
     if (serviceId && !serviceRes.data) {
       return NextResponse.json({
@@ -120,7 +127,7 @@ export async function GET(req: Request) {
 
       const schedule = weekly?.find((w) => w.day_of_week === day);
       const override = overrides?.find((o) => o.date === dateStr);
-      const resolved = resolveDaySchedule(schedule, override);
+      const resolved = resolveDaySchedule(schedule, override, scheduleMode);
 
       if (!resolved.isWorking) {
         current = addDays(current, 1);
@@ -160,6 +167,7 @@ export async function GET(req: Request) {
       weeklySchedule: weekly ?? [],
       overrides: overrides ?? [],
       vacationPeriods,
+      scheduleMode,
     });
   } catch (err) {
     console.error("AVAILABILITY ERROR:", err);
@@ -168,6 +176,7 @@ export async function GET(req: Request) {
       weeklySchedule: [],
       overrides: [],
       vacationPeriods: [],
+      scheduleMode: "weekly",
     });
   }
 }
