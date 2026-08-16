@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { publicSalonPath } from "@/lib/booking/publicBookingPath";
-import { pwaManifestHref } from "@/lib/pwa/manifestContent";
+import { pwaIconHref, pwaManifestHref } from "@/lib/pwa/manifestContent";
 import { resolveTenantBySlug } from "@/lib/slugs/slugRedirects";
 
 export async function generateMetadata({
@@ -13,38 +12,55 @@ export async function generateMetadata({
   const resolved = await resolveTenantBySlug(slug);
   const salonName =
     typeof resolved?.tenant?.name === "string" ? resolved.tenant.name : null;
+  const logo =
+    typeof resolved?.tenant?.logo_url === "string" && resolved.tenant.logo_url
+      ? resolved.tenant.logo_url
+      : null;
   const startUrl = publicSalonPath(resolved?.canonicalSlug ?? slug);
+  const hasBrand = Boolean(salonName?.trim() || logo);
 
   return {
     manifest: pwaManifestHref({
       startUrl,
       variant: "booking",
       label: salonName,
+      logo,
     }),
     appleWebApp: {
       capable: true,
       title: salonName?.trim().slice(0, 12) || "Programări",
       statusBarStyle: "default",
     },
+    ...(hasBrand
+      ? {
+          icons: {
+            apple: pwaIconHref({
+              size: 180,
+              label: salonName,
+              logo,
+            }),
+            icon: [
+              {
+                url: pwaIconHref({
+                  size: 192,
+                  label: salonName,
+                  logo,
+                }),
+                sizes: "192x192",
+                type: "image/png",
+              },
+            ],
+          },
+        }
+      : {}),
   };
 }
 
 export default async function SalonBookingLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;
-  const resolved = await resolveTenantBySlug(slug);
-  const salonName =
-    typeof resolved?.tenant?.name === "string" ? resolved.tenant.name : null;
-
-  return (
-    <>
-      {children}
-      <InstallAppPrompt variant="booking" label={salonName} />
-    </>
-  );
+  return children;
 }

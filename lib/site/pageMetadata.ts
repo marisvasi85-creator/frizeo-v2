@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import {
+  pwaIconHref,
   pwaManifestHref,
   type PwaManifestVariant,
 } from "@/lib/pwa/manifestContent";
@@ -17,6 +18,7 @@ type PageMetadataOptions = {
     startUrl: string;
     variant: PwaManifestVariant;
     label?: string | null;
+    logo?: string | null;
   };
 };
 
@@ -36,6 +38,9 @@ export function createPageMetadata({
   const url = pageUrl(path);
   const ogImage = image?.trim() || pageUrl("/opengraph-image");
   const twitterImage = image?.trim() || pageUrl("/twitter-image");
+  const bookingBrand =
+    pwa?.variant === "booking" &&
+    Boolean(pwa.label?.trim() || pwa.logo?.trim());
 
   return {
     title,
@@ -53,6 +58,28 @@ export function createPageMetadata({
             statusBarStyle:
               pwa.variant === "admin" ? "black-translucent" : "default",
           },
+          ...(bookingBrand
+            ? {
+                icons: {
+                  apple: pwaIconHref({
+                    size: 180,
+                    label: pwa.label,
+                    logo: pwa.logo,
+                  }),
+                  icon: [
+                    {
+                      url: pwaIconHref({
+                        size: 192,
+                        label: pwa.label,
+                        logo: pwa.logo,
+                      }),
+                      sizes: "192x192",
+                      type: "image/png",
+                    },
+                  ],
+                },
+              }
+            : {}),
         }
       : {}),
     alternates: {

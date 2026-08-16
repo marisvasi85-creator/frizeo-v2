@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import JsonLd from "@/app/components/JsonLd";
 import PublicLocationCard from "@/app/components/location/PublicLocationCard";
+import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 import {
@@ -59,6 +60,7 @@ export async function generateMetadata({
       startUrl,
       variant: "booking",
       label: String(salon.name),
+      logo,
     },
   });
 }
@@ -299,6 +301,15 @@ export default async function SalonPage({
           </div>
         )}
       </div>
+      <InstallAppPrompt
+        variant="booking"
+        label={String(salon.name)}
+        logo={
+          typeof salon.logo_url === "string" && salon.logo_url
+            ? salon.logo_url
+            : null
+        }
+      />
     </>
   );
 }

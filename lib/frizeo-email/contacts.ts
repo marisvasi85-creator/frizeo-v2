@@ -199,10 +199,11 @@ export async function createContact(
 }
 
 /**
- * CSV / sync upsert rules:
+ * CSV / sync / signup upsert rules:
  * - email match is case-insensitive
  * - never revive an unsubscribed/bounced/complained contact to subscribed
  * - never clear marketing_consent once true unless already unsubscribed flow
+ * - never grant consent over unsubscribe/bounce/complaint history
  * - fill empty name/phone; do not overwrite non-empty fields
  */
 export async function upsertContactSoft(

@@ -15,6 +15,7 @@ import { enforceRateLimit } from "@/lib/security/rateLimit";
 import { allocateTenantSlug } from "@/lib/tenant/allocateTenantSlug";
 import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 import { recordSignupAndTrialConversions } from "@/lib/frizeo-email/attribution";
+import { upsertContactSoft } from "@/lib/frizeo-email/contacts";
 
 export async function POST(req: Request) {
   let createdUserId: string | null = null;
@@ -28,9 +29,11 @@ export async function POST(req: Request) {
       fullName,
       phone,
       acceptedTerms,
+      marketingConsent,
       actsAsBarber,
       businessType,
     } = await req.json();
+    const wantsMarketing = marketingConsent === true;
     const limited = await enforceRateLimit(req, {
       bucket: "auth-signup",
       identifier: normalizeEmail(email || ""),
@@ -349,11 +352,26 @@ const { error: scheduleError } = await supabaseAdmin
     if (scheduleError) throw scheduleError;
     provisioningComplete = true;
 
-    // Non-blocking: marketing attribution must never fail signup.
+    // Non-blocking: marketing attribution / consent must never fail signup.
     void recordSignupAndTrialConversions({
       userId,
       tenantId: tenant.id,
       email: emailNorm,
+    });
+
+    const nameParts = name.split(/\s+/);
+    void upsertContactSoft({
+      email: emailNorm,
+      first_name: nameParts[0] || null,
+      last_name: nameParts.slice(1).join(" ") || null,
+      phone: phoneNorm,
+      source: "frizeo_user",
+      marketing_consent: wantsMarketing,
+      consent_source: wantsMarketing ? "signup" : null,
+      user_id: userId,
+      tenant_id: tenant.id,
+    }).catch((err) => {
+      console.error("SIGNUP MARKETING CONTACT ERROR:", err);
     });
 
     const { supabase, getResponse } = await createSupabaseRouteHandlerClient(

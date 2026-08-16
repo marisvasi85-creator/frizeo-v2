@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import {
   isAllowedPwaStartPath,
+  pwaIconHref,
   type PwaManifestVariant,
 } from "@/lib/pwa/manifestContent";
 
@@ -10,12 +11,35 @@ type UsePwaManifestOptions = {
   startPath: string | null;
   variant: PwaManifestVariant;
   label?: string | null;
+  logo?: string | null;
 };
+
+function upsertLink(
+  rel: string,
+  href: string,
+  attrs: Record<string, string> = {},
+) {
+  let link = document.querySelector<HTMLLinkElement>(
+    `link[rel="${rel}"]${attrs.sizes ? `[sizes="${attrs.sizes}"]` : ""}`,
+  );
+
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = rel;
+    for (const [key, value] of Object.entries(attrs)) {
+      link.setAttribute(key, value);
+    }
+    document.head.appendChild(link);
+  }
+
+  link.href = href;
+}
 
 export function usePwaManifest({
   startPath,
   variant,
   label,
+  logo,
 }: UsePwaManifestOptions) {
   useEffect(() => {
     if (!startPath || !isAllowedPwaStartPath(startPath)) {
@@ -30,16 +54,20 @@ export function usePwaManifest({
     if (label?.trim()) {
       params.set("label", label.trim());
     }
-
-    const href = `/api/pwa/manifest?${params.toString()}`;
-    let link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]');
-
-    if (!link) {
-      link = document.createElement("link");
-      link.rel = "manifest";
-      document.head.appendChild(link);
+    if (logo?.trim()) {
+      params.set("logo", logo.trim());
     }
 
-    link.href = href;
-  }, [startPath, variant, label]);
+    const href = `/api/pwa/manifest?${params.toString()}`;
+    upsertLink("manifest", href);
+
+    if (variant === "booking" && (label?.trim() || logo?.trim())) {
+      const appleIcon = pwaIconHref({
+        size: 180,
+        label,
+        logo,
+      });
+      upsertLink("apple-touch-icon", appleIcon);
+    }
+  }, [startPath, variant, label, logo]);
 }

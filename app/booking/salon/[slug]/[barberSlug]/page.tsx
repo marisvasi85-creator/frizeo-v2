@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
 import BarberBookingView from "@/app/booking/_components/BarberBookingView";
+import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
@@ -54,6 +55,10 @@ export async function generateMetadata({
         startUrl: `/booking/salon/${slug}/${barberSlug}`,
         variant: "booking",
         label: String(resolvedTenant.tenant.name),
+        logo:
+          typeof resolvedTenant.tenant.logo_url === "string"
+            ? resolvedTenant.tenant.logo_url
+            : null,
       },
     });
   }
@@ -88,7 +93,8 @@ export async function generateMetadata({
     pwa: {
       startUrl: canonicalPath,
       variant: "booking",
-      label: salonName,
+      label: barberName,
+      logo: avatar,
     },
   });
 }
@@ -139,11 +145,26 @@ export default async function Page({
     );
   }
 
+  const barberName = String(resolvedBarber.barber.display_name || "Frizer");
+  const logo =
+    typeof resolvedBarber.barber.avatar_url === "string"
+      ? resolvedBarber.barber.avatar_url
+      : typeof resolvedTenant.tenant.logo_url === "string"
+        ? resolvedTenant.tenant.logo_url
+        : null;
+
   return (
-    <BarberBookingView
-      salon={resolvedTenant.tenant}
-      barber={resolvedBarber.barber}
-      barberSlug={resolvedBarber.canonicalSlug}
-    />
+    <>
+      <BarberBookingView
+        salon={resolvedTenant.tenant}
+        barber={resolvedBarber.barber}
+        barberSlug={resolvedBarber.canonicalSlug}
+      />
+      <InstallAppPrompt
+        variant="booking"
+        label={barberName}
+        logo={logo}
+      />
+    </>
   );
 }

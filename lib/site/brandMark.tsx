@@ -1,6 +1,6 @@
 type BrandMarkProps = {
   size: number;
-  fontSize: number;
+  fontSize?: number;
   letter?: string;
 };
 
@@ -9,6 +9,11 @@ export function BrandMark({
   fontSize,
   letter = "F",
 }: BrandMarkProps) {
+  const mark = letter.trim() || "F";
+  const resolvedFontSize =
+    fontSize ??
+    Math.round(size * (mark.length >= 2 ? 0.42 : 0.62));
+
   return (
     <div
       style={{
@@ -19,14 +24,14 @@ export function BrandMark({
         alignItems: "center",
         justifyContent: "center",
         color: "white",
-        fontSize,
+        fontSize: resolvedFontSize,
         fontWeight: 600,
         fontFamily:
           'ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif',
-        letterSpacing: "-0.04em",
+        letterSpacing: mark.length >= 2 ? "-0.02em" : "-0.04em",
       }}
     >
-      {letter}
+      {mark}
     </div>
   );
 }

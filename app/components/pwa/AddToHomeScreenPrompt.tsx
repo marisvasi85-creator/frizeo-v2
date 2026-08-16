@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BeforeInstallPromptEvent } from "@/lib/pwa/beforeInstallPrompt";
+import { brandInitials } from "@/lib/pwa/brandInitials";
 import type { PwaManifestVariant } from "@/lib/pwa/manifestContent";
 import {
   detectInstallPlatform,
@@ -36,11 +37,13 @@ const COPY: Record<
 type AddToHomeScreenPromptProps = {
   variant: PwaManifestVariant;
   snoozeScope: string;
+  label?: string | null;
 };
 
 export default function AddToHomeScreenPrompt({
   variant,
   snoozeScope,
+  label,
 }: AddToHomeScreenPromptProps) {
   const [visible, setVisible] = useState(false);
   const [platform, setPlatform] = useState<InstallPlatform>("unsupported");
@@ -50,6 +53,7 @@ export default function AddToHomeScreenPrompt({
 
   const copy = COPY[variant];
   const isBooking = variant === "booking";
+  const mark = isBooking ? brandInitials(label) : "F";
 
   useEffect(() => {
     if (shouldSuppressInstallPrompt(snoozeScope) || !isMobileDevice()) {
@@ -162,7 +166,7 @@ export default function AddToHomeScreenPrompt({
                 : "bg-[#0B0B0C] text-white"
             }`}
           >
-            F
+            {mark}
           </div>
 
           <div className="min-w-0">

@@ -17,6 +17,7 @@ import {
 type InstallAppPromptProps = {
   variant: PwaManifestVariant;
   label?: string | null;
+  logo?: string | null;
 };
 
 function resolveStartPath(
@@ -44,6 +45,7 @@ function resolveSnoozeScope(
 export default function InstallAppPrompt({
   variant,
   label,
+  logo,
 }: InstallAppPromptProps) {
   const pathname = usePathname();
   const startPath = resolveStartPath(variant, pathname);
@@ -56,6 +58,7 @@ export default function InstallAppPrompt({
     startPath: enabled ? startPath : null,
     variant,
     label,
+    logo,
   });
 
   useEffect(() => {
@@ -76,7 +79,11 @@ export default function InstallAppPrompt({
     <>
       <RegisterServiceWorker />
       {showPrompt && (
-        <AddToHomeScreenPrompt variant={variant} snoozeScope={snoozeScope} />
+        <AddToHomeScreenPrompt
+          variant={variant}
+          snoozeScope={snoozeScope}
+          label={label}
+        />
       )}
     </>
   );

@@ -60,6 +60,12 @@ export async function generateMetadata({
 
   const barberName = result.barber.display_name || "Frizer";
   const salonName = result.salon.name;
+  const logo =
+    typeof result.barber.avatar_url === "string"
+      ? result.barber.avatar_url
+      : typeof result.salon.logo_url === "string"
+        ? result.salon.logo_url
+        : null;
 
   return createPageMetadata({
     title: `Programare online — ${barberName}`,
@@ -69,7 +75,8 @@ export async function generateMetadata({
     pwa: {
       startUrl: path,
       variant: "booking",
-      label: salonName,
+      label: barberName,
+      logo,
     },
   });
 }
@@ -87,6 +94,13 @@ export default async function BarberIdBookingPage({
   }
 
   const barberSlug = result.barber.slug || barberId;
+  const barberName = result.barber.display_name || "Frizer";
+  const logo =
+    typeof result.barber.avatar_url === "string"
+      ? result.barber.avatar_url
+      : typeof result.salon.logo_url === "string"
+        ? result.salon.logo_url
+        : null;
 
   return (
     <>
@@ -95,7 +109,11 @@ export default async function BarberIdBookingPage({
         barber={result.barber}
         barberSlug={barberSlug}
       />
-      <InstallAppPrompt variant="booking" label={result.salon.name} />
+      <InstallAppPrompt
+        variant="booking"
+        label={barberName}
+        logo={logo}
+      />
     </>
   );
 }

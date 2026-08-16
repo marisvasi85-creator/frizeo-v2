@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [businessType, setBusinessType] = useState<BusinessType | null>(null);
   const [actsAsBarber, setActsAsBarber] = useState<boolean | null>(null);
 
@@ -128,6 +129,7 @@ export default function SignupPage() {
           phone: form.phone,
           password: form.password,
           acceptedTerms: true,
+          marketingConsent,
           businessType,
           actsAsBarber: resolvedActsAsBarber,
         }),
@@ -331,6 +333,19 @@ export default function SignupPage() {
                 politica de confidențialitate
               </Link>
               .
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
+            />
+            <span>
+              Sunt de acord să primesc noutăți, sfaturi și oferte de la Frizeo
+              prin email. Mă pot dezabona oricând.
             </span>
           </label>
 
