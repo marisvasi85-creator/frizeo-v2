@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/requireTenantAccess";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
+import { getActiveBookings } from "@/lib/schedule/bookings";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 
@@ -80,13 +81,13 @@ export async function POST(req: Request) {
 
     const { data: existing } = await supabaseAdmin
       .from("bookings")
-      .select("id, start_time, end_time")
+      .select("id, start_time, end_time, status, expires_at")
       .eq("date", date)
       .eq("barber_id", booking?.barber_id)
       .neq("id", id)
       .in("status", ["confirmed", "pending"]);
 
-    const overlap = existing?.some((b) =>
+    const overlap = getActiveBookings(existing).some((b) =>
       timesOverlap(start_time, end_time, b.start_time, b.end_time)
     );
 
@@ -121,7 +122,10 @@ export async function POST(req: Request) {
       .eq("id", id);
 
     if (error) {
-      return NextResponse.json({ error: "Update eșuat" }, { status: 400 });
+      const message = error.message?.includes("Slot ocupat")
+        ? "Slot ocupat"
+        : "Update eșuat";
+      return NextResponse.json({ error: message }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

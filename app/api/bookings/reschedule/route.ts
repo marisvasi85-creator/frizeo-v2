@@ -172,19 +172,17 @@ export async function POST(req: Request) {
     oldBooking.tenant_id
   );
     const smsAllowed = await extendedSmsAllowedForTenant(oldBooking.tenant_id);
-    // 🔥 CREATE BOOKING NOU (RPC)
+    // Atomic create + cancel (DB transaction) — avoids double booking on crash mid-flow.
     const { data: newBooking, error: rpcError } =
-      await supabase.rpc("create_booking_safe_v2", {
-        p_barber_id: oldBooking.barber_id,
-        p_barber_service_id: barberServiceId,
+      await supabase.rpc("reschedule_booking_safe", {
+        p_old_booking_id: oldBooking.id,
         p_date: new_date,
         p_start: new_start_time,
-        p_end: calculatedEndTime,
         p_client_name: finalName,
         p_client_phone: finalPhone,
         p_client_email: finalEmail,
-        p_reschedule_count: (oldBooking.reschedule_count || 0) + 1,
-        p_exclude_booking_id: oldBooking.id,
+        p_client_notes: finalNotes,
+        p_barber_service_id: barberServiceId,
       });
 
     if (rpcError || !newBooking) {
@@ -199,13 +197,6 @@ export async function POST(req: Request) {
     { status: 400 }
   );
 }
-
-    if (newBooking?.id) {
-      await supabase
-        .from("bookings")
-        .update({ client_notes: finalNotes })
-        .eq("id", newBooking.id);
-    }
 
     // 🔥 EMAIL BARBER
     let barberEmail: string | null = null;
@@ -282,14 +273,7 @@ export async function POST(req: Request) {
       console.error("GOOGLE RESCHEDULE ERROR:", e);
     }
 
-    // 🔥 ANULEAZĂ VECHIUL BOOKING
-    await supabase
-      .from("bookings")
-      .update({
-        status: "cancelled",
-        reschedule_token: null,
-      })
-      .eq("id", oldBooking.id);
+    // Old booking already cancelled atomically inside reschedule_booking_safe.
 
     const bookingWithTokens = await ensureBookingClientTokens(newBooking.id);
 
