@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { hasAnalyticsConsent } from "@/lib/analytics/consent";
-import { trackInitiateCheckout } from "@/lib/analytics/track";
+import {
+  flushPendingTrackers,
+  settleTrackerRequests,
+  trackInitiateCheckout,
+  waitForConfiguredTrackers,
+} from "@/lib/analytics/track";
 
 type Props = {
   planId: string;
@@ -25,11 +30,13 @@ export default function UpgradeButton({
     setError(null);
 
     if (hasAnalyticsConsent()) {
+      await waitForConfiguredTrackers();
       trackInitiateCheckout({
         planName,
         value: planPrice,
         currency: "RON",
       });
+      flushPendingTrackers();
     }
 
     try {
@@ -42,11 +49,17 @@ export default function UpgradeButton({
       const data = await res.json();
 
       if (data.url) {
+        if (hasAnalyticsConsent()) {
+          await settleTrackerRequests();
+        }
         window.location.href = data.url;
         return;
       }
 
       if (data.success) {
+        if (hasAnalyticsConsent()) {
+          await settleTrackerRequests();
+        }
         window.location.href = "/admin/billing?checkout=success&updated=1";
         return;
       }

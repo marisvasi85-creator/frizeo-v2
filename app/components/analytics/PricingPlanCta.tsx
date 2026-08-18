@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { hasAnalyticsConsent } from "@/lib/analytics/consent";
-import { trackPlanSelected } from "@/lib/analytics/track";
+import { flushPendingTrackers, trackPlanSelected } from "@/lib/analytics/track";
 
 type Props = {
   href: string;
@@ -29,6 +29,7 @@ export default function PricingPlanCta({
       value: planPrice,
       currency: "RON",
     });
+    flushPendingTrackers();
   }
 
   return (

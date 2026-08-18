@@ -8,7 +8,7 @@ import {
   notifyConsentChange,
 } from "@/lib/analytics/consent";
 
-const AUTH_PATHS = ["/login", "/signup", "/reset-password", "/accept-invite"];
+const AUTH_PATHS = ["/login", "/reset-password", "/accept-invite"];
 
 export default function CookieBanner() {
   const pathname = usePathname();

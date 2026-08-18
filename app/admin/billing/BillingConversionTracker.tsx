@@ -20,7 +20,7 @@ export default function BillingConversionTracker({
   useEffect(() => {
     if (checkoutStatus !== "success" || !hasAnalyticsConsent()) return;
 
-    trackCheckoutSuccessOnce({
+    void trackCheckoutSuccessOnce({
       planName: planName ?? "Paid plan",
       value: planPrice,
       currency: "RON",

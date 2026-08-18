@@ -5,7 +5,11 @@ import { usePathname, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { getAnalyticsConfig } from "@/lib/analytics/config";
 import { hasAnalyticsConsent, onConsentChange } from "@/lib/analytics/consent";
-import { markAnalyticsReady, trackPageView } from "@/lib/analytics/track";
+import {
+  flushPendingTrackers,
+  markAnalyticsReady,
+  trackPageView,
+} from "@/lib/analytics/track";
 
 function AnalyticsInner() {
   const pathname = usePathname();
@@ -13,19 +17,37 @@ function AnalyticsInner() {
   const config = getAnalyticsConfig();
   const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
-  const loadedCount = useRef(0);
-  const scriptTargets = useRef(0);
   const skipInitialPageView = useRef(true);
   const isAdminRoute =
     pathname === "/admin" || pathname.startsWith("/admin/");
 
   useLayoutEffect(() => {
+    // Read localStorage after mount to avoid SSR mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- consent lives in localStorage
     setConsent(hasAnalyticsConsent());
   }, []);
 
   useEffect(() => {
     return onConsentChange(() => setConsent(hasAnalyticsConsent()));
   }, []);
+
+  useEffect(() => {
+    if (!consent) return;
+
+    const poll = window.setInterval(() => {
+      flushPendingTrackers();
+      if (window.fbq || window.ttq || window.gtag || window.dataLayer) {
+        markAnalyticsReady();
+        setReady(true);
+      }
+    }, 100);
+    const stop = window.setTimeout(() => window.clearInterval(poll), 8000);
+
+    return () => {
+      window.clearInterval(poll);
+      window.clearTimeout(stop);
+    };
+  }, [consent]);
 
   useEffect(() => {
     if (isAdminRoute || !consent || !ready) return;
@@ -37,17 +59,13 @@ function AnalyticsInner() {
   }, [pathname, searchParams, consent, ready, isAdminRoute]);
 
   function onScriptLoaded() {
-    loadedCount.current += 1;
-    if (loadedCount.current < scriptTargets.current) return;
-
     markAnalyticsReady();
     setReady(true);
   }
 
-  if (isAdminRoute || !consent || !config.isConfigured) return null;
+  if (!consent || !config.isConfigured) return null;
 
   if (config.gtmId) {
-    scriptTargets.current = 1;
     return (
       <>
         <Script id="gtm-loader" strategy="afterInteractive" onLoad={onScriptLoaded}>
@@ -75,8 +93,6 @@ function AnalyticsInner() {
   const usesMeta = Boolean(config.metaPixelId);
   const usesGa = Boolean(config.gaMeasurementId);
   const usesTikTok = Boolean(config.tiktokPixelId);
-  scriptTargets.current =
-    (usesMeta ? 1 : 0) + (usesGa ? 1 : 0) + (usesTikTok ? 1 : 0);
 
   return (
     <>
@@ -101,7 +117,10 @@ function AnalyticsInner() {
                 } else {
                   fbq('init', pixelId);
                 }
-                fbq('track', 'PageView');
+                var isAdmin = location.pathname === '/admin' || location.pathname.indexOf('/admin/') === 0;
+                if (!isAdmin) {
+                  fbq('track', 'PageView');
+                }
                 window.__frizeoMetaReady = true;
               })();
             `}
@@ -126,9 +145,12 @@ function AnalyticsInner() {
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
               gtag('config', ${JSON.stringify(config.gaMeasurementId)}, { send_page_view: false });
-              gtag('event', 'page_view', {
-                page_path: window.location.pathname + window.location.search,
-              });
+              var isAdmin = location.pathname === '/admin' || location.pathname.indexOf('/admin/') === 0;
+              if (!isAdmin) {
+                gtag('event', 'page_view', {
+                  page_path: window.location.pathname + window.location.search,
+                });
+              }
               window.__frizeoGaReady = true;
             `}
           </Script>
@@ -155,7 +177,10 @@ function AnalyticsInner() {
               e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
               ttq.load(${JSON.stringify(config.tiktokPixelId)});
               ttq.grantConsent();
-              ttq.page();
+              var isAdmin = location.pathname === '/admin' || location.pathname.indexOf('/admin/') === 0;
+              if (!isAdmin) {
+                ttq.page();
+              }
               window.__frizeoTikTokReady = true;
             }(window, document, 'ttq');
           `}

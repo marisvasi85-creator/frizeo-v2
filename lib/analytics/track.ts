@@ -17,27 +17,128 @@ declare global {
   }
 }
 
+type PendingMeta = { event: string; params?: EventParams };
+type PendingGa = { event: string; params?: EventParams };
+type PendingTikTok =
+  | { kind: "page" }
+  | { kind: "track"; event: string; params?: EventParams };
+type PendingDataLayer = { event: string; params?: EventParams };
+
+const pendingMeta: PendingMeta[] = [];
+const pendingGa: PendingGa[] = [];
+const pendingTikTok: PendingTikTok[] = [];
+const pendingDataLayer: PendingDataLayer[] = [];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function pushDataLayer(event: string, params?: EventParams) {
-  window.dataLayer = window.dataLayer || [];
+  if (typeof window === "undefined") return;
+  if (!window.dataLayer) {
+    pendingDataLayer.push({ event, params });
+    return;
+  }
   window.dataLayer.push({ event, ...params });
 }
 
 function trackMeta(event: string, params?: EventParams) {
-  if (!window.fbq) return;
+  if (typeof window === "undefined") return;
+  if (!window.fbq) {
+    pendingMeta.push({ event, params });
+    return;
+  }
   window.fbq("track", event, params);
 }
 
 function trackGa(event: string, params?: EventParams) {
-  if (!window.gtag) return;
+  if (typeof window === "undefined") return;
+  if (!window.gtag) {
+    pendingGa.push({ event, params });
+    return;
+  }
   window.gtag("event", event, params);
 }
 
 function trackTikTokPage() {
-  window.ttq?.page?.();
+  if (typeof window === "undefined") return;
+  if (!window.ttq?.page) {
+    pendingTikTok.push({ kind: "page" });
+    return;
+  }
+  window.ttq.page();
 }
 
 function trackTikTok(event: string, params?: EventParams) {
-  window.ttq?.track?.(event, params);
+  if (typeof window === "undefined") return;
+  if (!window.ttq?.track) {
+    pendingTikTok.push({ kind: "track", event, params });
+    return;
+  }
+  window.ttq.track(event, params);
+}
+
+export function flushPendingTrackers() {
+  if (typeof window === "undefined") return;
+
+  if (window.fbq && pendingMeta.length > 0) {
+    const queued = pendingMeta.splice(0, pendingMeta.length);
+    for (const item of queued) {
+      window.fbq("track", item.event, item.params);
+    }
+  }
+
+  if (window.gtag && pendingGa.length > 0) {
+    const queued = pendingGa.splice(0, pendingGa.length);
+    for (const item of queued) {
+      window.gtag("event", item.event, item.params);
+    }
+  }
+
+  if (window.ttq && pendingTikTok.length > 0) {
+    const queued = pendingTikTok.splice(0, pendingTikTok.length);
+    for (const item of queued) {
+      if (item.kind === "page") {
+        window.ttq.page?.();
+      } else {
+        window.ttq.track?.(item.event, item.params);
+      }
+    }
+  }
+
+  if (window.dataLayer && pendingDataLayer.length > 0) {
+    const queued = pendingDataLayer.splice(0, pendingDataLayer.length);
+    for (const item of queued) {
+      window.dataLayer.push({ event: item.event, ...item.params });
+    }
+  }
+}
+
+function configuredTrackersReady(): boolean {
+  const config = getAnalyticsConfig();
+  if (config.gtmId) return Array.isArray(window.dataLayer);
+
+  const metaOk = !config.metaPixelId || Boolean(window.fbq);
+  const gaOk = !config.gaMeasurementId || Boolean(window.gtag);
+  const tikTokOk = !config.tiktokPixelId || Boolean(window.ttq?.track);
+  return metaOk && gaOk && tikTokOk;
+}
+
+export async function waitForConfiguredTrackers(timeoutMs = 4000) {
+  if (typeof window === "undefined") return;
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    if (configuredTrackersReady()) {
+      flushPendingTrackers();
+      return;
+    }
+    await sleep(50);
+  }
+  flushPendingTrackers();
+}
+
+export async function settleTrackerRequests(delayMs = 400) {
+  await sleep(delayMs);
 }
 
 function tikTokContents(contentName: string) {
@@ -71,6 +172,7 @@ export function markAnalyticsReady() {
 
   if (config.gtmId) {
     pushDataLayer("analytics_consent_granted");
+    flushPendingTrackers();
     return;
   }
 
@@ -85,6 +187,8 @@ export function markAnalyticsReady() {
   if (config.tiktokPixelId) {
     window.__frizeoTikTokReady = true;
   }
+
+  flushPendingTrackers();
 }
 
 export function trackPageView(pathname: string, search = "") {
@@ -207,15 +311,31 @@ export function trackSubscribe(params: {
   pushDataLayer("subscribe", payload);
 }
 
-export function trackRegistrationOnce() {
-  const key = "frizeo_tracked_registration";
-  if (sessionStorage.getItem(key)) return;
-  sessionStorage.setItem(key, "1");
-  trackCompleteRegistration();
-  trackStartTrial();
+function anyConfiguredTrackerPresent(): boolean {
+  const config = getAnalyticsConfig();
+  if (config.gtmId) return Array.isArray(window.dataLayer);
+  return Boolean(
+    (config.metaPixelId && window.fbq) ||
+      (config.gaMeasurementId && window.gtag) ||
+      (config.tiktokPixelId && window.ttq),
+  );
 }
 
-export function trackCheckoutSuccessOnce(params: {
+export async function trackRegistrationOnce() {
+  const key = "frizeo_tracked_registration";
+  if (sessionStorage.getItem(key)) return;
+
+  await waitForConfiguredTrackers();
+  if (!anyConfiguredTrackerPresent()) return;
+
+  trackCompleteRegistration();
+  trackStartTrial();
+  flushPendingTrackers();
+  sessionStorage.setItem(key, "1");
+  await settleTrackerRequests();
+}
+
+export async function trackCheckoutSuccessOnce(params: {
   planName: string;
   value?: number;
   currency?: string;
@@ -226,6 +346,12 @@ export function trackCheckoutSuccessOnce(params: {
     : "frizeo_tracked_checkout_success";
 
   if (sessionStorage.getItem(key)) return;
-  sessionStorage.setItem(key, "1");
+
+  await waitForConfiguredTrackers();
+  if (!anyConfiguredTrackerPresent()) return;
+
   trackSubscribe(params);
+  flushPendingTrackers();
+  sessionStorage.setItem(key, "1");
+  await settleTrackerRequests();
 }

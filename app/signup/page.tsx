@@ -156,7 +156,7 @@ export default function SignupPage() {
       }
 
       if (hasAnalyticsConsent()) {
-        trackRegistrationOnce();
+        await trackRegistrationOnce();
       }
 
       window.location.href = data.redirect;
