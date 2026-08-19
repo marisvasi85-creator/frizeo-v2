@@ -168,7 +168,7 @@ export default async function SalonPage({
         })}
       />
       <div className="max-w-4xl mx-auto p-6 space-y-8">
-        <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">
+        <div className="bg-frz-card rounded-2xl shadow-sm border border-frz-line p-6 text-center">
           {typeof salon.logo_url === "string" && salon.logo_url && (
             <Image
               src={salon.logo_url}
@@ -184,7 +184,7 @@ export default async function SalonPage({
 
           {typeof salon.location_city === "string" &&
             salon.location_city.trim() && (
-              <p className="text-gray-500 mt-2">
+              <p className="text-frz-muted mt-2">
                 Frizerie în {salon.location_city.trim()}
               </p>
             )}
@@ -197,11 +197,11 @@ export default async function SalonPage({
           )}
 
           {typeof salon.phone === "string" && salon.phone && (
-            <p className="text-gray-600 mt-3">📞 {salon.phone}</p>
+            <p className="text-frz-muted mt-3">📞 {salon.phone}</p>
           )}
 
           {typeof salon.description === "string" && salon.description && (
-            <p className="text-gray-700 mt-4 max-w-2xl mx-auto">
+            <p className="text-frz-ink mt-4 max-w-2xl mx-auto">
               {salon.description}
             </p>
           )}
@@ -235,7 +235,7 @@ export default async function SalonPage({
               <Link
                 key={barber.id}
                 href={publicBookingPath(salon.slug, barber.slug)}
-                className="block border rounded-2xl p-5 hover:shadow-md transition bg-white"
+                className="block border border-frz-line rounded-2xl p-5 hover:shadow-md transition bg-frz-card"
               >
                 <div className="flex items-center gap-4">
                   {barber.avatar_url ? (
@@ -247,7 +247,7 @@ export default async function SalonPage({
                       className="w-20 h-20 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-full bg-gray-200" />
+                    <div className="w-20 h-20 rounded-full bg-frz-fog" />
                   )}
 
                   <div className="flex-1">
@@ -256,15 +256,15 @@ export default async function SalonPage({
                     </h3>
 
                     {barber.bio && (
-                      <p className="text-sm text-gray-600 mt-1">{barber.bio}</p>
+                      <p className="text-sm text-frz-muted mt-1">{barber.bio}</p>
                     )}
 
                     {barber.instagram_url && (
-                      <p className="text-sm text-blue-600 mt-2">Instagram</p>
+                      <p className="text-sm text-frz-accent mt-2">Instagram</p>
                     )}
                   </div>
 
-                  <div className="px-4 py-2 rounded-lg bg-black text-white text-sm">
+                  <div className="px-4 py-2 rounded-lg bg-frz-ink text-frz-ink-contrast text-sm">
                     Rezervă
                   </div>
                 </div>
@@ -280,20 +280,23 @@ export default async function SalonPage({
         )}
 
         {reviewSummary.reviews.length > 0 && (
-          <div className="bg-white rounded-2xl border p-6 space-y-4">
+          <div className="bg-frz-card rounded-2xl border border-frz-line p-6 space-y-4">
             <h2 className="text-2xl font-semibold">Recenzii</h2>
             <ul className="space-y-4">
               {reviewSummary.reviews.map((r) => (
-                <li key={r.id} className="border-t border-gray-100 pt-4 first:border-0 first:pt-0">
+                <li
+                  key={r.id}
+                  className="border-t border-frz-line/50 pt-4 first:border-0 first:pt-0"
+                >
                   <p className="font-medium">
                     {"★".repeat(r.rating)}
-                    <span className="text-gray-300">
+                    <span className="text-frz-muted">
                       {"★".repeat(Math.max(0, 5 - r.rating))}
                     </span>
-                    <span className="ml-2 text-gray-800">{r.author_name}</span>
+                    <span className="ml-2 text-frz-ink">{r.author_name}</span>
                   </p>
                   {r.comment && (
-                    <p className="text-gray-600 mt-1 text-sm">{r.comment}</p>
+                    <p className="text-frz-muted mt-1 text-sm">{r.comment}</p>
                   )}
                 </li>
               ))}

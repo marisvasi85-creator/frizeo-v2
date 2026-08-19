@@ -11,23 +11,23 @@ export default function BookingFooter() {
   const companyLine = companyFooterLine();
 
   return (
-    <footer className="border-t border-gray-200 bg-white mt-24">
-      <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-2 gap-8 text-sm text-gray-600">
+    <footer className="border-t border-frz-line bg-frz-fog mt-24">
+      <div className="max-w-6xl mx-auto px-6 py-10 grid md:grid-cols-2 gap-8 text-sm text-frz-muted">
         <div>
-          <p className="font-semibold text-black mb-4">Legal</p>
+          <p className="font-semibold text-frz-ink mb-4">Legal</p>
           <ul className="space-y-2">
             <li>
-              <Link href="/privacy" className="hover:text-black">
+              <Link href="/privacy" className="hover:text-frz-ink">
                 Politica de confidențialitate
               </Link>
             </li>
             <li>
-              <Link href="/terms" className="hover:text-black">
+              <Link href="/terms" className="hover:text-frz-ink">
                 Termeni și condiții
               </Link>
             </li>
             <li>
-              <Link href="/cookies" className="hover:text-black">
+              <Link href="/cookies" className="hover:text-frz-ink">
                 Politica cookies
               </Link>
             </li>
@@ -39,7 +39,7 @@ export default function BookingFooter() {
                 href={LEGAL_LINKS.anpc}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-black"
+                className="hover:text-frz-ink"
               >
                 ANPC
               </a>
@@ -49,7 +49,7 @@ export default function BookingFooter() {
                 href={LEGAL_LINKS.sol}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-black"
+                className="hover:text-frz-ink"
               >
                 Soluționare online (SOL)
               </a>
@@ -58,17 +58,17 @@ export default function BookingFooter() {
         </div>
 
         <div>
-          <p className="font-semibold text-black mb-4">Contact</p>
+          <p className="font-semibold text-frz-ink mb-4">Contact</p>
           <ul className="space-y-2">
             <li>
-              <Link href="/contact" className="hover:text-black">
+              <Link href="/contact" className="hover:text-frz-ink">
                 Pagina de contact
               </Link>
             </li>
             <li>
               <a
                 href={`mailto:${LEGAL_COMPANY.email}`}
-                className="hover:text-black"
+                className="hover:text-frz-ink"
               >
                 {LEGAL_COMPANY.email}
               </a>
@@ -77,7 +77,7 @@ export default function BookingFooter() {
         </div>
       </div>
 
-      <div className="border-t border-gray-200 py-6 px-6 text-center text-xs text-gray-500 space-y-2">
+      <div className="border-t border-frz-line py-6 px-6 text-center text-xs text-frz-muted space-y-2">
         {companyLine && <p>{companyLine}</p>}
         <p>
           © {new Date().getFullYear()} Frizeo. Toate drepturile rezervate.
