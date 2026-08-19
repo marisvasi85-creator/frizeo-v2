@@ -60,7 +60,7 @@ export default function UnsubscribeClient({ token }: { token: string }) {
         type="button"
         onClick={confirm}
         disabled={loading || !token}
-        className="w-full rounded-lg bg-white text-black py-2.5 text-sm font-medium hover:bg-gray-200 disabled:opacity-50"
+        className="w-full rounded-lg bg-frz-ink text-frz-ink-contrast py-2.5 text-sm font-medium hover:opacity-90 disabled:opacity-50"
       >
         {loading ? "Se procesează…" : "Confirmă dezabonarea"}
       </button>

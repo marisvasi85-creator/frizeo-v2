@@ -18,11 +18,11 @@ type Props = {
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     subscribed: "bg-emerald-500/15 text-emerald-300",
-    unsubscribed: "bg-white/10 text-white/60",
+    unsubscribed: "bg-frz-fog text-frz-ink/60",
     bounced: "bg-amber-500/15 text-amber-200",
     complained: "bg-red-500/15 text-red-300",
   };
-  return map[status] || "bg-white/10 text-white/60";
+  return map[status] || "bg-frz-fog text-frz-ink/60";
 }
 
 export default function ContactsClient({
@@ -358,7 +358,7 @@ export default function ContactsClient({
           <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
             Contacts
           </h1>
-          <p className="mt-2 text-sm text-white/55">
+          <p className="mt-2 text-sm text-frz-ink/60">
             {total} contacte · marketing consent separat de contul Frizeo
           </p>
         </div>
@@ -369,7 +369,7 @@ export default function ContactsClient({
               setShowImport(false);
               setShowAdd((v) => !v);
             }}
-            className="rounded-lg bg-white text-black px-3 py-2 text-sm font-medium hover:bg-gray-200"
+            className="rounded-lg bg-frz-ink text-frz-ink-contrast px-3 py-2 text-sm font-medium hover:bg-frz-fog"
           >
             Add Contact
           </button>
@@ -379,14 +379,14 @@ export default function ContactsClient({
               setShowAdd(false);
               setShowImport((v) => !v);
             }}
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
+            className="rounded-lg border border-frz-line px-3 py-2 text-sm text-frz-ink/80 hover:bg-frz-fog"
           >
             Import CSV
           </button>
           <button
             type="button"
             onClick={onSyncFrizeo}
-            className="rounded-lg border border-white/15 px-3 py-2 text-sm text-white/80 hover:bg-white/10"
+            className="rounded-lg border border-frz-line px-3 py-2 text-sm text-frz-ink/80 hover:bg-frz-fog"
           >
             Sync Frizeo owners
           </button>
@@ -406,7 +406,7 @@ export default function ContactsClient({
             </p>
           )}
           {importResult && (
-            <pre className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-white/70 whitespace-pre-wrap">
+            <pre className="rounded-lg border border-frz-line bg-frz-card px-3 py-2 text-frz-ink/80 whitespace-pre-wrap">
               {importResult}
             </pre>
           )}
@@ -416,30 +416,30 @@ export default function ContactsClient({
       {editContact && (
         <form
           onSubmit={onEditContact}
-          className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-4"
+          className="rounded-xl border border-frz-line bg-frz-card p-4 space-y-4"
         >
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-medium">Edit Contact</h2>
-              <p className="mt-1 text-sm text-white/50">{editContact.email}</p>
+              <p className="mt-1 text-sm text-frz-muted">{editContact.email}</p>
             </div>
             <button
               type="button"
               onClick={() => setEditContact(null)}
-              className="text-sm text-white/50 hover:text-white"
+              className="text-sm text-frz-muted hover:text-frz-ink"
             >
               Închide
             </button>
           </div>
 
           <label className="block max-w-xs">
-            <span className="mb-1 block text-xs text-white/50">
+            <span className="mb-1 block text-xs text-frz-muted">
               Marketing consent
             </span>
             <select
               value={editConsent}
               onChange={(e) => setEditConsent(e.target.value as "yes" | "no")}
-              className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+              className="w-full rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
             >
               <option value="yes">Yes</option>
               <option value="no">No</option>
@@ -464,14 +464,14 @@ export default function ContactsClient({
             <button
               type="submit"
               disabled={editSaving}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+              className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-50"
             >
               {editSaving ? "Se salvează…" : "Salvează"}
             </button>
             <button
               type="button"
               onClick={() => setEditContact(null)}
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/70"
+              className="rounded-lg border border-frz-line px-4 py-2 text-sm text-frz-ink/80"
             >
               Anulează
             </button>
@@ -482,7 +482,7 @@ export default function ContactsClient({
       {showAdd && (
         <form
           onSubmit={onAdd}
-          className="rounded-xl border border-white/10 bg-white/[0.03] p-4 grid md:grid-cols-2 gap-3"
+          className="rounded-xl border border-frz-line bg-frz-card p-4 grid md:grid-cols-2 gap-3"
         >
           <input
             required
@@ -490,14 +490,14 @@ export default function ContactsClient({
             placeholder="Email *"
             value={addForm.email}
             onChange={(e) => setAddForm((f) => ({ ...f, email: e.target.value }))}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           />
           <input
             type="text"
             placeholder="Telefon"
             value={addForm.phone}
             onChange={(e) => setAddForm((f) => ({ ...f, phone: e.target.value }))}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           />
           <input
             type="text"
@@ -506,7 +506,7 @@ export default function ContactsClient({
             onChange={(e) =>
               setAddForm((f) => ({ ...f, first_name: e.target.value }))
             }
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           />
           <input
             type="text"
@@ -515,9 +515,9 @@ export default function ContactsClient({
             onChange={(e) =>
               setAddForm((f) => ({ ...f, last_name: e.target.value }))
             }
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           />
-          <label className="md:col-span-2 flex items-center gap-2 text-sm text-white/70">
+          <label className="md:col-span-2 flex items-center gap-2 text-sm text-frz-ink/80">
             <input
               type="checkbox"
               checked={addForm.marketing_consent}
@@ -533,7 +533,7 @@ export default function ContactsClient({
           <div className="md:col-span-2">
             <button
               type="submit"
-              className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium"
+              className="rounded-lg bg-frz-ink text-frz-ink-contrast px-4 py-2 text-sm font-medium"
             >
               Salvează
             </button>
@@ -544,11 +544,11 @@ export default function ContactsClient({
       {showImport && (
         <form
           onSubmit={onImport}
-          className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-3"
+          className="rounded-xl border border-frz-line bg-frz-card p-4 space-y-3"
         >
-          <p className="text-sm text-white/55">
+          <p className="text-sm text-frz-ink/60">
             Header CSV:{" "}
-            <code className="text-white/80">
+            <code className="text-frz-ink/80">
               email,first_name,last_name,phone,marketing_consent
             </code>
             . Duplicatele pe email (case-insensitive) sunt raportate, fără
@@ -559,15 +559,15 @@ export default function ContactsClient({
             type="file"
             name="file"
             accept=".csv,text/csv"
-            className="block w-full text-sm text-white/70"
+            className="block w-full text-sm text-frz-ink/80"
           />
-          <label className="flex items-center gap-2 text-sm text-white/70">
+          <label className="flex items-center gap-2 text-sm text-frz-ink/80">
             <input type="checkbox" name="grant_consent" value="true" />
             Marchează toate rândurile ca având consimțământ (doar dacă ai dovadă)
           </label>
           <button
             type="submit"
-            className="rounded-lg bg-white text-black px-4 py-2 text-sm font-medium"
+            className="rounded-lg bg-frz-ink text-frz-ink-contrast px-4 py-2 text-sm font-medium"
           >
             Importă
           </button>
@@ -576,21 +576,21 @@ export default function ContactsClient({
 
       <div className="flex flex-col md:flex-row gap-2 md:items-end">
         <div className="flex-1">
-          <label className="block text-xs text-white/40 mb-1">Search</label>
+          <label className="block text-xs text-frz-muted mb-1">Search</label>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyFilters()}
             placeholder="Email, nume, telefon…"
-            className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="w-full rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           />
         </div>
         <div>
-          <label className="block text-xs text-white/40 mb-1">Status</label>
+          <label className="block text-xs text-frz-muted mb-1">Status</label>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           >
             <option value="all">All</option>
             <option value="subscribed">Subscribed</option>
@@ -600,11 +600,11 @@ export default function ContactsClient({
           </select>
         </div>
         <div>
-          <label className="block text-xs text-white/40 mb-1">Source</label>
+          <label className="block text-xs text-frz-muted mb-1">Source</label>
           <select
             value={source}
             onChange={(e) => setSource(e.target.value)}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           >
             <option value="all">All</option>
             <option value="manual">Manual</option>
@@ -614,11 +614,11 @@ export default function ContactsClient({
           </select>
         </div>
         <div>
-          <label className="block text-xs text-white/40 mb-1">Consent</label>
+          <label className="block text-xs text-frz-muted mb-1">Consent</label>
           <select
             value={consent}
             onChange={(e) => setConsent(e.target.value)}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           >
             <option value="all">All</option>
             <option value="yes">Yes</option>
@@ -629,22 +629,22 @@ export default function ContactsClient({
           type="button"
           onClick={applyFilters}
           disabled={pending}
-          className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
+          className="rounded-lg border border-frz-line px-4 py-2 text-sm hover:bg-frz-fog disabled:opacity-50"
         >
           Filter
         </button>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:flex-row sm:items-center">
-        <span className="text-sm text-white/60">
+      <div className="flex flex-col gap-3 rounded-xl border border-frz-line bg-frz-card p-3 sm:flex-row sm:items-center">
+        <span className="text-sm text-frz-ink/60">
           {selectedIds.size} contacte selectate
         </span>
-        <label className="flex items-center gap-2 text-sm text-white/70">
+        <label className="flex items-center gap-2 text-sm text-frz-ink/80">
           <span>Set marketing consent</span>
           <select
             value={bulkConsent}
             onChange={(e) => setBulkConsent(e.target.value as "yes" | "no")}
-            className="rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-sm"
+            className="rounded-lg bg-frz-fog border border-frz-line px-3 py-2 text-sm text-frz-ink"
           >
             <option value="yes">Yes</option>
             <option value="no">No</option>
@@ -654,7 +654,7 @@ export default function ContactsClient({
           type="button"
           onClick={applyBulkConsent}
           disabled={selectedIds.size === 0 || bulkSaving}
-          className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-40"
+          className="rounded-lg border border-frz-line px-4 py-2 text-sm hover:bg-frz-fog disabled:opacity-40"
         >
           {bulkSaving ? "Se aplică…" : "Aplică selecției"}
         </button>
@@ -668,9 +668,9 @@ export default function ContactsClient({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-frz-line">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/[0.04] text-white/50 text-left">
+          <thead className="bg-frz-fog text-frz-muted text-left">
             <tr>
               <th className="w-10 px-4 py-3 font-medium">
                 <input
@@ -693,7 +693,7 @@ export default function ContactsClient({
               <tr>
                 <td
                   colSpan={7}
-                  className="px-4 py-10 text-center text-white/40"
+                  className="px-4 py-10 text-center text-frz-muted"
                 >
                   Niciun contact. Adaugă manual, importă CSV sau sync Frizeo.
                 </td>
@@ -706,7 +706,7 @@ export default function ContactsClient({
                 return (
                   <tr
                     key={c.id}
-                    className="border-t border-white/5 hover:bg-white/[0.02]"
+                    className="border-t border-frz-line/50 hover:bg-frz-fog/50"
                   >
                     <td className="px-4 py-3 align-top">
                       <input
@@ -718,12 +718,12 @@ export default function ContactsClient({
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium">{name || "—"}</div>
-                      <div className="text-white/50">{c.email}</div>
+                      <div className="text-frz-muted">{c.email}</div>
                       {c.phone && (
-                        <div className="text-white/35 text-xs">{c.phone}</div>
+                        <div className="text-frz-muted text-xs">{c.phone}</div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-white/60">{c.source}</td>
+                    <td className="px-4 py-3 text-frz-ink/60">{c.source}</td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex rounded-md px-2 py-0.5 text-xs ${statusBadge(c.status)}`}
@@ -731,15 +731,15 @@ export default function ContactsClient({
                         {c.status}
                       </span>
                       {c.suppression_reason && (
-                        <div className="mt-1 max-w-56 text-[11px] text-white/35">
+                        <div className="mt-1 max-w-56 text-[11px] text-frz-muted">
                           {c.suppression_reason}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-white/60">
+                    <td className="px-4 py-3 text-frz-ink/60">
                       {c.marketing_consent ? "Yes" : "No"}
                       {(c.consent_source || c.consent_at) && (
-                        <div className="text-[11px] text-white/35">
+                        <div className="text-[11px] text-frz-muted">
                           {c.consent_source || "sursă necunoscută"}
                           {c.consent_at
                             ? ` · ${new Date(c.consent_at).toLocaleDateString("ro-RO")}`
@@ -747,7 +747,7 @@ export default function ContactsClient({
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-white/50">
+                    <td className="px-4 py-3 text-frz-muted">
                       {new Date(c.created_at).toLocaleDateString("ro-RO")}
                     </td>
                     <td className="px-4 py-3">
@@ -755,7 +755,7 @@ export default function ContactsClient({
                         <button
                           type="button"
                           onClick={() => openEditContact(c)}
-                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10"
+                          className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs text-frz-ink/80 hover:bg-frz-fog"
                         >
                           Edit Contact
                         </button>
@@ -783,7 +783,7 @@ export default function ContactsClient({
                                 startTransition(() => router.refresh())
                               }
                               disabled={pending}
-                              className="text-xs text-white/45 underline underline-offset-2 hover:text-white/75 disabled:opacity-50"
+                              className="text-xs text-frz-muted underline underline-offset-2 hover:text-frz-ink disabled:opacity-50"
                             >
                               Actualizează statusul
                             </button>
@@ -793,7 +793,7 @@ export default function ContactsClient({
                             type="button"
                             onClick={() => createUnsubscribeTestLink(c.id)}
                             disabled={unsubscribeLoadingId === c.id}
-                            className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/10 disabled:opacity-50"
+                            className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs text-frz-ink/80 hover:bg-frz-fog disabled:opacity-50"
                           >
                             {unsubscribeLoadingId === c.id
                               ? "Se generează…"

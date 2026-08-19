@@ -56,7 +56,7 @@ export default function AutomationsClient({
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
           Automations
         </h1>
-        <p className="mt-2 text-sm text-white/55 max-w-3xl">
+        <p className="mt-2 text-sm text-frz-ink/60 max-w-3xl">
           System automations Frizeo. Toate pornesc pe <strong>Paused</strong>.
           Activează manual câte una, pe un contact controlat, înainte de
           volume reale.
@@ -69,9 +69,9 @@ export default function AutomationsClient({
         </p>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-frz-line">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/[0.04] text-left text-white/50">
+          <thead className="bg-frz-fog text-left text-frz-muted">
             <tr>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Trigger</th>
@@ -90,7 +90,7 @@ export default function AutomationsClient({
               <tr>
                 <td
                   colSpan={10}
-                  className="px-4 py-10 text-center text-white/40"
+                  className="px-4 py-10 text-center text-frz-muted"
                 >
                   Nicio automation. Rulează migrarea Phase 6 pe staging.
                 </td>
@@ -99,21 +99,21 @@ export default function AutomationsClient({
               initialAutomations.map((automation) => (
                 <tr
                   key={automation.id}
-                  className="border-t border-white/5 hover:bg-white/[0.02]"
+                  className="border-t border-frz-line/50 hover:bg-frz-fog/50"
                 >
                   <td className="px-4 py-3">
                     <div className="font-medium">{automation.name}</div>
-                    <div className="text-xs text-white/40">
+                    <div className="text-xs text-frz-muted">
                       {automation.automation_key}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-white/65">
+                  <td className="px-4 py-3 text-frz-ink/60">
                     {automation.trigger_type}
                   </td>
-                  <td className="px-4 py-3 text-white/65">
+                  <td className="px-4 py-3 text-frz-ink/60">
                     {delayLabel(automation.delay_minutes)}
                   </td>
-                  <td className="px-4 py-3 text-white/65">
+                  <td className="px-4 py-3 text-frz-ink/60">
                     {automation.template_key || automation.template_name || "—"}
                   </td>
                   <td className="px-4 py-3">
@@ -121,13 +121,13 @@ export default function AutomationsClient({
                       className={`inline-flex rounded-md px-2 py-0.5 text-xs ${
                         automation.is_active
                           ? "bg-emerald-500/15 text-emerald-200"
-                          : "bg-white/10 text-white/55"
+                          : "bg-frz-fog text-frz-ink/60"
                       }`}
                     >
                       {automation.is_active ? "Active" : "Paused"}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-white/50">
+                  <td className="px-4 py-3 text-frz-muted">
                     {automation.last_run_at
                       ? new Date(automation.last_run_at).toLocaleString("ro-RO")
                       : "—"}
@@ -145,13 +145,13 @@ export default function AutomationsClient({
                         type="button"
                         disabled={pending || busyId === automation.id}
                         onClick={() => toggle(automation)}
-                        className="rounded-lg border border-white/15 px-2.5 py-1 text-xs hover:bg-white/10 disabled:opacity-50"
+                        className="rounded-lg border border-frz-line px-2.5 py-1 text-xs hover:bg-frz-fog disabled:opacity-50"
                       >
                         {automation.is_active ? "Pause" : "Activate"}
                       </button>
                       <Link
                         href={`/email/automations/${automation.id}`}
-                        className="rounded-lg bg-white px-2.5 py-1 text-xs font-medium text-black hover:bg-gray-200"
+                        className="rounded-lg bg-frz-ink px-2.5 py-1 text-xs font-medium text-frz-ink-contrast hover:bg-frz-fog"
                       >
                         View / Runs
                       </Link>

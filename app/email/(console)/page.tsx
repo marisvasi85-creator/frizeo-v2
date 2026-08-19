@@ -5,8 +5,8 @@ import { getConversionStatsLastDays } from "@/lib/frizeo-email/attribution";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-5 py-4">
-      <p className="text-xs uppercase tracking-wide text-white/45">{label}</p>
+    <div className="rounded-xl border border-frz-line bg-frz-card px-5 py-4">
+      <p className="text-xs uppercase tracking-wide text-frz-muted">{label}</p>
       <p className="mt-2 text-3xl font-semibold tabular-nums">{value}</p>
     </div>
   );
@@ -61,14 +61,14 @@ export default async function EmailDashboardPage() {
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">
           Dashboard
         </h1>
-        <p className="mt-2 text-white/55 text-sm max-w-2xl">
+        <p className="mt-2 text-frz-muted text-sm max-w-2xl">
           Sistem intern de email marketing Frizeo, cu livrare și engagement
           actualizate din evenimentele verificate Resend.
         </p>
       </header>
 
       {loadError && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
           {loadError}
         </div>
       )}
@@ -88,7 +88,7 @@ export default async function EmailDashboardPage() {
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-medium">Conversions — Last 30 days</h2>
-          <p className="text-sm text-white/45">
+          <p className="text-sm text-frz-muted">
             Last Frizeo Email click attribution
           </p>
         </div>
@@ -107,21 +107,21 @@ export default async function EmailDashboardPage() {
         <div className="flex items-end justify-between gap-3">
           <div>
             <h2 className="text-lg font-medium">Recent Campaigns</h2>
-            <p className="text-sm text-white/45">
+            <p className="text-sm text-frz-muted">
               Drafturi și campanii recente.
             </p>
           </div>
           <Link
             href="/email/campaigns"
-            className="text-sm text-white/70 hover:text-white"
+            className="text-sm text-frz-ink/70 hover:text-frz-ink"
           >
             Vezi Campaigns →
           </Link>
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-white/10">
+        <div className="overflow-x-auto rounded-xl border border-frz-line">
           <table className="min-w-full text-sm">
-            <thead className="bg-white/[0.04] text-white/50 text-left">
+            <thead className="bg-frz-fog text-frz-muted text-left">
               <tr>
                 <th className="px-4 py-3 font-medium">Campaign</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -137,14 +137,14 @@ export default async function EmailDashboardPage() {
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-4 py-10 text-center text-white/40"
+                    className="px-4 py-10 text-center text-frz-muted"
                   >
                     Nu există campanii recente.
                   </td>
                 </tr>
               ) : (
                 campaignData.recent.map((campaign) => (
-                  <tr key={campaign.id} className="border-t border-white/5">
+                  <tr key={campaign.id} className="border-t border-frz-line/50">
                     <td className="px-4 py-3">
                       <Link
                         href={`/email/campaigns/${campaign.id}`}
@@ -153,7 +153,7 @@ export default async function EmailDashboardPage() {
                         {campaign.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-white/60">
+                    <td className="px-4 py-3 text-frz-muted">
                       {campaign.status}
                     </td>
                     <td className="px-4 py-3 tabular-nums">
@@ -168,7 +168,7 @@ export default async function EmailDashboardPage() {
                     <td className="px-4 py-3 tabular-nums">
                       {campaign.clicked_count}
                     </td>
-                    <td className="px-4 py-3 text-white/50">
+                    <td className="px-4 py-3 text-frz-muted">
                       {new Date(
                         campaign.sent_at || campaign.created_at,
                       ).toLocaleDateString("ro-RO")}
@@ -181,15 +181,15 @@ export default async function EmailDashboardPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm text-white/60">
+      <section className="rounded-xl border border-frz-line bg-frz-card px-5 py-4 text-sm text-frz-muted">
         <p>
           Cu consimțământ marketing:{" "}
-          <span className="text-white font-medium">{stats.withConsent}</span>
+          <span className="text-frz-ink font-medium">{stats.withConsent}</span>
           {" · "}
-          Bounced: <span className="text-white font-medium">{stats.bounced}</span>
+          Bounced: <span className="text-frz-ink font-medium">{stats.bounced}</span>
           {" · "}
           Complained:{" "}
-          <span className="text-white font-medium">{stats.complained}</span>
+          <span className="text-frz-ink font-medium">{stats.complained}</span>
         </p>
       </section>
     </div>

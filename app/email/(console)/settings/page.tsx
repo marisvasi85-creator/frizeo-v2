@@ -15,16 +15,16 @@ export default function EmailSettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
           Settings
         </h1>
-        <p className="mt-2 text-sm text-white/55">
+        <p className="mt-2 text-sm text-frz-muted">
           Status read-only. Secretele se configurează exclusiv în Vercel.
         </p>
       </header>
 
-      <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-medium">Marketing email provider</h2>
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm text-frz-muted">
               Resend · teste și campanii
             </p>
           </div>
@@ -38,18 +38,18 @@ export default function EmailSettingsPage() {
             {provider.configured ? "Configured" : "Not configured"}
           </span>
         </div>
-        <p className="text-sm text-white/60">{provider.message}</p>
-        <p className="text-xs text-white/35">
+        <p className="text-sm text-frz-ink/70">{provider.message}</p>
+        <p className="text-xs text-frz-muted">
           SMTP-ul de booking (`EMAIL_*`) rămâne separat și nu este folosit ca
           fallback.
         </p>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-medium">Resend delivery webhooks</h2>
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm text-frz-muted">
               Delivery, opens, clicks, bounces și complaints
             </p>
           </div>
@@ -64,22 +64,22 @@ export default function EmailSettingsPage() {
           </span>
         </div>
         <div>
-          <p className="text-xs text-white/40">Webhook URL</p>
-          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+          <p className="text-xs text-frz-muted">Webhook URL</p>
+          <code className="mt-1 block break-all rounded-md bg-frz-fog px-3 py-2 text-xs text-frz-ink">
             {webhookUrl}
           </code>
         </div>
-        <p className="text-xs text-white/35">
+        <p className="text-xs text-frz-muted">
           Semnătura este verificată pe body-ul raw cu secretul dedicat
           RESEND_WEBHOOK_SECRET. Secretul nu este afișat.
         </p>
       </section>
 
-      <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-medium">External campaign worker</h2>
-            <p className="mt-1 text-sm text-white/45">
+            <p className="mt-1 text-sm text-frz-muted">
               Endpoint securizat pentru serviciul Cron Job extern
             </p>
           </div>
@@ -94,42 +94,42 @@ export default function EmailSettingsPage() {
           </span>
         </div>
         <div>
-          <p className="text-xs text-white/40">Campaign worker URL</p>
-          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+          <p className="text-xs text-frz-muted">Campaign worker URL</p>
+          <code className="mt-1 block break-all rounded-md bg-frz-fog px-3 py-2 text-xs text-frz-ink">
             {`${getAppUrl()}/api/internal/marketing/worker?secret=…`}
           </code>
         </div>
         <div>
-          <p className="text-xs text-white/40">Automations worker URL</p>
-          <code className="mt-1 block break-all rounded-md bg-black/30 px-3 py-2 text-xs text-white/75">
+          <p className="text-xs text-frz-muted">Automations worker URL</p>
+          <code className="mt-1 block break-all rounded-md bg-frz-fog px-3 py-2 text-xs text-frz-ink">
             {`${getAppUrl()}/api/internal/marketing/automations?secret=…`}
           </code>
         </div>
-        <p className="text-xs text-white/35">
+        <p className="text-xs text-frz-muted">
           Ambele folosesc `MARKETING_WORKER_SECRET` (același worker intern
           marketing). Nu folosi Vercel Cron.
         </p>
       </section>
 
-      <section className="space-y-3 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+      <section className="space-y-3 rounded-xl border border-frz-line bg-frz-card p-5">
         <h2 className="font-medium">Provider details</h2>
         <dl className="grid gap-3 text-sm md:grid-cols-2">
           <div>
-            <dt className="text-xs text-white/40">Provider</dt>
-            <dd className="mt-1 text-white/80">Resend</dd>
+            <dt className="text-xs text-frz-muted">Provider</dt>
+            <dd className="mt-1 text-frz-ink">Resend</dd>
           </div>
           <div>
-            <dt className="text-xs text-white/40">Domain</dt>
-            <dd className="mt-1 text-white/80">{provider.domain}</dd>
+            <dt className="text-xs text-frz-muted">Domain</dt>
+            <dd className="mt-1 text-frz-ink">{provider.domain}</dd>
           </div>
         </dl>
-        <p className="text-xs text-white/35">
+        <p className="text-xs text-frz-muted">
           Adresele From și Reply-To sunt citite exclusiv server-side din Vercel
           și nu sunt afișate aici.
         </p>
       </section>
 
-      <section className="rounded-xl border border-dashed border-white/15 p-5 text-sm text-white/50">
+      <section className="rounded-xl border border-dashed border-frz-line p-5 text-sm text-frz-muted">
         Workerul procesează batch-uri mici, iar progresul campaniei se
         actualizează automat în interfață. Nu este folosit Vercel Cron.
       </section>

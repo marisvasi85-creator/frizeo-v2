@@ -90,9 +90,9 @@ function SegmentTable({
   onDelete?: (segment: MarketingSegmentSummary) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-white/10">
+    <div className="overflow-x-auto rounded-xl border border-frz-line">
       <table className="min-w-full text-sm">
-        <thead className="bg-white/[0.04] text-left text-white/50">
+        <thead className="bg-frz-fog text-left text-frz-muted">
           <tr>
             <th className="px-4 py-3 font-medium">Name</th>
             <th className="px-4 py-3 font-medium">Description</th>
@@ -105,44 +105,44 @@ function SegmentTable({
         <tbody>
           {segments.length === 0 ? (
             <tr>
-              <td colSpan={6} className="px-4 py-10 text-center text-white/40">
+              <td colSpan={6} className="px-4 py-10 text-center text-frz-muted">
                 Niciun segment.
               </td>
             </tr>
           ) : (
             segments.map((segment) => (
-              <tr key={segment.id} className="border-t border-white/5 align-top">
+              <tr key={segment.id} className="border-t border-frz-line/50 align-top">
                 <td className="px-4 py-3">
                   <span className="font-medium">{segment.name}</span>
-                  <span className="ml-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-white/45">
+                  <span className="ml-2 rounded bg-frz-fog px-1.5 py-0.5 text-[10px] uppercase text-frz-muted">
                     {segment.category}
                   </span>
                 </td>
-                <td className="max-w-sm px-4 py-3 text-white/55">
+                <td className="max-w-sm px-4 py-3 text-frz-ink/60">
                   {segment.description}
                 </td>
                 <td className="px-4 py-3 text-lg font-semibold tabular-nums">
                   {segment.contacts_count}
                 </td>
-                <td className="px-4 py-3 text-white/60">
+                <td className="px-4 py-3 text-frz-ink/60">
                   {segment.is_system_segment ? "System" : "Custom"}
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-white/45">
+                <td className="whitespace-nowrap px-4 py-3 text-frz-muted">
                   {new Date(segment.evaluated_at).toLocaleString("ro-RO")}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex min-w-max flex-wrap gap-2">
-                    <button type="button" onClick={() => onView(segment)} className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10">
+                    <button type="button" onClick={() => onView(segment)} className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog">
                       View
                     </button>
                     <button type="button" onClick={() => onUse(segment)} disabled={busyId === segment.id} className="rounded-md border border-emerald-500/25 px-2.5 py-1.5 text-xs text-emerald-200 hover:bg-emerald-500/10 disabled:opacity-40">
                       Use in Campaign
                     </button>
-                    <button type="button" onClick={() => onDuplicate(segment)} disabled={busyId === segment.id} className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40">
+                    <button type="button" onClick={() => onDuplicate(segment)} disabled={busyId === segment.id} className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog disabled:opacity-40">
                       Duplicate &amp; Edit
                     </button>
                     {onEdit && (
-                      <button type="button" onClick={() => onEdit(segment)} className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10">
+                      <button type="button" onClick={() => onEdit(segment)} className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog">
                         Edit
                       </button>
                     )}
@@ -376,11 +376,11 @@ export default function SegmentsClient({
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Segments</h1>
-          <p className="mt-2 text-sm text-white/55">
+          <p className="mt-2 text-sm text-frz-ink/60">
             Audiențe dinamice calculate live, cu suppression global înainte de snapshot.
           </p>
         </div>
-        <button type="button" onClick={createNew} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black">
+        <button type="button" onClick={createNew} className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast">
           Create Segment
         </button>
       </header>
@@ -395,7 +395,7 @@ export default function SegmentsClient({
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-medium">Frizeo Segments</h2>
-          <p className="text-xs text-white/40">System · read-only · evaluate live</p>
+          <p className="text-xs text-frz-muted">System · read-only · evaluate live</p>
         </div>
         <SegmentTable segments={systemSegments} busyId={busyId} onView={view} onUse={useInCampaign} onDuplicate={duplicate} />
       </section>
@@ -403,32 +403,32 @@ export default function SegmentsClient({
       <section className="space-y-3">
         <div>
           <h2 className="text-lg font-medium">Custom Segments</h2>
-          <p className="text-xs text-white/40">Condiții whitelist-uite legate exclusiv prin AND.</p>
+          <p className="text-xs text-frz-muted">Condiții whitelist-uite legate exclusiv prin AND.</p>
         </div>
         <SegmentTable segments={customSegments} busyId={busyId} onView={view} onUse={useInCampaign} onDuplicate={duplicate} onEdit={edit} onDelete={remove} />
       </section>
 
       {showBuilder && (
-        <form onSubmit={save} className="space-y-5 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <form onSubmit={save} className="space-y-5 rounded-xl border border-frz-line bg-frz-card p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-medium">{editingId ? "Edit Custom Segment" : "Create Custom Segment"}</h2>
-              <p className="mt-1 text-xs text-white/40">V1: maximum 10 condiții AND, fără SQL raw.</p>
+              <p className="mt-1 text-xs text-frz-muted">V1: maximum 10 condiții AND, fără SQL raw.</p>
             </div>
-            <button type="button" onClick={() => setShowBuilder(false)} className="text-sm text-white/50 hover:text-white">Close</button>
+            <button type="button" onClick={() => setShowBuilder(false)} className="text-sm text-frz-muted hover:text-frz-ink">Close</button>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             <label className="space-y-1 text-sm">
-              <span className="text-xs text-white/45">Name</span>
-              <input required value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2" />
+              <span className="text-xs text-frz-muted">Name</span>
+              <input required value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2" />
             </label>
             <label className="space-y-1 text-sm">
-              <span className="text-xs text-white/45">Category</span>
-              <input required value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2" />
+              <span className="text-xs text-frz-muted">Category</span>
+              <input required value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2" />
             </label>
             <label className="space-y-1 text-sm md:col-span-3">
-              <span className="text-xs text-white/45">Description</span>
-              <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2" />
+              <span className="text-xs text-frz-muted">Description</span>
+              <input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2" />
             </label>
           </div>
 
@@ -437,29 +437,29 @@ export default function SegmentsClient({
               const config = segmentFieldConfig(condition.field)!;
               const operators = operatorsForSegmentField(condition.field);
               return (
-                <div key={`${index}-${condition.field}`} className="grid gap-2 rounded-lg border border-white/10 p-3 md:grid-cols-[28px_1fr_180px_1fr_auto] md:items-end">
-                  <span className="pb-2 text-xs font-semibold text-white/35">{index === 0 ? "" : "AND"}</span>
-                  <label className="space-y-1 text-xs text-white/45">
+                <div key={`${index}-${condition.field}`} className="grid gap-2 rounded-lg border border-frz-line p-3 md:grid-cols-[28px_1fr_180px_1fr_auto] md:items-end">
+                  <span className="pb-2 text-xs font-semibold text-frz-muted">{index === 0 ? "" : "AND"}</span>
+                  <label className="space-y-1 text-xs text-frz-muted">
                     Field
-                    <select value={condition.field} onChange={(event) => updateCondition(index, defaultCondition(event.target.value as MarketingSegmentField))} className="block w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white">
+                    <select value={condition.field} onChange={(event) => updateCondition(index, defaultCondition(event.target.value as MarketingSegmentField))} className="block w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink">
                       {SEGMENT_FIELD_CONFIG.map((item) => <option key={item.field} value={item.field}>{item.label}</option>)}
                     </select>
                   </label>
-                  <label className="space-y-1 text-xs text-white/45">
+                  <label className="space-y-1 text-xs text-frz-muted">
                     Operator
                     <select value={condition.operator} onChange={(event) => {
                       const operator = event.target.value as MarketingSegmentOperator;
                       updateCondition(index, config.kind === "boolean" ? { field: condition.field, operator } : { ...condition, operator });
-                    }} className="block w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white">
+                    }} className="block w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink">
                       {operators.map((operator) => <option key={operator} value={operator}>{OPERATOR_LABELS[operator]}</option>)}
                     </select>
                   </label>
-                  <label className="space-y-1 text-xs text-white/45">
+                  <label className="space-y-1 text-xs text-frz-muted">
                     Value
                     {config.kind === "boolean" ? (
-                      <div className="rounded-lg border border-white/5 bg-black/20 px-3 py-2 text-sm text-white/45">{OPERATOR_LABELS[condition.operator]}</div>
+                      <div className="rounded-lg border border-frz-line/50 bg-frz-fog px-3 py-2 text-sm text-frz-muted">{OPERATOR_LABELS[condition.operator]}</div>
                     ) : config.kind === "enum" && condition.operator !== "in" ? (
-                      <select value={String(condition.value || "")} onChange={(event) => updateCondition(index, { ...condition, value: event.target.value })} className="block w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white">
+                      <select value={String(condition.value || "")} onChange={(event) => updateCondition(index, { ...condition, value: event.target.value })} className="block w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink">
                         {config.values?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                     ) : (
@@ -471,7 +471,7 @@ export default function SegmentsClient({
                           ...condition,
                           value: config.kind === "number" ? Number(event.target.value) : condition.operator === "in" ? event.target.value.split(",").map((item) => item.trim()).filter(Boolean) : event.target.value,
                         })}
-                        className="block w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+                        className="block w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink"
                       />
                     )}
                   </label>
@@ -479,45 +479,45 @@ export default function SegmentsClient({
                 </div>
               );
             })}
-            <button type="button" disabled={form.conditions.length >= 10} onClick={() => setForm((current) => ({ ...current, conditions: [...current.conditions, defaultCondition("source")] }))} className="rounded-md border border-white/15 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-40">
+            <button type="button" disabled={form.conditions.length >= 10} onClick={() => setForm((current) => ({ ...current, conditions: [...current.conditions, defaultCondition("source")] }))} className="rounded-md border border-frz-line px-3 py-2 text-sm hover:bg-frz-fog disabled:opacity-40">
               Add AND condition
             </button>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button type="button" onClick={preview} disabled={busyId !== null} className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-40">Preview audience</button>
-            <button type="submit" disabled={busyId !== null} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-40">Save Segment</button>
-            <span className="text-sm text-white/55">{previewCount === null ? "Preview necalculat" : `${previewCount} eligible contacts`}</span>
+            <button type="button" onClick={preview} disabled={busyId !== null} className="rounded-lg border border-frz-line px-4 py-2 text-sm hover:bg-frz-fog disabled:opacity-40">Preview audience</button>
+            <button type="submit" disabled={busyId !== null} className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-40">Save Segment</button>
+            <span className="text-sm text-frz-ink/60">{previewCount === null ? "Preview necalculat" : `${previewCount} eligible contacts`}</span>
           </div>
           {previewMembers.length > 0 && (
-            <p className="text-xs text-white/40">Primele rezultate: {previewMembers.map((member) => member.email).join(", ")}</p>
+            <p className="text-xs text-frz-muted">Primele rezultate: {previewMembers.map((member) => member.email).join(", ")}</p>
           )}
         </form>
       )}
 
       {selected && (
-        <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-medium">{selected.name}</h2>
-              <p className="mt-1 text-sm text-white/50">{memberTotal} contacte eligibile acum · lista nu este snapshot</p>
+              <p className="mt-1 text-sm text-frz-muted">{memberTotal} contacte eligibile acum · lista nu este snapshot</p>
             </div>
-            <button type="button" onClick={() => setSelected(null)} className="text-sm text-white/50 hover:text-white">Close</button>
+            <button type="button" onClick={() => setSelected(null)} className="text-sm text-frz-muted hover:text-frz-ink">Close</button>
           </div>
-          <div className="overflow-x-auto rounded-lg border border-white/10">
+          <div className="overflow-x-auto rounded-lg border border-frz-line">
             <table className="min-w-full text-sm">
-              <thead className="bg-black/25 text-left text-white/45"><tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Source</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Plan</th><th className="px-3 py-2">Trial end</th><th className="px-3 py-2">Consent</th></tr></thead>
+              <thead className="bg-frz-fog text-left text-frz-muted"><tr><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Source</th><th className="px-3 py-2">Status</th><th className="px-3 py-2">Plan</th><th className="px-3 py-2">Trial end</th><th className="px-3 py-2">Consent</th></tr></thead>
               <tbody>
                 {members.length === 0 ? (
-                  <tr><td colSpan={7} className="px-3 py-8 text-center text-white/35">Niciun contact eligibil acum.</td></tr>
+                  <tr><td colSpan={7} className="px-3 py-8 text-center text-frz-muted">Niciun contact eligibil acum.</td></tr>
                 ) : members.map((member) => (
-                  <tr key={member.contact_id} className="border-t border-white/5">
+                  <tr key={member.contact_id} className="border-t border-frz-line/50">
                     <td className="px-3 py-2">{[member.first_name, member.last_name].filter(Boolean).join(" ") || "—"}</td>
-                    <td className="px-3 py-2 text-white/70">{member.email}</td>
-                    <td className="px-3 py-2 text-white/50">{member.source}</td>
-                    <td className="px-3 py-2 text-white/50">{member.contact_status}</td>
-                    <td className="px-3 py-2 text-white/50">{member.subscription_plan}</td>
-                    <td className="px-3 py-2 text-white/50">{member.trial_end_date || "—"}</td>
+                    <td className="px-3 py-2 text-frz-ink/70">{member.email}</td>
+                    <td className="px-3 py-2 text-frz-muted">{member.source}</td>
+                    <td className="px-3 py-2 text-frz-muted">{member.contact_status}</td>
+                    <td className="px-3 py-2 text-frz-muted">{member.subscription_plan}</td>
+                    <td className="px-3 py-2 text-frz-muted">{member.trial_end_date || "—"}</td>
                     <td className="px-3 py-2 text-emerald-200">{member.consent_status ? "Yes" : "No"}</td>
                   </tr>
                 ))}

@@ -44,7 +44,7 @@ export default async function AutomationDetailPage({
     <div className="space-y-4 max-w-6xl">
       <Link
         href="/email/automations"
-        className="text-sm text-white/55 hover:text-white"
+        className="text-sm text-frz-ink/60 hover:text-frz-ink"
       >
         ← Automations
       </Link>

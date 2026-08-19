@@ -238,21 +238,21 @@ export default function TemplatesClient({
         <div>
           <Link
             href="/email/campaigns"
-            className="text-xs text-white/45 hover:text-white/75"
+            className="text-xs text-frz-muted hover:text-frz-ink"
           >
             ← Campaigns
           </Link>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
             Email Templates
           </h1>
-          <p className="mt-2 text-sm text-white/55">
+          <p className="mt-2 text-sm text-frz-ink/60">
             Template HTML responsive, cu câmpuri simple și date escapate.
           </p>
         </div>
         <button
           type="button"
           onClick={createNew}
-          className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black"
+          className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast"
         >
           New Template
         </button>
@@ -274,8 +274,8 @@ export default function TemplatesClient({
       )}
 
       <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_minmax(320px,0.9fr)]">
-        <aside className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
-          <p className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+        <aside className="space-y-2 rounded-xl border border-frz-line bg-frz-card/50 p-3">
+          <p className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-wider text-frz-muted">
             Frizeo Templates
           </p>
           {systemTemplates.map((template) => (
@@ -285,8 +285,8 @@ export default function TemplatesClient({
               onClick={() => choose(template)}
               className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                 selectedId === template.id
-                  ? "bg-white text-black"
-                  : "text-white/70 hover:bg-white/10"
+                  ? "bg-frz-ink text-frz-ink-contrast"
+                  : "text-frz-ink/70 hover:bg-frz-fog"
               }`}
             >
               <span className="block font-medium">{template.name}</span>
@@ -295,7 +295,7 @@ export default function TemplatesClient({
               </span>
             </button>
           ))}
-          <p className="px-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+          <p className="px-2 pt-4 text-[11px] font-semibold uppercase tracking-wider text-frz-muted">
             Custom Templates
           </p>
           {customTemplates.map((template) => (
@@ -305,8 +305,8 @@ export default function TemplatesClient({
               onClick={() => choose(template)}
               className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
                 selectedId === template.id
-                  ? "bg-white text-black"
-                  : "text-white/70 hover:bg-white/10"
+                  ? "bg-frz-ink text-frz-ink-contrast"
+                  : "text-frz-ink/70 hover:bg-frz-fog"
               }`}
             >
               <span className="block font-medium">{template.name}</span>
@@ -318,13 +318,13 @@ export default function TemplatesClient({
             </button>
           ))}
           {templates.length === 0 && (
-            <p className="px-2 py-4 text-xs text-white/40">Niciun template.</p>
+            <p className="px-2 py-4 text-xs text-frz-muted">Niciun template.</p>
           )}
         </aside>
 
         <form
           onSubmit={save}
-          className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+          className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-4"
         >
           {selected?.is_system_template && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/10 p-3">
@@ -335,14 +335,14 @@ export default function TemplatesClient({
                 type="button"
                 onClick={useTemplate}
                 disabled={saving}
-                className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
+                className="rounded-lg bg-frz-ink px-3 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-50"
               >
                 Use Template
               </button>
               <button
                 type="button"
                 onClick={() => document.getElementById("template-preview")?.scrollIntoView({ behavior: "smooth" })}
-                className="rounded-lg border border-white/15 px-3 py-2 text-sm"
+                className="rounded-lg border border-frz-line px-3 py-2 text-sm"
               >
                 Preview
               </button>
@@ -350,11 +350,11 @@ export default function TemplatesClient({
                 type="button"
                 onClick={duplicate}
                 disabled={saving}
-                className="rounded-lg border border-white/15 px-3 py-2 text-sm disabled:opacity-50"
+                className="rounded-lg border border-frz-line px-3 py-2 text-sm disabled:opacity-50"
               >
                 Duplicate &amp; Edit
               </button>
-              <p className="w-full text-xs text-white/45">
+              <p className="w-full text-xs text-frz-muted">
                 Template oficial protejat. Creează o copie pentru modificări.
               </p>
             </div>
@@ -386,14 +386,14 @@ export default function TemplatesClient({
             onChange={(value) => field("heading", value)}
           />
           <label className="block space-y-1 text-sm">
-            <span className="text-xs text-white/45">Body *</span>
+            <span className="text-xs text-frz-muted">Body *</span>
             <textarea
               required
               rows={9}
               value={draft.body_text}
               disabled={selected?.is_system_template}
               onChange={(event) => field("body_text", event.target.value)}
-              className="w-full resize-y rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+              className="w-full resize-y rounded-lg border border-frz-line bg-frz-fog px-3 py-2"
             />
           </label>
           <TextField
@@ -417,13 +417,13 @@ export default function TemplatesClient({
             />
           </div>
           <label className="block space-y-1 text-sm">
-            <span className="text-xs text-white/45">Footer</span>
+            <span className="text-xs text-frz-muted">Footer</span>
             <textarea
               rows={3}
               value={draft.footer_text}
               disabled={selected?.is_system_template}
               onChange={(event) => field("footer_text", event.target.value)}
-              className="w-full resize-y rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+              className="w-full resize-y rounded-lg border border-frz-line bg-frz-fog px-3 py-2"
             />
           </label>
           <div className="flex flex-wrap gap-2">
@@ -431,7 +431,7 @@ export default function TemplatesClient({
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+                className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-50"
               >
                 {saving ? "Se salvează…" : selectedId ? "Save Template" : "Create Template"}
               </button>
@@ -450,8 +450,8 @@ export default function TemplatesClient({
         </form>
 
         <section id="template-preview" className="space-y-2">
-          <p className="text-xs uppercase tracking-wide text-white/40">Preview</p>
-          <div className="overflow-hidden rounded-xl border border-white/10 bg-white">
+          <p className="text-xs uppercase tracking-wide text-frz-muted">Preview</p>
+          <div className="overflow-hidden rounded-xl border border-frz-line bg-white">
             <iframe
               title="Email template preview"
               srcDoc={previewHtml}
@@ -478,12 +478,12 @@ function TextField({
 }) {
   return (
     <label className="block space-y-1 text-sm">
-      <span className="text-xs text-white/45">{label}</span>
+      <span className="text-xs text-frz-muted">{label}</span>
       <input
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 disabled:cursor-not-allowed disabled:opacity-60"
       />
     </label>
   );

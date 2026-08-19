@@ -466,7 +466,7 @@ export default function CampaignEditor({
         <div>
           <Link
             href="/email/campaigns"
-            className="text-xs text-white/45 hover:text-white/75"
+            className="text-xs text-frz-muted hover:text-frz-ink"
           >
             ← Campaigns
           </Link>
@@ -474,11 +474,11 @@ export default function CampaignEditor({
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
               {draft.name}
             </h1>
-            <span className="rounded-md bg-white/10 px-2 py-1 text-xs text-white/60">
+            <span className="rounded-md bg-frz-fog px-2 py-1 text-xs text-frz-ink/60">
               {campaignStatus}
             </span>
           </div>
-          <p className="mt-2 text-sm text-white/50">
+          <p className="mt-2 text-sm text-frz-muted">
             {editable
               ? "Pregătește conținutul, verifică audiența și pornește trimiterea."
               : "Conținutul și audiența sunt blocate după pornirea campaniei."}
@@ -500,7 +500,7 @@ export default function CampaignEditor({
               type="button"
               onClick={() => saveDraft()}
               disabled={busy !== null}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+              className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-50"
             >
               {busy === "save" ? "Se salvează…" : "Save Draft"}
             </button>
@@ -509,21 +509,21 @@ export default function CampaignEditor({
       </header>
 
       {!editable && (
-        <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-5">
+        <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-medium">Campaign progress</h2>
-              <p className="mt-1 text-sm text-white/45">
+              <p className="mt-1 text-sm text-frz-muted">
                 {progress.sent} / {progress.total} sent
               </p>
             </div>
-            <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs text-white/65">
+            <span className="rounded-md bg-frz-fog px-2.5 py-1 text-xs text-frz-ink/70">
               {campaignStatus === "sent"
                 ? "Campaign completed"
                 : campaignStatus.replaceAll("_", " ")}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+          <div className="h-2 overflow-hidden rounded-full bg-frz-fog">
             <div
               className="h-full rounded-full bg-emerald-400 transition-all"
               style={{ width: `${sentPercent}%` }}
@@ -541,8 +541,8 @@ export default function CampaignEditor({
               ["Unsubscribed", progress.unsubscribed],
               ["Failed", progress.failed],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg bg-black/25 p-3">
-                <dt className="text-xs text-white/40">{label}</dt>
+              <div key={label} className="rounded-lg bg-frz-fog p-3">
+                <dt className="text-xs text-frz-muted">{label}</dt>
                 <dd className="mt-1 text-lg font-semibold tabular-nums">
                   {value}
                 </dd>
@@ -560,25 +560,25 @@ export default function CampaignEditor({
                 rate(progress.unsubscribed, progress.delivered),
               ],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-white/5 p-3">
-                <dt className="text-xs text-white/40">{label}</dt>
+              <div key={label} className="rounded-lg border border-frz-line/50 p-3">
+                <dt className="text-xs text-frz-muted">{label}</dt>
                 <dd className="mt-1 font-medium tabular-nums">{value}</dd>
               </div>
             ))}
           </dl>
-          <p className="text-xs text-white/35">
+          <p className="text-xs text-frz-muted">
             Opened este orientativ: protecțiile de confidențialitate și proxy-urile
             de imagini pot influența open tracking.
           </p>
           {progress.skipped > 0 && (
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-frz-muted">
               Skipped/suppressed: {progress.skipped}
             </p>
           )}
 
-          <div className="border-t border-white/10 pt-4">
+          <div className="border-t border-frz-line pt-4">
             <h3 className="font-medium">Conversions</h3>
-            <p className="mt-1 text-xs text-white/40">
+            <p className="mt-1 text-xs text-frz-muted">
               Last Frizeo Email click · fereastră 30 zile · fără Send Test
             </p>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
@@ -603,8 +603,8 @@ export default function CampaignEditor({
                   `${conversions.attributed_mrr.toFixed(0)} ${conversions.currency}`,
                 ],
               ].map(([label, value]) => (
-                <div key={String(label)} className="rounded-lg bg-black/25 p-3">
-                  <dt className="text-xs text-white/40">{label}</dt>
+                <div key={String(label)} className="rounded-lg bg-frz-fog p-3">
+                  <dt className="text-xs text-frz-muted">{label}</dt>
                   <dd className="mt-1 text-lg font-semibold tabular-nums">
                     {value}
                   </dd>
@@ -641,12 +641,12 @@ export default function CampaignEditor({
                 onChange={(value) => field("name", value)}
               />
               <label className="block space-y-1 text-sm">
-                <span className="text-xs text-white/45">Apply template</span>
+                <span className="text-xs text-frz-muted">Apply template</span>
                 <select
                   value={draft.template_id || ""}
                   disabled={!editable}
                   onChange={(event) => applyTemplate(event.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 disabled:opacity-60"
+                  className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-frz-ink disabled:opacity-60"
                 >
                   {templates.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -693,7 +693,7 @@ export default function CampaignEditor({
               disabled={!editable}
               onChange={(value) => field("reply_to", value || null)}
             />
-            <p className="text-xs text-white/35">
+            <p className="text-xs text-frz-muted">
               Send Test folosește adresele From și Reply-To configurate
               server-side în Vercel; valorile nu sunt afișate în interfață.
             </p>
@@ -707,14 +707,14 @@ export default function CampaignEditor({
               onChange={(value) => field("heading", value)}
             />
             <label className="block space-y-1 text-sm">
-              <span className="text-xs text-white/45">Body *</span>
+              <span className="text-xs text-frz-muted">Body *</span>
               <textarea
                 rows={10}
                 required
                 value={draft.body_text}
                 disabled={!editable}
                 onChange={(event) => field("body_text", event.target.value)}
-                className="w-full resize-y rounded-lg border border-white/10 bg-black/40 px-3 py-2 disabled:opacity-60"
+                className="w-full resize-y rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-frz-ink disabled:opacity-60"
               />
             </label>
             <TextField
@@ -738,16 +738,16 @@ export default function CampaignEditor({
               />
             </div>
             <label className="block space-y-1 text-sm">
-              <span className="text-xs text-white/45">Footer</span>
+              <span className="text-xs text-frz-muted">Footer</span>
               <textarea
                 rows={3}
                 value={draft.footer_text}
                 disabled={!editable}
                 onChange={(event) => field("footer_text", event.target.value)}
-                className="w-full resize-y rounded-lg border border-white/10 bg-black/40 px-3 py-2 disabled:opacity-60"
+                className="w-full resize-y rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-frz-ink disabled:opacity-60"
               />
             </label>
-            <p className="text-xs text-white/35">
+            <p className="text-xs text-frz-muted">
               Linkul de dezabonare este inclus automat și nu poate fi eliminat.
             </p>
           </EditorCard>
@@ -767,7 +767,7 @@ export default function CampaignEditor({
                   type="button"
                   onClick={() => selectSegment(recommendedSegment.id)}
                   disabled={!editable || selectedSegment?.id === recommendedSegment.id}
-                  className="rounded-lg bg-emerald-300 px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
+                  className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
                 >
                   {selectedSegment?.id === recommendedSegment.id
                     ? "Recommended segment selected"
@@ -787,8 +787,8 @@ export default function CampaignEditor({
                   key={audience.kind}
                   className={`cursor-pointer rounded-lg border p-3 ${
                     draft.audience_kind === audience.kind
-                      ? "border-white/40 bg-white/10"
-                      : "border-white/10 bg-black/20"
+                      ? "border-frz-line bg-frz-fog"
+                      : "border-frz-line/50 bg-frz-fog"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -807,17 +807,17 @@ export default function CampaignEditor({
                     </span>
                   </div>
                   <p className="mt-2 text-sm font-medium">{audience.label}</p>
-                  <p className="mt-1 text-xs text-white/40">
+                  <p className="mt-1 text-xs text-frz-muted">
                     {audience.description}
                   </p>
                 </label>
               ))}
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment?.is_system_segment ? "border-white/40 bg-white/10" : "border-white/10 bg-black/20"}`}>
+              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment?.is_system_segment ? "border-frz-line bg-frz-fog" : "border-frz-line/50 bg-frz-fog"}`}>
                 <span className="flex items-center justify-between text-sm font-medium">
                   System Segments
-                  <span className="tabular-nums text-white/55">
+                  <span className="tabular-nums text-frz-ink/60">
                     {selectedSegment?.is_system_segment ? selectedSegment.contacts_count : "—"}
                   </span>
                 </span>
@@ -825,7 +825,7 @@ export default function CampaignEditor({
                   value={selectedSegment?.is_system_segment ? selectedSegment.id : ""}
                   disabled={!editable}
                   onChange={(event) => event.target.value && selectSegment(event.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink"
                 >
                   <option value="">Choose a system segment</option>
                   {systemSegments.map((segment) => (
@@ -835,10 +835,10 @@ export default function CampaignEditor({
                   ))}
                 </select>
               </label>
-              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment && !selectedSegment.is_system_segment ? "border-white/40 bg-white/10" : "border-white/10 bg-black/20"}`}>
+              <label className={`space-y-2 rounded-lg border p-3 ${selectedSegment && !selectedSegment.is_system_segment ? "border-frz-line bg-frz-fog" : "border-frz-line/50 bg-frz-fog"}`}>
                 <span className="flex items-center justify-between text-sm font-medium">
                   Custom Segments
-                  <span className="tabular-nums text-white/55">
+                  <span className="tabular-nums text-frz-ink/60">
                     {selectedSegment && !selectedSegment.is_system_segment ? selectedSegment.contacts_count : "—"}
                   </span>
                 </span>
@@ -846,7 +846,7 @@ export default function CampaignEditor({
                   value={selectedSegment && !selectedSegment.is_system_segment ? selectedSegment.id : ""}
                   disabled={!editable || customSegments.length === 0}
                   onChange={(event) => event.target.value && selectSegment(event.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm disabled:opacity-50"
+                  className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink disabled:opacity-50"
                 >
                   <option value="">{customSegments.length ? "Choose a custom segment" : "No custom segments"}</option>
                   {customSegments.map((segment) => (
@@ -858,10 +858,10 @@ export default function CampaignEditor({
               </label>
             </div>
             {draft.audience_kind === "controlled_test" && (
-              <div className="space-y-2 rounded-lg border border-white/10 bg-black/20 p-3">
+              <div className="space-y-2 rounded-lg border border-frz-line bg-frz-fog p-3">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-medium">Contacte de test eligibile</p>
-                  <span className="text-xs text-white/45">
+                  <span className="text-xs text-frz-muted">
                     {draft.test_contact_ids.length}/5 selectate
                   </span>
                 </div>
@@ -879,7 +879,7 @@ export default function CampaignEditor({
                       return (
                         <label
                           key={contact.id}
-                          className="flex items-start gap-2 rounded-md border border-white/10 p-2 text-xs"
+                          className="flex items-start gap-2 rounded-md border border-frz-line p-2 text-xs"
                         >
                           <input
                             type="checkbox"
@@ -898,8 +898,8 @@ export default function CampaignEditor({
                             }}
                           />
                           <span>
-                            <span className="block text-white/80">{name || "—"}</span>
-                            <span className="block text-white/45">{contact.email}</span>
+                            <span className="block text-frz-ink/80">{name || "—"}</span>
+                            <span className="block text-frz-muted">{contact.email}</span>
                           </span>
                         </label>
                       );
@@ -913,11 +913,11 @@ export default function CampaignEditor({
                 type="button"
                 onClick={createSnapshot}
                 disabled={!editable || busy !== null}
-                className="rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10 disabled:opacity-50"
+                className="rounded-lg border border-frz-line px-4 py-2 text-sm hover:bg-frz-fog disabled:opacity-50"
               >
                 {busy === "snapshot" ? "Se generează…" : "Create / Refresh Snapshot"}
               </button>
-              <span className="text-sm text-white/50">
+              <span className="text-sm text-frz-muted">
                 {snapshotAt
                   ? `${snapshotCount} destinatari · ${new Date(snapshotAt).toLocaleString("ro-RO")}`
                   : "Snapshot necreat"}
@@ -933,17 +933,17 @@ export default function CampaignEditor({
                 value={testEmail}
                 onChange={(event) => setTestEmail(event.target.value)}
                 placeholder="adresa@exemplu.ro"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm"
+                className="min-w-0 flex-1 rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink"
               />
               <button
                 type="submit"
                 disabled={!editable || busy !== null}
-                className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+                className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-50"
               >
                 {busy === "test" ? "Se trimite…" : "Send Test"}
               </button>
             </form>
-            <p className="text-xs text-white/35">
+            <p className="text-xs text-frz-muted">
               Testul păstrează subiectul și conținutul campaniei, nu intră în
               snapshot și nu modifică statisticile.
             </p>
@@ -951,7 +951,7 @@ export default function CampaignEditor({
 
           <EditorCard title="Send Campaign">
             <div className="space-y-3">
-              <p className="text-sm text-white/55">
+              <p className="text-sm text-frz-ink/60">
                 Lansarea recalculează atomic audiența eligibilă, fixează snapshot-ul
                 și mută campania în coada procesată de worker.
               </p>
@@ -959,7 +959,7 @@ export default function CampaignEditor({
                 type="button"
                 onClick={prepareSendCampaign}
                 disabled={!editable || busy !== null}
-                className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {busy === "snapshot" ? "Se verifică audiența…" : "Send Campaign"}
               </button>
@@ -969,15 +969,15 @@ export default function CampaignEditor({
 
         <aside className="space-y-3 xl:sticky xl:top-6 xl:self-start">
           <div className="flex items-center justify-between">
-            <p className="text-xs uppercase tracking-wide text-white/40">Preview</p>
-            <div className="flex rounded-lg border border-white/10 p-1 text-xs">
+            <p className="text-xs uppercase tracking-wide text-frz-muted">Preview</p>
+            <div className="flex rounded-lg border border-frz-line p-1 text-xs">
               {(["desktop", "mobile"] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
                   onClick={() => setPreviewMode(mode)}
                   className={`rounded-md px-2.5 py-1 ${
-                    previewMode === mode ? "bg-white text-black" : "text-white/55"
+                    previewMode === mode ? "bg-frz-ink text-frz-ink-contrast" : "text-frz-ink/60"
                   }`}
                 >
                   {mode === "desktop" ? "Desktop" : "Mobile"}
@@ -985,7 +985,7 @@ export default function CampaignEditor({
               ))}
             </div>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-white/10 bg-[#171719] p-3">
+          <div className="overflow-x-auto rounded-xl border border-frz-line bg-frz-card p-3">
             <iframe
               title="Campaign email preview"
               srcDoc={previewHtml}
@@ -1002,16 +1002,16 @@ export default function CampaignEditor({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h2 className="text-lg font-medium">Snapshot recipients</h2>
-            <p className="text-sm text-white/45">
+            <p className="text-sm text-frz-muted">
               Lista rămâne fixă după lansare; evenimentele actualizează livrarea.
             </p>
           </div>
-          <label className="text-xs text-white/45">
+          <label className="text-xs text-frz-muted">
             <span className="mb-1 block">Filter</span>
             <select
               value={recipientFilter}
               onChange={(event) => setRecipientFilter(event.target.value)}
-              className="rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm text-white"
+              className="rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-sm text-frz-ink"
             >
               <option value="all">All recipients</option>
               <option value="sent">Sent</option>
@@ -1026,9 +1026,9 @@ export default function CampaignEditor({
             </select>
           </label>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-white/10">
+        <div className="overflow-x-auto rounded-xl border border-frz-line">
           <table className="min-w-full text-sm">
-            <thead className="bg-white/[0.04] text-left text-white/50">
+            <thead className="bg-frz-fog text-left text-frz-muted">
               <tr>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Email</th>
@@ -1042,34 +1042,34 @@ export default function CampaignEditor({
             <tbody>
               {recipients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-white/40">
+                  <td colSpan={7} className="px-4 py-8 text-center text-frz-muted">
                     Nu există încă un snapshot pentru această campanie.
                   </td>
                 </tr>
               ) : filteredRecipients.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-white/40">
+                  <td colSpan={7} className="px-4 py-8 text-center text-frz-muted">
                     Niciun recipient nu corespunde filtrului selectat.
                   </td>
                 </tr>
               ) : (
                 filteredRecipients.map((recipient) => (
-                  <tr key={recipient.id} className="border-t border-white/5">
+                  <tr key={recipient.id} className="border-t border-frz-line/50">
                     <td className="px-4 py-3">
                       {[recipient.first_name, recipient.last_name]
                         .filter(Boolean)
                         .join(" ") || "—"}
                     </td>
-                    <td className="px-4 py-3 text-white/60">
+                    <td className="px-4 py-3 text-frz-ink/60">
                       <a
                         href={`mailto:${recipient.email}`}
-                        className="hover:text-white hover:underline"
+                        className="hover:text-frz-ink hover:underline"
                       >
                         {recipient.email}
                       </a>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/60">
+                      <span className="rounded-md bg-frz-fog px-2 py-0.5 text-xs text-frz-ink/60">
                         {recipient.status}
                       </span>
                       {recipient.bounce_reason && (
@@ -1078,19 +1078,19 @@ export default function CampaignEditor({
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-white/50">
+                    <td className="px-4 py-3 text-xs text-frz-muted">
                       {recipient.first_opened_at || recipient.opened_at ? "Yes" : "No"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-white/50">
+                    <td className="px-4 py-3 text-xs text-frz-muted">
                       {recipient.first_clicked_at || recipient.clicked_at ? "Yes" : "No"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-white/50">
+                    <td className="px-4 py-3 text-xs text-frz-muted">
                       {recipient.unsubscribed_at ? "Yes" : "No"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-white/50">
+                    <td className="px-4 py-3 text-xs text-frz-muted">
                       <span className="block">{recipient.last_event_type || "—"}</span>
                       {recipient.last_event_at && (
-                        <span className="block text-white/30">
+                        <span className="block text-frz-muted">
                           {new Date(recipient.last_event_at).toLocaleString("ro-RO")}
                         </span>
                       )}
@@ -1109,7 +1109,7 @@ export default function CampaignEditor({
             role="dialog"
             aria-modal="true"
             aria-labelledby="send-campaign-title"
-            className="w-full max-w-lg space-y-5 rounded-2xl border border-white/15 bg-[#171719] p-6 shadow-2xl"
+            className="w-full max-w-lg space-y-5 rounded-2xl border border-frz-line bg-frz-card p-6 shadow-2xl"
           >
             <div>
               <h2 id="send-campaign-title" className="text-xl font-semibold">
@@ -1130,10 +1130,10 @@ export default function CampaignEditor({
               ].map(([label, value]) => (
                 <div
                   key={label}
-                  className="grid gap-1 border-b border-white/10 pb-2 sm:grid-cols-[150px_1fr]"
+                  className="grid gap-1 border-b border-frz-line pb-2 sm:grid-cols-[150px_1fr]"
                 >
-                  <dt className="text-white/40">{label}</dt>
-                  <dd className="break-words text-white/85">{value}</dd>
+                  <dt className="text-frz-muted">{label}</dt>
+                  <dd className="break-words text-frz-ink">{value}</dd>
                 </div>
               ))}
             </dl>
@@ -1142,7 +1142,7 @@ export default function CampaignEditor({
                 type="button"
                 onClick={() => setShowSendConfirmation(false)}
                 disabled={busy === "queue"}
-                className="rounded-lg border border-white/15 px-4 py-2 text-sm disabled:opacity-50"
+                className="rounded-lg border border-frz-line px-4 py-2 text-sm disabled:opacity-50"
               >
                 Înapoi
               </button>
@@ -1150,7 +1150,7 @@ export default function CampaignEditor({
                 type="button"
                 onClick={confirmSendCampaign}
                 disabled={busy === "queue"}
-                className="rounded-lg bg-emerald-300 px-4 py-2 text-sm font-semibold text-black disabled:opacity-50"
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
                 {busy === "queue" ? "Se pornește…" : "Confirm & Send"}
               </button>
@@ -1170,7 +1170,7 @@ function EditorCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+    <section className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-4">
       <h2 className="text-base font-medium">{title}</h2>
       {children}
     </section>
@@ -1192,13 +1192,13 @@ function TextField({
 }) {
   return (
     <label className="block space-y-1 text-sm">
-      <span className="text-xs text-white/45">{label}</span>
+      <span className="text-xs text-frz-muted">{label}</span>
       <input
         type={type}
         value={value}
         disabled={disabled}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2 disabled:opacity-60"
+        className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2 text-frz-ink disabled:opacity-60"
       />
     </label>
   );

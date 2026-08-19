@@ -11,14 +11,14 @@ import type {
 
 function statusClass(status: string): string {
   const colors: Record<string, string> = {
-    draft: "bg-white/10 text-white/70",
+    draft: "bg-frz-fog text-frz-ink/70",
     scheduled: "bg-blue-500/15 text-blue-200",
     queued: "bg-sky-500/15 text-sky-200",
     sending: "bg-amber-500/15 text-amber-200",
     sent: "bg-emerald-500/15 text-emerald-200",
     partially_failed: "bg-orange-500/15 text-orange-200",
     failed: "bg-red-500/15 text-red-200",
-    cancelled: "bg-white/5 text-white/40",
+    cancelled: "bg-frz-fog/50 text-frz-muted",
   };
   return colors[status] || colors.draft;
 }
@@ -124,21 +124,21 @@ export default function CampaignsClient({
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
             Campaigns
           </h1>
-          <p className="mt-2 text-sm text-white/55">
+          <p className="mt-2 text-sm text-frz-ink/60">
             Drafturi, teste, snapshot de audiență și campanii reale în batch-uri.
           </p>
         </div>
         <div className="flex gap-2">
           <Link
             href="/email/campaigns/templates"
-            className="rounded-lg border border-white/15 px-4 py-2 text-sm text-white/80 hover:bg-white/10"
+            className="rounded-lg border border-frz-line px-4 py-2 text-sm text-frz-ink/80 hover:bg-frz-fog"
           >
             Templates
           </Link>
           <button
             type="button"
             onClick={() => setShowCreate((value) => !value)}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black hover:bg-gray-200"
+            className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast hover:bg-frz-fog"
           >
             Create Campaign
           </button>
@@ -154,13 +154,13 @@ export default function CampaignsClient({
       {showCreate && (
         <form
           onSubmit={create}
-          className="space-y-4 rounded-xl border border-white/10 bg-white/[0.03] p-4"
+          className="space-y-4 rounded-xl border border-frz-line bg-frz-card p-4"
         >
           <div className="grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setCreateMode("template")}
-              className={`rounded-xl border p-4 text-left ${createMode === "template" ? "border-white bg-white text-black" : "border-white/10 hover:bg-white/5"}`}
+              className={`rounded-xl border p-4 text-left ${createMode === "template" ? "border-frz-ink bg-frz-ink text-frz-ink-contrast" : "border-frz-line hover:bg-frz-fog"}`}
             >
               <span className="block font-medium">Start from Frizeo Template</span>
               <span className="mt-1 block text-xs opacity-60">Conținutul și CTA-ul se completează automat.</span>
@@ -168,7 +168,7 @@ export default function CampaignsClient({
             <button
               type="button"
               onClick={() => setCreateMode("blank")}
-              className={`rounded-xl border p-4 text-left ${createMode === "blank" ? "border-white bg-white text-black" : "border-white/10 hover:bg-white/5"}`}
+              className={`rounded-xl border p-4 text-left ${createMode === "blank" ? "border-frz-ink bg-frz-ink text-frz-ink-contrast" : "border-frz-line hover:bg-frz-fog"}`}
             >
               <span className="block font-medium">Blank Campaign</span>
               <span className="mt-1 block text-xs opacity-60">Pornește cu un draft gol.</span>
@@ -176,23 +176,23 @@ export default function CampaignsClient({
           </div>
           <div className="grid gap-3 md:grid-cols-[1fr_320px_auto] md:items-end">
             <label className="space-y-1 text-sm">
-            <span className="text-xs text-white/45">Campaign name</span>
+            <span className="text-xs text-frz-muted">Campaign name</span>
             <input
               required
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Ex. Noutăți august"
-              className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+              className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2"
             />
             </label>
             {createMode === "template" ? (
               <label className="space-y-1 text-sm">
-            <span className="text-xs text-white/45">Template</span>
+            <span className="text-xs text-frz-muted">Template</span>
             <select
               required={createMode === "template"}
               value={templateId}
               onChange={(event) => setTemplateId(event.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black/40 px-3 py-2"
+              className="w-full rounded-lg border border-frz-line bg-frz-fog px-3 py-2"
             >
               {systemTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -202,12 +202,12 @@ export default function CampaignsClient({
             </select>
               </label>
             ) : (
-              <div className="text-sm text-white/45">Draft fără template</div>
+              <div className="text-sm text-frz-muted">Draft fără template</div>
             )}
           <button
             type="submit"
             disabled={pending || (createMode === "template" && systemTemplates.length === 0)}
-            className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
+            className="rounded-lg bg-frz-ink px-4 py-2 text-sm font-medium text-frz-ink-contrast disabled:opacity-40"
           >
             Creează draft
           </button>
@@ -215,9 +215,9 @@ export default function CampaignsClient({
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-frz-line">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/[0.04] text-left text-white/50">
+          <thead className="bg-frz-fog text-left text-frz-muted">
             <tr>
               <th className="px-4 py-3 font-medium">Campaign</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -230,13 +230,13 @@ export default function CampaignsClient({
           <tbody>
             {campaigns.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-white/40">
+                <td colSpan={6} className="px-4 py-12 text-center text-frz-muted">
                   Nicio campanie. Creează primul draft dintr-un template.
                 </td>
               </tr>
             ) : (
               campaigns.map((campaign) => (
-                <tr key={campaign.id} className="border-t border-white/5">
+                <tr key={campaign.id} className="border-t border-frz-line/50">
                   <td className="px-4 py-3">
                     <Link
                       href={`/email/campaigns/${campaign.id}`}
@@ -244,7 +244,7 @@ export default function CampaignsClient({
                     >
                       {campaign.name}
                     </Link>
-                    <div className="max-w-xs truncate text-xs text-white/40">
+                    <div className="max-w-xs truncate text-xs text-frz-muted">
                       {campaign.subject || "Fără subiect"}
                     </div>
                   </td>
@@ -255,29 +255,29 @@ export default function CampaignsClient({
                       {campaign.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-white/60">
+                  <td className="px-4 py-3 text-frz-ink/60">
                     {campaign.segment_name_snapshot ||
                       segments.find((segment) => segment.id === campaign.segment_id)?.name ||
                       campaign.audience_kind}
                   </td>
-                  <td className="px-4 py-3 tabular-nums text-white/70">
+                  <td className="px-4 py-3 tabular-nums text-frz-ink/70">
                     {campaign.recipient_count}
                   </td>
-                  <td className="px-4 py-3 text-white/50">
+                  <td className="px-4 py-3 text-frz-muted">
                     {new Date(campaign.updated_at).toLocaleDateString("ro-RO")}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Link
                         href={`/email/campaigns/${campaign.id}`}
-                        className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10"
+                        className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog"
                       >
                         View
                       </Link>
                       {campaign.status === "draft" && (
                         <Link
                           href={`/email/campaigns/${campaign.id}`}
-                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10"
+                          className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog"
                         >
                           Edit
                         </Link>
@@ -287,7 +287,7 @@ export default function CampaignsClient({
                           type="button"
                           onClick={() => duplicate(campaign)}
                           disabled={busyId === campaign.id}
-                          className="rounded-md border border-white/15 px-2.5 py-1.5 text-xs hover:bg-white/10 disabled:opacity-40"
+                          className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog disabled:opacity-40"
                         >
                           Duplicate
                         </button>
@@ -321,7 +321,7 @@ export default function CampaignsClient({
         </table>
       </div>
 
-      <p className="text-xs text-white/35">
+      <p className="text-xs text-frz-muted">
         Campaniile pornite continuă server-side prin workerul extern chiar dacă
         închizi browserul. Tracking-ul și webhook-urile vor veni separat.
       </p>
