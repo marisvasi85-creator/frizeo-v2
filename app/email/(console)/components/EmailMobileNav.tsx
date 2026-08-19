@@ -22,7 +22,7 @@ export default function EmailMobileNav() {
       )}
 
       <div
-        className={`fixed left-0 right-0 bottom-0 bg-white border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
+        className={`fixed left-0 right-0 bottom-0 bg-frz-card border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -47,7 +47,7 @@ export default function EmailMobileNav() {
         </div>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-frz-line bg-white">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-frz-line bg-frz-card">
         <ul className="flex justify-around px-2 py-2">
           {mainItems.map((item) => {
             const active = isEmailNavActive(pathname, item.path);

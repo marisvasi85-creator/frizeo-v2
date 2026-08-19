@@ -30,7 +30,7 @@ export default function AdminModal({
     >
       <div
         className={cn(
-          "bg-white border border-frz-line p-6 rounded-2xl w-full space-y-4 max-h-[90vh] overflow-y-auto shadow-frz",
+          "bg-frz-card border border-frz-line p-6 rounded-2xl w-full space-y-4 max-h-[90vh] overflow-y-auto shadow-frz",
           maxWidth,
           className
         )}

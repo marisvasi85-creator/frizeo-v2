@@ -85,7 +85,7 @@ export default function UpgradeButton({
         type="button"
         onClick={handleUpgrade}
         disabled={loading}
-        className="w-full bg-white text-black py-2 rounded hover:bg-gray-200 transition disabled:opacity-60 disabled:cursor-not-allowed"
+        className="w-full bg-frz-ink text-frz-fog py-2 rounded hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
       >
         {loading
           ? "Se deschide Stripe…"

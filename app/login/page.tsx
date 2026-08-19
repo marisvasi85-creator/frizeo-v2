@@ -108,7 +108,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4 py-10 pb-32">
       <div
-        className={`w-full max-w-sm bg-white rounded-2xl p-6 shadow-frz space-y-6 border border-frz-line ${
+        className={`w-full max-w-sm bg-frz-card rounded-2xl p-6 shadow-frz space-y-6 border border-frz-line ${
           shake ? "animate-shake" : ""
         }`}
       >
@@ -159,7 +159,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
+            className="w-full bg-frz-ink text-frz-ink-contrast font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
           >
             {loading ? "Se autentifică..." : "Autentificare"}
           </button>

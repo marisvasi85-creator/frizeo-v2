@@ -58,7 +58,7 @@ export default function BillingPlansSection({
               className={`rounded-xl border p-6 ${
                 isCurrent
                   ? "border-green-500 bg-green-50"
-                  : "border-frz-line bg-white"
+                  : "border-frz-line bg-frz-card"
               }`}
             >
               <div className="flex justify-between items-center">
@@ -121,7 +121,7 @@ export default function BillingPlansSection({
                 {plan.slug === "custom" ? (
                   <a
                     href="mailto:office@frizeo.ro"
-                    className="block w-full text-center bg-frz-ink text-white py-2 rounded"
+                    className="block w-full text-center bg-frz-ink text-frz-ink-contrast py-2 rounded"
                   >
                     Contactează-ne
                   </a>

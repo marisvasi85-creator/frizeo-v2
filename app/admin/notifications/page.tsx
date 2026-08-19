@@ -56,7 +56,7 @@ export default async function NotificationsPage() {
 
       <FormWithSaveFeedback
         action={updateNotifications}
-        className="bg-white border border-frz-line rounded-xl p-6 space-y-6"
+        className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-6"
       >
         <NotificationToggle
           name="booking_email_enabled"

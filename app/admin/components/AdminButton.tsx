@@ -36,11 +36,11 @@ const base =
   "inline-flex items-center justify-center rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-frz-ink text-white font-semibold hover:bg-frz-ink-soft",
+  primary: "bg-frz-ink text-frz-ink-contrast font-semibold hover:opacity-90",
   secondary:
-    "bg-white text-frz-ink font-medium border border-frz-line hover:bg-frz-fog",
+    "bg-frz-card text-frz-ink font-medium border border-frz-line hover:bg-frz-fog",
   danger:
-    "bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium",
+    "bg-frz-card text-frz-danger border border-frz-danger/20 hover:bg-frz-danger-soft font-medium",
   ghost: "text-frz-muted hover:text-frz-ink hover:bg-frz-mist",
 };
 

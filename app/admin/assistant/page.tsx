@@ -27,7 +27,7 @@ export default async function AssistantPage() {
         </p>
       </div>
 
-      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-frz-line bg-white">
+      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-frz-line bg-frz-card">
         <AssistantChatPanel
           configured={isAssistantLlmConfigured()}
           displayName={session.barber.display_name || ""}

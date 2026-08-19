@@ -132,7 +132,7 @@ export default async function AdminReportsPage({
               className={cn(
                 "px-4 py-2 text-sm rounded-md transition",
                 active
-                  ? "bg-frz-ink text-white font-medium"
+                  ? "bg-frz-ink text-frz-ink-contrast font-medium"
                   : "text-frz-ink/60 hover:text-frz-ink",
               )}
             >

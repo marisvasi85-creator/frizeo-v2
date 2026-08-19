@@ -28,9 +28,7 @@ export default function SlotPicker({
         {Array.from({ length: 9 }).map((_, i) => (
           <div
             key={i}
-            className={`h-12 rounded-xl animate-pulse ${
-              isLight ? "bg-frz-fog" : "bg-zinc-700"
-            }`}
+            className="h-12 rounded-xl animate-pulse bg-frz-fog"
           />
         ))}
       </div>
@@ -134,11 +132,7 @@ export default function SlotPicker({
                     key={`unavailable-${s.time}`}
                     type="button"
                     disabled
-                    className={`p-3 rounded-xl border cursor-not-allowed opacity-60 ${
-                      isLight
-                        ? "bg-gray-100 text-gray-400 border-gray-200"
-                        : "bg-zinc-900 text-white/40 border-zinc-800"
-                    }`}
+                    className="p-3 rounded-xl border cursor-not-allowed opacity-60 bg-frz-fog text-frz-muted border-frz-line"
                   >
                     <div className="font-semibold">{s.time}</div>
                     <div className="text-xs mt-0.5">
@@ -159,12 +153,8 @@ export default function SlotPicker({
                     p-3 rounded-xl border transition
                     ${
                       selected === s.time
-                        ? isLight
-                          ? "bg-black text-white border-black"
-                          : "bg-white text-black"
-                        : isLight
-                          ? "bg-white text-black border-gray-200 hover:bg-gray-50"
-                          : "bg-zinc-800 text-white border-zinc-700 hover:bg-zinc-700"
+                        ? "bg-frz-ink text-frz-ink-contrast border-frz-ink"
+                        : "bg-frz-card text-frz-ink border-frz-line hover:bg-frz-fog"
                     }
                   `}
                 >

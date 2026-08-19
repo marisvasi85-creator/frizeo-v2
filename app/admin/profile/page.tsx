@@ -9,6 +9,7 @@ import BarberLocationSection from "@/app/components/location/BarberLocationSecti
 import GoogleCalendarConnectDisclosure from "./GoogleCalendarConnectDisclosure";
 import GoogleCalendarSyncButton from "./GoogleCalendarSyncButton";
 import { formatLocationAddress } from "@/lib/location/resolveLocation";
+import ThemeSelector from "../components/ThemeSelector";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
@@ -88,21 +89,27 @@ export default async function ProfilePage({
         <div
           className={`rounded-xl p-4 text-sm ${
             isSuccess
-              ? "bg-green-500/10 border border-green-500/30 text-green-300"
-              : "bg-red-500/10 border border-red-500/30 text-red-300"
+              ? "bg-green-50 border border-green-200 text-green-700"
+              : "bg-red-50 border border-red-200 text-red-700"
           }`}
         >
           {statusMessage}
         </div>
       )}
 
-      <div className="bg-white border border-frz-line rounded-xl p-6">
+      <div className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Aspect</h2>
+        <p className="text-sm text-frz-muted">Alege tema interfeței Frizeo.</p>
+        <ThemeSelector />
+      </div>
+
+      <div className="bg-frz-card border border-frz-line rounded-xl p-6">
         <h2 className="text-lg font-semibold mb-4">Google Calendar</h2>
 
         {isConnected ? (
           <div className="space-y-4">
             <div>
-              <p className="text-green-400">Calendar conectat</p>
+              <p className="text-frz-success">Calendar conectat</p>
               {googleAccount?.google_email && (
                 <p className="text-sm text-frz-ink/50 mt-1">
                   {googleAccount.google_email}
@@ -157,7 +164,7 @@ export default async function ProfilePage({
 
             <a
               href="/api/google/connect"
-              className="inline-block px-4 py-2 bg-frz-ink text-white rounded-lg font-medium text-center text-sm hover:bg-frz-ink-soft transition"
+              className="inline-block px-4 py-2 bg-frz-ink text-frz-ink-contrast rounded-lg font-medium text-center text-sm hover:opacity-90 transition"
             >
               Conectează Google Calendar
             </a>
@@ -169,7 +176,7 @@ export default async function ProfilePage({
 
       <FormWithSaveFeedback
         action={updateProfile}
-        className="bg-white border border-frz-line rounded-xl p-6 space-y-5"
+        className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-5"
       >
         <div>
           <label className="block text-sm text-frz-ink/60 mb-2">

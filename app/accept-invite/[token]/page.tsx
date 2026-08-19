@@ -127,7 +127,7 @@ export default function AcceptInvitePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4">
 
-      <div className="w-full max-w-sm bg-white border border-frz-line rounded-2xl p-6 shadow-frz space-y-4">
+      <div className="w-full max-w-sm bg-frz-card border border-frz-line rounded-2xl p-6 shadow-frz space-y-4">
 
         <div className="text-center">
           <h1 className="text-frz-ink text-2xl font-semibold">
@@ -184,7 +184,7 @@ export default function AcceptInvitePage() {
         <button
           onClick={acceptInvite}
           disabled={saving}
-          className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition"
+          className="w-full bg-frz-ink text-frz-ink-contrast font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition"
         >
           {saving
             ? "Se creează..."

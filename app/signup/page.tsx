@@ -177,7 +177,7 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4 py-10 pb-32">
       <SignupAnalytics />
-      <div className="w-full max-w-sm bg-white border border-frz-line rounded-2xl p-6 shadow-frz space-y-6">
+      <div className="w-full max-w-sm bg-frz-card border border-frz-line rounded-2xl p-6 shadow-frz space-y-6">
         <div className="text-center">
           <h1 className="text-frz-ink text-2xl font-semibold">Frizeo</h1>
           <p className="text-frz-ink/60 text-sm mt-1">Creează cont</p>
@@ -362,7 +362,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
+            className="w-full bg-frz-ink text-frz-ink-contrast font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
           >
             {loading ? "Se creează..." : "Creează cont"}
           </button>

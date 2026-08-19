@@ -88,7 +88,7 @@ export default async function SalonPage() {
 
       <LocationMigrationBanner ready={locationMigrationReady} />
 
-      <div className="bg-white border border-frz-line rounded-xl p-6 space-y-4">
+      <div className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-4">
         <div>
           <p className="text-sm text-frz-ink/60">Link public salon</p>
 
@@ -103,7 +103,7 @@ export default async function SalonPage() {
               <a
                 href={salonUrl}
                 target="_blank"
-                className="flex-1 text-center px-4 py-3 bg-white text-black rounded-lg"
+                className="flex-1 text-center px-4 py-3 bg-frz-card text-frz-ink rounded-lg"
               >
                 Deschide
               </a>
@@ -138,7 +138,7 @@ export default async function SalonPage() {
 
       <FormWithSaveFeedback
         action={updateSalon}
-        className="bg-white border border-frz-line rounded-xl p-6 space-y-5"
+        className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-5"
       >
         <div>
           <label className="block text-sm text-frz-ink/60 mb-2">Nume salon</label>
@@ -196,7 +196,7 @@ export default async function SalonPage() {
             <span className="block font-medium">
               Afișează salonul în directorul Frizeo
             </span>
-            <span className="block text-sm text-white/50 mt-1">
+            <span className="block text-sm text-frz-muted mt-1">
               Apară pe pagini gen „Frizerii în Arad” (după orașul din locație)
               și ajută la descoperirea pe Google. Linkul tău de programare
               rămâne public oricum.

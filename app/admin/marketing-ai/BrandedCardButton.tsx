@@ -73,8 +73,8 @@ export default function BrandedCardButton({
 
   return (
     <div className="pt-2 border-t border-white/10 space-y-2">
-      <p className="text-sm font-medium text-white/80">Imagine promo (gratuit)</p>
-      <p className="text-xs text-white/50">
+      <p className="text-sm font-medium text-frz-ink">Imagine promo (gratuit)</p>
+      <p className="text-xs text-frz-muted">
         Card cu logo, text și link programări — {squareMeta.label} pentru feed,{" "}
         {storyMeta.label} pentru Stories.
         {preferred === "story" && (

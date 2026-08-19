@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4 py-10 pb-32">
-      <div className="bg-white border border-frz-line p-6 rounded-xl space-y-4 w-full max-w-sm shadow-frz">
+      <div className="bg-frz-card border border-frz-line p-6 rounded-xl space-y-4 w-full max-w-sm shadow-frz">
         <div>
           <h2 className="text-xl font-semibold text-frz-ink">
             Setează parola nouă
@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
 
           <button
             type="submit"
-            className="w-full bg-frz-ink text-white py-3 rounded-lg font-semibold hover:bg-frz-ink-soft transition"
+            className="w-full bg-frz-ink text-frz-ink-contrast py-3 rounded-lg font-semibold hover:bg-frz-ink-soft transition"
           >
             Schimbă parola
           </button>

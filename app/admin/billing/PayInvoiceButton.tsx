@@ -33,7 +33,7 @@ export default function PayInvoiceButton() {
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="rounded bg-white text-black px-4 py-2 text-sm hover:bg-gray-200 transition disabled:opacity-60"
+        className="rounded bg-frz-ink text-frz-fog px-4 py-2 text-sm hover:opacity-90 transition disabled:opacity-60"
       >
         {loading ? "Se deschide…" : "Finalizează plata"}
       </button>

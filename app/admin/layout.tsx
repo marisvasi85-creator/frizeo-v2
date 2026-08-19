@@ -55,7 +55,7 @@ export default async function AdminLayout({
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
 
   return (
-    <div className="frz-admin-light flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-frz-fog text-frz-ink">
+    <div className="frz-admin flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-frz-fog text-frz-ink">
       <Sidebar
         role={session.role}
         actsAsBarber={actsAsBarber}

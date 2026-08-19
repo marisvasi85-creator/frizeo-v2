@@ -40,7 +40,7 @@ export default function MobileNav({
       )}
 
       <div
-        className={`fixed left-0 right-0 bottom-0 bg-white border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
+        className={`fixed left-0 right-0 bottom-0 bg-frz-card border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -72,7 +72,7 @@ export default function MobileNav({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-frz-line flex justify-around py-2 md:hidden z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-frz-card border-t border-frz-line flex justify-around py-2 md:hidden z-50">
         {mainItems.map((item) => {
           const active = pathname.startsWith(item.href);
 

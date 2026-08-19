@@ -293,7 +293,7 @@ export default function AssistantChatPanel({
             <div
               className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap ${
                 message.role === "user"
-                  ? "bg-frz-ink text-white"
+                  ? "bg-frz-ink text-frz-ink-contrast"
                   : "bg-frz-fog border border-frz-line text-frz-ink/90"
               }`}
             >
@@ -312,7 +312,7 @@ export default function AssistantChatPanel({
                 type="button"
                 disabled={loading}
                 onClick={() => void handleConfirmation(true)}
-                className="rounded-lg bg-white text-black px-3.5 py-2 text-sm font-medium disabled:opacity-40"
+                className="rounded-lg bg-frz-ink text-frz-fog px-3.5 py-2 text-sm font-medium disabled:opacity-40"
               >
                 Confirmă
               </button>
@@ -320,7 +320,7 @@ export default function AssistantChatPanel({
                 type="button"
                 disabled={loading}
                 onClick={() => void handleConfirmation(false)}
-                className="rounded-lg border border-frz-line bg-white text-frz-ink px-3.5 py-2 text-sm disabled:opacity-40"
+                className="rounded-lg border border-frz-line bg-frz-card text-frz-ink px-3.5 py-2 text-sm disabled:opacity-40"
               >
                 Renunță
               </button>
@@ -394,7 +394,7 @@ export default function AssistantChatPanel({
                   ? "Vorbește acum…"
                   : "Scrie sau dictează…"
             }
-            className="flex-1 rounded-xl bg-white border border-frz-line px-3 py-2.5 text-sm text-frz-ink outline-none focus:border-frz-ink/30 disabled:opacity-50 placeholder:text-frz-ink/40"
+            className="flex-1 rounded-xl bg-frz-card border border-frz-line px-3 py-2.5 text-sm text-frz-ink outline-none focus:border-frz-ink/30 disabled:opacity-50 placeholder:text-frz-ink/40"
           />
 
           {dictation.supported && (
@@ -428,7 +428,7 @@ export default function AssistantChatPanel({
           <button
             type="submit"
             disabled={inputLocked || !composeCurrentText().trim()}
-            className="rounded-xl bg-white text-black px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0"
+            className="rounded-xl bg-frz-ink text-frz-fog px-3.5 py-2.5 text-sm font-medium disabled:opacity-40 shrink-0"
           >
             Trimite
           </button>

@@ -437,7 +437,7 @@ export default function MarketingAIClient({
                 onClick={() => setTone(value)}
                 className={`rounded-lg px-3 py-2 text-sm transition ${
                   tone === value
-                    ? "bg-frz-ink text-white font-medium"
+                    ? "bg-frz-ink text-frz-ink-contrast font-medium"
                     : "bg-frz-fog text-frz-ink/80 hover:bg-frz-mist"
                 }`}
               >
@@ -531,7 +531,7 @@ export default function MarketingAIClient({
                   onClick={() => handleSelectVariant(index)}
                   className={`rounded-lg px-3 py-2 text-sm transition ${
                     activeVariantIndex === index
-                      ? "bg-frz-ink text-white font-medium"
+                      ? "bg-frz-ink text-frz-ink-contrast font-medium"
                       : "bg-frz-fog text-frz-ink/80 hover:bg-frz-mist"
                   }`}
                 >

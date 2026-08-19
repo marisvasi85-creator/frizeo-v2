@@ -331,7 +331,7 @@ export default function OverrideManager({
       {!isSelective && (
         <div>
           <h3 className="font-medium">O singură zi</h3>
-          <p className="text-sm text-white/50 mt-1">
+          <p className="text-sm text-frz-muted mt-1">
             Pentru o zi liberă sau program special (nu concediu pe perioadă).
           </p>
         </div>

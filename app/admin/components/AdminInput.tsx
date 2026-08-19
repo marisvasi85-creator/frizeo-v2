@@ -1,7 +1,7 @@
 import { cn } from "./cn";
 
 export const adminInputClass =
-  "w-full bg-white border border-frz-line rounded-xl px-4 py-3 text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25";
+  "w-full bg-frz-card border border-frz-line rounded-xl px-4 py-3 text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25";
 
 export function AdminInput({
   className,

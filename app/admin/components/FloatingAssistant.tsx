@@ -67,7 +67,7 @@ export default function FloatingAssistant({
             : "opacity-0 translate-y-3 pointer-events-none"
         }`}
       >
-        <div className="w-[min(100vw-1.5rem,380px)] h-[min(70vh,560px)] flex flex-col overflow-hidden rounded-2xl border border-frz-line bg-white shadow-frz">
+        <div className="w-[min(100vw-1.5rem,380px)] h-[min(70vh,560px)] flex flex-col overflow-hidden rounded-2xl border border-frz-line bg-frz-card shadow-frz">
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-frz-line bg-frz-fog">
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate">
@@ -80,7 +80,7 @@ export default function FloatingAssistant({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="h-8 w-8 shrink-0 rounded-full bg-white border border-frz-line hover:bg-frz-fog text-frz-ink/70"
+              className="h-8 w-8 shrink-0 rounded-full bg-frz-card border border-frz-line hover:bg-frz-fog text-frz-ink/70"
               aria-label="Închide"
             >
               ✕
@@ -104,7 +104,7 @@ export default function FloatingAssistant({
           type="button"
           onClick={openAssistant}
           aria-label="Deschide Frizeo Assistant"
-          className="fixed z-[90] right-3 md:right-6 bottom-20 md:bottom-6 h-14 w-14 rounded-full shadow-lg shadow-black/40 transition flex items-center justify-center text-2xl bg-white text-black hover:scale-105"
+          className="fixed z-[90] right-3 md:right-6 bottom-20 md:bottom-6 h-14 w-14 rounded-full shadow-lg shadow-black/40 transition flex items-center justify-center text-2xl bg-frz-ink text-frz-fog hover:scale-105"
         >
           🤖
         </button>

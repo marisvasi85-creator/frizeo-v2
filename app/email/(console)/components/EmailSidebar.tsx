@@ -8,7 +8,7 @@ export default function EmailSidebar({ backUrl }: { backUrl: string }) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex w-64 border-r border-frz-line p-6 flex-col justify-between bg-white">
+    <aside className="hidden md:flex w-64 border-r border-frz-line p-6 flex-col justify-between bg-frz-card">
       <div>
         <p className="text-[11px] uppercase tracking-[0.18em] text-frz-ink/40 mb-2">
           Internal
@@ -28,7 +28,7 @@ export default function EmailSidebar({ backUrl }: { backUrl: string }) {
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   ${
                     active
-                      ? "bg-frz-ink text-white"
+                      ? "bg-frz-ink text-frz-ink-contrast"
                       : "text-frz-ink/70 hover:bg-frz-fog hover:text-frz-ink"
                   }`}
               >

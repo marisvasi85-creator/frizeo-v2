@@ -23,7 +23,7 @@ export default function BookingRulesForm({ minBookingNoticeHours }: Props) {
   return (
     <FormWithSaveFeedback
       action={saveBookingRules}
-      className="bg-white border border-frz-line rounded-xl p-6 space-y-4"
+      className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-4"
       saveLabel="Salvează regulile"
     >
       <div>

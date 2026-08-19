@@ -63,7 +63,7 @@ export default function ScheduleModePicker({
           onClick={() => void save("weekly")}
           className={`px-3 py-2 rounded-lg text-sm border ${
             mode === "weekly"
-              ? "bg-frz-ink text-white border-frz-ink"
+              ? "bg-frz-ink text-frz-ink-contrast border-frz-ink"
               : "bg-frz-fog text-frz-ink/70 border-frz-line"
           }`}
         >

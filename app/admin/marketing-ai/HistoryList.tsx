@@ -35,8 +35,8 @@ export default function HistoryList({
     <AdminCard className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-white/90">Istoric generări</p>
-          <p className="text-xs text-white/50 mt-1">
+          <p className="text-sm font-medium text-frz-ink">Istoric generări</p>
+          <p className="text-xs text-frz-muted mt-1">
             Redeschide un text salvat — fără să consume din limita zilnică.
           </p>
         </div>
@@ -52,7 +52,7 @@ export default function HistoryList({
       </div>
 
       {items.length === 0 && !loading && (
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-frz-muted">
           Încă nu ai generări salvate. Creează prima postare mai jos.
         </p>
       )}
@@ -70,19 +70,19 @@ export default function HistoryList({
                   onClick={() => onSelect(item)}
                   className={`w-full text-left px-4 py-3 transition ${
                     active
-                      ? "bg-white/10"
-                      : "bg-transparent hover:bg-white/[0.04]"
+                      ? "bg-frz-mist"
+                      : "bg-transparent hover:bg-frz-fog"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-white truncate">
+                      <p className="text-sm font-medium text-frz-ink truncate">
                         {item.title}
                       </p>
-                      <p className="text-xs text-white/45 mt-1">
+                      <p className="text-xs text-frz-muted mt-1">
                         {label} · {formatWhen(item.createdAt)}
                       </p>
-                      <p className="text-xs text-white/55 mt-1 line-clamp-2">
+                      <p className="text-xs text-frz-muted mt-1 line-clamp-2">
                         {item.content}
                       </p>
                     </div>

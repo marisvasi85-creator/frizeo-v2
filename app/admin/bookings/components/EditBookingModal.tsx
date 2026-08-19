@@ -269,7 +269,7 @@ export default function EditBookingModal({
 
   return (
     <div className="fixed inset-0 bg-frz-ink/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white border border-frz-line p-6 rounded-xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-frz-card border border-frz-line p-6 rounded-xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
         <div>
           <h2 className="text-lg font-semibold">Editează programarea</h2>
           <p className="text-sm text-emerald-400 mt-1">
@@ -373,7 +373,7 @@ export default function EditBookingModal({
                         : !isFree
                         ? "bg-red-100 text-red-600 cursor-not-allowed"
                         : isSelected
-                          ? "bg-frz-ink text-white"
+                          ? "bg-frz-ink text-frz-ink-contrast"
                           : isCurrent
                             ? "bg-emerald-50 border border-emerald-300 text-frz-ink"
                             : "bg-frz-fog border border-frz-line text-frz-ink hover:border-frz-ink/30"

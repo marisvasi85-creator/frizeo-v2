@@ -37,7 +37,7 @@ export default function ManageSubscriptionButton({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="rounded border border-frz-line bg-white text-frz-ink px-4 py-2 text-sm hover:bg-frz-fog transition disabled:opacity-60"
+        className="rounded border border-frz-line bg-frz-card text-frz-ink px-4 py-2 text-sm hover:bg-frz-fog transition disabled:opacity-60"
       >
         {loading ? "Se deschide…" : label}
       </button>

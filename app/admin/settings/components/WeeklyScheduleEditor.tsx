@@ -157,7 +157,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
         {days.map((day, index) => (
           <div
             key={day.day_of_week}
-            className="bg-white border border-frz-line p-4 rounded-xl space-y-4"
+            className="bg-frz-card border border-frz-line p-4 rounded-xl space-y-4"
           >
 
             {/* HEADER */}

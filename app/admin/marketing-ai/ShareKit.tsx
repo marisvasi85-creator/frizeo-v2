@@ -77,8 +77,8 @@ export default function ShareKit({
   return (
     <div className="pt-2 border-t border-white/10 space-y-3">
       <div>
-        <p className="text-sm font-medium text-white/80">Distribuie rapid</p>
-        <p className="text-xs text-white/50 mt-1">
+        <p className="text-sm font-medium text-frz-ink">Distribuie rapid</p>
+        <p className="text-xs text-frz-muted mt-1">
           Copiază textul, trimite pe WhatsApp sau descarcă QR pentru afiș / oglindă.
         </p>
       </div>

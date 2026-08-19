@@ -55,7 +55,7 @@ export default function AvatarUpload({
   }
 
   return (
-    <div className="bg-white border border-frz-line rounded-xl p-6 space-y-4">
+    <div className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-4">
       <h2 className="text-lg font-semibold">Poză profil</h2>
 
       {preview ? (

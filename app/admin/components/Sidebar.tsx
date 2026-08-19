@@ -27,7 +27,7 @@ export default function Sidebar({
   });
 
   return (
-    <aside className="hidden md:flex w-64 border-r border-frz-line p-6 flex-col justify-between bg-white">
+    <aside className="hidden md:flex w-64 border-r border-frz-line p-6 flex-col justify-between bg-frz-card">
       <div>
         <h2 className="text-xl font-semibold mb-8 tracking-wide text-frz-ink">
           Frizeo
@@ -46,7 +46,7 @@ export default function Sidebar({
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   ${
                     active
-                      ? "bg-frz-ink text-white"
+                      ? "bg-frz-ink text-frz-ink-contrast"
                       : "text-frz-ink/70 hover:bg-frz-fog hover:text-frz-ink"
                   }`}
               >

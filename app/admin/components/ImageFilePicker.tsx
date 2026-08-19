@@ -42,7 +42,7 @@ export default function ImageFilePicker({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={loading}
-        className="px-4 py-2 bg-white border border-frz-line rounded-lg text-sm text-frz-ink hover:bg-frz-fog disabled:opacity-50"
+        className="px-4 py-2 bg-frz-card border border-frz-line rounded-lg text-sm text-frz-ink hover:bg-frz-fog disabled:opacity-50"
       >
         {loading ? "Se încarcă..." : fileName ? changeLabel : label}
       </button>

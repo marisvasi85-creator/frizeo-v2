@@ -4,6 +4,7 @@ import type { Viewport } from "next";
 import { Figtree, Syne } from "next/font/google";
 import CookieBanner from "./components/CookieBanner";
 import AnalyticsProvider from "./components/analytics/AnalyticsProvider";
+import ThemeProvider from "./components/ThemeProvider";
 import { siteMetadata } from "@/lib/site/metadata";
 
 const appBody = Figtree({
@@ -34,22 +35,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ro" className={`${appBody.variable} ${appDisplay.variable}`}>
+    <html lang="ro" className={`${appBody.variable} ${appDisplay.variable}`} suppressHydrationWarning>
       <body>
-        <NextTopLoader
-          color="#0B0B0C"
-          initialPosition={0.08}
-          crawlSpeed={200}
-          height={3}
-          crawl={true}
-          showSpinner={false}
-          easing="ease"
-          speed={200}
-        />
+        <ThemeProvider>
+          <NextTopLoader
+            color="var(--frz-ink)"
+            initialPosition={0.08}
+            crawlSpeed={200}
+            height={3}
+            crawl={true}
+            showSpinner={false}
+            easing="ease"
+            speed={200}
+          />
 
-        {children}
-        <AnalyticsProvider />
-        <CookieBanner />
+          {children}
+          <AnalyticsProvider />
+          <CookieBanner />
+        </ThemeProvider>
       </body>
     </html>
   );

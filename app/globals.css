@@ -2,10 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DESIGN SYSTEM — aligned with marketing Frizeo */
+/* DESIGN SYSTEM — semantic theme tokens */
 :root {
   --radius: 14px;
 
+  /* Semantic tokens — light */
+  --frz-ink: #0b0b0c;
+  --frz-ink-soft: #1c1f24;
+  --frz-muted: #5b6573;
+  --frz-steel: #3d4a5c;
+  --frz-mist: #e8eef5;
+  --frz-fog: #f3f6fa;
+  --frz-line: #d5dde8;
+  --frz-accent: #1f6feb;
+  --frz-accent-soft: #dbeafe;
+  --frz-success: #15803d;
+  --frz-success-soft: #dcfce7;
+  --frz-danger: #dc2626;
+  --frz-danger-soft: #fef2f2;
+  --frz-shadow: 0 1px 2px rgba(11, 11, 12, 0.04);
+
+  /* Legacy aliases */
   --bg: #f3f6fa;
   --card: #ffffff;
   --ink: #0b0b0c;
@@ -14,6 +31,47 @@
   --border: #d5dde8;
   --primary: #0b0b0c;
   --accent: #1f6feb;
+
+  /* Surfaces */
+  --frz-bg: #f3f6fa;
+  --frz-card: #ffffff;
+  --frz-overlay: rgba(11, 11, 12, 0.4);
+  --frz-ink-contrast: #ffffff;
+
+  color-scheme: light;
+}
+
+.dark {
+  --frz-ink: #f0f2f5;
+  --frz-ink-soft: #d4d8df;
+  --frz-muted: #8b95a5;
+  --frz-steel: #9aa3b3;
+  --frz-mist: #1e2128;
+  --frz-fog: #13151a;
+  --frz-line: #2a2e37;
+  --frz-accent: #4d94ff;
+  --frz-accent-soft: #1a2f4d;
+  --frz-success: #34d399;
+  --frz-success-soft: #0d2818;
+  --frz-danger: #f87171;
+  --frz-danger-soft: #2d1215;
+  --frz-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  --bg: #13151a;
+  --card: #1a1d24;
+  --ink: #f0f2f5;
+  --ink-soft: #d4d8df;
+  --muted: #8b95a5;
+  --border: #2a2e37;
+  --primary: #f0f2f5;
+  --accent: #4d94ff;
+
+  --frz-bg: #13151a;
+  --frz-card: #1a1d24;
+  --frz-overlay: rgba(0, 0, 0, 0.6);
+  --frz-ink-contrast: #13151a;
+
+  color-scheme: dark;
 }
 
 /* BODY — avoid horizontal overflow looking like “zoom” on phones */
@@ -23,8 +81,8 @@ html {
 }
 
 body {
-  background: var(--bg);
-  color: var(--ink);
+  background: var(--frz-bg);
+  color: var(--frz-ink);
   font-family: var(--font-app-body), Inter, Arial, sans-serif;
   overflow-x: clip;
   max-width: 100%;
@@ -90,8 +148,8 @@ body {
 }
 
 .rdp-day_selected {
-  background: #0b0b0c !important;
-  color: white !important;
+  background: var(--frz-ink) !important;
+  color: var(--frz-fog) !important;
 }
 
 .rdp-day_today {
@@ -122,68 +180,114 @@ body {
 
 input[type="date"],
 input[type="time"] {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
 .react-datepicker {
-  background: #ffffff !important;
-  border: 1px solid #d5dde8 !important;
+  background: var(--frz-card) !important;
+  border: 1px solid var(--frz-line) !important;
   font-family: inherit !important;
 }
 
 .react-datepicker__header {
-  background: #f3f6fa !important;
-  border-bottom: 1px solid #d5dde8 !important;
+  background: var(--frz-fog) !important;
+  border-bottom: 1px solid var(--frz-line) !important;
 }
 
 .react-datepicker__current-month,
 .react-datepicker__day-name,
 .react-datepicker__day {
-  color: #0b0b0c !important;
+  color: var(--frz-ink) !important;
 }
 
 .react-datepicker__day:hover {
-  background: #e8eef5 !important;
+  background: var(--frz-mist) !important;
 }
 
 .react-datepicker__day--selected {
-  background: #0b0b0c !important;
-  color: #ffffff !important;
+  background: var(--frz-ink) !important;
+  color: var(--frz-fog) !important;
 }
 
 .react-datepicker__day--keyboard-selected {
-  background: #e8eef5 !important;
+  background: var(--frz-mist) !important;
 }
 
 .react-datepicker__day--disabled {
-  color: #9aa3b0 !important;
+  color: var(--frz-muted) !important;
 }
 
-/* FRIZEO admin light overrides for legacy dark classes */
-.frz-admin-light [class*="bg-[#161618]"],
-.frz-admin-light [class*="bg-[#1C1C1F]"] {
-  background-color: #ffffff !important;
+/* FRIZEO admin overrides for legacy dark classes */
+.frz-admin [class*="bg-[#161618]"],
+.frz-admin [class*="bg-[#1C1C1F]"] {
+  background-color: var(--frz-card) !important;
 }
 
-.frz-admin-light [class*="bg-[#0B0B0C]"],
-.frz-admin-light [class*="bg-[#0F0F10]"],
-.frz-admin-light [class*="bg-zinc-800"],
-.frz-admin-light [class*="bg-zinc-700"] {
-  background-color: var(--bg) !important;
+.frz-admin [class*="bg-[#0B0B0C]"],
+.frz-admin [class*="bg-[#0F0F10]"],
+.frz-admin [class*="bg-zinc-800"],
+.frz-admin [class*="bg-zinc-700"] {
+  background-color: var(--frz-bg) !important;
 }
 
-.frz-admin-light [class*="bg-zinc-900"] {
-  background-color: #ffffff !important;
+.frz-admin [class*="bg-zinc-900"] {
+  background-color: var(--frz-card) !important;
 }
 
-.frz-admin-light
+.frz-admin
   [class*="bg-[#161618]"]
   [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]),
-.frz-admin-light
+.frz-admin
   [class*="bg-[#0F0F10]"]
   [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]),
-.frz-admin-light
+.frz-admin
   [class*="bg-[#0B0B0C]"]
   [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]) {
-  color: var(--ink) !important;
+  color: var(--frz-ink) !important;
+}
+
+/* Dark mode overrides for Tailwind status/alert colors */
+.dark .bg-green-50 { background-color: #0d2818 !important; }
+.dark .bg-red-50 { background-color: #2d1215 !important; }
+.dark .bg-amber-50 { background-color: #2d2006 !important; }
+.dark .bg-blue-50 { background-color: #0d1b2e !important; }
+.dark .bg-yellow-50 { background-color: #2d2006 !important; }
+.dark .bg-emerald-50 { background-color: #0d2818 !important; }
+.dark .bg-sky-50 { background-color: #0d1b2e !important; }
+
+.dark .border-green-200 { border-color: #166534 !important; }
+.dark .border-red-200 { border-color: #991b1b !important; }
+.dark .border-amber-200 { border-color: #92400e !important; }
+.dark .border-blue-200 { border-color: #1e40af !important; }
+.dark .border-yellow-200 { border-color: #92400e !important; }
+.dark .border-emerald-200 { border-color: #166534 !important; }
+.dark .border-sky-200 { border-color: #0369a1 !important; }
+
+.dark .text-green-700 { color: #86efac !important; }
+.dark .text-red-700 { color: #fca5a5 !important; }
+.dark .text-amber-700 { color: #fbbf24 !important; }
+.dark .text-amber-800 { color: #fbbf24 !important; }
+.dark .text-blue-700 { color: #93c5fd !important; }
+.dark .text-blue-600 { color: #93c5fd !important; }
+.dark .text-yellow-700 { color: #fbbf24 !important; }
+.dark .text-emerald-700 { color: #6ee7b7 !important; }
+.dark .text-emerald-600 { color: #6ee7b7 !important; }
+.dark .text-sky-700 { color: #7dd3fc !important; }
+.dark .text-red-600 { color: #fca5a5 !important; }
+.dark .text-amber-600 { color: #fbbf24 !important; }
+
+/* EditBookingModal calendar dark overrides */
+.dark .edit-booking-calendar .rdp-root,
+.dark .edit-booking-calendar .rdp {
+  --rdp-accent-color: var(--frz-ink);
+  --rdp-background-color: var(--frz-mist);
+  color: var(--frz-ink);
+}
+.dark .edit-booking-calendar .rdp-caption_label,
+.dark .edit-booking-calendar .rdp-weekday {
+  color: var(--frz-muted);
+}
+.dark .edit-booking-calendar .rdp-button:hover:not([disabled]),
+.dark .edit-booking-calendar .rdp-day_button:hover:not([disabled]) {
+  background-color: var(--frz-mist);
 }
