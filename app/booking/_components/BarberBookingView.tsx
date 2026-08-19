@@ -79,9 +79,9 @@ export default function BarberBookingView({
           barberSlug,
         })}
       />
-      <div className="bg-white min-h-screen">
+      <div className="bg-frz-bg min-h-screen text-frz-ink">
         <div className="max-w-5xl mx-auto px-4 py-8">
-          <div className="bg-white border rounded-2xl p-6 mb-6">
+          <div className="bg-frz-card border border-frz-line rounded-2xl p-6 mb-6">
             <div className="flex flex-col md:flex-row gap-6 items-center">
               {salon.logo_url && (
                 <Image
@@ -98,17 +98,17 @@ export default function BarberBookingView({
                 <h1 className="text-3xl font-bold">{String(salon.name || "Salon")}</h1>
 
                 {salon.phone && (
-                  <p className="text-gray-600 mt-2">📞 {salon.phone}</p>
+                  <p className="text-frz-muted mt-2">📞 {salon.phone}</p>
                 )}
               </div>
             </div>
 
             {salon.description && (
-              <p className="mt-4 text-gray-700">{salon.description}</p>
+              <p className="mt-4 text-frz-ink">{salon.description}</p>
             )}
           </div>
 
-          <div className="bg-white border rounded-2xl p-6 mb-8">
+          <div className="bg-frz-card border border-frz-line rounded-2xl p-6 mb-8">
             <div className="flex items-center gap-4">
               {barber.avatar_url ? (
                 <Image
@@ -119,20 +119,20 @@ export default function BarberBookingView({
                   className="w-20 h-20 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-gray-200" />
+                <div className="w-20 h-20 rounded-full bg-frz-fog" />
               )}
 
               <div>
                 <h2 className="text-xl font-semibold">{barberName}</h2>
 
-                {barber.bio && <p className="text-gray-600">{barber.bio}</p>}
+                {barber.bio && <p className="text-frz-muted">{barber.bio}</p>}
 
                 {barber.instagram_url && (
                   <a
                     href={barber.instagram_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
+                    className="text-frz-accent text-sm block"
                   >
                     Instagram
                   </a>
@@ -142,7 +142,7 @@ export default function BarberBookingView({
                     href={barber.facebook_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
+                    className="text-frz-accent text-sm block"
                   >
                     Facebook
                   </a>
@@ -152,7 +152,7 @@ export default function BarberBookingView({
                     href={barber.tiktok_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 text-sm block"
+                    className="text-frz-accent text-sm block"
                   >
                     TikTok
                   </a>

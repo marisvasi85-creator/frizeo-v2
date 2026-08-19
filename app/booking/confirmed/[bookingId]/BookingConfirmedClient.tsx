@@ -52,13 +52,13 @@ export default function BookingConfirmed({
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-      <h1 className="text-2xl font-semibold text-green-600">
+      <h1 className="text-2xl font-semibold text-frz-success">
         ✔ Programare confirmată
       </h1>
 
-      <p className="mt-2 text-gray-600">Am trimis un email de confirmare.</p>
+      <p className="mt-2 text-frz-muted">Am trimis un email de confirmare.</p>
 
-      <p className="text-sm text-gray-400">Verifică inbox / spam.</p>
+      <p className="text-sm text-frz-muted">Verifică inbox / spam.</p>
 
       {hasCalendar && (
         <div className="mt-8 flex flex-col sm:flex-row gap-3 items-center">
@@ -75,7 +75,7 @@ export default function BookingConfirmed({
           {meta.icsUrl && (
             <a
               href={meta.icsUrl}
-              className="inline-block bg-black text-white px-5 py-3 rounded-xl text-sm font-medium"
+              className="inline-block bg-frz-ink text-frz-ink-contrast px-5 py-3 rounded-xl text-sm font-medium"
             >
               Descarcă pentru Apple / Outlook
             </a>
@@ -86,7 +86,7 @@ export default function BookingConfirmed({
       {meta.reviewUrl && (
         <a
           href={meta.reviewUrl}
-          className="mt-6 inline-block border border-gray-300 text-gray-800 px-5 py-3 rounded-xl text-sm font-medium"
+          className="mt-6 inline-block border border-frz-line text-frz-ink px-5 py-3 rounded-xl text-sm font-medium"
         >
           Lasă o recenzie
         </a>

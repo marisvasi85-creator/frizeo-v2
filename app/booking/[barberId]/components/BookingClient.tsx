@@ -316,30 +316,30 @@ export default function BookingClient({
   };
 
   return (
-    <div className="max-w-xl mx-auto p-6 space-y-6">
+    <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">
       <div className="text-center">
         <h1 className="text-3xl font-semibold">Programează-te</h1>
-        <p className="text-gray-500 mt-1">
-          la <span className="font-medium text-black">{barberName}</span>
+        <p className="text-frz-muted mt-1">
+          la <span className="font-medium text-frz-ink">{barberName}</span>
         </p>
       </div>
 
       {servicesError && (
-        <p className="text-red-600 text-sm text-center">{servicesError}</p>
+        <p className="text-frz-danger text-sm text-center">{servicesError}</p>
       )}
 
       {services.length > 0 && (
         <div className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">1. Alege serviciul</p>
+          <p className="text-sm text-frz-muted font-medium">1. Alege serviciul</p>
           {services.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => handleServiceSelect(s.id)}
-              className={`w-full p-4 rounded-xl border transition ${
+              className={`w-full p-4 rounded-xl border border-frz-line transition ${
                 serviceId === s.id
-                  ? "bg-black text-white"
-                  : "bg-white hover:bg-gray-50"
+                  ? "bg-frz-ink text-frz-ink-contrast border-frz-ink"
+                  : "bg-frz-card hover:bg-frz-fog text-frz-ink"
               }`}
             >
               {s.display_name} ({s.duration} min)
@@ -350,14 +350,16 @@ export default function BookingClient({
 
       {services.length > 0 && (
         <div ref={calendarRef} className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">2. Alege data</p>
+          <p className="text-sm text-frz-muted font-medium">2. Alege data</p>
 
           {serviceFirstError && (
-            <p className="text-red-600 text-sm text-center">{serviceFirstError}</p>
+            <p className="text-frz-danger text-sm text-center">
+              {serviceFirstError}
+            </p>
           )}
 
           {loadingAvailability ? (
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-sm text-frz-muted text-center">
               Se încarcă zilele disponibile...
             </p>
           ) : serviceId && availableDays.length === 0 ? (
@@ -365,7 +367,7 @@ export default function BookingClient({
               {vacationPeriods.length > 0 && (
                 <VacationNotice periods={vacationPeriods} />
               )}
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-frz-muted text-center">
                 {vacationPeriods.length > 0
                   ? "Nu sunt locuri disponibile în următoarele 30 de zile (concediu sau program complet)."
                   : "Nu mai sunt locuri disponibile în următoarele 30 de zile pentru acest serviciu."}
@@ -385,7 +387,7 @@ export default function BookingClient({
                 enforceAvailableDays={!!serviceId}
               />
               {serviceId && (
-                <p className="text-xs text-gray-400 text-center">
+                <p className="text-xs text-frz-muted text-center">
                   Zilele verzi au locuri libere pentru serviciul selectat.
                 </p>
               )}
@@ -396,7 +398,7 @@ export default function BookingClient({
 
       {serviceId && date && (loadingSlots || slots.length > 0) && (
         <div ref={slotsRef} className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">3. Alege ora</p>
+          <p className="text-sm text-frz-muted font-medium">3. Alege ora</p>
           <SlotPicker
             variant="light"
             slots={slots}
@@ -416,21 +418,21 @@ export default function BookingClient({
       )}
 
       {serviceId && date && !loadingSlots && slots.length === 0 && (
-        <p className="text-gray-500 text-sm text-center">
+        <p className="text-frz-muted text-sm text-center">
           Nu mai sunt locuri disponibile în această zi. Alege altă dată.
         </p>
       )}
 
       {selectedSlot && (
         <div ref={formRef} className="space-y-3">
-          <p className="text-sm text-gray-500 font-medium">4. Datele tale</p>
+          <p className="text-sm text-frz-muted font-medium">4. Datele tale</p>
 
           <input
             placeholder="Nume complet"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
-            className="w-full p-3 border rounded-xl"
+            className="w-full p-3 border border-frz-line rounded-xl bg-frz-card text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25"
           />
 
           <input
@@ -439,7 +441,7 @@ export default function BookingClient({
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             autoComplete="tel"
-            className="w-full p-3 border rounded-xl"
+            className="w-full p-3 border border-frz-line rounded-xl bg-frz-card text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25"
           />
 
           <input
@@ -448,7 +450,7 @@ export default function BookingClient({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
-            className="w-full p-3 border rounded-xl"
+            className="w-full p-3 border border-frz-line rounded-xl bg-frz-card text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25"
           />
 
           <textarea
@@ -456,18 +458,18 @@ export default function BookingClient({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full p-3 border rounded-xl resize-y min-h-[80px]"
+            className="w-full p-3 border border-frz-line rounded-xl resize-y min-h-[80px] bg-frz-card text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25"
           />
 
           {bookingError && (
-            <p className="text-red-600 text-sm">{bookingError}</p>
+            <p className="text-frz-danger text-sm">{bookingError}</p>
           )}
 
           <button
             type="button"
             onClick={createBooking}
             disabled={bookingLoading}
-            className="w-full bg-black text-white p-3 rounded-xl disabled:opacity-70"
+            className="w-full bg-frz-ink text-frz-ink-contrast p-3 rounded-xl disabled:opacity-70"
           >
             {bookingLoading ? "Se salvează programarea..." : "Confirmă programarea"}
           </button>
