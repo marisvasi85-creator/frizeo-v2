@@ -22,6 +22,7 @@ export function marketingCtaUrl(
   if (type === "register") return `${base}/signup`;
   if (type === "marketing") return base;
   if (type === "dashboard") return `${base}/admin/dashboard`;
+  if (type === "salon") return `${base}/admin/salon`;
   if (type === "plans") return `${base}/pricing`;
   if (type === "booking_link") return "{{booking_link}}";
   return null;

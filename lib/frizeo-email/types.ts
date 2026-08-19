@@ -49,6 +49,7 @@ export const MARKETING_CTA_URL_TYPES = [
   "dashboard",
   "booking_link",
   "plans",
+  "salon",
 ] as const;
 
 export type MarketingCtaUrlType = (typeof MARKETING_CTA_URL_TYPES)[number];
