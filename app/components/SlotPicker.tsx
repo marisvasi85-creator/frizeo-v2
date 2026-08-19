@@ -28,7 +28,9 @@ export default function SlotPicker({
         {Array.from({ length: 9 }).map((_, i) => (
           <div
             key={i}
-            className="h-12 bg-zinc-700 rounded-xl animate-pulse"
+            className={`h-12 rounded-xl animate-pulse ${
+              isLight ? "bg-frz-fog" : "bg-zinc-700"
+            }`}
           />
         ))}
       </div>

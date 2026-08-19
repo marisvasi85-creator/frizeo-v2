@@ -19,8 +19,10 @@ export default function AdminPageHeader({
       )}
     >
       <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        {subtitle && <p className="text-white/60 mt-1">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight text-frz-ink">
+          {title}
+        </h1>
+        {subtitle && <p className="text-frz-muted mt-1">{subtitle}</p>}
       </div>
       {children}
     </div>

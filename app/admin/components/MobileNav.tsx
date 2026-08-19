@@ -40,12 +40,12 @@ export default function MobileNav({
       )}
 
       <div
-        className={`fixed left-0 right-0 bottom-0 bg-[#161618] border-t border-white/10 rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
+        className={`fixed left-0 right-0 bottom-0 bg-white border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="p-6">
-          <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+          <div className="w-12 h-1 bg-frz-line/80 rounded-full mx-auto mb-6" />
 
           <h3 className="text-center text-lg font-semibold mb-6">Mai mult</h3>
 
@@ -55,7 +55,7 @@ export default function MobileNav({
                 key={item.href}
                 href={item.href}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-frz-fog"
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
@@ -63,7 +63,7 @@ export default function MobileNav({
             ))}
 
             <form action="/api/auth/logout" method="post">
-              <button className="w-full flex items-center gap-3 p-3 rounded-xl text-red-400 hover:bg-white/5">
+              <button className="w-full flex items-center gap-3 p-3 rounded-xl text-red-600 hover:bg-frz-fog">
                 <span>🚪</span>
                 <span>Logout</span>
               </button>
@@ -72,7 +72,7 @@ export default function MobileNav({
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0B0B0C] border-t border-white/10 flex justify-around py-2 md:hidden z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-frz-line flex justify-around py-2 md:hidden z-50">
         {mainItems.map((item) => {
           const active = pathname.startsWith(item.href);
 
@@ -82,7 +82,7 @@ export default function MobileNav({
               href={item.href}
               aria-label={item.label}
               className={`text-xl transition ${
-                active ? "text-white" : "text-white/40"
+                active ? "text-frz-ink" : "text-frz-ink/40"
               }`}
             >
               {item.icon}
@@ -94,7 +94,7 @@ export default function MobileNav({
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Mai mult"
-          className="text-xl text-white/70"
+          className="text-xl text-frz-ink/70"
         >
           ☰
         </button>

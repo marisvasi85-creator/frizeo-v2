@@ -8,7 +8,12 @@ export default function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("text-center py-12 text-white/60", className)}>
+    <div
+      className={cn(
+        "text-center py-12 px-4 text-frz-muted rounded-2xl border border-dashed border-frz-line bg-frz-fog/60",
+        className,
+      )}
+    >
       {children}
     </div>
   );

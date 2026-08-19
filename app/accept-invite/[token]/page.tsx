@@ -118,29 +118,29 @@ export default function AcceptInvitePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <div className="min-h-screen flex items-center justify-center bg-frz-fog text-frz-ink">
         Se încarcă...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4">
+    <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4">
 
-      <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-4">
+      <div className="w-full max-w-sm bg-white border border-frz-line rounded-2xl p-6 shadow-frz space-y-4">
 
         <div className="text-center">
-          <h1 className="text-white text-2xl font-semibold">
+          <h1 className="text-frz-ink text-2xl font-semibold">
             Acceptă invitația
           </h1>
 
-          <p className="text-zinc-400 text-sm mt-1">
+          <p className="text-frz-ink/60 text-sm mt-1">
             Creează contul de frizer
           </p>
         </div>
 
         {error && (
-          <div className="text-red-400 text-sm text-center">
+          <div className="text-red-700 text-sm text-center">
             {error}
           </div>
         )}
@@ -148,13 +148,13 @@ export default function AcceptInvitePage() {
         <input
           value={fullName}
           disabled
-          className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line text-frz-ink/60 rounded-lg px-4 py-3"
         />
 
         <input
           value={email}
           disabled
-          className="w-full bg-zinc-800 text-zinc-400 rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line text-frz-ink/60 rounded-lg px-4 py-3"
         />
 
         <input
@@ -164,7 +164,7 @@ export default function AcceptInvitePage() {
           onChange={(e) =>
             setPassword(e.target.value)
           }
-          className="w-full bg-zinc-800 text-white rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line text-frz-ink rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
         />
 
         <input
@@ -176,7 +176,7 @@ export default function AcceptInvitePage() {
               e.target.value
             )
           }
-          className="w-full bg-zinc-800 text-white rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line text-frz-ink rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
         />
 
         <PasswordRequirements password={password} />
@@ -184,7 +184,7 @@ export default function AcceptInvitePage() {
         <button
           onClick={acceptInvite}
           disabled={saving}
-          className="w-full bg-white text-black font-medium py-3 rounded-lg"
+          className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition"
         >
           {saving
             ? "Se creează..."

@@ -17,9 +17,9 @@ export default function AdminCard({
     <div
       id={id}
       className={cn(
-        "bg-[#161618] border border-white/10 rounded-xl",
+        "bg-white border border-frz-line rounded-2xl",
         padding === "sm" ? "p-4" : "p-6",
-        hoverable && "hover:border-white/20 transition",
+        hoverable && "hover:border-frz-steel/25 transition",
         className
       )}
     >

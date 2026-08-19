@@ -34,7 +34,7 @@ export default async function NotificationsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold">Notificări</h1>
 
-      <p className="text-sm text-white/60">
+      <p className="text-sm text-frz-ink/60">
         Email pe toate planurile. SMS reminder pe Pro / Pro+ / trial. Fără
         credite și fără reîncărcări.
       </p>
@@ -47,7 +47,7 @@ export default async function NotificationsPage() {
       )}
 
       {reminderSmsAllowed && !extendedSmsAllowed && (
-        <p className="text-sm text-white/55 bg-white/5 border border-white/10 rounded-lg px-4 py-3">
+        <p className="text-sm text-frz-ink/55 bg-frz-fog border border-frz-line rounded-lg px-4 py-3">
           Pe Pro / Pro+ / trial, SMS-ul este pentru reminder. Confirmările,
           anulările și reprogramările se trimit pe email. Pentru SMS extins,
           contactează-ne pentru plan Custom.
@@ -56,7 +56,7 @@ export default async function NotificationsPage() {
 
       <FormWithSaveFeedback
         action={updateNotifications}
-        className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-6"
+        className="bg-white border border-frz-line rounded-xl p-6 space-y-6"
       >
         <NotificationToggle
           name="booking_email_enabled"

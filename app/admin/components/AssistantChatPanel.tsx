@@ -293,8 +293,8 @@ export default function AssistantChatPanel({
             <div
               className={`max-w-[90%] rounded-2xl px-3.5 py-2.5 text-sm whitespace-pre-wrap ${
                 message.role === "user"
-                  ? "bg-white text-black"
-                  : "bg-white/5 border border-white/10 text-white/90"
+                  ? "bg-frz-ink text-white"
+                  : "bg-frz-fog border border-frz-line text-frz-ink/90"
               }`}
             >
               {message.content}
@@ -320,7 +320,7 @@ export default function AssistantChatPanel({
                 type="button"
                 disabled={loading}
                 onClick={() => void handleConfirmation(false)}
-                className="rounded-lg border border-white/15 bg-white/5 text-white px-3.5 py-2 text-sm disabled:opacity-40"
+                className="rounded-lg border border-frz-line bg-white text-frz-ink px-3.5 py-2 text-sm disabled:opacity-40"
               >
                 Renunță
               </button>
@@ -329,12 +329,12 @@ export default function AssistantChatPanel({
         )}
 
         {loading && (
-          <div className="text-sm text-white/50">Assistant-ul gândește…</div>
+          <div className="text-sm text-frz-ink/50">Assistant-ul gândește…</div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t border-white/10 p-3 space-y-2.5">
+      <div className="border-t border-frz-line p-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex flex-wrap gap-1.5 min-w-0">
             {suggestions
@@ -345,7 +345,7 @@ export default function AssistantChatPanel({
                   type="button"
                   disabled={inputLocked}
                   onClick={() => sendMessage(suggestion)}
-                  className="text-[11px] px-2.5 py-1 rounded-full border border-white/10 text-white/70 hover:bg-white/5 disabled:opacity-40"
+                  className="text-[11px] px-2.5 py-1 rounded-full border border-frz-line text-frz-ink/70 hover:bg-frz-fog disabled:opacity-40"
                 >
                   {suggestion}
                 </button>
@@ -356,7 +356,7 @@ export default function AssistantChatPanel({
             <button
               type="button"
               onClick={resetConversation}
-              className="shrink-0 text-[11px] text-white/40 hover:text-white/70 px-1"
+              className="shrink-0 text-[11px] text-frz-ink/40 hover:text-frz-ink/70 px-1"
               title="Șterge conversația"
             >
               Șterge
@@ -365,7 +365,7 @@ export default function AssistantChatPanel({
         </div>
 
         {dictation.listening && (
-          <div className="text-[11px] text-red-300 flex items-center gap-1.5">
+          <div className="text-[11px] text-red-600 flex items-center gap-1.5">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-red-400 animate-pulse" />
             Ascult… oprește-se singur după ce termini, sau apasă microfonul
           </div>
@@ -394,7 +394,7 @@ export default function AssistantChatPanel({
                   ? "Vorbește acum…"
                   : "Scrie sau dictează…"
             }
-            className="flex-1 rounded-xl bg-[#0F0F10] border border-white/10 px-3 py-2.5 text-sm outline-none focus:border-white/30 disabled:opacity-50"
+            className="flex-1 rounded-xl bg-white border border-frz-line px-3 py-2.5 text-sm text-frz-ink outline-none focus:border-frz-ink/30 disabled:opacity-50 placeholder:text-frz-ink/40"
           />
 
           {dictation.supported && (
@@ -418,7 +418,7 @@ export default function AssistantChatPanel({
               className={`h-11 w-11 shrink-0 rounded-xl border text-lg flex items-center justify-center transition disabled:opacity-40 ${
                 dictation.listening
                   ? "bg-red-500 text-white border-red-400 animate-pulse"
-                  : "bg-white/5 text-white border-white/10 hover:bg-white/10"
+                  : "bg-frz-fog text-frz-ink border-frz-line hover:bg-frz-fog"
               }`}
             >
               🎤
@@ -439,7 +439,7 @@ export default function AssistantChatPanel({
         )}
 
         {!dictation.supported && (
-          <p className="text-[11px] text-white/40">
+          <p className="text-[11px] text-frz-ink/40">
             Dictarea nu e disponibilă pe acest browser. Folosește Chrome pe
             Android sau desktop.
           </p>

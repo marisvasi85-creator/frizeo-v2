@@ -2,16 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DESIGN SYSTEM */
+/* DESIGN SYSTEM — aligned with marketing Frizeo */
 :root {
   --radius: 14px;
 
-  --bg: #ffffff;
+  --bg: #f3f6fa;
   --card: #ffffff;
-  --muted: #6b7280;
-  --border: #e5e7eb;
-
-  --primary: #111111;
+  --ink: #0b0b0c;
+  --ink-soft: #1c1f24;
+  --muted: #5b6573;
+  --border: #d5dde8;
+  --primary: #0b0b0c;
+  --accent: #1f6feb;
 }
 
 /* BODY — avoid horizontal overflow looking like “zoom” on phones */
@@ -22,9 +24,16 @@ html {
 
 body {
   background: var(--bg);
-  font-family: Inter, Arial, sans-serif;
+  color: var(--ink);
+  font-family: var(--font-app-body), Inter, Arial, sans-serif;
   overflow-x: clip;
   max-width: 100%;
+}
+
+.font-display {
+  font-family: var(--font-app-display), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.04em;
+  font-weight: 700;
 }
 
 /*
@@ -81,7 +90,7 @@ body {
 }
 
 .rdp-day_selected {
-  background: black !important;
+  background: #0b0b0c !important;
   color: white !important;
 }
 
@@ -110,30 +119,71 @@ body {
 .animate-shake {
   animation: shake 0.4s ease-in-out;
 }
+
 input[type="date"],
 input[type="time"] {
-  color-scheme: dark;
+  color-scheme: light;
 }
+
 .react-datepicker {
-  background: #161618 !important;
-  border: 1px solid rgba(255,255,255,.1) !important;
+  background: #ffffff !important;
+  border: 1px solid #d5dde8 !important;
+  font-family: inherit !important;
 }
 
 .react-datepicker__header {
-  background: #0f0f10 !important;
-  border-bottom: 1px solid rgba(255,255,255,.1) !important;
+  background: #f3f6fa !important;
+  border-bottom: 1px solid #d5dde8 !important;
 }
 
 .react-datepicker__current-month,
 .react-datepicker__day-name,
 .react-datepicker__day {
-  color: white !important;
+  color: #0b0b0c !important;
 }
 
 .react-datepicker__day:hover {
-  background: #2563eb !important;
+  background: #e8eef5 !important;
 }
 
 .react-datepicker__day--selected {
-  background: #2563eb !important;
+  background: #0b0b0c !important;
+  color: #ffffff !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background: #e8eef5 !important;
+}
+
+.react-datepicker__day--disabled {
+  color: #9aa3b0 !important;
+}
+
+/* FRIZEO admin light overrides for legacy dark classes */
+.frz-admin-light [class*="bg-[#161618]"],
+.frz-admin-light [class*="bg-[#1C1C1F]"] {
+  background-color: #ffffff !important;
+}
+
+.frz-admin-light [class*="bg-[#0B0B0C]"],
+.frz-admin-light [class*="bg-[#0F0F10]"],
+.frz-admin-light [class*="bg-zinc-800"],
+.frz-admin-light [class*="bg-zinc-700"] {
+  background-color: var(--bg) !important;
+}
+
+.frz-admin-light [class*="bg-zinc-900"] {
+  background-color: #ffffff !important;
+}
+
+.frz-admin-light
+  [class*="bg-[#161618]"]
+  [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]),
+.frz-admin-light
+  [class*="bg-[#0F0F10]"]
+  [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]),
+.frz-admin-light
+  [class*="bg-[#0B0B0C]"]
+  [class*="text-white"]:not([class*="bg-frz-ink"]):not([class*="bg-black"]) {
+  color: var(--ink) !important;
 }

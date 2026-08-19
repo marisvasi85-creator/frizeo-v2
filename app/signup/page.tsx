@@ -175,13 +175,13 @@ export default function SignupPage() {
         : "Alege tipul de activitate ca să vedem ce trial ți se potrivește.";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10 pb-32">
+    <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4 py-10 pb-32">
       <SignupAnalytics />
-      <div className="w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6">
+      <div className="w-full max-w-sm bg-white border border-frz-line rounded-2xl p-6 shadow-frz space-y-6">
         <div className="text-center">
-          <h1 className="text-white text-2xl font-semibold">Frizeo</h1>
-          <p className="text-zinc-400 text-sm mt-1">Creează cont</p>
-          <p className="text-zinc-500 text-xs mt-2">{trialHint}</p>
+          <h1 className="text-frz-ink text-2xl font-semibold">Frizeo</h1>
+          <p className="text-frz-ink/60 text-sm mt-1">Creează cont</p>
+          <p className="text-frz-ink/60 text-xs mt-2">{trialHint}</p>
         </div>
 
         <form ref={formRef} onSubmit={handleSignup} className="space-y-3">
@@ -189,7 +189,7 @@ export default function SignupPage() {
             name="fullName"
             placeholder="Nume complet"
             autoComplete="name"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <input
@@ -197,7 +197,7 @@ export default function SignupPage() {
             type="email"
             autoComplete="email"
             placeholder="Email"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <input
@@ -205,7 +205,7 @@ export default function SignupPage() {
             type="tel"
             autoComplete="tel"
             placeholder="Telefon"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <input
@@ -213,7 +213,7 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             placeholder="Parolă"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <input
@@ -221,16 +221,16 @@ export default function SignupPage() {
             type="password"
             autoComplete="new-password"
             placeholder="Confirmă parola"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <PasswordRequirementsField formRef={formRef} />
 
-          <fieldset className="space-y-2 rounded-lg border border-zinc-700 p-3">
-            <legend className="px-1 text-sm text-zinc-300">
+          <fieldset className="space-y-2 rounded-lg border border-frz-line bg-frz-fog p-3">
+            <legend className="px-1 text-sm text-frz-ink/70">
               Cum lucrezi?
             </legend>
-            <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+            <label className="flex items-start gap-3 text-sm text-frz-ink/70 cursor-pointer">
               <input
                 type="radio"
                 name="businessType"
@@ -239,15 +239,15 @@ export default function SignupPage() {
                 className="mt-1 h-4 w-4 shrink-0"
               />
               <span>
-                <span className="text-white font-medium">
+                <span className="text-frz-ink font-medium">
                   Sunt frizer independent
                 </span>
-                <span className="block text-zinc-500 text-xs mt-0.5">
+                <span className="block text-frz-ink/60 text-xs mt-0.5">
                   Lucrez pe cont propriu — dashboard Pro (1 loc, fără echipă).
                 </span>
               </span>
             </label>
-            <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+            <label className="flex items-start gap-3 text-sm text-frz-ink/70 cursor-pointer">
               <input
                 type="radio"
                 name="businessType"
@@ -256,10 +256,10 @@ export default function SignupPage() {
                 className="mt-1 h-4 w-4 shrink-0"
               />
               <span>
-                <span className="text-white font-medium">
+                <span className="text-frz-ink font-medium">
                   Lucrez într-un salon
                 </span>
-                <span className="block text-zinc-500 text-xs mt-0.5">
+                <span className="block text-frz-ink/60 text-xs mt-0.5">
                   Administrez un salon / o echipă — trial Pro+ (până la 3
                   frizeri).
                 </span>
@@ -268,11 +268,11 @@ export default function SignupPage() {
           </fieldset>
 
           {businessType === "salon" && (
-            <fieldset className="space-y-2 rounded-lg border border-zinc-700 p-3">
-              <legend className="px-1 text-sm text-zinc-300">
+            <fieldset className="space-y-2 rounded-lg border border-frz-line bg-frz-fog p-3">
+              <legend className="px-1 text-sm text-frz-ink/70">
                 Rolul tău în salon
               </legend>
-              <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-start gap-3 text-sm text-frz-ink/70 cursor-pointer">
                 <input
                   type="radio"
                   name="actsAsBarber"
@@ -281,14 +281,14 @@ export default function SignupPage() {
                   className="mt-1 h-4 w-4 shrink-0"
                 />
                 <span>
-                  <span className="text-white font-medium">Sunt și frizer</span>
-                  <span className="block text-zinc-500 text-xs mt-0.5">
+                  <span className="text-frz-ink font-medium">Sunt și frizer</span>
+                  <span className="block text-frz-ink/60 text-xs mt-0.5">
                     Administrez salonul și apar la programări (ocupă 1 loc din
                     3).
                   </span>
                 </span>
               </label>
-              <label className="flex items-start gap-3 text-sm text-zinc-300 cursor-pointer">
+              <label className="flex items-start gap-3 text-sm text-frz-ink/70 cursor-pointer">
                 <input
                   type="radio"
                   name="actsAsBarber"
@@ -297,10 +297,10 @@ export default function SignupPage() {
                   className="mt-1 h-4 w-4 shrink-0"
                 />
                 <span>
-                  <span className="text-white font-medium">
+                  <span className="text-frz-ink font-medium">
                     Doar administrez salonul
                   </span>
-                  <span className="block text-zinc-500 text-xs mt-0.5">
+                  <span className="block text-frz-ink/60 text-xs mt-0.5">
                     Nu apar la programări. Poți invita până la 3 frizeri.
                   </span>
                 </span>
@@ -308,19 +308,19 @@ export default function SignupPage() {
             </fieldset>
           )}
 
-          <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
+          <label className="flex items-start gap-3 text-sm text-frz-ink/60 cursor-pointer">
             <input
               type="checkbox"
               checked={acceptedTerms}
               onChange={(e) => setAcceptedTerms(e.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-frz-line"
             />
             <span>
               Accept{" "}
               <Link
                 href="/terms"
                 target="_blank"
-                className="text-white underline hover:no-underline"
+                className="text-frz-ink underline hover:no-underline"
               >
                 termenii și condițiile
               </Link>{" "}
@@ -328,7 +328,7 @@ export default function SignupPage() {
               <Link
                 href="/privacy"
                 target="_blank"
-                className="text-white underline hover:no-underline"
+                className="text-frz-ink underline hover:no-underline"
               >
                 politica de confidențialitate
               </Link>
@@ -336,12 +336,12 @@ export default function SignupPage() {
             </span>
           </label>
 
-          <label className="flex items-start gap-3 text-sm text-zinc-400 cursor-pointer">
+          <label className="flex items-start gap-3 text-sm text-frz-ink/60 cursor-pointer">
             <input
               type="checkbox"
               checked={marketingConsent}
               onChange={(e) => setMarketingConsent(e.target.checked)}
-              className="mt-1 h-4 w-4 shrink-0 rounded border-zinc-600"
+              className="mt-1 h-4 w-4 shrink-0 rounded border-frz-line"
             />
             <span>
               Sunt de acord să primesc noutăți, sfaturi și oferte de la Frizeo
@@ -353,7 +353,7 @@ export default function SignupPage() {
             <div
               ref={errorRef}
               role="alert"
-              className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg p-3 text-center"
+              className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 text-center"
             >
               {error}
             </div>
@@ -362,15 +362,15 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+            className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
           >
             {loading ? "Se creează..." : "Creează cont"}
           </button>
         </form>
 
-        <div className="text-center text-sm text-zinc-500">
+        <div className="text-center text-sm text-frz-ink/60">
           Ai deja cont?{" "}
-          <Link href="/login" className="text-white hover:underline">
+          <Link href="/login" className="text-frz-ink hover:underline">
             Autentificare
           </Link>
         </div>

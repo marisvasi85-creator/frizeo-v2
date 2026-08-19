@@ -39,7 +39,9 @@ function BookingCard({
     <AdminCard
       padding="sm"
       hoverable={!muted}
-      className={`flex items-stretch gap-3 ${muted ? "opacity-70 border-white/5" : ""}`}
+      className={`flex items-stretch gap-3 ${
+        muted ? "opacity-70 border-frz-line/80" : ""
+      }`}
     >
       <button
         type="button"
@@ -48,12 +50,16 @@ function BookingCard({
       >
         <div className="flex justify-between items-center gap-3">
           <div>
-            <div className={`font-semibold ${muted ? "text-white/80" : ""}`}>
+            <div
+              className={`font-semibold ${muted ? "text-frz-ink/80" : ""}`}
+            >
               {booking.client_name}
             </div>
-            <div className="text-sm text-white/60">{booking.client_phone}</div>
+            <div className="text-sm text-frz-ink/60">
+              {booking.client_phone}
+            </div>
             {booking.client_notes && (
-              <div className="text-xs text-white/50 mt-1 line-clamp-2">
+              <div className="text-xs text-frz-ink/50 mt-1 line-clamp-2">
                 📝 {booking.client_notes}
               </div>
             )}
@@ -68,12 +74,12 @@ function BookingCard({
             <div className="font-medium">
               {getServiceDisplayName(booking.barber_services)}
             </div>
-            <div className="text-sm text-white/60">
+            <div className="text-sm text-frz-ink/60">
               {booking.start_time?.slice(0, 5)}
               {booking.end_time ? ` – ${booking.end_time.slice(0, 5)}` : ""}
             </div>
             {muted && (
-              <div className="text-xs text-white/40 mt-1">{booking.date}</div>
+              <div className="text-xs text-frz-ink/40 mt-1">{booking.date}</div>
             )}
           </div>
         </div>
@@ -119,13 +125,13 @@ function GroupBlock({
             group.highlight
               ? "text-emerald-300"
               : muted
-                ? "text-white/50"
-                : "text-white/80"
+                ? "text-frz-ink/50"
+                : "text-frz-ink/80"
           }`}
         >
           {group.label}
         </h3>
-        <span className="text-xs text-white/40 shrink-0">
+        <span className="text-xs text-frz-ink/40 shrink-0">
           {group.count}{" "}
           {group.count === 1 ? "programare" : "programări"}
         </span>
@@ -170,25 +176,25 @@ function TimelineSection({
     <section className="space-y-4">
       <div
         className={`flex items-center gap-3 ${
-          muted ? "border-t border-white/10 pt-6" : ""
+          muted ? "border-t border-frz-line pt-6" : ""
         }`}
       >
         <h2
           className={`text-lg font-semibold ${
-            muted ? "text-white/50" : "text-white"
+            muted ? "text-frz-ink/50" : "text-frz-ink"
           }`}
         >
           {title}
         </h2>
         <span
-          className={`text-sm ${muted ? "text-white/30" : "text-white/40"}`}
+          className={`text-sm ${muted ? "text-frz-ink/30" : "text-frz-ink/40"}`}
         >
           {total}
         </span>
       </div>
 
       {groups.length === 0 ? (
-        <p className={`text-sm ${muted ? "text-white/30" : "text-white/50"}`}>
+        <p className={`text-sm ${muted ? "text-frz-ink/30" : "text-frz-ink/50"}`}>
           {emptyLabel}
         </p>
       ) : (

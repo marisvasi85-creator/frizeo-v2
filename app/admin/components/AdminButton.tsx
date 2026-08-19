@@ -33,19 +33,20 @@ type AdminButtonAsButton = SharedProps &
 type AdminButtonProps = AdminButtonAsLink | AdminButtonAsButton;
 
 const base =
-  "inline-flex items-center justify-center rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex items-center justify-center rounded-xl transition disabled:opacity-50 disabled:cursor-not-allowed";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-white text-black font-medium hover:bg-gray-200",
-  secondary: "bg-white/10 text-white hover:bg-white/15",
+  primary: "bg-frz-ink text-white font-semibold hover:bg-frz-ink-soft",
+  secondary:
+    "bg-white text-frz-ink font-medium border border-frz-line hover:bg-frz-fog",
   danger:
-    "text-red-400 border border-red-500/30 hover:bg-red-500/10 hover:text-red-300",
-  ghost: "text-white/70 hover:text-white hover:bg-white/10",
+    "bg-white text-red-600 border border-red-200 hover:bg-red-50 font-medium",
+  ghost: "text-frz-muted hover:text-frz-ink hover:bg-frz-mist",
 };
 
 const sizes: Record<Size, string> = {
-  sm: "px-3 py-2 text-sm",
-  md: "px-5 py-3 text-sm",
+  sm: "px-3 py-2 text-sm min-h-10",
+  md: "px-5 py-3 text-sm min-h-11",
 };
 
 function buttonClasses({
@@ -74,7 +75,7 @@ export default function AdminButton(props: AdminButtonProps) {
 
   const classes = cn(
     buttonClasses({ variant, size, fullWidth, className }),
-    saved && "bg-green-500 text-black hover:bg-green-500 font-medium",
+    saved && "bg-emerald-600 text-white hover:bg-emerald-600 font-semibold border-transparent",
   );
   const content = loading ? loadingLabel : saved ? savedLabel : children;
 

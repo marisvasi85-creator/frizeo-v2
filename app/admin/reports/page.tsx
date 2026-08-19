@@ -32,9 +32,9 @@ function MetricCard({
 }) {
   return (
     <AdminCard padding="sm">
-      <div className="text-white/60 text-sm">{label}</div>
+      <div className="text-frz-ink/60 text-sm">{label}</div>
       <div className="text-2xl font-semibold mt-1">{value}</div>
-      {hint ? <div className="text-white/40 text-xs mt-1">{hint}</div> : null}
+      {hint ? <div className="text-frz-ink/40 text-xs mt-1">{hint}</div> : null}
     </AdminCard>
   );
 }
@@ -63,7 +63,7 @@ function BreakdownTable({
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[420px]">
             <thead>
-              <tr className="text-white/50 border-b border-white/10">
+              <tr className="text-frz-ink/50 border-b border-frz-line">
                 <th className="py-2 pr-3 font-medium">Nume</th>
                 <th className="py-2 pr-3 font-medium text-right">Confirmate</th>
                 <th className="py-2 pr-3 font-medium text-right">Anulate</th>
@@ -74,16 +74,16 @@ function BreakdownTable({
               {rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-white/5 last:border-0"
+                  className="border-b border-frz-line/70 last:border-0"
                 >
-                  <td className="py-2.5 pr-3 text-white">{row.name}</td>
-                  <td className="py-2.5 pr-3 text-right text-white/80">
+                  <td className="py-2.5 pr-3 text-frz-ink">{row.name}</td>
+                  <td className="py-2.5 pr-3 text-right text-frz-ink/80">
                     {row.confirmed}
                   </td>
-                  <td className="py-2.5 pr-3 text-right text-white/80">
+                  <td className="py-2.5 pr-3 text-right text-frz-ink/80">
                     {row.cancelled}
                   </td>
-                  <td className="py-2.5 text-right text-white/80">{row.total}</td>
+                  <td className="py-2.5 text-right text-frz-ink/80">{row.total}</td>
                 </tr>
               ))}
             </tbody>
@@ -122,7 +122,7 @@ export default async function AdminReportsPage({
     <div className="space-y-6 min-w-0">
       <AdminPageHeader title="Rapoarte" subtitle={subtitle} />
 
-      <div className="inline-flex rounded-lg border border-white/10 p-1 bg-[#0F0F10] flex-wrap">
+      <div className="inline-flex rounded-lg border border-frz-line p-1 bg-frz-fog flex-wrap">
         {REPORTS_RANGE_PRESETS.map((preset) => {
           const active = range === preset.value;
           return (
@@ -132,8 +132,8 @@ export default async function AdminReportsPage({
               className={cn(
                 "px-4 py-2 text-sm rounded-md transition",
                 active
-                  ? "bg-white text-black font-medium"
-                  : "text-white/60 hover:text-white",
+                  ? "bg-frz-ink text-white font-medium"
+                  : "text-frz-ink/60 hover:text-frz-ink",
               )}
             >
               {preset.label}
@@ -146,7 +146,7 @@ export default async function AdminReportsPage({
         <EmptyState>{error || "Nu am putut încărca statisticile."}</EmptyState>
       ) : (
         <>
-          <p className="text-white/50 text-sm">
+          <p className="text-frz-ink/50 text-sm">
             Perioadă: {stats.from === stats.to ? stats.from : `${stats.from} → ${stats.to}`}
             {" · "}
             {stats.rangeLabel}

@@ -92,7 +92,7 @@ export default function ServicesClient({
               {s.display_name || s.name}
             </div>
 
-            <div className="text-sm text-white/50 mt-1">
+            <div className="text-sm text-frz-ink/50 mt-1">
               {s.duration} min
             </div>
           </div>
@@ -100,7 +100,7 @@ export default function ServicesClient({
           {/* RIGHT */}
           <div className="flex flex-wrap items-center gap-3">
 
-            <span className="text-white/70 font-medium">
+            <span className="text-frz-ink/70 font-medium">
               {s.price ? `${s.price} lei` : "—"}
             </span>
 
@@ -109,7 +109,7 @@ export default function ServicesClient({
               className={`relative w-10 h-5 rounded-full transition ${
                 s.active
                   ? "bg-green-500"
-                  : "bg-zinc-600"
+                  : "bg-frz-ink/15"
               }`}
             >
               <div

@@ -96,7 +96,7 @@ export default async function ProfilePage({
         </div>
       )}
 
-      <div className="bg-[#161618] border border-white/10 rounded-xl p-6">
+      <div className="bg-white border border-frz-line rounded-xl p-6">
         <h2 className="text-lg font-semibold mb-4">Google Calendar</h2>
 
         {isConnected ? (
@@ -104,7 +104,7 @@ export default async function ProfilePage({
             <div>
               <p className="text-green-400">Calendar conectat</p>
               {googleAccount?.google_email && (
-                <p className="text-sm text-white/50 mt-1">
+                <p className="text-sm text-frz-ink/50 mt-1">
                   {googleAccount.google_email}
                 </p>
               )}
@@ -115,7 +115,7 @@ export default async function ProfilePage({
             <div className="flex flex-col sm:flex-row gap-2">
               <a
                 href="/api/google/connect"
-                className="px-4 py-2 bg-white/10 rounded-lg text-center text-sm"
+                className="px-4 py-2 bg-frz-fog border border-frz-line rounded-lg text-center text-sm text-frz-ink"
               >
                 Reconectează
               </a>
@@ -123,14 +123,14 @@ export default async function ProfilePage({
               <form action="/api/google/disconnect" method="post">
                 <button
                   type="submit"
-                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-center text-sm border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg text-center text-sm border border-red-200 text-red-700 hover:bg-red-50"
                 >
                   Deconectează Calendar
                 </button>
               </form>
             </div>
 
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-frz-ink/40">
               Poți revoca accesul și din{" "}
               <a
                 href="https://myaccount.google.com/permissions"
@@ -148,7 +148,7 @@ export default async function ProfilePage({
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-white/60">
+            <p className="text-frz-ink/60">
               Opțional — programările confirmate pot apărea automat în Google
               Calendar. Frizeo funcționează normal și fără această conexiune.
             </p>
@@ -157,7 +157,7 @@ export default async function ProfilePage({
 
             <a
               href="/api/google/connect"
-              className="inline-block px-4 py-2 bg-white text-black rounded-lg font-medium text-center text-sm"
+              className="inline-block px-4 py-2 bg-frz-ink text-white rounded-lg font-medium text-center text-sm hover:bg-frz-ink-soft transition"
             >
               Conectează Google Calendar
             </a>
@@ -169,10 +169,10 @@ export default async function ProfilePage({
 
       <FormWithSaveFeedback
         action={updateProfile}
-        className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
+        className="bg-white border border-frz-line rounded-xl p-6 space-y-5"
       >
         <div>
-          <label className="block text-sm text-white/60 mb-2">
+          <label className="block text-sm text-frz-ink/60 mb-2">
             Nume afișat
           </label>
 
@@ -180,32 +180,32 @@ export default async function ProfilePage({
             type="text"
             name="display_name"
             defaultValue={barber.display_name || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">Telefon</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">Telefon</label>
 
           <input
             type="text"
             name="phone"
             defaultValue={barber.phone || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">
+          <label className="block text-sm text-frz-ink/60 mb-2">
             Link programări
           </label>
 
-          <p className="text-xs text-white/40">
+          <p className="text-xs text-frz-ink/40">
             Linkul frumos se creează o singură dată și nu se schimbă când îți
             actualizezi numele. Îl poți trimite clienților fără griji.
           </p>
 
-          <p className="mt-2 text-sm text-white/50 font-mono break-all">
+          <p className="mt-2 text-sm text-frz-ink/50 font-mono break-all">
             {barber.slug && tenantRes.data?.slug
               ? `/booking/salon/${tenantRes.data.slug}/${barber.slug}`
               : `/booking/${barber.id}`}
@@ -213,52 +213,52 @@ export default async function ProfilePage({
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">
+          <label className="block text-sm text-frz-ink/60 mb-2">
             Rețele sociale
           </label>
-          <p className="text-xs text-white/40 mb-3">
+          <p className="text-xs text-frz-ink/40 mb-3">
             Linkurile apar în Marketing AI și pe pagina ta publică de programări.
           </p>
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">Instagram</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">Instagram</label>
 
           <input
             type="url"
             name="instagram_url"
             defaultValue={barber.instagram_url || ""}
             placeholder="https://instagram.com/..."
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">Facebook</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">Facebook</label>
 
           <input
             type="url"
             name="facebook_url"
             defaultValue={barber.facebook_url || ""}
             placeholder="https://facebook.com/..."
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">TikTok</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">TikTok</label>
 
           <input
             type="url"
             name="tiktok_url"
             defaultValue={barber.tiktok_url || ""}
             placeholder="https://tiktok.com/@..."
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
           />
         </div>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">
+          <label className="block text-sm text-frz-ink/60 mb-2">
             Descriere / Bio
           </label>
 
@@ -266,7 +266,7 @@ export default async function ProfilePage({
             name="bio"
             rows={5}
             defaultValue={barber.bio || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10 placeholder:text-frz-ink/40"
           />
         </div>
 

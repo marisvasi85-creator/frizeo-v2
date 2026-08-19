@@ -32,22 +32,22 @@ export default function BookingLinkCard({
 
   return (
     <AdminCard id="booking-link" padding="sm" className="mb-6 scroll-mt-24">
-      <p className="text-sm text-white/60 mb-2">{title}</p>
+      <p className="text-sm text-frz-ink/60 mb-2">{title}</p>
 
-      <p className="text-xs text-white/40 mb-3">
+      <p className="text-xs text-frz-ink/40 mb-3">
         Linkul frumos se creează o singură dată (din numele salonului/frizerului)
         și nu se schimbă când îți actualizezi numele. Îl poți trimite clienților
         fără griji.
       </p>
 
       {!url ? (
-        <p className="text-red-400 text-sm">Link indisponibil momentan.</p>
+        <p className="text-red-600 text-sm">Link indisponibil momentan.</p>
       ) : (
         <div className="flex flex-col md:flex-row gap-2">
           <AdminInput
             value={url}
             readOnly
-            className="py-2 text-sm bg-white/5 truncate"
+            className="py-2 text-sm bg-frz-fog truncate"
           />
 
           <div className="flex gap-2">

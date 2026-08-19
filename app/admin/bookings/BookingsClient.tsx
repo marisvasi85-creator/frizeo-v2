@@ -111,7 +111,7 @@ export default function BookingsClient({
   );
 
   return (
-    <div className="text-white space-y-6">
+    <div className="text-frz-ink space-y-6">
       <AdminPageHeader title="Programări">
         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
           <AdminSelect
@@ -135,7 +135,7 @@ export default function BookingsClient({
       </AdminPageHeader>
 
       {!loading && !loadError && filteredBookings.length > 0 && (
-        <div className="inline-flex rounded-lg border border-white/10 p-1 bg-[#0F0F10]">
+        <div className="inline-flex rounded-lg border border-frz-line p-1 bg-frz-fog">
           {GROUP_MODES.map((mode) => (
             <button
               key={mode.value}
@@ -144,8 +144,8 @@ export default function BookingsClient({
               className={cn(
                 "px-4 py-2 text-sm rounded-md transition",
                 groupMode === mode.value
-                  ? "bg-white text-black font-medium"
-                  : "text-white/60 hover:text-white",
+                  ? "bg-frz-ink text-white font-medium"
+                  : "text-frz-ink/60 hover:text-frz-ink",
               )}
             >
               {mode.label}
@@ -155,7 +155,7 @@ export default function BookingsClient({
       )}
 
       {loading ? (
-        <div className="text-white/60">Se încarcă...</div>
+        <div className="text-frz-ink/60">Se încarcă...</div>
       ) : loadError ? (
         <EmptyState>{loadError}</EmptyState>
       ) : filteredBookings.length === 0 ? (

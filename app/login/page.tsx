@@ -106,25 +106,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black px-4 py-10 pb-32">
+    <div className="min-h-screen flex items-center justify-center bg-frz-fog px-4 py-10 pb-32">
       <div
-        className={`w-full max-w-sm bg-zinc-900 rounded-2xl p-6 shadow-xl space-y-6 ${
+        className={`w-full max-w-sm bg-white rounded-2xl p-6 shadow-frz space-y-6 border border-frz-line ${
           shake ? "animate-shake" : ""
         }`}
       >
         <div className="text-center">
-          <h1 className="text-white text-2xl font-semibold">Frizeo</h1>
-          <p className="text-zinc-400 text-sm mt-1">Autentificare frizer</p>
+          <h1 className="text-frz-ink text-2xl font-semibold">Frizeo</h1>
+          <p className="text-frz-ink/60 text-sm mt-1">Autentificare frizer</p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-300 text-sm rounded-lg p-3 text-center">
+          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 text-center">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="bg-green-500/10 border border-green-500/30 text-green-300 text-sm rounded-lg p-3 text-center">
+          <div className="bg-green-50 border border-green-200 text-green-800 text-sm rounded-lg p-3 text-center">
             {success}
           </div>
         )}
@@ -135,7 +135,7 @@ export default function LoginPage() {
             type="email"
             placeholder="Email"
             autoComplete="email"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
           <input
@@ -143,14 +143,14 @@ export default function LoginPage() {
             type="password"
             placeholder="Parolă"
             autoComplete="current-password"
-            className="w-full bg-zinc-800 text-white placeholder-zinc-500 rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-white/20"
+            className="w-full bg-frz-fog text-frz-ink placeholder-frz-ink/40 rounded-lg px-4 py-3 outline-none border border-frz-line focus:ring-2 focus:ring-frz-ink/10"
           />
 
-          <div className="flex justify-end text-sm text-zinc-400">
+          <div className="flex justify-end text-sm text-frz-ink/60">
             <button
               type="button"
               onClick={forgotPassword}
-              className="hover:underline"
+              className="hover:text-frz-ink"
             >
               Ai uitat parola?
             </button>
@@ -159,18 +159,18 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-medium py-3 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+            className="w-full bg-frz-ink text-white font-semibold py-3 rounded-lg hover:bg-frz-ink-soft transition disabled:opacity-50"
           >
             {loading ? "Se autentifică..." : "Autentificare"}
           </button>
         </form>
 
-        <div className="text-center text-sm text-zinc-500">
+        <div className="text-center text-sm text-frz-ink/60">
           Nu ai cont?{" "}
           <button
             type="button"
             onClick={() => router.push("/signup")}
-            className="text-white hover:underline"
+            className="text-frz-ink hover:underline"
           >
             Creează cont
           </button>

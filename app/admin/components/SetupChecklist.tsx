@@ -56,14 +56,14 @@ export default function SetupChecklist({
     <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-5">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-emerald-100">
+          <h2 className="text-lg font-semibold text-emerald-800">
             Primii pași
           </h2>
-          <p className="text-sm text-white/65 mt-1">
+          <p className="text-sm text-frz-ink/65 mt-1">
             Contul e gata de rezervări. Personalizează serviciile și programul,
             apoi copiază linkul — fără el, clienții nu ajung la tine.
           </p>
-          <p className="text-xs text-white/45 mt-2">
+          <p className="text-xs text-frz-ink/45 mt-2">
             {completedCount}/{SETUP_CHECKLIST_STEPS.length} completate
           </p>
         </div>
@@ -72,7 +72,7 @@ export default function SetupChecklist({
           <button
             type="button"
             onClick={() => dismissSetupChecklist(barberId)}
-            className="shrink-0 text-sm text-white/50 hover:text-white transition"
+            className="shrink-0 text-sm text-frz-ink/50 hover:text-frz-ink transition"
             aria-label="Închide checklist-ul de setup"
           >
             Închide
@@ -91,14 +91,14 @@ export default function SetupChecklist({
           return (
             <li
               key={step.id}
-              className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg bg-black/20 border border-white/5 px-4 py-3"
+              className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg bg-frz-fog border border-frz-line px-4 py-3"
             >
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 <span
                   className={
                     done
                       ? "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-400 text-black text-xs font-bold"
-                      : "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/25 text-white/40 text-xs"
+                      : "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-frz-line/70 text-frz-ink/40 text-xs"
                   }
                   aria-hidden
                 >
@@ -108,13 +108,13 @@ export default function SetupChecklist({
                   <p
                     className={
                       done
-                        ? "font-medium text-white/50 line-through"
-                        : "font-medium text-white"
+                        ? "font-medium text-frz-ink/50 line-through"
+                        : "font-medium text-frz-ink"
                     }
                   >
                     {step.title}
                   </p>
-                  <p className="text-sm text-white/55 mt-0.5">
+                  <p className="text-sm text-frz-ink/55 mt-0.5">
                     {step.description}
                   </p>
                 </div>

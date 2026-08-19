@@ -110,7 +110,7 @@ export default async function DashboardPage() {
         <h1 className="text-2xl font-semibold">
           Salut, {barber.display_name} 👋
         </h1>
-        <p className="text-white/60 mt-1">Panoul tău de control</p>
+        <p className="text-frz-ink/60 mt-1">Panoul tău de control</p>
       </div>
 
       {actsAsBarber && (
@@ -170,17 +170,17 @@ export default async function DashboardPage() {
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-5">
               <div className="font-semibold text-blue-300">🎁 Trial activ</div>
 
-              <p className="text-white/70 mt-2">
+              <p className="text-frz-ink/70 mt-2">
                 {currentPlan?.slug === "pro"
                   ? "Beneficiezi de acces Pro (SMS reminder, 1 frizer, programări nelimitate — fără invitații echipă)."
                   : "Beneficiezi de acces Pro+ (SMS reminder, până la 3 frizeri, programări nelimitate)."}
               </p>
 
-              <p className="text-white mt-3 font-medium">
+              <p className="text-frz-ink mt-3 font-medium">
                 Mai ai {daysLeft} zile rămase.
               </p>
 
-              <p className="text-white/50 text-sm mt-2">
+              <p className="text-frz-ink/50 text-sm mt-2">
                 După expirare vei fi trecut pe planul Free.
               </p>
 
@@ -197,7 +197,7 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <AdminCard padding="sm">
-          <p className="text-sm text-white/60">
+          <p className="text-sm text-frz-ink/60">
             {actsAsBarber ? "Programări azi" : "Programări salon azi"}
           </p>
           <p className="text-3xl font-bold mt-2">
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         </AdminCard>
 
         <AdminCard padding="sm">
-          <p className="text-sm text-white/60">Status</p>
+          <p className="text-sm text-frz-ink/60">Status</p>
           <p className="text-lg mt-2">
             {todayBookings && todayBookings.length > 0
               ? "Ai clienți azi"
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
         </AdminCard>
 
         <AdminCard padding="sm">
-          <p className="text-sm text-white/60">Următoarea programare</p>
+          <p className="text-sm text-frz-ink/60">Următoarea programare</p>
           <p className="text-lg mt-2">
             {upcoming && upcoming.length > 0
               ? `${upcoming[0].date} ${upcoming[0].start_time}`
@@ -262,17 +262,17 @@ export default async function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">Programările de azi</h2>
 
         {!todayBookings || todayBookings.length === 0 ? (
-          <p className="text-white/60">Nu ai programări azi.</p>
+          <p className="text-frz-ink/60">Nu ai programări azi.</p>
         ) : (
           <div className="space-y-3">
             {todayBookings.map((b) => (
               <div
                 key={b.id}
-                className="flex justify-between items-center p-3 rounded-lg bg-[#0F0F10]"
+                className="flex justify-between items-center p-3 rounded-lg bg-frz-fog"
               >
                 <div>
                   <p className="font-medium">{b.client_name}</p>
-                  <p className="text-sm text-white/60">
+                  <p className="text-sm text-frz-ink/60">
                     {b.start_time} - {b.end_time}
                   </p>
                 </div>
@@ -290,17 +290,17 @@ export default async function DashboardPage() {
         <h2 className="text-lg font-semibold mb-4">Următoarele programări</h2>
 
         {!upcoming || upcoming.length === 0 ? (
-          <p className="text-white/60">Nu există programări.</p>
+          <p className="text-frz-ink/60">Nu există programări.</p>
         ) : (
           <div className="space-y-3">
             {upcoming.map((b) => (
               <div
                 key={b.id}
-                className="flex justify-between items-center p-3 rounded-lg bg-[#0F0F10]"
+                className="flex justify-between items-center p-3 rounded-lg bg-frz-fog"
               >
                 <div>
                   <p className="font-medium">{b.client_name}</p>
-                  <p className="text-sm text-white/60">
+                  <p className="text-sm text-frz-ink/60">
                     {b.date} - {b.start_time}
                   </p>
                 </div>

@@ -256,7 +256,7 @@ export default function AddBookingClient({
       )}
 
       <div className="space-y-2">
-        <p className="text-sm text-white/50 font-medium">1. Alege serviciul</p>
+        <p className="text-sm text-frz-ink/50 font-medium">1. Alege serviciul</p>
         <AdminSelect value={serviceId} onChange={(e) => handleServiceChange(e.target.value)}>
           <option value="">Alege serviciu</option>
           {services.map((s) => (
@@ -268,14 +268,14 @@ export default function AddBookingClient({
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm text-white/50 font-medium">2. Alege data</p>
+        <p className="text-sm text-frz-ink/50 font-medium">2. Alege data</p>
 
         {serviceFirstError && (
           <p className="text-red-500 text-sm">{serviceFirstError}</p>
         )}
 
         {loadingAvailability ? (
-          <p className="text-sm text-white/40">Se încarcă zilele disponibile...</p>
+          <p className="text-sm text-frz-ink/40">Se încarcă zilele disponibile...</p>
         ) : serviceId && availableDays.length === 0 ? (
           <div className="space-y-3">
             {vacationPeriods.length > 0 && (
@@ -284,7 +284,7 @@ export default function AddBookingClient({
                 className="border-amber-500/30 bg-amber-500/10 text-amber-100"
               />
             )}
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-frz-ink/50">
               {vacationPeriods.length > 0
                 ? "Nu sunt locuri disponibile în următoarele 30 de zile (concediu sau program complet)."
                 : "Nu mai sunt locuri disponibile în următoarele 30 de zile pentru acest serviciu."}
@@ -307,7 +307,7 @@ export default function AddBookingClient({
               enforceAvailableDays={!!serviceId}
             />
             {serviceId && (
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-frz-ink/40">
                 Zilele verzi au locuri libere pentru serviciul selectat.
               </p>
             )}
@@ -317,25 +317,26 @@ export default function AddBookingClient({
 
       {serviceId && date && (loadingSlots || slots.length > 0) && (
         <div className="space-y-2">
-          <p className="text-sm text-white/50 font-medium">3. Alege ora</p>
+          <p className="text-sm text-frz-ink/50 font-medium">3. Alege ora</p>
           <SlotPicker
             slots={slots}
             selected={selectedSlot}
             onSelect={setSelectedSlot}
             loading={loadingSlots}
+            variant="light"
           />
         </div>
       )}
 
       {serviceId && date && !loadingSlots && slots.length === 0 && (
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-frz-ink/50">
           Nu mai sunt locuri disponibile în această zi. Alege altă dată.
         </p>
       )}
 
       {selectedSlot && (
         <AdminCard padding="sm" className="space-y-3">
-          <p className="text-sm text-white/50 font-medium">4. Date client</p>
+          <p className="text-sm text-frz-ink/50 font-medium">4. Date client</p>
 
           <AdminInput
             placeholder="Nume client"
@@ -360,7 +361,7 @@ export default function AddBookingClient({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink placeholder:text-frz-ink/40 resize-y min-h-[80px]"
           />
 
           <AdminButton

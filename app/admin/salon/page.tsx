@@ -88,15 +88,15 @@ export default async function SalonPage() {
 
       <LocationMigrationBanner ready={locationMigrationReady} />
 
-      <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
+      <div className="bg-white border border-frz-line rounded-xl p-6 space-y-4">
         <div>
-          <p className="text-sm text-white/60">Link public salon</p>
+          <p className="text-sm text-frz-ink/60">Link public salon</p>
 
           <div className="mt-2 flex flex-col md:flex-row gap-2">
             <input
               value={salonUrl}
               readOnly
-              className="w-full min-w-0 bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 truncate"
+              className="w-full min-w-0 bg-frz-fog border border-frz-line rounded-lg px-4 py-3 truncate"
             />
 
             <div className="flex gap-2">
@@ -115,19 +115,19 @@ export default async function SalonPage() {
 
         <div className="grid md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-white/60">Plan curent</p>
+            <p className="text-sm text-frz-ink/60">Plan curent</p>
             <p className="text-lg font-medium mt-1">💎 {plan?.name || "Free"}</p>
           </div>
 
           <div>
-            <p className="text-sm text-white/60">Frizeri activi</p>
+            <p className="text-sm text-frz-ink/60">Frizeri activi</p>
             <p className="text-lg font-medium mt-1">
               {activeBarbers ?? 0} / {plan?.max_barbers ?? 1}
             </p>
           </div>
 
           <div>
-            <p className="text-sm text-white/60">Programări luna aceasta</p>
+            <p className="text-sm text-frz-ink/60">Programări luna aceasta</p>
             <p className="text-lg font-medium mt-1">{monthBookings ?? 0}</p>
           </div>
         </div>
@@ -138,46 +138,46 @@ export default async function SalonPage() {
 
       <FormWithSaveFeedback
         action={updateSalon}
-        className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-5"
+        className="bg-white border border-frz-line rounded-xl p-6 space-y-5"
       >
         <div>
-          <label className="block text-sm text-white/60 mb-2">Nume salon</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">Nume salon</label>
           <input
             type="text"
             name="name"
             defaultValue={tenant?.name || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
 
         {tenant?.slug && (
           <div>
-            <label className="block text-sm text-white/60 mb-2">
+            <label className="block text-sm text-frz-ink/60 mb-2">
               Link public salon
             </label>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-frz-ink/40">
               Linkul rămâne același dacă schimbi doar numele salonului.
             </p>
-            <p className="mt-2 text-sm text-white/50 font-mono break-all">
+            <p className="mt-2 text-sm text-frz-ink/50 font-mono break-all">
               /booking/salon/{tenant.slug}
             </p>
           </div>
         )}
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">Telefon</label>
+          <label className="block text-sm text-frz-ink/60 mb-2">Telefon</label>
           <input
             type="text"
             name="phone"
             defaultValue={tenant?.phone || ""}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
 
-        <div className="space-y-3 border-t border-white/10 pt-5">
+        <div className="space-y-3 border-t border-frz-line pt-5">
           <div>
             <h3 className="text-lg font-medium">Locație salon</h3>
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-sm text-frz-ink/50 mt-1">
               Apare pe pagina publică de programări, cu link Google Maps / Waze
               și hartă. Orașul e folosit și pentru SEO / directorul local.
             </p>
@@ -185,7 +185,7 @@ export default async function SalonPage() {
           <LocationFormFields defaults={tenant || {}} />
         </div>
 
-        <label className="flex items-start gap-3 border-t border-white/10 pt-5 cursor-pointer">
+        <label className="flex items-start gap-3 border-t border-frz-line pt-5 cursor-pointer">
           <input
             type="checkbox"
             name="directory_listed"
@@ -205,14 +205,14 @@ export default async function SalonPage() {
         </label>
 
         <div>
-          <label className="block text-sm text-white/60 mb-2">
+          <label className="block text-sm text-frz-ink/60 mb-2">
             Descriere salon
           </label>
           <textarea
             name="description"
             defaultValue={tenant?.description || ""}
             rows={5}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
       </FormWithSaveFeedback>

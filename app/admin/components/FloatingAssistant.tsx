@@ -7,9 +7,9 @@ import { usePathname } from "next/navigation";
 const AssistantChatPanel = dynamic(() => import("./AssistantChatPanel"), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 flex items-center justify-center text-sm text-white/50 p-6">
-      Se încarcă Assistant…
-    </div>
+      <div className="flex-1 flex items-center justify-center text-sm text-frz-ink/50 p-6">
+        Se încarcă Assistant…
+      </div>
   ),
 });
 
@@ -67,20 +67,20 @@ export default function FloatingAssistant({
             : "opacity-0 translate-y-3 pointer-events-none"
         }`}
       >
-        <div className="w-[min(100vw-1.5rem,380px)] h-[min(70vh,560px)] flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#161618] shadow-2xl shadow-black/50">
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/10 bg-[#1C1C1F]">
+        <div className="w-[min(100vw-1.5rem,380px)] h-[min(70vh,560px)] flex flex-col overflow-hidden rounded-2xl border border-frz-line bg-white shadow-frz">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-frz-line bg-frz-fog">
             <div className="min-w-0">
               <div className="text-sm font-semibold truncate">
                 Frizeo Assistant
               </div>
-              <div className="text-[11px] text-white/50">
+              <div className="text-[11px] text-frz-ink/50">
                 Chat helper · staging
               </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="h-8 w-8 shrink-0 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
+              className="h-8 w-8 shrink-0 rounded-full bg-white border border-frz-line hover:bg-frz-fog text-frz-ink/70"
               aria-label="Închide"
             >
               ✕

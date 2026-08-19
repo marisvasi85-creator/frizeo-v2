@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: SITE_NAME,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
   },
   icons: {
     apple: "/apple-icon",
@@ -55,7 +55,7 @@ export default async function AdminLayout({
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
 
   return (
-    <div className="flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-[#0B0B0C] text-white">
+    <div className="frz-admin-light flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-frz-fog text-frz-ink">
       <Sidebar
         role={session.role}
         actsAsBarber={actsAsBarber}
@@ -64,7 +64,7 @@ export default async function AdminLayout({
         frizeoEmailEnabled={frizeoEmailEnabled}
       />
 
-      <main className="flex-1 min-w-0 p-6 md:p-10 pb-20 md:pb-10 bg-[#0F0F10]">
+      <main className="flex-1 min-w-0 p-6 md:p-10 pb-20 md:pb-10 bg-frz-fog">
         {children}
       </main>
 
