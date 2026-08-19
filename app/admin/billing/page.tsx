@@ -111,7 +111,7 @@ export default async function BillingPage({
       <AdminPageHeader title="Abonament" />
 
       {checkoutStatus === "success" && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-4 text-green-300 text-sm">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-700 text-sm">
           {planUpdated
             ? "Planul a fost actualizat."
             : "Mulțumim! Plata a fost înregistrată."}
@@ -119,13 +119,13 @@ export default async function BillingPage({
       )}
 
       {checkoutStatus === "canceled" && (
-        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-yellow-200 text-sm">
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-700 text-sm">
           Plata a fost anulată. Poți încerca din nou când dorești.
         </div>
       )}
 
       {isPastDue && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-red-200 text-sm space-y-3">
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 text-sm space-y-3">
           <p>
             Ultima plată nu a reușit. Până la finalizarea plății, beneficiile
             planului plătit (SMS, limite Pro, invitații echipă) sunt suspendate.
@@ -136,7 +136,7 @@ export default async function BillingPage({
       )}
 
       {isOverBarberLimit && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-100 text-sm">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-700 text-sm">
           Ai {activeBarberCount} frizeri activi, dar planul permite maximum{" "}
           {maxBarbers}.{" "}
           <Link href="/admin/barbers" className="underline">
@@ -148,7 +148,7 @@ export default async function BillingPage({
 
       <AdminCard>
         <div className="space-y-3">
-          <p className="text-white/60 text-sm">Plan curent</p>
+          <p className="text-frz-ink/60 text-sm">Plan curent</p>
 
           <h2 className="text-3xl font-bold">
             {isTrial
@@ -156,7 +156,7 @@ export default async function BillingPage({
               : `💎 ${currentPlan?.name || "Free"}`}
           </h2>
 
-          <p className="text-white/60">
+          <p className="text-frz-ink/60">
             Status:{" "}
             {isTrial
               ? `Trial (${trialDaysLeft} zile rămase)`
@@ -167,24 +167,24 @@ export default async function BillingPage({
                   : subscription?.status || "Activ"}
           </p>
 
-          <p className="text-white/60">
+          <p className="text-frz-ink/60">
             Frizeri activi: {activeBarberCount}
             {" / "}
             {maxBarbers ?? "∞"}
           </p>
 
           {freeBookingLimit != null && (
-            <p className="text-white/60">
+            <p className="text-frz-ink/60">
               Limită programări: {freeBookingLimit} / lună
             </p>
           )}
 
           {isTrial && (
-            <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-500/10 p-4">
-              <p className="font-medium text-blue-300">
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <p className="font-medium text-blue-600">
                 🚀 Perioadă de probă activă
               </p>
-              <p className="text-sm text-white/70 mt-1">
+              <p className="text-sm text-frz-ink/70 mt-1">
                 {currentPlan?.slug === "pro"
                   ? `Ai acces Pro (1 frizer, SMS reminder, programări nelimitate, fără invitații) încă ${trialDaysLeft} zile`
                   : `Ai acces Pro+ (până la 3 frizeri, SMS reminder, programări nelimitate) încă ${trialDaysLeft} zile`}
@@ -201,7 +201,7 @@ export default async function BillingPage({
           )}
 
           {canManageStripe && isPaidStripeSub && !isTrial && (
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-frz-line">
               <ManageSubscriptionButton />
             </div>
           )}

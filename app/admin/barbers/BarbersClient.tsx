@@ -290,25 +290,25 @@ export default function BarbersClient({
         <h1 className="text-2xl font-semibold">Frizeri</h1>
         <div className="mt-4">
           <AdminCard padding="sm">
-            <div className="text-sm text-white/60">Plan curent</div>
+            <div className="text-sm text-frz-ink/60">Plan curent</div>
 
             <div className="font-medium mt-1">{currentPlan}</div>
 
-            <div className="text-sm text-white/60 mt-3">Frizeri activi</div>
+            <div className="text-sm text-frz-ink/60 mt-3">Frizeri activi</div>
 
             <div className="font-medium mt-1">
               {activeCount} / {maxLabel}
             </div>
 
             {invitesAllowed && pendingCount > 0 && (
-              <div className="text-xs text-white/50 mt-1">
+              <div className="text-xs text-frz-ink/50 mt-1">
                 {pendingCount} invitații în așteptare (ocupă locuri până la
                 acceptare sau ștergere)
               </div>
             )}
 
             {invitesAllowed && maxBarbers !== null && (
-              <div className="text-xs text-white/50 mt-1">
+              <div className="text-xs text-frz-ink/50 mt-1">
                 Locuri pentru invitații noi:{" "}
                 {invitesLeft === null ? "∞" : invitesLeft} rămase (
                 {inviteSlotsUsed}/{maxBarbers} ocupate)
@@ -316,7 +316,7 @@ export default function BarbersClient({
             )}
 
             {invitesBlockedByPlan && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 Planul {planSlug === "pro" ? "Pro" : "Free"} nu include
                 invitații. Un singur frizer. Pentru echipă: upgrade la Pro+ sau
                 Custom.
@@ -324,7 +324,7 @@ export default function BarbersClient({
             )}
 
             {isOverLimit && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 Ai mai mulți frizeri activi decât permite planul. Dezactivează
                 frizeri până la {maxLabel} ca să poți schimba planul sau activa
                 alții.
@@ -332,7 +332,7 @@ export default function BarbersClient({
             )}
 
             {atInviteLimit && !isOverLimit && (
-              <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
                 Ai atins limita de {maxLabel} frizeri (activi + invitații).
                 Dezactivează un frizer, șterge o invitație în așteptare, sau fă
                 upgrade la Custom.
@@ -353,7 +353,7 @@ export default function BarbersClient({
             )}
           </AdminCard>
         </div>
-        <p className="text-white/60 mt-1">
+        <p className="text-frz-ink/60 mt-1">
           Gestionează frizerii salonului. {inviteQuotaHint}
         </p>
       </div>
@@ -361,7 +361,7 @@ export default function BarbersClient({
       <AdminCard className="space-y-4">
         <h2 className="font-medium">Invită frizer</h2>
 
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-frz-ink/60">
           {invitesBlockedByPlan
             ? "Planul Free/Pro nu include invitații. Un singur frizer — fără echipă prin invitații. Upgrade la Pro+ sau Custom."
             : maxBarbers === null
@@ -372,8 +372,8 @@ export default function BarbersClient({
         </p>
 
         {isTrial && invitesAllowed && !atInviteLimit && (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-50 space-y-2">
-            <p className="font-medium text-amber-100">Important pe trial</p>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 space-y-2">
+            <p className="font-medium text-amber-800">Important pe trial</p>
             <p>
               Frizerul invitat face parte din abonamentul salonului. Nu e taxat
               separat — e acoperit din planul tău (Pro+ pe trial).
@@ -391,7 +391,7 @@ export default function BarbersClient({
         )}
 
         {(invitesBlockedByPlan || atInviteLimit) && (
-          <p className="text-sm text-amber-100/90">
+          <p className="text-sm text-amber-700">
             {invitesBlockedByPlan
               ? "Invitațiile sunt disponibile pe Pro+ (trial inclus) și Custom."
               : "Ai atins limita. Dezactivează un frizer actual, șterge o invitație în așteptare, sau upgrade la Custom."}
@@ -440,7 +440,7 @@ export default function BarbersClient({
           Trimite invitația
         </AdminButton>
 
-        {message && <div className="text-sm text-white/70">{message}</div>}
+        {message && <div className="text-sm text-frz-ink/70">{message}</div>}
       </AdminCard>
 
       <div className="space-y-3">
@@ -461,13 +461,13 @@ export default function BarbersClient({
                 <div className="font-medium">
                   {barber.display_name}
                   {isOwner && (
-                    <span className="ml-2 text-xs text-white/40">
+                    <span className="ml-2 text-xs text-frz-ink/40">
                       (tu · owner)
                     </span>
                   )}
                 </div>
                 {barber.slug && tenantSlug && (
-                  <div className="text-xs text-white/40 mt-1">
+                  <div className="text-xs text-frz-ink/40 mt-1">
                     {publicBookingPath(tenantSlug, barber.slug)}
                   </div>
                 )}
@@ -485,12 +485,12 @@ export default function BarbersClient({
 
                     return (
                       <div className="mt-2 space-y-2">
-                        <div className="text-xs text-white/40 break-all">
+                        <div className="text-xs text-frz-ink/40 break-all">
                           Permanent: {stableUrl}
                         </div>
 
                         {slug && (
-                          <div className="text-xs text-white/30 break-all">
+                          <div className="text-xs text-frz-ink/30 break-all">
                             Scurt: {bookingUrl}
                           </div>
                         )}
@@ -521,7 +521,7 @@ export default function BarbersClient({
                       </div>
                     );
                   })()}
-                <div className="text-sm text-white/60">
+                <div className="text-sm text-frz-ink/60">
                   {barber.phone || "Fără telefon"}
                 </div>
               </div>
@@ -530,8 +530,8 @@ export default function BarbersClient({
                 <div
                   className={
                     barber.active
-                      ? "text-green-400 text-sm"
-                      : "text-red-400 text-sm"
+                      ? "text-emerald-600 text-sm"
+                      : "text-red-600 text-sm"
                   }
                 >
                   {barber.active ? "Activ" : "Inactiv"}
@@ -539,7 +539,7 @@ export default function BarbersClient({
 
                 <button
                   onClick={() => toggleBarber(barber.id, barber.active)}
-                  className="text-sm text-white/70 hover:text-white"
+                  className="text-sm text-frz-ink/70 hover:text-frz-ink"
                 >
                   {barber.active ? "Dezactivează" : "Activează"}
                 </button>
@@ -547,7 +547,7 @@ export default function BarbersClient({
                 {!isOwner && (
                   <button
                     onClick={() => deleteBarber(barber.id)}
-                    className="text-sm text-red-400 hover:text-red-300"
+                    className="text-sm text-red-600 hover:text-red-500"
                   >
                     Șterge
                   </button>
@@ -573,10 +573,10 @@ export default function BarbersClient({
             <div>
               <div className="font-medium">{invite.full_name}</div>
 
-              <div className="text-sm text-white/60">{invite.email}</div>
+              <div className="text-sm text-frz-ink/60">{invite.email}</div>
 
               <div className="mt-2">
-                <span className="text-yellow-400 text-sm">În așteptare</span>
+                <span className="text-amber-600 text-sm">În așteptare</span>
               </div>
             </div>
 
@@ -593,16 +593,16 @@ export default function BarbersClient({
       </div>
 
       <AdminCard id="owner-role" className="space-y-3 scroll-mt-24 mt-10">
-        <h2 className="font-medium text-white/80 text-sm">
+        <h2 className="font-medium text-frz-ink/80 text-sm">
           Opțiune: apari și ca frizer
         </h2>
-        <p className="text-sm text-white/45">
+        <p className="text-sm text-frz-ink/45">
           Schimbi rar. Dacă ești și frizer, ocupi 1 loc și ai Profil, Servicii și
           Program în meniu.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-white/45">
+          <span className="text-sm text-frz-ink/45">
             {ownerActsAsBarber
               ? "Activă — ești și frizer"
               : "Dezactivată — doar admin"}
@@ -623,7 +623,7 @@ export default function BarbersClient({
         </div>
 
         {ownerRoleMessage && (
-          <p className="text-sm text-white/70">{ownerRoleMessage}</p>
+          <p className="text-sm text-frz-ink/70">{ownerRoleMessage}</p>
         )}
       </AdminCard>
     </div>

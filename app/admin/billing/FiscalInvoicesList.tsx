@@ -24,7 +24,7 @@ export default async function FiscalInvoicesList({
       <div className="space-y-4">
         <div>
           <h2 className="text-xl font-semibold">Facturi fiscale</h2>
-          <p className="text-sm text-white/60 mt-1">
+          <p className="text-sm text-frz-ink/60 mt-1">
             Emise automat via FGO după plată (când FGO e configurat), pe baza datelor din Stripe.
           </p>
         </div>
@@ -33,7 +33,7 @@ export default async function FiscalInvoicesList({
           {invoices.map((invoice) => (
             <div
               key={invoice.id}
-              className="rounded-lg border border-white/10 bg-[#0F0F10] p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+              className="rounded-lg border border-frz-line bg-frz-fog p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
             >
               <div>
                 <p className="font-medium">
@@ -41,7 +41,7 @@ export default async function FiscalInvoicesList({
                     ? `${invoice.fgo_serie} ${invoice.fgo_numar}`
                     : "Factură FGO"}
                 </p>
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-frz-ink/60">
                   {Number(invoice.amount_ron).toFixed(2)} lei ·{" "}
                   {invoice.status === "issued" ? "Emisă" : "Eșuată"}
                 </p>
@@ -55,7 +55,7 @@ export default async function FiscalInvoicesList({
                   href={invoice.fgo_pdf_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-white underline underline-offset-2"
+                  className="text-sm text-frz-accent underline underline-offset-2"
                 >
                   Descarcă PDF
                 </a>

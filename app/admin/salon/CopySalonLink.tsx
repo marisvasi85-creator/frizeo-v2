@@ -14,9 +14,12 @@ export default function CopySalonLink({
 className="
   px-4
   py-3
-  bg-white/10
+  bg-frz-fog
+  border
+  border-frz-line
   rounded-lg
   shrink-0
+  text-frz-ink
 "    >
       Copiază
     </button>

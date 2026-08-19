@@ -300,8 +300,8 @@ export default function MarketingAIClient({
       <SocialLinksBar links={socialLinks} />
 
       {!configured && (
-        <AdminCard className="border-amber-500/30 bg-amber-500/10">
-          <p className="text-amber-100 text-sm">
+        <AdminCard className="border-amber-200 bg-amber-50">
+          <p className="text-amber-700 text-sm">
             Marketing AI nu este configurat. Setează un provider în Vercel sau lasă implicit{" "}
             <code className="text-amber-50">template</code> pentru testare gratuită.
           </p>
@@ -312,11 +312,11 @@ export default function MarketingAIClient({
         <AdminCard
           className={
             isFreeTier
-              ? "border-emerald-500/30 bg-emerald-500/10"
-              : "border-white/10"
+              ? "border-emerald-200 bg-emerald-50"
+              : "border-frz-line"
           }
         >
-          <p className="text-sm text-white/80">
+          <p className="text-sm text-frz-ink/80">
             <span className="font-medium">{modeLabel}</span>
             {" · "}
             {provider} / {model}
@@ -324,7 +324,7 @@ export default function MarketingAIClient({
 
           {usage.countsTowardLimit && usage.limit !== null && (
             <div className="mt-3 flex items-center gap-3">
-              <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+              <div className="flex-1 h-2 rounded-full bg-frz-fog overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all ${
                     usage.remaining === 0 ? "bg-red-400" : "bg-emerald-400"
@@ -334,25 +334,25 @@ export default function MarketingAIClient({
                   }}
                 />
               </div>
-              <p className="text-sm text-white font-medium whitespace-nowrap">
+              <p className="text-sm text-frz-ink font-medium whitespace-nowrap">
                 {usage.used}/{usage.limit}
               </p>
             </div>
           )}
 
           {usage.countsTowardLimit && usage.limit !== null && (
-            <p className="text-xs text-white/60 mt-2">
+            <p className="text-xs text-frz-ink/60 mt-2">
               Generări AI azi — plan {usage.planLabel}
               {usage.remaining !== null && usage.remaining > 0 && (
                 <>
                   {" "}
-                  · <span className="text-white/80">{usage.remaining} rămase</span>
+                  · <span className="text-frz-ink/80">{usage.remaining} rămase</span>
                 </>
               )}
               {usage.remaining === 0 && (
                 <>
                   {" "}
-                  · <span className="text-red-300">limită atinsă</span>
+                  · <span className="text-red-600">limită atinsă</span>
                 </>
               )}{" "}
               — 1 click = 1 generare (3 variante) · reset la miezul nopții
@@ -360,35 +360,35 @@ export default function MarketingAIClient({
           )}
 
           {usage.countsTowardLimit && usage.unlimited && (
-            <p className="text-xs text-white/60 mt-2">
+            <p className="text-xs text-frz-ink/60 mt-2">
               Generări AI azi:{" "}
-              <span className="text-white font-medium">{usage.used}</span> (nelimitat, plan{" "}
+              <span className="text-frz-ink font-medium">{usage.used}</span> (nelimitat, plan{" "}
               {usage.planLabel})
             </p>
           )}
 
           {provider === "template" && (
-            <p className="text-xs text-white/50 mt-2">
+            <p className="text-xs text-frz-ink/50 mt-2">
               Mod demo — texte generate din șabloane, fără cost API. Pentru AI real gratuit,
-              adaugă <code className="text-white/70">GEMINI_API_KEY</code> din Google AI Studio.
+              adaugă <code className="text-frz-ink/70">GEMINI_API_KEY</code> din Google AI Studio.
             </p>
           )}
           {provider === "template" && diagnostics.geminiKeySet && (
-            <p className="text-xs text-amber-300 mt-2">
+            <p className="text-xs text-amber-600 mt-2">
               Cheia Gemini e detectată, dar providerul activ e încă template. Setează{" "}
-              <code className="text-amber-100">MARKETING_AI_PROVIDER=gemini</code> în Vercel și
+              <code className="text-amber-800">MARKETING_AI_PROVIDER=gemini</code> în Vercel și
               fă redeploy.
             </p>
           )}
           {provider === "template" && !diagnostics.geminiKeySet && (
-            <p className="text-xs text-amber-300 mt-2">
+            <p className="text-xs text-amber-600 mt-2">
               Cheia nu e încă vizibilă pe server. Verifică în Vercel: env pentru{" "}
               <strong>Preview</strong> (staging), nume exact <code>GEMINI_API_KEY</code>, apoi
               Redeploy.
             </p>
           )}
           {provider === "gemini" && (
-            <p className="text-xs text-white/50 mt-2">
+            <p className="text-xs text-frz-ink/50 mt-2">
               Google Gemini Free Tier — model recomandat: gemini-3.1-flash-lite.
             </p>
           )}
@@ -404,14 +404,14 @@ export default function MarketingAIClient({
       />
 
       <AdminCard className="space-y-4">
-        <p className="text-white/60 text-sm">
+        <p className="text-frz-ink/60 text-sm">
           AI-ul folosește datele salonului tău (nume, servicii, link programări) și generează
           3 variante dintr-un click.
         </p>
 
         {role === "owner" && barbers.length > 1 && (
           <div className="space-y-2">
-            <label className="text-sm text-white/50">Frizer</label>
+            <label className="text-sm text-frz-ink/50">Frizer</label>
             <AdminSelect
               value={selectedBarberId}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -428,7 +428,7 @@ export default function MarketingAIClient({
         )}
 
         <div className="space-y-2">
-          <label className="text-sm text-white/50">Ton</label>
+          <label className="text-sm text-frz-ink/50">Ton</label>
           <div className="flex flex-wrap gap-2">
             {MARKETING_TONES.map((value) => (
               <button
@@ -437,8 +437,8 @@ export default function MarketingAIClient({
                 onClick={() => setTone(value)}
                 className={`rounded-lg px-3 py-2 text-sm transition ${
                   tone === value
-                    ? "bg-white text-black font-medium"
-                    : "bg-white/10 text-white/80 hover:bg-white/15"
+                    ? "bg-frz-ink text-white font-medium"
+                    : "bg-frz-fog text-frz-ink/80 hover:bg-frz-mist"
                 }`}
               >
                 {MARKETING_TONE_LABELS[value]}
@@ -448,7 +448,7 @@ export default function MarketingAIClient({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm text-white/50">Serviciu pentru promovare (opțional)</label>
+          <label className="text-sm text-frz-ink/50">Serviciu pentru promovare (opțional)</label>
           <AdminSelect
             value={selectedServiceId}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -465,7 +465,7 @@ export default function MarketingAIClient({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm text-white/50">
+          <label className="text-sm text-frz-ink/50">
             Note suplimentare (opțional, max {MARKETING_EXTRA_NOTES_MAX})
           </label>
           <textarea
@@ -475,7 +475,7 @@ export default function MarketingAIClient({
             }
             placeholder="Ex: vreau ton relaxat, menționează că avem cafea gratuită..."
             rows={3}
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink placeholder:text-frz-muted resize-y min-h-[80px]"
           />
         </div>
       </AdminCard>
@@ -500,7 +500,7 @@ export default function MarketingAIClient({
             <span>
               {action.label}
               {action.seasonal ? (
-                <span className="block text-[11px] text-white/45 font-normal">
+                <span className="block text-[11px] text-frz-ink/45 font-normal">
                   Sezon actual
                 </span>
               ) : null}
@@ -509,14 +509,14 @@ export default function MarketingAIClient({
         ))}
       </div>
 
-      {warning && <p className="text-amber-300 text-sm">{warning}</p>}
+      {warning && <p className="text-amber-600 text-sm">{warning}</p>}
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-red-600 text-sm">{error}</p>}
 
       {result && (
         <AdminCard className="space-y-4">
           {provider === "template" && (
-            <p className="text-xs text-emerald-300/90">
+            <p className="text-xs text-emerald-700">
               Text demo (gratuit) — bun pentru testare. Pentru variante mai creative, folosește
               Gemini Free.
             </p>
@@ -531,8 +531,8 @@ export default function MarketingAIClient({
                   onClick={() => handleSelectVariant(index)}
                   className={`rounded-lg px-3 py-2 text-sm transition ${
                     activeVariantIndex === index
-                      ? "bg-white text-black font-medium"
-                      : "bg-white/10 text-white/80 hover:bg-white/15"
+                      ? "bg-frz-ink text-white font-medium"
+                      : "bg-frz-fog text-frz-ink/80 hover:bg-frz-mist"
                   }`}
                 >
                   Varianta {index + 1}
@@ -544,7 +544,7 @@ export default function MarketingAIClient({
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">{result.title}</h2>
-              <p className="text-white/50 text-sm mt-1">
+              <p className="text-frz-ink/50 text-sm mt-1">
                 {activeHistoryId ? "Din istoric / generare salvată" : "Conținut generat"}
                 {" · "}
                 Ton {MARKETING_TONE_LABELS[tone]}
@@ -555,18 +555,18 @@ export default function MarketingAIClient({
             </AdminButton>
           </div>
 
-          <div className="whitespace-pre-wrap text-white/90 text-sm leading-relaxed">
+          <div className="whitespace-pre-wrap text-frz-ink/90 text-sm leading-relaxed">
             {result.content}
           </div>
 
-          <div className="pt-2 border-t border-white/10 space-y-2">
-            <p className="text-sm font-medium text-white/80">Call to action</p>
-            <p className="text-sm text-white/70">{result.callToAction}</p>
+          <div className="pt-2 border-t border-frz-line space-y-2">
+            <p className="text-sm font-medium text-frz-ink/80">Call to action</p>
+            <p className="text-sm text-frz-ink/70">{result.callToAction}</p>
           </div>
 
           {result.hashtags.length > 0 && (
-            <div className="pt-2 border-t border-white/10">
-              <p className="text-sm font-medium text-white/80 mb-2">Hashtag-uri</p>
+            <div className="pt-2 border-t border-frz-line">
+              <p className="text-sm font-medium text-frz-ink/80 mb-2">Hashtag-uri</p>
               <p className="text-sm text-sky-300">
                 {result.hashtags
                   .map((tag) => (tag.startsWith("#") ? tag : `#${tag}`))

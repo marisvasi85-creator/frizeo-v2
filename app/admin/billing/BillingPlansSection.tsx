@@ -31,7 +31,7 @@ export default function BillingPlansSection({
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Planuri disponibile</h2>
-      <p className="text-sm text-white/60 mb-4">
+      <p className="text-sm text-frz-ink/60 mb-4">
         Alegi planul → completezi datele de facturare în Stripe → plătești.
         Factura fiscală se emite pe baza datelor din Stripe (export pentru
         contabilitate).
@@ -57,8 +57,8 @@ export default function BillingPlansSection({
               key={plan.id}
               className={`rounded-xl border p-6 ${
                 isCurrent
-                  ? "border-green-500 bg-green-500/10"
-                  : "border-white/10 bg-[#161618]"
+                  ? "border-green-500 bg-green-50"
+                  : "border-frz-line bg-white"
               }`}
             >
               <div className="flex justify-between items-center">
@@ -84,7 +84,7 @@ export default function BillingPlansSection({
                     : `${plan.price} lei`}
                 </div>
                 {plan.slug !== "custom" && (
-                  <div className="text-white/60 text-sm">/ lună</div>
+                  <div className="text-frz-ink/60 text-sm">/ lună</div>
                 )}
               </div>
 
@@ -121,7 +121,7 @@ export default function BillingPlansSection({
                 {plan.slug === "custom" ? (
                   <a
                     href="mailto:office@frizeo.ro"
-                    className="block w-full text-center bg-white text-black py-2 rounded"
+                    className="block w-full text-center bg-frz-ink text-white py-2 rounded"
                   >
                     Contactează-ne
                   </a>
@@ -130,11 +130,11 @@ export default function BillingPlansSection({
                     <button
                       type="button"
                       disabled
-                      className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                      className="w-full py-2 rounded bg-frz-fog text-frz-ink/40 cursor-not-allowed"
                     >
                       Plan inferior
                     </button>
-                    <p className="text-xs text-white/50 text-center">
+                    <p className="text-xs text-frz-ink/50 text-center">
                       Beneficiezi deja de un plan mai mare.
                     </p>
                   </div>
@@ -143,11 +143,11 @@ export default function BillingPlansSection({
                     <button
                       type="button"
                       disabled
-                      className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
+                      className="w-full py-2 rounded bg-frz-fog text-frz-ink/40 cursor-not-allowed"
                     >
                       Redu frizerii activi
                     </button>
-                    <p className="text-xs text-amber-200/90 text-center">
+                    <p className="text-xs text-amber-700/90 text-center">
                       Ai {activeBarbers} frizeri activi; acest plan permite{" "}
                       {plan.max_barbers}.{" "}
                       <Link href="/admin/barbers" className="underline">
@@ -171,9 +171,9 @@ export default function BillingPlansSection({
                   <button
                     type="button"
                     disabled
-                    className="w-full py-2 rounded bg-white/10 text-white/50 cursor-not-allowed"
-                  >
-                    Plan Free
+                      className="w-full py-2 rounded bg-frz-fog text-frz-ink/40 cursor-not-allowed"
+                    >
+                      Plan Free
                   </button>
                 ) : isPaidPlan ? (
                   <UpgradeButton

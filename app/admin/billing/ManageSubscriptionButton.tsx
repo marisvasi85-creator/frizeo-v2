@@ -37,15 +37,15 @@ export default function ManageSubscriptionButton({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="rounded border border-white/20 bg-white/5 text-white px-4 py-2 text-sm hover:bg-white/10 transition disabled:opacity-60"
+        className="rounded border border-frz-line bg-white text-frz-ink px-4 py-2 text-sm hover:bg-frz-fog transition disabled:opacity-60"
       >
         {loading ? "Se deschide…" : label}
       </button>
-      <p className="text-xs text-white/45">
+      <p className="text-xs text-frz-ink/45">
         Poți anula abonamentul (la finalul perioadei plătite), schimba cardul
         sau vedea facturile Stripe.
       </p>
-      {error && <p className="text-xs text-red-300">{error}</p>}
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }

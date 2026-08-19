@@ -157,7 +157,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
         {days.map((day, index) => (
           <div
             key={day.day_of_week}
-            className="bg-[#161618] border border-white/10 p-4 rounded-xl space-y-4"
+            className="bg-white border border-frz-line p-4 rounded-xl space-y-4"
           >
 
             {/* HEADER */}
@@ -173,8 +173,8 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                 }
                 className={`px-3 py-1 rounded text-sm ${
                   day.is_working
-                    ? "bg-green-500 text-black"
-                    : "bg-gray-700 text-white"
+                    ? "bg-frz-success text-white"
+                    : "bg-frz-fog text-frz-ink/60"
                 }`}
               >
                 {day.is_working ? "Lucrează" : "Liber"}
@@ -191,7 +191,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                   onChange={(e) =>
                     updateDay(index, "work_start", e.target.value)
                   }
-                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                  className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                 />
 
                 <input
@@ -200,7 +200,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                   onChange={(e) =>
                     updateDay(index, "work_end", e.target.value)
                   }
-                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                  className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                 />
 
               </div>
@@ -215,8 +215,8 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                   onClick={() => toggleBreak(index)}
                   className={`text-sm ${
                     day.break_enabled
-                      ? "text-green-400"
-                      : "text-white/60"
+                    ? "text-emerald-600"
+                    : "text-frz-ink/50"
                   }`}
                 >
                   {day.break_enabled
@@ -237,7 +237,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                           e.target.value
                         )
                       }
-                      className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                      className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                     />
 
                     <input
@@ -250,7 +250,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
                           e.target.value
                         )
                       }
-                      className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                      className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                     />
 
                   </div>
@@ -266,7 +266,7 @@ export default function WeeklyScheduleEditor({ initialData }: Props) {
       <div className="flex justify-end items-center gap-3">
 
   {error && (
-    <div className="text-red-400 text-sm">{error}</div>
+    <div className="text-red-600 text-sm">{error}</div>
   )}
 
   <AdminButton

@@ -26,9 +26,9 @@ export default async function EmailLayout({
   }
 
   return (
-    <div className="flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-[#0B0B0C] text-white">
+    <div className="frz-admin-light flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-frz-fog text-frz-ink">
       <EmailSidebar backUrl={`${frizeoUrl}/admin/dashboard`} />
-      <main className="flex-1 min-w-0 p-6 md:p-10 pb-24 md:pb-10 bg-[#0F0F10]">
+      <main className="flex-1 min-w-0 p-6 md:p-10 pb-24 md:pb-10 bg-frz-fog">
         {children}
       </main>
       <EmailMobileNav />

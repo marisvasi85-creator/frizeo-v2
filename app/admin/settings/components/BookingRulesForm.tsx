@@ -23,12 +23,12 @@ export default function BookingRulesForm({ minBookingNoticeHours }: Props) {
   return (
     <FormWithSaveFeedback
       action={saveBookingRules}
-      className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4"
+      className="bg-white border border-frz-line rounded-xl p-6 space-y-4"
       saveLabel="Salvează regulile"
     >
       <div>
         <h2 className="text-lg font-semibold">Reguli programări online</h2>
-        <p className="text-sm text-white/50 mt-1">
+        <p className="text-sm text-frz-ink/50 mt-1">
           Clienții nu pot rezerva în trecut. Poți seta cât timp înainte trebuie
           făcută programarea. Din admin poți programa oricând (exceptând trecutul).
         </p>

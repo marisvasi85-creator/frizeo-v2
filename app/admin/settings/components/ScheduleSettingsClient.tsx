@@ -43,7 +43,7 @@ export default function ScheduleSettingsClient({
       {mode === "weekly" ? (
         <WeeklyScheduleEditor initialData={initialWeekly} />
       ) : (
-        <div className="rounded-xl border border-dashed border-white/15 px-4 py-3 text-sm text-white/50">
+        <div className="rounded-xl border border-dashed border-frz-line px-4 py-3 text-sm text-frz-ink/50">
           Programul săptămânal este păstrat, dar nu se aplică cât timp ești pe
           modul selectiv. Poți reveni oricând la săptămânal.
         </div>

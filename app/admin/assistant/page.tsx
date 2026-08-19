@@ -17,17 +17,17 @@ export default async function AssistantPage() {
   return (
     <div className="space-y-6 min-w-0">
       <div>
-        <div className="inline-flex items-center gap-2 text-xs text-emerald-300/90 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full mb-3">
+        <div className="inline-flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full mb-3">
           Staging · chat helper
         </div>
         <h1 className="text-2xl font-semibold">Frizeo Assistant</h1>
-        <p className="text-white/60 mt-1">
+        <p className="text-frz-ink/60 mt-1">
           Același chat ca butonul flotant — programări, servicii, acțiuni cu
           confirmare. Preț opțional. Fără încasări.
         </p>
       </div>
 
-      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-white/10 bg-[#161618]">
+      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-frz-line bg-white">
         <AssistantChatPanel
           configured={isAssistantLlmConfigured()}
           displayName={session.barber.display_name || ""}

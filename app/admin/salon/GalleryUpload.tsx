@@ -87,7 +87,7 @@ export default function GalleryUpload({
   }
 
   return (
-    <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
+    <div className="bg-white border border-frz-line rounded-xl p-6 space-y-4">
       <h2 className="text-lg font-semibold">Galerie salon</h2>
 
       <input type="file" accept="image/*" onChange={upload} />

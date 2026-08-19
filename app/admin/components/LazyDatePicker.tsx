@@ -13,7 +13,7 @@ const ReactDatePicker = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-10 rounded-lg border border-white/10 bg-white/5 animate-pulse" />
+      <div className="h-10 rounded-lg border border-frz-line bg-frz-fog animate-pulse" />
     ),
   },
 );

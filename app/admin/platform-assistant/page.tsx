@@ -30,17 +30,17 @@ export default async function PlatformAssistantPage() {
   return (
     <div className="space-y-6 min-w-0">
       <div>
-        <div className="inline-flex items-center gap-2 text-xs text-sky-300/90 bg-sky-500/10 border border-sky-500/20 px-2.5 py-1 rounded-full mb-3">
+        <div className="inline-flex items-center gap-2 text-xs text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-full mb-3">
           Creator only · plan / trial / delete / email
         </div>
         <h1 className="text-2xl font-semibold">Platform Assistant</h1>
-        <p className="text-white/60 mt-1">
+        <p className="text-frz-ink/60 mt-1">
           Asistent intern — briefing, health, follow-up email, note, planuri,
           ștergere salon. Separat de asistentul de salon.
         </p>
       </div>
 
-      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-white/10 bg-[#161618]">
+      <div className="h-[min(75vh,700px)] overflow-hidden rounded-xl border border-frz-line bg-white">
         <AssistantChatPanel
           configured={isPlatformAssistantLlmConfigured()}
           displayName="Maris"

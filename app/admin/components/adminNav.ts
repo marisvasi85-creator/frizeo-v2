@@ -118,9 +118,9 @@ export function buildMobileMainItems(options: {
     if (actsAsBarber) {
       return [
         { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
-        { href: "/admin/bookings", label: "Programări", icon: "📋" },
         { href: "/admin/services", label: "Servicii", icon: "✂️", requiresBarber: true },
-        { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
+        { href: "/admin/settings", label: "Program", icon: "🗓️", requiresBarber: true },
+        { href: "/admin/bookings", label: "Programări", icon: "📋" },
       ];
     }
     return [
@@ -133,9 +133,9 @@ export function buildMobileMainItems(options: {
 
   return [
     { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
-    { href: "/admin/bookings", label: "Programări", icon: "📋" },
     { href: "/admin/services", label: "Servicii", icon: "✂️", requiresBarber: true },
-    { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
+    { href: "/admin/settings", label: "Program", icon: "🗓️", requiresBarber: true },
+    { href: "/admin/bookings", label: "Programări", icon: "📋" },
   ];
 }
 

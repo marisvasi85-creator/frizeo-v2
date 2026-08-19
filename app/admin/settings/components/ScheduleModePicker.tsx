@@ -50,7 +50,7 @@ export default function ScheduleModePicker({
     <AdminCard padding="sm" className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Tip program</h2>
-        <p className="text-sm text-white/55 mt-1">
+        <p className="text-sm text-frz-ink/55 mt-1">
           Implicit rămâne programul săptămânal. Programul selectiv e opțional:
           deschizi doar zilele pe care le setezi tu în calendar.
         </p>
@@ -63,8 +63,8 @@ export default function ScheduleModePicker({
           onClick={() => void save("weekly")}
           className={`px-3 py-2 rounded-lg text-sm border ${
             mode === "weekly"
-              ? "bg-white text-black border-white"
-              : "bg-[#0F0F10] text-white/70 border-white/10"
+              ? "bg-frz-ink text-white border-frz-ink"
+              : "bg-frz-fog text-frz-ink/70 border-frz-line"
           }`}
         >
           Program săptămânal
@@ -76,29 +76,29 @@ export default function ScheduleModePicker({
           className={`px-3 py-2 rounded-lg text-sm border ${
             mode === "selective"
               ? "bg-amber-400 text-black border-amber-300"
-              : "bg-[#0F0F10] text-white/70 border-white/10"
+              : "bg-frz-fog text-frz-ink/70 border-frz-line"
           }`}
         >
           Program selectiv
         </button>
         {saved && (
-          <span className="self-center text-sm text-emerald-300">Salvat ✔</span>
+          <span className="self-center text-sm text-emerald-600">Salvat ✔</span>
         )}
       </div>
 
       {mode === "weekly" ? (
-        <p className="text-sm text-white/50">
+        <p className="text-sm text-frz-ink/50">
           Lucrezi după orarul săptămânal. Zilele speciale / concediile rămân
           excepții și se păstrează dacă treci pe selectiv.
         </p>
       ) : (
-        <p className="text-sm text-amber-200/80">
+        <p className="text-sm text-amber-700/80">
           Orarul săptămânal nu mai deschide sloturi. Zilele setate și
           concediile rămân în listă și dacă revii la săptămânal.
         </p>
       )}
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {loading && (
         <AdminButton disabled loading loadingLabel="Se salvează...">

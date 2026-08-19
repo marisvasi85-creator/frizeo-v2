@@ -55,17 +55,17 @@ export default function LogoUpload({
   }
 
   return (
-    <div className="bg-[#161618] border border-white/10 rounded-xl p-6 space-y-4">
+    <div className="bg-white border border-frz-line rounded-xl p-6 space-y-4">
       <h2 className="text-lg font-semibold">Logo salon</h2>
 
       {preview ? (
         <img
           src={preview}
           alt=""
-          className="w-32 h-32 rounded-xl object-cover border border-white/10"
+          className="w-32 h-32 rounded-xl object-cover border border-frz-line"
         />
       ) : (
-        <div className="w-32 h-32 rounded-xl bg-[#0F0F10] border border-white/10 flex items-center justify-center text-white/40 text-sm">
+        <div className="w-32 h-32 rounded-xl bg-frz-fog border border-frz-line flex items-center justify-center text-frz-ink/40 text-sm">
           Fără logo
         </div>
       )}

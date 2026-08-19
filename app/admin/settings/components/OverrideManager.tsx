@@ -37,7 +37,7 @@ function describeOverride(item: Override, selective: boolean) {
     return {
       label: selective ? "Închis" : "Zi liberă",
       detail: "Închis",
-      tone: "text-red-400",
+      tone: "text-red-600",
     };
   }
 
@@ -52,11 +52,11 @@ function describeOverride(item: Override, selective: boolean) {
     return {
       label: selective ? "Lucrez" : "Program special",
       detail,
-      tone: "text-amber-400",
+      tone: "text-amber-600",
     };
   }
 
-  return { label: "Zi specială", detail: "", tone: "text-white/60" };
+  return { label: "Zi specială", detail: "", tone: "text-frz-ink/60" };
 }
 
 export default function OverrideManager({
@@ -344,13 +344,13 @@ export default function OverrideManager({
           dateFormat="dd.MM.yyyy"
           placeholderText="Selectează ziua"
           minDate={new Date()}
-          className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+          className="w-full bg-frz-fog text-frz-ink border border-frz-line px-4 py-3 pr-12 rounded-lg"
           inline={isSelective}
         />
         {!isSelective && (
           <CalendarDays
             size={18}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-frz-ink/40 pointer-events-none"
           />
         )}
       </div>
@@ -364,7 +364,7 @@ export default function OverrideManager({
               className={`px-3 py-2 rounded-lg text-sm border ${
                 mode === "custom"
                   ? "bg-amber-400 text-black border-amber-300"
-                  : "bg-[#0F0F10] text-white/70 border-white/10"
+                  : "bg-frz-fog text-frz-ink/70 border-frz-line"
               }`}
             >
               Lucrez
@@ -374,8 +374,8 @@ export default function OverrideManager({
               onClick={() => setMode("closed")}
               className={`px-3 py-2 rounded-lg text-sm border ${
                 mode === "closed"
-                  ? "bg-red-500/20 text-red-300 border-red-500/40"
-                  : "bg-[#0F0F10] text-white/70 border-white/10"
+                  ? "bg-red-50 text-red-600 border-red-200"
+                  : "bg-frz-fog text-frz-ink/70 border-frz-line"
               }`}
             >
               Închis
@@ -384,20 +384,20 @@ export default function OverrideManager({
 
           {mode === "custom" && (
             <div className="space-y-3">
-              <p className="text-sm text-white/60">Ore</p>
+              <p className="text-sm text-frz-ink/60">Ore</p>
               <div className="flex flex-wrap gap-2 items-center">
                 <input
                   type="time"
                   value={workStart}
                   onChange={(e) => setWorkStart(e.target.value)}
-                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                  className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                 />
-                <span className="text-white/40">–</span>
+                <span className="text-frz-ink/40">–</span>
                 <input
                   type="time"
                   value={workEnd}
                   onChange={(e) => setWorkEnd(e.target.value)}
-                  className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                  className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                 />
               </div>
 
@@ -405,7 +405,7 @@ export default function OverrideManager({
                 type="button"
                 onClick={() => setBreakEnabled((v) => !v)}
                 className={`text-sm ${
-                  breakEnabled ? "text-green-400" : "text-white/60"
+                  breakEnabled ? "text-emerald-600" : "text-frz-ink/50"
                 }`}
               >
                 {breakEnabled
@@ -419,20 +419,20 @@ export default function OverrideManager({
                     type="time"
                     value={breakStart}
                     onChange={(e) => setBreakStart(e.target.value)}
-                    className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                    className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                   />
                   <input
                     type="time"
                     value={breakEnd}
                     onChange={(e) => setBreakEnd(e.target.value)}
-                    className="bg-[#0F0F10] border border-white/10 px-3 py-2 rounded text-sm"
+                    className="bg-frz-fog border border-frz-line px-3 py-2 rounded text-sm text-frz-ink"
                   />
                 </div>
               )}
             </div>
           )}
 
-          {error && <p className="text-sm text-red-400">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex flex-wrap gap-2">
             <AdminButton
@@ -479,8 +479,8 @@ export default function OverrideManager({
             <div className="font-medium">
               {formatVacationPeriodRO(period)}
             </div>
-            <div className="text-sm text-blue-300">Concediu</div>
-            <div className="text-sm text-white/60 mt-1">
+            <div className="text-sm text-blue-600">Concediu</div>
+            <div className="text-sm text-frz-ink/60 mt-1">
               {period.dayCount} {period.dayCount === 1 ? "zi" : "zile"} ·
               închis
             </div>
@@ -488,7 +488,7 @@ export default function OverrideManager({
 
           <button
             onClick={() => deleteVacation(period.id)}
-            className="text-red-400 hover:text-red-300 text-sm shrink-0"
+            className="text-red-600 hover:text-red-500 text-sm shrink-0"
           >
             Șterge
           </button>
@@ -508,20 +508,20 @@ export default function OverrideManager({
               <div className="font-medium">{formatDateRO(item.date)}</div>
               <div className={`text-sm ${info.tone}`}>{info.label}</div>
               {info.detail && (
-                <div className="text-sm text-white/60 mt-1">{info.detail}</div>
+                <div className="text-sm text-frz-ink/60 mt-1">{info.detail}</div>
               )}
             </div>
 
             <div className="flex gap-3 shrink-0">
               <button
                 onClick={() => loadIntoForm(item)}
-                className="text-white/70 hover:text-white text-sm"
+                className="text-frz-ink/70 hover:text-frz-ink text-sm"
               >
                 Editează
               </button>
               <button
                 onClick={() => deleteOverride(item.date)}
-                className="text-red-400 hover:text-red-300 text-sm"
+                className="text-red-600 hover:text-red-500 text-sm"
               >
                 Șterge
               </button>
@@ -537,7 +537,7 @@ export default function OverrideManager({
       <div className="space-y-6">
         <div>
           <h2 className="text-lg font-semibold">Zile de lucru</h2>
-          <p className="text-sm text-white/60 mt-1">
+          <p className="text-sm text-frz-ink/60 mt-1">
             Alege o zi → Lucrez sau Închis → setează orele → salvează. Zilele
             apar mai jos, cu opțiune de editare. Rămân valabile și dacă revii
             la program săptămânal.
@@ -549,7 +549,7 @@ export default function OverrideManager({
         <AdminCard padding="sm" className="space-y-4">
           <div>
             <h3 className="font-medium">Concediu</h3>
-            <p className="text-sm text-white/50 mt-1">
+            <p className="text-sm text-frz-ink/50 mt-1">
               Opțional: închide mai multe zile odată.
             </p>
           </div>
@@ -569,16 +569,16 @@ export default function OverrideManager({
               dateFormat="dd.MM.yyyy"
               placeholderText="De la – Până la"
               minDate={new Date()}
-              className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+              className="w-full bg-frz-fog text-frz-ink border border-frz-line px-4 py-3 pr-12 rounded-lg"
             />
             <CalendarDays
               size={18}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-frz-ink/40 pointer-events-none"
             />
           </div>
 
           {vacationError && (
-            <p className="text-sm text-red-400">{vacationError}</p>
+            <p className="text-sm text-red-600">{vacationError}</p>
           )}
 
           <div className="flex flex-wrap gap-2">
@@ -615,7 +615,7 @@ export default function OverrideManager({
     <div className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold">Zile speciale</h2>
-        <p className="text-sm text-white/60 mt-1">
+        <p className="text-sm text-frz-ink/60 mt-1">
           Concedii pe perioadă, zile libere sau program diferit față de cel
           săptămânal.
         </p>
@@ -624,7 +624,7 @@ export default function OverrideManager({
       <AdminCard padding="sm" className="space-y-4">
         <div>
           <h3 className="font-medium">Concediu</h3>
-          <p className="text-sm text-white/50 mt-1">
+          <p className="text-sm text-frz-ink/50 mt-1">
             Toate zilele din perioadă vor fi închise. Clienții vor vedea
             „Concediu” la programare.
           </p>
@@ -645,16 +645,16 @@ export default function OverrideManager({
             dateFormat="dd.MM.yyyy"
             placeholderText="De la – Până la"
             minDate={new Date()}
-            className="w-full bg-[#0F0F10] text-white border border-white/10 px-4 py-3 pr-12 rounded-lg"
+            className="w-full bg-frz-fog text-frz-ink border border-frz-line px-4 py-3 pr-12 rounded-lg"
           />
           <CalendarDays
             size={18}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white/50 pointer-events-none"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-frz-ink/40 pointer-events-none"
           />
         </div>
 
         {vacationError && (
-          <p className="text-sm text-red-400">{vacationError}</p>
+          <p className="text-sm text-red-600">{vacationError}</p>
         )}
 
         <div className="flex flex-wrap gap-2">

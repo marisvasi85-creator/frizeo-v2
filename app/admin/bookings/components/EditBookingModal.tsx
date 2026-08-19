@@ -268,8 +268,8 @@ export default function EditBookingModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#161618] border border-white/10 p-6 rounded-xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-frz-ink/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white border border-frz-line p-6 rounded-xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto">
         <div>
           <h2 className="text-lg font-semibold">Editează programarea</h2>
           <p className="text-sm text-emerald-400 mt-1">
@@ -280,12 +280,12 @@ export default function EditBookingModal({
           </p>
         </div>
 
-        <div className="text-xs text-white/50">
+        <div className="text-xs text-frz-ink/50">
           Curent: {originalDate} {originalTime} – {normTime(booking.end_time)}
         </div>
 
         {error && (
-          <div className="bg-red-500/20 text-red-400 p-2 rounded-lg text-sm">
+          <div className="bg-red-50 text-red-600 p-2 rounded-lg text-sm">
             {error}
           </div>
         )}
@@ -313,11 +313,11 @@ export default function EditBookingModal({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
-          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 resize-y min-h-[80px]"
+          className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink placeholder:text-frz-muted resize-y min-h-[80px]"
         />
 
-        <div className="rounded-xl border border-white/10 bg-[#0F0F10] p-3 edit-booking-calendar">
-          <p className="text-xs text-white/50 mb-2 text-center">
+        <div className="rounded-xl border border-frz-line bg-frz-fog p-3 edit-booking-calendar">
+          <p className="text-xs text-frz-ink/50 mb-2 text-center">
             Zilele evidențiate au program activ
           </p>
           <Calendar
@@ -331,22 +331,22 @@ export default function EditBookingModal({
         </div>
 
         <div ref={slotsRef}>
-          <p className="text-sm text-white/70 mb-2">
+          <p className="text-sm text-frz-ink/70 mb-2">
             Intervale – {date}
             {slotsLoading && (
-              <span className="text-white/40"> · se încarcă...</span>
+              <span className="text-frz-ink/40"> · se încarcă...</span>
             )}
           </p>
 
           {isOriginalSlot && freeSlots.length === 0 && !slotsLoading && (
-            <p className="text-xs text-amber-400/90 mb-2">
+            <p className="text-xs text-amber-600 mb-2">
               Programare la ora curentă ({originalTime}). Poți salva datele
               clientului sau alege altă oră/zi.
             </p>
           )}
 
           {!slotsLoading && displaySlots.length === 0 ? (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-frz-ink/50">
               Nu există intervale libere în această zi.
             </p>
           ) : (
@@ -369,14 +369,14 @@ export default function EditBookingModal({
                     onClick={() => isFree && setSelectedSlot(time)}
                     className={`py-2 rounded-lg text-sm transition ${
                       isUnavailable
-                        ? "bg-[#0F0F10]/80 border border-white/5 text-white/35 cursor-not-allowed"
+                        ? "bg-frz-fog/80 border border-frz-line/40 text-frz-ink/30 cursor-not-allowed"
                         : !isFree
-                        ? "bg-red-500/80 text-white cursor-not-allowed"
+                        ? "bg-red-100 text-red-600 cursor-not-allowed"
                         : isSelected
-                          ? "bg-white text-black"
+                          ? "bg-frz-ink text-white"
                           : isCurrent
-                            ? "bg-emerald-500/20 border border-emerald-500/40 text-white"
-                            : "bg-[#0F0F10] border border-white/10 text-white hover:border-white/30"
+                            ? "bg-emerald-50 border border-emerald-300 text-frz-ink"
+                            : "bg-frz-fog border border-frz-line text-frz-ink hover:border-frz-ink/30"
                     }`}
                   >
                     <div className="font-semibold">{time}</div>
@@ -440,9 +440,9 @@ export default function EditBookingModal({
       <style jsx global>{`
         .edit-booking-calendar .rdp-root,
         .edit-booking-calendar .rdp {
-          --rdp-accent-color: #ffffff;
-          --rdp-background-color: #27272a;
-          color: #ffffff;
+          --rdp-accent-color: #0b0b0c;
+          --rdp-background-color: #e8eef5;
+          color: #0b0b0c;
           margin: 0 auto;
           width: 100%;
           max-width: 100%;
@@ -452,11 +452,11 @@ export default function EditBookingModal({
         }
         .edit-booking-calendar .rdp-caption_label,
         .edit-booking-calendar .rdp-weekday {
-          color: rgba(255, 255, 255, 0.7);
+          color: rgba(11, 11, 12, 0.7);
         }
         .edit-booking-calendar .rdp-button:hover:not([disabled]),
         .edit-booking-calendar .rdp-day_button:hover:not([disabled]) {
-          background-color: rgba(255, 255, 255, 0.1);
+          background-color: rgba(11, 11, 12, 0.06);
         }
       `}</style>
     </div>

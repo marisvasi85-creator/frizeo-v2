@@ -77,7 +77,7 @@ export default async function MarketingAIPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold">Marketing AI</h1>
-        <p className="text-white/60 mt-1">
+        <p className="text-frz-ink/60 mt-1">
           Unealtă de salon — generează conținut pentru un frizer activ (text,
           Story/feed, WhatsApp și QR).
         </p>
@@ -85,7 +85,7 @@ export default async function MarketingAIPage() {
 
       {barberOptions.length === 0 ? (
         <AdminCard className="space-y-3">
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-frz-ink/70">
             Nu există frizeri activi. Marketing AI are nevoie de cel puțin un
             frizer activ (tu sau un invitat) ca să genereze conținut.
           </p>
@@ -98,7 +98,7 @@ export default async function MarketingAIPage() {
       ) : (
         <>
           {role === "owner" && !actsAsBarber && (
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-frz-ink/50">
               Alege un frizer activ din listă. Linkurile sociale se iau din
               profilul frizerului.
             </p>
