@@ -18,10 +18,10 @@ export default function BarberLocationSection({
   const [useSalon, setUseSalon] = useState(useSalonLocation);
 
   return (
-    <div className="space-y-4 border-t border-white/10 pt-5">
+    <div className="space-y-4 border-t border-frz-line pt-5">
       <div>
         <h3 className="text-lg font-medium">Locație programări</h3>
-        <p className="text-sm text-white/50 mt-1">
+        <p className="text-sm text-frz-muted mt-1">
           Clienții văd locația pe pagina de booking și în emailurile de
           confirmare.
         </p>
@@ -38,12 +38,12 @@ export default function BarberLocationSection({
         <span>
           <span className="block text-sm">Folosește locația salonului</span>
           {useSalon && salonPreview && (
-            <span className="block text-sm text-white/50 mt-1">
+            <span className="block text-sm text-frz-muted mt-1">
               📍 {salonPreview}
             </span>
           )}
           {useSalon && !salonPreview && (
-            <span className="block text-sm text-amber-400/90 mt-1">
+            <span className="block text-sm text-amber-600 mt-1">
               Proprietarul salonului nu a setat încă o locație.
             </span>
           )}

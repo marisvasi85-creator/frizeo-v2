@@ -19,7 +19,7 @@ export default function LocationFormFields({
       <div>
         <label
           htmlFor={fieldId("location_address_line")}
-          className="block text-sm text-white/60 mb-2"
+          className="block text-sm text-frz-muted mb-2"
         >
           Stradă și număr
         </label>
@@ -30,7 +30,7 @@ export default function LocationFormFields({
           name="location_address_line"
           defaultValue={addressLine}
           placeholder="Str. Exemplu nr. 10"
-          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
         />
       </div>
 
@@ -38,7 +38,7 @@ export default function LocationFormFields({
         <div>
           <label
             htmlFor={fieldId("location_city")}
-            className="block text-sm text-white/60 mb-2"
+            className="block text-sm text-frz-muted mb-2"
           >
             Localitate
           </label>
@@ -49,14 +49,14 @@ export default function LocationFormFields({
             name="location_city"
             defaultValue={defaults.location_city || ""}
             placeholder="Arad"
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
 
         <div>
           <label
             htmlFor={fieldId("location_county")}
-            className="block text-sm text-white/60 mb-2"
+            className="block text-sm text-frz-muted mb-2"
           >
             Județ
           </label>
@@ -67,7 +67,7 @@ export default function LocationFormFields({
             name="location_county"
             defaultValue={defaults.location_county || ""}
             placeholder="Arad"
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function LocationFormFields({
       <div>
         <label
           htmlFor={fieldId("location_postal_code")}
-          className="block text-sm text-white/60 mb-2"
+          className="block text-sm text-frz-muted mb-2"
         >
           Cod poștal (opțional)
         </label>
@@ -85,14 +85,14 @@ export default function LocationFormFields({
           type="text"
           name="location_postal_code"
           defaultValue={defaults.location_postal_code || ""}
-          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
         />
       </div>
 
       <div>
         <label
           htmlFor={fieldId("location_maps_url")}
-          className="block text-sm text-white/60 mb-2"
+          className="block text-sm text-frz-muted mb-2"
         >
           Link Google Maps (opțional)
         </label>
@@ -103,10 +103,10 @@ export default function LocationFormFields({
           name="location_maps_url"
           defaultValue={defaults.location_maps_url || ""}
           placeholder="https://maps.google.com/..."
-          className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+          className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
         />
 
-        <p className="text-xs text-white/40 mt-2">
+        <p className="text-xs text-frz-muted mt-2">
           Dacă lași gol, generăm link automat din adresă sau coordonate.
         </p>
       </div>
@@ -115,7 +115,7 @@ export default function LocationFormFields({
         <div>
           <label
             htmlFor={fieldId("location_latitude")}
-            className="block text-sm text-white/60 mb-2"
+            className="block text-sm text-frz-muted mb-2"
           >
             Latitudine (opțional)
           </label>
@@ -130,14 +130,14 @@ export default function LocationFormFields({
                 : ""
             }
             placeholder="46.186"
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
 
         <div>
           <label
             htmlFor={fieldId("location_longitude")}
-            className="block text-sm text-white/60 mb-2"
+            className="block text-sm text-frz-muted mb-2"
           >
             Longitudine (opțional)
           </label>
@@ -152,7 +152,7 @@ export default function LocationFormFields({
                 : ""
             }
             placeholder="21.312"
-            className="w-full bg-[#0F0F10] border border-white/10 rounded-lg px-4 py-3"
+            className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3"
           />
         </div>
       </div>
