@@ -47,12 +47,11 @@ export default function ProductScreens() {
           </div>
         </div>
         <figcaption>
-          <p className="mkt-display text-xl">
-            Tu doar îți verifici calendarul
-          </p>
+          <p className="mkt-display text-xl">Tot programul, într-un singur loc</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
             Clienții se programează singuri, iar SMS Reminder este trimis
-            automat. Tu vezi cine vine, la ce oră și pentru ce serviciu.
+            automat. Calendarul îți arată clar cine vine, la ce oră și pentru ce
+            serviciu.
           </p>
         </figcaption>
       </figure>
