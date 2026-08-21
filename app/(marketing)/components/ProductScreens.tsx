@@ -47,10 +47,12 @@ export default function ProductScreens() {
           </div>
         </div>
         <figcaption>
-          <p className="mkt-display text-xl">Știi ziua dintr-o privire</p>
+          <p className="mkt-display text-xl">
+            Tu doar îți verifici calendarul
+          </p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Cine vine, la ce oră, ce vrea — clar pentru frizerie sau salon, fără
-            să cauți prin mesaje.
+            Clienții se programează singuri, iar SMS Reminder este trimis
+            automat. Tu vezi cine vine, la ce oră și pentru ce serviciu.
           </p>
         </figcaption>
       </figure>
@@ -63,8 +65,8 @@ export default function ProductScreens() {
         <figcaption className="md:order-1 order-2">
           <p className="mkt-display text-xl">Fără ore dublate</p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--mkt-muted)]">
-            Programările și Google Calendar rămân aliniate — eviți confuzia din
-            agendă.
+            Frizeo și Google Calendar rămân sincronizate automat — fără să
+            actualizezi două agende.
           </p>
         </figcaption>
         <div className="order-1 overflow-hidden rounded-2xl border border-[var(--mkt-line)] bg-white md:order-2">
