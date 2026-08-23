@@ -195,6 +195,19 @@ export default function ClientAccessClient({
   }, [loadClients]);
 
   useEffect(() => {
+    const refreshVisibleClients = () => {
+      if (document.visibilityState === "visible") void loadClients();
+    };
+
+    window.addEventListener("focus", refreshVisibleClients);
+    document.addEventListener("visibilitychange", refreshVisibleClients);
+    return () => {
+      window.removeEventListener("focus", refreshVisibleClients);
+      document.removeEventListener("visibilitychange", refreshVisibleClients);
+    };
+  }, [loadClients]);
+
+  useEffect(() => {
     if (!feedback) return;
     const timer = window.setTimeout(() => setFeedback(null), 5000);
     return () => window.clearTimeout(timer);

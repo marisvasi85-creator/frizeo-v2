@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireManagedBarber } from "@/lib/barber-access/authorization";
+import { isExistingClient } from "@/lib/barber-access/clientList";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type ExistingClient = {
@@ -87,7 +88,12 @@ export async function GET(req: Request) {
 
     const merged = [...rows.values()]
       .filter((row) => {
-        if (statusFilter === "existing") return row.appointment_count > 0;
+        if (statusFilter === "existing") {
+          return isExistingClient({
+            appointmentCount: row.appointment_count,
+            accessStatus: row.access?.status,
+          });
+        }
         if (statusFilter !== "all") return row.access?.status === statusFilter;
         return true;
       })
@@ -115,7 +121,12 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       clients: merged,
-      totalExisting: (existing ?? []).length,
+      totalExisting: [...rows.values()].filter((row) =>
+        isExistingClient({
+          appointmentCount: row.appointment_count,
+          accessStatus: row.access?.status,
+        }),
+      ).length,
       statusCounts,
     });
   } catch (error) {

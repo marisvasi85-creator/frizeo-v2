@@ -13,6 +13,7 @@ import {
   canSubmitAccessRequest,
   publicAccessMessage,
 } from "../lib/barber-access/types.ts";
+import { isExistingClient } from "../lib/barber-access/clientList.ts";
 
 function projectFile(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -132,4 +133,22 @@ test("bulk approval re-checks blocked rows at write time", () => {
   assert.equal(actionsRoute.includes("ignoreDuplicates: true"), true);
   assert.equal(actionsRoute.includes('.neq("status", "blocked")'), true);
   assert.equal(actionsRoute.includes('row.status === "blocked"'), true);
+});
+
+test("accepted clients appear among existing clients before their first booking", () => {
+  assert.equal(
+    isExistingClient({ appointmentCount: 0, accessStatus: "approved" }),
+    true,
+  );
+  assert.equal(
+    isExistingClient({ appointmentCount: 1, accessStatus: null }),
+    true,
+  );
+
+  for (const accessStatus of [null, "pending", "rejected", "blocked"]) {
+    assert.equal(
+      isExistingClient({ appointmentCount: 0, accessStatus }),
+      false,
+    );
+  }
 });
