@@ -2,8 +2,13 @@ import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import ClientAccessClient from "./ClientAccessClient";
 
-export default async function ClientAccessPage() {
+export default async function ClientAccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ barberId?: string; status?: string }>;
+}) {
   const session = await getAdminSession();
+  const query = await searchParams;
 
   if (!session?.tenantId) {
     redirect("/login");
@@ -13,5 +18,10 @@ export default async function ClientAccessPage() {
     redirect("/admin/dashboard");
   }
 
-  return <ClientAccessClient />;
+  return (
+    <ClientAccessClient
+      initialBarberId={query.barberId ?? ""}
+      initialStatus={query.status ?? "all"}
+    />
+  );
 }

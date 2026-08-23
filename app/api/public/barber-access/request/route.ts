@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { getAppUrlForRequest } from "@/lib/app/getAppUrl";
 import {
   checkBarberBookingAccess,
   getBarberAccessMode,
   publicAccessMessage,
 } from "@/lib/barber-access/server";
 import { notifyBarberAboutAccessRequest } from "@/lib/barber-access/notifications";
+import { attemptAccessRequestNotification } from "@/lib/barber-access/requestNotification";
 import { normalizeRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -102,18 +104,22 @@ export async function POST(req: Request) {
       );
     }
 
-    const { error } = await supabaseAdmin.from("barber_client_access").insert({
-      tenant_id: barber.tenant_id,
-      barber_id: barberId,
-      phone_normalized: phoneNormalized,
-      client_name: clientName,
-      client_email: clientEmail,
-      referral,
-      request_message: message,
-      status: "pending",
-      source: "client_request",
-      requested_at: new Date().toISOString(),
-    });
+    const { data: createdRequest, error } = await supabaseAdmin
+      .from("barber_client_access")
+      .insert({
+        tenant_id: barber.tenant_id,
+        barber_id: barberId,
+        phone_normalized: phoneNormalized,
+        client_name: clientName,
+        client_email: clientEmail,
+        referral,
+        request_message: message,
+        status: "pending",
+        source: "client_request",
+        requested_at: new Date().toISOString(),
+      })
+      .select("id, status")
+      .single();
 
     if (error?.code === "23505") {
       const latest = await checkBarberBookingAccess({
@@ -137,16 +143,22 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
-    notifyBarberAboutAccessRequest({
-      barberId,
-      clientName,
-      clientPhone: rawPhone,
-      clientEmail,
-      referral,
-      message,
-    }).catch((notifyError) => {
-      console.error("BARBER ACCESS REQUEST EMAIL:", notifyError);
-    });
+    await attemptAccessRequestNotification(
+      { created: Boolean(createdRequest), status: createdRequest?.status },
+      () =>
+        notifyBarberAboutAccessRequest({
+          barberId,
+          clientName,
+          clientPhone: rawPhone,
+          clientEmail,
+          referral,
+          message,
+          appUrl: getAppUrlForRequest(req.url),
+        }).then(() => undefined),
+      (notifyError) => {
+        console.error("BARBER ACCESS REQUEST EMAIL:", notifyError);
+      },
+    );
 
     return NextResponse.json({
       status: "pending",

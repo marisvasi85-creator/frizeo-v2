@@ -83,7 +83,13 @@ function formatDate(value: string | null) {
   }).format(new Date(`${value}T12:00:00`));
 }
 
-export default function ClientAccessClient() {
+export default function ClientAccessClient({
+  initialBarberId,
+  initialStatus,
+}: {
+  initialBarberId: string;
+  initialStatus: string;
+}) {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [selectedBarberId, setSelectedBarberId] = useState("");
   const [mode, setMode] = useState<BookingAccessMode>("open");
@@ -91,7 +97,9 @@ export default function ClientAccessClient() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(() =>
+    FILTERS.some((item) => item.value === initialStatus) ? initialStatus : "all",
+  );
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
@@ -114,11 +122,15 @@ export default function ClientAccessClient() {
       if (!response.ok) throw new Error(data.error || "Nu am putut încărca setările.");
 
       const nextBarbers = (data.barbers ?? []) as Barber[];
+      const requestedBarber = nextBarbers.find(
+        (barber) => barber.id === initialBarberId,
+      );
+      const firstBarber = requestedBarber ?? nextBarbers[0];
       setBarbers(nextBarbers);
       setSchemaReady(data.schemaReady !== false);
-      setSelectedBarberId((current) => current || nextBarbers[0]?.id || "");
-      if (nextBarbers[0]) {
-        setMode(nextBarbers[0].booking_access_mode);
+      setSelectedBarberId((current) => current || firstBarber?.id || "");
+      if (firstBarber) {
+        setMode(firstBarber.booking_access_mode);
       }
     } catch (error) {
       setFeedback({
@@ -128,7 +140,7 @@ export default function ClientAccessClient() {
     } finally {
       setSettingsLoading(false);
     }
-  }, []);
+  }, [initialBarberId]);
 
   const loadClients = useCallback(async () => {
     if (!selectedBarberId || !schemaReady) return;

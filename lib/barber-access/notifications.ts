@@ -2,6 +2,7 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import { publicBookingUrl } from "@/lib/booking/publicBookingPath";
 import { sendEmail } from "@/lib/email/email";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { deliverAccessRequestEmail } from "./requestNotification";
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (char) => {
@@ -23,42 +24,27 @@ export async function notifyBarberAboutAccessRequest(input: {
   clientEmail: string | null;
   referral: string | null;
   message: string | null;
+  appUrl: string;
 }) {
-  const { data: barber } = await supabaseAdmin
-    .from("barbers")
-    .select("user_id, display_name")
-    .eq("id", input.barberId)
-    .maybeSingle();
+  return deliverAccessRequestEmail(input, {
+    resolveRecipient: async (barberId) => {
+      const { data: barber } = await supabaseAdmin
+        .from("barbers")
+        .select("user_id, display_name")
+        .eq("id", barberId)
+        .maybeSingle();
 
-  if (!barber?.user_id) return;
+      if (!barber?.user_id) return null;
 
-  const { data } = await supabaseAdmin.auth.admin.getUserById(barber.user_id);
-  const barberEmail = data.user?.email;
-  if (!barberEmail) return;
+      const { data } = await supabaseAdmin.auth.admin.getUserById(
+        barber.user_id,
+      );
+      const email = data.user?.email;
+      if (!email) return null;
 
-  const dashboardUrl = `${getAppUrl()}/admin/client-access`;
-  const optionalRows = [
-    input.clientEmail
-      ? `<p><strong>Email:</strong> ${escapeHtml(input.clientEmail)}</p>`
-      : "",
-    input.referral
-      ? `<p><strong>Recomandare:</strong> ${escapeHtml(input.referral)}</p>`
-      : "",
-    input.message
-      ? `<p><strong>Mesaj:</strong> ${escapeHtml(input.message)}</p>`
-      : "",
-  ].join("");
-
-  await sendEmail({
-    to: barberEmail,
-    subject: "Solicitare nouă de acces la programări",
-    html: `
-      <h2>Solicitare nouă pentru ${escapeHtml(barber.display_name || "programări")}</h2>
-      <p><strong>Client:</strong> ${escapeHtml(input.clientName)}</p>
-      <p><strong>Telefon:</strong> ${escapeHtml(input.clientPhone)}</p>
-      ${optionalRows}
-      <p><a href="${escapeHtml(dashboardUrl)}">Gestionează solicitarea în Frizeo</a></p>
-    `,
+      return { email, displayName: barber.display_name };
+    },
+    send: sendEmail,
   });
 }
 

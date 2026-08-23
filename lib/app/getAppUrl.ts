@@ -18,3 +18,22 @@ export function getAppUrl(): string {
 
   return "http://localhost:3000";
 }
+
+/** Resolve a safe same-environment dashboard origin from a public request. */
+export function getAppUrlForRequest(requestUrl: string | URL): string {
+  const url = new URL(requestUrl);
+  const hostname = url.hostname.toLowerCase();
+
+  if (
+    hostname === "www.frizeo.ro" ||
+    hostname === "frizeo.ro" ||
+    hostname === "staging.frizeo.ro" ||
+    hostname.endsWith(".vercel.app") ||
+    hostname === "localhost" ||
+    hostname === "127.0.0.1"
+  ) {
+    return url.origin;
+  }
+
+  return getAppUrl();
+}
