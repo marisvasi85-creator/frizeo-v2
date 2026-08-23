@@ -16,17 +16,22 @@ import {
   loadSavedClientDetails,
   saveSavedClientDetails,
 } from "@/lib/bookings/savedClientDetails";
+import BookingAccessPrompt from "@/app/booking/_components/BookingAccessPrompt";
+import type { BookingAccessMode } from "@/lib/barber-access/types";
+import { isValidRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
 
 function isValidPhone(phone: string) {
-  return /^(\+40|0)[0-9]{9}$/.test(phone.replace(/\s/g, ""));
+  return isValidRomanianPhone(phone);
 }
 
 export default function BookingClient({
   barberId,
   barberName,
+  accessMode = "open",
 }: {
   barberId: string;
   barberName: string;
+  accessMode?: BookingAccessMode;
 }) {
   const router = useRouter();
 
@@ -53,6 +58,7 @@ export default function BookingClient({
   const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
+  const [accessGranted, setAccessGranted] = useState(accessMode === "open");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -69,6 +75,7 @@ export default function BookingClient({
   }, []);
 
   useEffect(() => {
+    if (!accessGranted) return;
     const ac = new AbortController();
 
     fetch(`/api/services?barberId=${barberId}`, { signal: ac.signal })
@@ -85,9 +92,10 @@ export default function BookingClient({
       });
 
     return () => ac.abort();
-  }, [barberId]);
+  }, [barberId, accessGranted]);
 
   useEffect(() => {
+    if (!accessGranted) return;
     const ac = new AbortController();
 
     const load = async () => {
@@ -126,7 +134,7 @@ export default function BookingClient({
 
     load();
     return () => ac.abort();
-  }, [barberId, serviceId]);
+  }, [barberId, serviceId, accessGranted]);
 
   useEffect(() => {
     if (!serviceId || !date) return;
@@ -139,6 +147,7 @@ export default function BookingClient({
   }, [availableDays, date, serviceId]);
 
   useEffect(() => {
+    if (!accessGranted) return;
     if (!date || !serviceId) return;
 
     const cacheKey = `${date}_${serviceId}`;
@@ -196,7 +205,7 @@ export default function BookingClient({
       });
 
     return () => ac.abort();
-  }, [date, serviceId, barberId]);
+  }, [date, serviceId, barberId, accessGranted]);
 
   function handleDateChange(value: string) {
     if (!serviceId) {
@@ -269,6 +278,7 @@ export default function BookingClient({
           date,
           start_time: selectedSlot,
           end_time: endTime,
+          client_phone: phone,
         }),
       });
 
@@ -314,6 +324,30 @@ export default function BookingClient({
       setBookingLoading(false);
     }
   };
+
+  if (!accessGranted && accessMode !== "open") {
+    return (
+      <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">
+        <div className="text-center">
+          <h1 className="text-3xl font-semibold">Programează-te</h1>
+          <p className="text-frz-muted mt-1">
+            la <span className="font-medium text-frz-ink">{barberName}</span>
+          </p>
+        </div>
+        <BookingAccessPrompt
+          barberId={barberId}
+          mode={accessMode}
+          presentation="embedded"
+          onApproved={(details) => {
+            setName(details.name);
+            setPhone(details.phone);
+            setEmail(details.email);
+            setAccessGranted(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">

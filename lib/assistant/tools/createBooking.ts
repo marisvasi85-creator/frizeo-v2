@@ -34,6 +34,10 @@ import {
   resolveServiceForBarber,
 } from "./helpers";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
+import {
+  checkBarberBookingAccess,
+  publicAccessMessage,
+} from "@/lib/barber-access/server";
 
 function resolveDate(args: Record<string, unknown>): string | null {
   const date = asString(args.date);
@@ -273,6 +277,19 @@ export async function createBookingTool(
       ok: false,
       summary: "Frizerul nu aparține salonului.",
       error: "forbidden",
+    };
+  }
+
+  const bookingAccess = await checkBarberBookingAccess({
+    barberId: target.barberId,
+    phone: clientPhone,
+  });
+
+  if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
+    return {
+      ok: false,
+      summary: publicAccessMessage(bookingAccess),
+      error: "booking_access_required",
     };
   }
 

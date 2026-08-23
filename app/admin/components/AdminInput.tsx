@@ -27,12 +27,13 @@ export function AdminTextarea({
 export function AdminLabel({
   children,
   className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+  ...props
+}: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
-    <label className={cn("block text-sm text-frz-muted mb-2", className)}>
+    <label
+      className={cn("block text-sm text-frz-muted mb-2", className)}
+      {...props}
+    >
       {children}
     </label>
   );

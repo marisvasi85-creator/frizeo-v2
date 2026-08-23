@@ -17,6 +17,10 @@ import {
   getGoogleBusyIntervalsForDate,
   slotOverlapsBusyIntervals,
 } from "@/lib/google/getGoogleBusyIntervals";
+import {
+  checkBarberBookingAccess,
+  publicAccessMessage,
+} from "@/lib/barber-access/server";
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +34,13 @@ export async function POST(req: Request) {
     const supabase = supabaseAdmin;
     const body = await req.json();
 
-    const { barber_id, barber_service_id, date, start_time } = body;
+    const {
+      barber_id,
+      barber_service_id,
+      date,
+      start_time,
+      client_phone,
+    } = body;
 
     if (!barber_id || !barber_service_id || !date || !start_time) {
       return NextResponse.json(
@@ -45,6 +55,21 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: barberCheck.error },
         { status: barberCheck.status }
+      );
+    }
+
+    const bookingAccess = await checkBarberBookingAccess({
+      barberId: barber_id,
+      phone: typeof client_phone === "string" ? client_phone : "",
+    });
+
+    if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
+      return NextResponse.json(
+        {
+          error: publicAccessMessage(bookingAccess),
+          accessStatus: bookingAccess.status,
+        },
+        { status: 403 },
       );
     }
 

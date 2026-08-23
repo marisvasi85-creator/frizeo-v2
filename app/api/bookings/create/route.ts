@@ -25,6 +25,10 @@ import {
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
+import {
+  checkBarberBookingAccess,
+  publicAccessMessage,
+} from "@/lib/barber-access/server";
 
 export async function POST(req: Request) {
   try {
@@ -72,6 +76,21 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: barberCheck.error },
         { status: barberCheck.status }
+      );
+    }
+
+    const bookingAccess = await checkBarberBookingAccess({
+      barberId: booking.barber_id,
+      phone: client_phone,
+    });
+
+    if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
+      return NextResponse.json(
+        {
+          error: publicAccessMessage(bookingAccess),
+          accessStatus: bookingAccess.status,
+        },
+        { status: 403 },
       );
     }
 

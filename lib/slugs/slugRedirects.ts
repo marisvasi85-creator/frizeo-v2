@@ -18,6 +18,7 @@ type BarberRow = BarberLocationFields & {
   display_name?: string | null;
   slug: string;
   avatar_url?: string | null;
+  booking_access_mode?: "open" | "approval_required" | "approved_only" | null;
 };
 
 export type ResolvedTenantSlug = {

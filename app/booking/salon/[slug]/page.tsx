@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import { permanentRedirect } from "next/navigation";
@@ -21,6 +20,8 @@ import {
   buildSalonSeoTitle,
 } from "@/lib/seo/salonSeo";
 import { getSalonReviewSummary } from "@/lib/reviews/salonReviews";
+import { getBarberAccessModes } from "@/lib/barber-access/server";
+import PublicBarberCard from "@/app/booking/_components/PublicBarberCard";
 
 export async function generateMetadata({
   params,
@@ -118,6 +119,10 @@ export default async function SalonPage({
       salon.location_address_line.trim()) ||
     (typeof salon.address === "string" && salon.address.trim()) ||
     null;
+
+  const accessModes = await getBarberAccessModes(
+    (barbers ?? []).map((barber) => barber.id),
+  );
 
   return (
     <>
@@ -232,43 +237,19 @@ export default async function SalonPage({
 
           <div className="grid gap-4">
             {barbers?.map((barber) => (
-              <Link
+              <PublicBarberCard
                 key={barber.id}
-                href={publicBookingPath(salon.slug, barber.slug)}
-                className="block border border-frz-line rounded-2xl p-5 hover:shadow-md transition bg-frz-card"
-              >
-                <div className="flex items-center gap-4">
-                  {barber.avatar_url ? (
-                    <Image
-                      src={barber.avatar_url}
-                      alt={`${barber.display_name} — ${salon.name}`}
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-full bg-frz-fog" />
-                  )}
-
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold">
-                      {barber.display_name}
-                    </h3>
-
-                    {barber.bio && (
-                      <p className="text-sm text-frz-muted mt-1">{barber.bio}</p>
-                    )}
-
-                    {barber.instagram_url && (
-                      <p className="text-sm text-frz-accent mt-2">Instagram</p>
-                    )}
-                  </div>
-
-                  <div className="px-4 py-2 rounded-lg bg-frz-ink text-frz-ink-contrast text-sm">
-                    Rezervă
-                  </div>
-                </div>
-              </Link>
+                salonName={String(salon.name)}
+                bookingHref={publicBookingPath(salon.slug, barber.slug)}
+                accessMode={accessModes[barber.id] ?? "open"}
+                barber={{
+                  id: barber.id,
+                  display_name: barber.display_name ?? null,
+                  avatar_url: barber.avatar_url ?? null,
+                  bio: barber.bio ?? null,
+                  instagram_url: barber.instagram_url ?? null,
+                }}
+              />
             ))}
           </div>
         </div>

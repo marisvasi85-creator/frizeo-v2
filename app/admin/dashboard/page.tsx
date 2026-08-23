@@ -103,6 +103,17 @@ export default async function DashboardPage() {
   }
 
   const showSetupChecklist = actsAsBarber && !anyBookingRes.data?.length;
+  let pendingAccessQuery = supabaseAdmin
+    .from("barber_client_access")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
+    .eq("status", "pending");
+
+  if (role === "barber") {
+    pendingAccessQuery = pendingAccessQuery.eq("barber_id", barber.id);
+  }
+
+  const { count: pendingAccessCount } = await pendingAccessQuery;
 
   return (
     <div className="space-y-8 min-w-0">
@@ -121,6 +132,22 @@ export default async function DashboardPage() {
           }
           eligible={showSetupChecklist}
         />
+      )}
+
+      {(pendingAccessCount ?? 0) > 0 && (
+        <AdminCard className="border-amber-400/40 bg-amber-500/10">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Solicitări noi de acces</h2>
+              <p className="mt-1 text-sm text-frz-muted">
+                Ai {pendingAccessCount} {pendingAccessCount === 1 ? "solicitare în așteptare" : "solicitări în așteptare"}.
+              </p>
+            </div>
+            <AdminButton href="/admin/client-access" size="sm">
+              Verifică solicitările
+            </AdminButton>
+          </div>
+        </AdminCard>
       )}
 
       <BookingLinkCard

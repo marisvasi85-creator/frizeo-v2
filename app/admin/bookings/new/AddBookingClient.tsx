@@ -204,6 +204,7 @@ export default function AddBookingClient({
           date,
           start_time: selectedSlot,
           end_time: endTime,
+          client_phone: phone,
         }),
       });
 

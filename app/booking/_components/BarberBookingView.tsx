@@ -8,6 +8,7 @@ import {
   formatLocationAddress,
 } from "@/lib/location/resolveLocation";
 import type { BarberLocationFields } from "@/lib/location/types";
+import type { BookingAccessMode } from "@/lib/barber-access/types";
 
 type Salon = {
   name?: string | null;
@@ -28,6 +29,7 @@ type Barber = BarberLocationFields & {
   instagram_url?: string | null;
   facebook_url?: string | null;
   tiktok_url?: string | null;
+  booking_access_mode?: BookingAccessMode | null;
 };
 
 export default function BarberBookingView({
@@ -161,7 +163,11 @@ export default function BarberBookingView({
             </div>
           </div>
 
-          <BookingClient barberId={barber.id} barberName={barberName} />
+          <BookingClient
+            barberId={barber.id}
+            barberName={barberName}
+            accessMode={barber.booking_access_mode ?? "open"}
+          />
 
           {bookingLocation && (
             <div className="mt-8 max-w-xl mx-auto">
