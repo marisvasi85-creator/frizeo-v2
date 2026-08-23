@@ -9,6 +9,10 @@ import {
   PASSWORD_REQUIREMENTS_MESSAGE,
 } from "@/lib/auth/credentials";
 import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import {
+  getFirstPartyAnalyticsContext,
+  trackFirstPartyEventOnce,
+} from "@/lib/analytics/firstParty";
 import { trackRegistrationOnce } from "@/lib/analytics/track";
 import SignupAnalytics from "@/app/components/analytics/SignupAnalytics";
 
@@ -116,6 +120,14 @@ export default function SignupPage() {
     const resolvedActsAsBarber =
       businessType === "independent" ? true : Boolean(actsAsBarber);
 
+    const analyticsContext = getFirstPartyAnalyticsContext();
+    if (analyticsContext) {
+      void trackFirstPartyEventOnce("lead", "signup_submit", {
+        business_type: businessType,
+        acts_as_barber: resolvedActsAsBarber,
+      });
+    }
+
     setLoading(true);
 
     try {
@@ -132,6 +144,7 @@ export default function SignupPage() {
           marketingConsent,
           businessType,
           actsAsBarber: resolvedActsAsBarber,
+          analyticsContext,
         }),
       });
 

@@ -5,12 +5,19 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { EMAIL_NAV_ITEMS, emailHref, isEmailNavActive } from "./emailNav";
 
-export default function EmailMobileNav() {
+export default function EmailMobileNav({
+  showOwnerAnalytics,
+}: {
+  showOwnerAnalytics: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const mainItems = EMAIL_NAV_ITEMS.slice(0, 4);
-  const moreItems = EMAIL_NAV_ITEMS.slice(4);
+  const visibleItems = EMAIL_NAV_ITEMS.filter(
+    (item) => !item.ownerOnly || showOwnerAnalytics,
+  );
+  const mainItems = visibleItems.slice(0, 4);
+  const moreItems = visibleItems.slice(4);
 
   return (
     <>

@@ -16,6 +16,7 @@ import { allocateTenantSlug } from "@/lib/tenant/allocateTenantSlug";
 import { allocateBarberSlug } from "@/lib/barbers/allocateBarberSlug";
 import { recordSignupAndTrialConversions } from "@/lib/frizeo-email/attribution";
 import { upsertContactSoft } from "@/lib/frizeo-email/contacts";
+import { parseFirstPartyAnalyticsContext } from "@/lib/analytics/serverContext";
 
 export async function POST(req: Request) {
   let createdUserId: string | null = null;
@@ -32,7 +33,9 @@ export async function POST(req: Request) {
       marketingConsent,
       actsAsBarber,
       businessType,
+      analyticsContext: rawAnalyticsContext,
     } = await req.json();
+    const analyticsContext = parseFirstPartyAnalyticsContext(rawAnalyticsContext);
     const wantsMarketing = marketingConsent === true;
     const limited = await enforceRateLimit(req, {
       bucket: "auth-signup",
@@ -352,11 +355,13 @@ const { error: scheduleError } = await supabaseAdmin
     if (scheduleError) throw scheduleError;
     provisioningComplete = true;
 
-    // Non-blocking: marketing attribution / consent must never fail signup.
-    void recordSignupAndTrialConversions({
+    // Failure-isolated inside the attribution helper; ensure both canonical
+    // conversions are persisted before returning the successful signup.
+    await recordSignupAndTrialConversions({
       userId,
       tenantId: tenant.id,
       email: emailNorm,
+      analyticsContext,
     });
 
     const nameParts = name.split(/\s+/);

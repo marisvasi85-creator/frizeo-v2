@@ -4,7 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { EMAIL_NAV_ITEMS, emailHref, isEmailNavActive } from "./emailNav";
 
-export default function EmailSidebar({ backUrl }: { backUrl: string }) {
+export default function EmailSidebar({
+  backUrl,
+  showOwnerAnalytics,
+}: {
+  backUrl: string;
+  showOwnerAnalytics: boolean;
+}) {
   const pathname = usePathname();
 
   return (
@@ -18,7 +24,9 @@ export default function EmailSidebar({ backUrl }: { backUrl: string }) {
         </h2>
 
         <nav className="flex flex-col gap-2">
-          {EMAIL_NAV_ITEMS.map((item) => {
+          {EMAIL_NAV_ITEMS.filter(
+            (item) => !item.ownerOnly || showOwnerAnalytics,
+          ).map((item) => {
             const href = emailHref(item.path);
             const active = isEmailNavActive(pathname, item.path);
             return (

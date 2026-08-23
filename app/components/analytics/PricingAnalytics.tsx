@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { hasAnalyticsConsent, onConsentChange } from "@/lib/analytics/consent";
+import { trackFirstPartyEventOnce } from "@/lib/analytics/firstParty";
 import { flushPendingTrackers, trackViewContent } from "@/lib/analytics/track";
 
 export default function PricingAnalytics() {
@@ -11,6 +12,7 @@ export default function PricingAnalytics() {
     function maybeTrack() {
       if (sent.current || !hasAnalyticsConsent()) return;
       sent.current = true;
+      void trackFirstPartyEventOnce("pricing_view", "pricing");
       trackViewContent("Pricing");
       flushPendingTrackers();
     }

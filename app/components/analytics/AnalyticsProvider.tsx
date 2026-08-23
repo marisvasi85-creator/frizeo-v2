@@ -6,6 +6,10 @@ import Script from "next/script";
 import { getAnalyticsConfig } from "@/lib/analytics/config";
 import { hasAnalyticsConsent, onConsentChange } from "@/lib/analytics/consent";
 import {
+  isAcquisitionPath,
+  trackFirstPartyEvent,
+} from "@/lib/analytics/firstParty";
+import {
   flushPendingTrackers,
   markAnalyticsReady,
   trackPageView,
@@ -18,6 +22,7 @@ function AnalyticsInner() {
   const [consent, setConsent] = useState(false);
   const [ready, setReady] = useState(false);
   const skipInitialPageView = useRef(true);
+  const lastFirstPartyPage = useRef("");
   const isAdminRoute =
     pathname === "/admin" || pathname.startsWith("/admin/");
 
@@ -48,6 +53,14 @@ function AnalyticsInner() {
       window.clearTimeout(stop);
     };
   }, [consent]);
+
+  useEffect(() => {
+    if (!consent || !isAcquisitionPath(pathname)) return;
+    const pageKey = `${pathname}?${searchParams.toString()}`;
+    if (lastFirstPartyPage.current === pageKey) return;
+    lastFirstPartyPage.current = pageKey;
+    void trackFirstPartyEvent("page_view");
+  }, [pathname, searchParams, consent]);
 
   useEffect(() => {
     if (isAdminRoute || !consent || !ready) return;

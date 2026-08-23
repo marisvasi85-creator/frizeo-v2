@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import { trackFirstPartyEventOnce } from "@/lib/analytics/firstParty";
 import {
   flushPendingTrackers,
   settleTrackerRequests,
@@ -30,6 +31,11 @@ export default function UpgradeButton({
     setError(null);
 
     if (hasAnalyticsConsent()) {
+      void trackFirstPartyEventOnce("checkout_started", planId, {
+        plan_id: planId,
+        plan_name: planName,
+        plan_price: planPrice ?? null,
+      });
       await waitForConfiguredTrackers();
       trackInitiateCheckout({
         planName,

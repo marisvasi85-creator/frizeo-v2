@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { hasAnalyticsConsent } from "@/lib/analytics/consent";
+import { trackFirstPartyEvent } from "@/lib/analytics/firstParty";
 import { flushPendingTrackers, trackPlanSelected } from "@/lib/analytics/track";
 
 type Props = {
@@ -28,6 +29,10 @@ export default function PricingPlanCta({
       planName,
       value: planPrice,
       currency: "RON",
+    });
+    void trackFirstPartyEvent("plan_selected", {
+      plan_name: planName,
+      plan_price: planPrice ?? null,
     });
     flushPendingTrackers();
   }

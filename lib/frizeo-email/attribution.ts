@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { getFrizeoAppUrl } from "@/lib/frizeo-email/config";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { MarketingConversionStats } from "@/lib/frizeo-email/types";
+import type { FirstPartyAnalyticsContext } from "@/lib/analytics/firstParty";
 
 export const ATTRIBUTION_COOKIE = "fe_attr";
 export const ATTRIBUTION_WINDOW_DAYS = 30;
@@ -262,6 +263,13 @@ async function insertConversion(row: {
   currency?: string | null;
   billing_interval?: string | null;
   mrr_amount?: number | null;
+  visitor_id?: string | null;
+  session_id?: string | null;
+  source?: string | null;
+  medium?: string | null;
+  utm_campaign?: string | null;
+  landing_path?: string | null;
+  referrer_host?: string | null;
   idempotency_key: string;
 }): Promise<boolean> {
   const { error } = await supabaseAdmin.from("marketing_conversions").insert(row);
@@ -275,6 +283,7 @@ export async function recordSignupAndTrialConversions(input: {
   userId: string;
   tenantId: string;
   email: string;
+  analyticsContext?: FirstPartyAnalyticsContext | null;
 }): Promise<void> {
   try {
     const token = await readAttributionCookieToken();
@@ -297,6 +306,14 @@ export async function recordSignupAndTrialConversions(input: {
       attribution_link_id: valid?.id ?? null,
       campaign_id: valid?.campaign_id ?? null,
       automation_id: valid?.automation_id ?? null,
+      visitor_id: input.analyticsContext?.visitorId ?? null,
+      session_id: input.analyticsContext?.sessionId ?? null,
+      source: valid ? "frizeo_email" : input.analyticsContext?.source ?? null,
+      medium: valid ? "email" : input.analyticsContext?.medium ?? null,
+      utm_campaign:
+        valid?.utm_campaign ?? input.analyticsContext?.campaign ?? null,
+      landing_path: input.analyticsContext?.landingPath ?? null,
+      referrer_host: input.analyticsContext?.referrerHost ?? null,
     };
 
     await insertConversion({
@@ -398,6 +415,13 @@ export async function recordPaidSubscriptionConversion(input: {
     let role: "acquisition" | "lifecycle" = "acquisition";
     let contactId: string | null = null;
     let userId = input.userId ?? null;
+    let visitorId: string | null = null;
+    let sessionId: string | null = null;
+    let source: string | null = null;
+    let medium: string | null = null;
+    let utmCampaign: string | null = null;
+    let landingPath: string | null = null;
+    let referrerHost: string | null = null;
 
     // Cookie is usually absent on Stripe webhooks — use persisted clicks.
     if (token) {
@@ -412,6 +436,9 @@ export async function recordPaidSubscriptionConversion(input: {
         attributionLinkId = link.id;
         contactId = link.contact_id;
         role = link.source_kind === "automation" ? "lifecycle" : "acquisition";
+        source = "frizeo_email";
+        medium = "email";
+        utmCampaign = link.utm_campaign;
       }
     }
 
@@ -419,7 +446,7 @@ export async function recordPaidSubscriptionConversion(input: {
       const { data: signupConv } = await supabaseAdmin
         .from("marketing_conversions")
         .select(
-          "user_id, contact_id, campaign_id, automation_id, attribution_link_id, occurred_at",
+          "user_id, contact_id, campaign_id, automation_id, attribution_link_id, visitor_id, session_id, source, medium, utm_campaign, landing_path, referrer_host, occurred_at",
         )
         .eq("tenant_id", input.tenantId)
         .eq("conversion_type", "signup")
@@ -430,6 +457,13 @@ export async function recordPaidSubscriptionConversion(input: {
       if (signupConv) {
         userId = userId || signupConv.user_id;
         contactId = contactId || signupConv.contact_id;
+        visitorId = signupConv.visitor_id;
+        sessionId = signupConv.session_id;
+        source = signupConv.source;
+        medium = signupConv.medium;
+        utmCampaign = signupConv.utm_campaign;
+        landingPath = signupConv.landing_path;
+        referrerHost = signupConv.referrer_host;
       }
 
       // Last clicked automation link for this contact within the 30-day window.
@@ -457,6 +491,8 @@ export async function recordPaidSubscriptionConversion(input: {
           campaignId = null;
           attributionLinkId = lifecycleLink.id;
           role = "lifecycle";
+          source = "frizeo_email";
+          medium = "email";
         } else if (signupConv) {
           campaignId = signupConv.campaign_id;
           automationId = signupConv.automation_id;
@@ -493,6 +529,13 @@ export async function recordPaidSubscriptionConversion(input: {
       currency,
       billing_interval: billingInterval,
       mrr_amount: mrr,
+      visitor_id: visitorId,
+      session_id: sessionId,
+      source,
+      medium,
+      utm_campaign: utmCampaign,
+      landing_path: landingPath,
+      referrer_host: referrerHost,
       idempotency_key: `subscription_started:tenant:${input.tenantId}`,
     });
   } catch (error) {

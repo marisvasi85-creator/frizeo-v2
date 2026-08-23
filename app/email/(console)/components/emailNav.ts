@@ -3,10 +3,17 @@ export type EmailNavItem = {
   path: string;
   label: string;
   icon: string;
+  ownerOnly?: boolean;
 };
 
 export const EMAIL_NAV_ITEMS: EmailNavItem[] = [
   { path: "", label: "Dashboard", icon: "📊" },
+  {
+    path: "/analytics",
+    label: "Trafic & conversii",
+    icon: "📈",
+    ownerOnly: true,
+  },
   { path: "/contacts", label: "Contacts", icon: "👤" },
   { path: "/segments", label: "Segments", icon: "🗂️" },
   { path: "/campaigns", label: "Campaigns", icon: "📨" },
