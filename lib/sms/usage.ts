@@ -1,13 +1,19 @@
 import { getTodayInBookingTimezone } from "@/lib/bookings/bookingTimezone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-export type SmsType = "booking" | "reminder" | "reschedule" | "cancel";
+export type SmsType =
+  | "booking"
+  | "reminder"
+  | "reschedule"
+  | "cancel"
+  | "access_request";
 
 export const SMS_TYPES: SmsType[] = [
   "booking",
   "reminder",
   "reschedule",
   "cancel",
+  "access_request",
 ];
 
 let smsSendsTableReady: boolean | null = null;

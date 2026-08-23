@@ -9,6 +9,7 @@ export type AccessRequestNotificationEvent = {
 export type AccessRequestEmailInput = {
   barberId: string;
   appUrl: string;
+  quickActionUrl: string | null;
   clientName: string;
   clientPhone: string;
   clientEmail: string | null;
@@ -17,14 +18,23 @@ export type AccessRequestEmailInput = {
 };
 
 export type AccessRequestRecipient = {
-  email: string;
+  email: string | null;
+  phone: string | null;
   displayName: string | null;
+  smsEnabled: boolean;
 };
 
 export type AccessRequestEmailPayload = {
   to: string;
   subject: string;
   html: string;
+};
+
+export type AccessRequestDeliveryResult = {
+  emailAttempted: boolean;
+  emailSent: boolean;
+  smsAttempted: boolean;
+  smsSent: boolean;
 };
 
 function escapeHtml(value: string): string {
@@ -57,6 +67,7 @@ export function accessRequestDashboardUrl(
 
 export function barberAccessRequestEmailHtml(input: {
   barberName: string | null;
+  actionUrl: string;
   dashboardUrl: string;
   clientName: string;
   clientPhone: string;
@@ -64,6 +75,7 @@ export function barberAccessRequestEmailHtml(input: {
   referral: string | null;
   message: string | null;
 }): string {
+  const safeActionUrl = escapeHtml(input.actionUrl);
   const safeDashboardUrl = escapeHtml(input.dashboardUrl);
   const greeting = input.barberName?.trim()
     ? `<p>Salut, <strong>${escapeHtml(input.barberName.trim())}</strong>,</p>`
@@ -89,14 +101,24 @@ export function barberAccessRequestEmailHtml(input: {
       </div>
 
       <p style="margin:24px 0;">
-        <a href="${safeDashboardUrl}" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">
+        <a href="${safeActionUrl}" style="background:#000;color:#fff;padding:12px 20px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">
           Vezi cererea în Frizeo
         </a>
       </p>
 
       <p style="font-size:13px;color:#666;">
+        Deschiderea linkului nu aprobă automat clientul. Decizia este aplicată
+        numai după ce apeși explicit „Acceptă clientul”.
+      </p>
+
+      <p style="font-size:13px;color:#666;">
         Dacă butonul nu funcționează, deschide acest link:<br />
-        <a href="${safeDashboardUrl}" style="color:#111;word-break:break-all;">${safeDashboardUrl}</a>
+        <a href="${safeActionUrl}" style="color:#111;word-break:break-all;">${safeActionUrl}</a>
+      </p>
+
+      <p style="font-size:13px;color:#666;">
+        Poți gestiona cererea și din
+        <a href="${safeDashboardUrl}" style="color:#111;">Acces clienți</a>.
       </p>
 
       <hr style="margin:30px 0;border:0;border-top:1px solid #e5e5e5;" />
@@ -106,6 +128,10 @@ export function barberAccessRequestEmailHtml(input: {
       </p>
     </div>
   `;
+}
+
+export function barberAccessRequestSmsMessage(quickActionUrl: string): string {
+  return `Frizeo: cerere noua de acces. Verifica si accepta: ${quickActionUrl}`;
 }
 
 export function shouldNotifyAccessRequest(
@@ -152,6 +178,7 @@ export async function deliverAccessRequestEmail(
     subject: BARBER_ACCESS_REQUEST_SUBJECT,
     html: barberAccessRequestEmailHtml({
       barberName: recipient.displayName,
+      actionUrl: input.quickActionUrl ?? dashboardUrl,
       dashboardUrl,
       clientName: input.clientName,
       clientPhone: input.clientPhone,
@@ -162,4 +189,47 @@ export async function deliverAccessRequestEmail(
   });
 
   return true;
+}
+
+export async function deliverAccessRequestChannels(
+  input: AccessRequestEmailInput,
+  recipient: AccessRequestRecipient,
+  dependencies: {
+    sendEmail: (payload: AccessRequestEmailPayload) => Promise<void>;
+    sendSms: (phone: string, message: string) => Promise<boolean>;
+    onError: (channel: "email" | "sms", error: unknown) => void;
+  },
+): Promise<AccessRequestDeliveryResult> {
+  const result: AccessRequestDeliveryResult = {
+    emailAttempted: Boolean(recipient.email),
+    emailSent: false,
+    smsAttempted: Boolean(
+      recipient.smsEnabled && recipient.phone && input.quickActionUrl,
+    ),
+    smsSent: false,
+  };
+
+  if (recipient.email) {
+    try {
+      result.emailSent = await deliverAccessRequestEmail(input, {
+        resolveRecipient: async () => recipient,
+        send: dependencies.sendEmail,
+      });
+    } catch (error) {
+      dependencies.onError("email", error);
+    }
+  }
+
+  if (result.smsAttempted && recipient.phone && input.quickActionUrl) {
+    try {
+      result.smsSent = await dependencies.sendSms(
+        recipient.phone,
+        barberAccessRequestSmsMessage(input.quickActionUrl),
+      );
+    } catch (error) {
+      dependencies.onError("sms", error);
+    }
+  }
+
+  return result;
 }

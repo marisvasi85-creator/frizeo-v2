@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireManagedBarber } from "@/lib/barber-access/authorization";
-import { notifyClientAccessApproved } from "@/lib/barber-access/notifications";
+import {
+  notifyClientAccessApproved,
+  notifyClientAccessApprovedOnce,
+} from "@/lib/barber-access/notifications";
+import {
+  isQuickApprovalSchemaReady,
+  markAccessRequestTokensProcessed,
+} from "@/lib/barber-access/quickApprovalServer";
+import { getAppUrlForRequest } from "@/lib/app/getAppUrl";
 import { normalizeRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -203,10 +211,21 @@ export async function POST(req: Request) {
     let affected = rows.length;
     let finalSkippedBlocked = skippedBlocked;
 
+    if (!isApproval && nextStatus !== "pending") {
+      const processedRequestIds = actionablePhones
+        .map((phone) => currentByPhone.get(phone)?.id)
+        .filter((id): id is string => Boolean(id));
+      try {
+        await markAccessRequestTokensProcessed(processedRequestIds);
+      } catch (tokenError) {
+        console.error("BARBER ACCESS TOKEN CONSUME:", tokenError);
+      }
+    }
+
     if (isApproval) {
       const { data: finalRows, error: finalError } = await supabaseAdmin
         .from("barber_client_access")
-        .select("phone_normalized, status")
+        .select("id, phone_normalized, status")
         .eq("tenant_id", context.auth.tenantId)
         .eq("barber_id", barberId)
         .in("phone_normalized", requestedPhones);
@@ -227,15 +246,38 @@ export async function POST(req: Request) {
           finallyApproved.has(row.phone_normalized) &&
           currentByPhone.get(row.phone_normalized)?.status !== "approved",
       );
-      await Promise.allSettled(
-        newlyApproved.map((row) =>
-          notifyClientAccessApproved({
-            barberId,
-            clientEmail: row.client_email,
-            clientName: row.client_name,
-          }),
-        ),
+      const finalByPhone = new Map(
+        (finalRows ?? []).map((row) => [row.phone_normalized, row]),
       );
+      const newlyApprovedRequestIds = newlyApproved
+        .map((row) => finalByPhone.get(row.phone_normalized)?.id)
+        .filter((id): id is string => Boolean(id));
+      const appUrl = getAppUrlForRequest(req.url);
+      try {
+        const quickApprovalReady = await isQuickApprovalSchemaReady();
+
+        if (quickApprovalReady) {
+          await Promise.allSettled([
+            markAccessRequestTokensProcessed(newlyApprovedRequestIds),
+            ...newlyApprovedRequestIds.map((requestId) =>
+              notifyClientAccessApprovedOnce({ requestId, appUrl }),
+            ),
+          ]);
+        } else {
+          await Promise.allSettled(
+            newlyApproved.map((row) =>
+              notifyClientAccessApproved({
+                barberId,
+                clientEmail: row.client_email,
+                clientName: row.client_name,
+                appUrl,
+              }),
+            ),
+          );
+        }
+      } catch (notificationError) {
+        console.error("BARBER ACCESS APPROVAL NOTIFICATION:", notificationError);
+      }
     }
 
     return NextResponse.json({

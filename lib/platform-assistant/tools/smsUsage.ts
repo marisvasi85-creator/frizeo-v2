@@ -25,6 +25,7 @@ function emptyByType(): Record<SmsType, { sent: number; failed: number }> {
     reminder: { sent: 0, failed: 0 },
     reschedule: { sent: 0, failed: 0 },
     cancel: { sent: 0, failed: 0 },
+    access_request: { sent: 0, failed: 0 },
   };
 }
 

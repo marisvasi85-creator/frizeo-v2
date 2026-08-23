@@ -20,6 +20,7 @@ type Barber = {
   id: string;
   display_name: string | null;
   booking_access_mode: BookingAccessMode;
+  access_request_sms_enabled: boolean;
 };
 
 type AccessDetails = {
@@ -94,6 +95,8 @@ export default function ClientAccessClient({
   const [selectedBarberId, setSelectedBarberId] = useState("");
   const [mode, setMode] = useState<BookingAccessMode>("open");
   const [schemaReady, setSchemaReady] = useState(true);
+  const [quickApprovalReady, setQuickApprovalReady] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(true);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [clients, setClients] = useState<ClientRow[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
@@ -104,6 +107,7 @@ export default function ClientAccessClient({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [savingMode, setSavingMode] = useState(false);
+  const [savingSms, setSavingSms] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
   const existingClientsRef = useRef<HTMLDivElement>(null);
@@ -128,9 +132,11 @@ export default function ClientAccessClient({
       const firstBarber = requestedBarber ?? nextBarbers[0];
       setBarbers(nextBarbers);
       setSchemaReady(data.schemaReady !== false);
+      setQuickApprovalReady(data.quickApprovalReady === true);
       setSelectedBarberId((current) => current || firstBarber?.id || "");
       if (firstBarber) {
         setMode(firstBarber.booking_access_mode);
+        setSmsEnabled(firstBarber.access_request_sms_enabled ?? true);
       }
     } catch (error) {
       setFeedback({
@@ -230,6 +236,43 @@ export default function ClientAccessClient({
       });
     } finally {
       setSavingMode(false);
+    }
+  }
+
+  async function saveSmsSetting() {
+    if (!selectedBarberId || !quickApprovalReady) return;
+    setSavingSms(true);
+    setFeedback(null);
+
+    try {
+      const response = await fetch("/api/barber-access/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ barberId: selectedBarberId, smsEnabled }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Nu am putut salva setarea SMS.");
+      }
+
+      setBarbers((current) =>
+        current.map((barber) =>
+          barber.id === selectedBarberId
+            ? { ...barber, access_request_sms_enabled: smsEnabled }
+            : barber,
+        ),
+      );
+      setFeedback({ tone: "success", message: "Setarea SMS a fost salvată." });
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Nu am putut salva setarea SMS.",
+      });
+    } finally {
+      setSavingSms(false);
     }
   }
 
@@ -344,7 +387,10 @@ export default function ClientAccessClient({
                 const nextId = event.target.value;
                 setSelectedBarberId(nextId);
                 const nextBarber = barbers.find((barber) => barber.id === nextId);
-                if (nextBarber) setMode(nextBarber.booking_access_mode);
+                if (nextBarber) {
+                  setMode(nextBarber.booking_access_mode);
+                  setSmsEnabled(nextBarber.access_request_sms_enabled ?? true);
+                }
               }}
             >
               {barbers.map((barber) => (
@@ -385,6 +431,45 @@ export default function ClientAccessClient({
               ? "Clienții noi trimit o solicitare și se pot programa numai după aprobare."
               : "Numai clienții acceptați anterior se pot programa; solicitările noi sunt închise."}
         </p>
+
+        <div className="mt-5 flex flex-col gap-4 border-t border-frz-line pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <label className="flex min-w-0 items-start gap-3">
+            <input
+              type="checkbox"
+              checked={smsEnabled}
+              disabled={!quickApprovalReady || savingSms}
+              onChange={(event) => setSmsEnabled(event.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 disabled:cursor-not-allowed"
+            />
+            <span>
+              <span className="block font-medium">
+                SMS pentru cereri noi de acces
+              </span>
+              <span className="mt-1 block text-sm text-frz-muted">
+                Primește un SMS când un client nou solicită acces la
+                programările tale.
+              </span>
+              {!quickApprovalReady && (
+                <span className="mt-1 block text-xs text-amber-500">
+                  Setarea devine activă după migrarea Supabase pregătită pentru
+                  această etapă.
+                </span>
+              )}
+            </span>
+          </label>
+          <AdminButton
+            size="sm"
+            className="shrink-0"
+            loading={savingSms}
+            disabled={
+              !quickApprovalReady ||
+              smsEnabled === selectedBarber?.access_request_sms_enabled
+            }
+            onClick={() => void saveSmsSetting()}
+          >
+            Salvează SMS
+          </AdminButton>
+        </div>
       </AdminCard>
 
       <div ref={existingClientsRef} className="space-y-4">

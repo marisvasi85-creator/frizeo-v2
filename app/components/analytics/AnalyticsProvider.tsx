@@ -25,6 +25,7 @@ function AnalyticsInner() {
   const lastFirstPartyPage = useRef("");
   const isAdminRoute =
     pathname === "/admin" || pathname.startsWith("/admin/");
+  const isSensitiveRoute = pathname === "/access-request";
 
   useLayoutEffect(() => {
     // Read localStorage after mount to avoid SSR mismatch.
@@ -37,7 +38,7 @@ function AnalyticsInner() {
   }, []);
 
   useEffect(() => {
-    if (!consent) return;
+    if (!consent || isSensitiveRoute) return;
 
     const poll = window.setInterval(() => {
       flushPendingTrackers();
@@ -52,31 +53,31 @@ function AnalyticsInner() {
       window.clearInterval(poll);
       window.clearTimeout(stop);
     };
-  }, [consent]);
+  }, [consent, isSensitiveRoute]);
 
   useEffect(() => {
-    if (!consent || !isAcquisitionPath(pathname)) return;
+    if (isSensitiveRoute || !consent || !isAcquisitionPath(pathname)) return;
     const pageKey = `${pathname}?${searchParams.toString()}`;
     if (lastFirstPartyPage.current === pageKey) return;
     lastFirstPartyPage.current = pageKey;
     void trackFirstPartyEvent("page_view");
-  }, [pathname, searchParams, consent]);
+  }, [pathname, searchParams, consent, isSensitiveRoute]);
 
   useEffect(() => {
-    if (isAdminRoute || !consent || !ready) return;
+    if (isAdminRoute || isSensitiveRoute || !consent || !ready) return;
     if (skipInitialPageView.current) {
       skipInitialPageView.current = false;
       return;
     }
     trackPageView(pathname, searchParams.toString());
-  }, [pathname, searchParams, consent, ready, isAdminRoute]);
+  }, [pathname, searchParams, consent, ready, isAdminRoute, isSensitiveRoute]);
 
   function onScriptLoaded() {
     markAnalyticsReady();
     setReady(true);
   }
 
-  if (!consent || !config.isConfigured) return null;
+  if (isSensitiveRoute || !consent || !config.isConfigured) return null;
 
   if (config.gtmId) {
     return (

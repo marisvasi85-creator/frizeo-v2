@@ -5,7 +5,9 @@ import {
   BARBER_ACCESS_REQUEST_SUBJECT,
   accessRequestDashboardUrl,
   attemptAccessRequestNotification,
+  barberAccessRequestSmsMessage,
   barberAccessRequestEmailHtml,
+  deliverAccessRequestChannels,
   deliverAccessRequestEmail,
   shouldNotifyAccessRequest,
 } from "../lib/barber-access/requestNotification.ts";
@@ -13,6 +15,8 @@ import {
 const requestInput = {
   barberId: "barber-b",
   appUrl: "https://staging.frizeo.ro",
+  quickActionUrl:
+    "https://staging.frizeo.ro/access-request?token=secure-test-token",
   clientName: "Ana Client",
   clientPhone: "0745 123 456",
   clientEmail: "ana@example.com",
@@ -85,7 +89,9 @@ test("the requested barber alone is resolved and receives the branded email", as
       resolvedBarbers.push(barberId);
       return {
         email: "barber-b@frizeo.test",
+        phone: "40745123456",
         displayName: "Frizer B",
+        smsEnabled: true,
       };
     },
     send: async (payload) => {
@@ -122,6 +128,7 @@ test("optional request fields appear only when supplied and are escaped", () => 
   );
   const withoutOptionalFields = barberAccessRequestEmailHtml({
     barberName: null,
+    actionUrl: requestInput.quickActionUrl,
     dashboardUrl,
     clientName: "Ana Client",
     clientPhone: "0745 123 456",
@@ -137,6 +144,7 @@ test("optional request fields appear only when supplied and are escaped", () => 
 
   const withOptionalFields = barberAccessRequestEmailHtml({
     barberName: "Frizer <B>",
+    actionUrl: requestInput.quickActionUrl,
     dashboardUrl,
     clientName: "Ana <Client>",
     clientPhone: "0745 123 456",
@@ -167,4 +175,123 @@ test("a missing canonical barber email prevents sending", async () => {
 
   assert.equal(result, false);
   assert.equal(sendCalls, 0);
+});
+
+test("SMS toggle ON delivers email first and then the short SMS", async () => {
+  const calls = [];
+  const result = await deliverAccessRequestChannels(
+    requestInput,
+    {
+      email: "barber-b@frizeo.test",
+      phone: "40745123456",
+      displayName: "Frizer B",
+      smsEnabled: true,
+    },
+    {
+      sendEmail: async () => calls.push("email"),
+      sendSms: async (phone, message) => {
+        calls.push("sms");
+        assert.equal(phone, "40745123456");
+        assert.equal(message, barberAccessRequestSmsMessage(requestInput.quickActionUrl));
+        assert.match(message, /access-request\?token=/);
+        assert.doesNotMatch(message, /Ana Client|0745|ana@example\.com|barber-b/);
+        return true;
+      },
+      onError: () => assert.fail("no channel should fail"),
+    },
+  );
+
+  assert.deepEqual(calls, ["email", "sms"]);
+  assert.deepEqual(result, {
+    emailAttempted: true,
+    emailSent: true,
+    smsAttempted: true,
+    smsSent: true,
+  });
+});
+
+test("SMS toggle OFF suppresses only SMS and email continues", async () => {
+  let emailCalls = 0;
+  let smsCalls = 0;
+  const result = await deliverAccessRequestChannels(
+    requestInput,
+    {
+      email: "barber-b@frizeo.test",
+      phone: "40745123456",
+      displayName: "Frizer B",
+      smsEnabled: false,
+    },
+    {
+      sendEmail: async () => {
+        emailCalls += 1;
+      },
+      sendSms: async () => {
+        smsCalls += 1;
+        return true;
+      },
+      onError: () => assert.fail("no channel should fail"),
+    },
+  );
+
+  assert.equal(emailCalls, 1);
+  assert.equal(smsCalls, 0);
+  assert.equal(result.emailSent, true);
+  assert.equal(result.smsAttempted, false);
+});
+
+test("email failure does not suppress SMS or escape the delivery boundary", async () => {
+  const failures = [];
+  let smsCalls = 0;
+  const result = await deliverAccessRequestChannels(
+    requestInput,
+    {
+      email: "barber-b@frizeo.test",
+      phone: "40745123456",
+      displayName: "Frizer B",
+      smsEnabled: true,
+    },
+    {
+      sendEmail: async () => {
+        throw new Error("SMTP unavailable");
+      },
+      sendSms: async () => {
+        smsCalls += 1;
+        return true;
+      },
+      onError: (channel) => failures.push(channel),
+    },
+  );
+
+  assert.deepEqual(failures, ["email"]);
+  assert.equal(smsCalls, 1);
+  assert.equal(result.emailSent, false);
+  assert.equal(result.smsSent, true);
+});
+
+test("SMS failure does not undo or suppress the email delivery", async () => {
+  const failures = [];
+  let emailCalls = 0;
+  const result = await deliverAccessRequestChannels(
+    requestInput,
+    {
+      email: "barber-b@frizeo.test",
+      phone: "40745123456",
+      displayName: "Frizer B",
+      smsEnabled: true,
+    },
+    {
+      sendEmail: async () => {
+        emailCalls += 1;
+      },
+      sendSms: async () => {
+        throw new Error("SMSO unavailable");
+      },
+      onError: (channel) => failures.push(channel),
+    },
+  );
+
+  assert.equal(emailCalls, 1);
+  assert.deepEqual(failures, ["sms"]);
+  assert.equal(result.emailSent, true);
+  assert.equal(result.smsSent, false);
 });

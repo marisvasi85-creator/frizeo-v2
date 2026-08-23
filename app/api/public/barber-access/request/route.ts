@@ -6,10 +6,11 @@ import {
   publicAccessMessage,
 } from "@/lib/barber-access/server";
 import { notifyBarberAboutAccessRequest } from "@/lib/barber-access/notifications";
+import { createPendingAccessRequest } from "@/lib/barber-access/quickApprovalServer";
+import { accessRequestQuickApprovalUrl } from "@/lib/barber-access/quickApprovalToken";
 import { attemptAccessRequestNotification } from "@/lib/barber-access/requestNotification";
 import { normalizeRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function optionalText(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
@@ -104,22 +105,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: createdRequest, error } = await supabaseAdmin
-      .from("barber_client_access")
-      .insert({
-        tenant_id: barber.tenant_id,
-        barber_id: barberId,
-        phone_normalized: phoneNormalized,
-        client_name: clientName,
-        client_email: clientEmail,
-        referral,
-        request_message: message,
-        status: "pending",
-        source: "client_request",
-        requested_at: new Date().toISOString(),
-      })
-      .select("id, status")
-      .single();
+    const { data: createdRequest, error } = await createPendingAccessRequest({
+      tenantId: barber.tenant_id,
+      barberId,
+      phoneNormalized,
+      clientName,
+      clientEmail,
+      referral,
+      message,
+    });
 
     if (error?.code === "23505") {
       const latest = await checkBarberBookingAccess({
@@ -143,6 +137,11 @@ export async function POST(req: Request) {
 
     if (error) throw error;
 
+    const appUrl = getAppUrlForRequest(req.url);
+    const quickActionUrl = createdRequest?.quickToken
+      ? accessRequestQuickApprovalUrl(createdRequest.quickToken, appUrl)
+      : null;
+
     await attemptAccessRequestNotification(
       { created: Boolean(createdRequest), status: createdRequest?.status },
       () =>
@@ -153,10 +152,11 @@ export async function POST(req: Request) {
           clientEmail,
           referral,
           message,
-          appUrl: getAppUrlForRequest(req.url),
+          appUrl,
+          quickActionUrl,
         }).then(() => undefined),
       (notifyError) => {
-        console.error("BARBER ACCESS REQUEST EMAIL:", notifyError);
+        console.error("BARBER ACCESS REQUEST NOTIFICATION:", notifyError);
       },
     );
 
