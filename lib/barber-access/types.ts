@@ -34,6 +34,14 @@ export function canBookForAccess(
   return mode === "open" || status === "approved";
 }
 
+export function canSubmitAccessRequest(
+  mode: BookingAccessMode,
+  status: PublicAccessStatus | null,
+): boolean {
+  if (mode !== "approval_required") return false;
+  return status === null || status === "not_found" || status === "invalid_phone";
+}
+
 export function publicAccessMessage(result: PublicAccessResult): string {
   if (result.canBook) return "Poți continua către programare.";
   if (result.status === "pending") return "Cerere în așteptare";

@@ -10,6 +10,7 @@ import type {
   BookingAccessMode,
   PublicAccessStatus,
 } from "@/lib/barber-access/types";
+import { canSubmitAccessRequest } from "@/lib/barber-access/types";
 
 type ClientDetails = {
   name: string;
@@ -122,8 +123,8 @@ export default function BookingAccessPrompt({
           setFeedback("Acces confirmat. Poți continua către programare.");
           onApproved?.(saved);
           if (presentation === "modal") setOpen(false);
-        } else if (nextStatus === "pending") {
-          setFeedback(data.message || "Cererea este în așteptare.");
+        } else {
+          setFeedback(data.message || "Accesul nu este disponibil.");
         }
       } catch {
         // Verificarea automată este doar o optimizare. Formularul rămâne activ
@@ -235,9 +236,11 @@ export default function BookingAccessPrompt({
     );
   }
 
+  const canRequest = canSubmitAccessRequest(mode, status);
+
   const form = (
     <form onSubmit={submitRequest} className="space-y-3">
-      {mode === "approval_required" && status !== "pending" && (
+      {mode === "approval_required" && canRequest && (
         <>
           <input
             value={name}
@@ -256,7 +259,13 @@ export default function BookingAccessPrompt({
       {status !== "pending" && (
         <input
           value={phone}
-          onChange={(event) => setPhone(event.target.value)}
+          onChange={(event) => {
+            setPhone(event.target.value);
+            if (status) {
+              updateStatus(null);
+              setFeedback("");
+            }
+          }}
           placeholder="Telefon (07xxxxxxxx)"
           aria-label="Număr de telefon"
           type="tel"
@@ -267,7 +276,7 @@ export default function BookingAccessPrompt({
         />
       )}
 
-      {mode === "approval_required" && status !== "pending" && (
+      {mode === "approval_required" && canRequest && (
         <>
           <input
             value={email}
@@ -312,7 +321,8 @@ export default function BookingAccessPrompt({
         </p>
       )}
 
-      {status !== "pending" && (
+      {status !== "pending" &&
+        (mode === "approved_only" || canRequest) && (
         <button
           type="submit"
           disabled={loading}

@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import {
-  barberBelongsToTenant,
-  isAuthError,
-  requireTenantAccess,
-} from "@/lib/auth/requireTenantAccess";
+  requireManagedBarber,
+} from "@/lib/barber-access/authorization";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
@@ -62,24 +60,16 @@ export async function POST(req: Request) {
     let isDashboardBooking = false;
     let bypassMinNotice = false;
     let bypassGoogleBusy = false;
-    const auth = booking_context === "dashboard"
-      ? await requireTenantAccess(["owner", "manager", "barber"])
+    const dashboardContext = booking_context === "dashboard"
+      ? await requireManagedBarber(barber_id)
       : null;
 
-    if (auth && isAuthError(auth)) return auth;
+    if (dashboardContext instanceof NextResponse) return dashboardContext;
 
-    if (auth && !isAuthError(auth)) {
-      const belongs = await barberBelongsToTenant(
-        supabase,
-        barber_id,
-        auth.tenantId,
-      );
-
-      if (belongs) {
-        isDashboardBooking = true;
-        bypassMinNotice = true;
-        bypassGoogleBusy = true;
-      }
+    if (dashboardContext) {
+      isDashboardBooking = true;
+      bypassMinNotice = true;
+      bypassGoogleBusy = true;
     }
 
     if (!isDashboardBooking) {

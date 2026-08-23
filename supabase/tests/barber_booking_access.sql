@@ -246,6 +246,14 @@ begin
     raise exception 'manual_blocked_booking_rule_failed';
   end if;
 
+  -- Cancelling an existing appointment remains allowed after blocking.
+  update public.bookings
+  set status = 'cancelled'
+  where id = v_blocked_hold;
+  if (select status from public.bookings where id = v_blocked_hold) <> 'cancelled' then
+    raise exception 'blocked_existing_cancel_failed';
+  end if;
+
   -- Assistant/manual direct creation uses the same atomic rule.
   insert into public.barber_client_access (
     tenant_id, barber_id, phone_normalized, client_name, status, source
@@ -262,8 +270,33 @@ begin
     raise exception 'manual_direct_booking_did_not_approve';
   end if;
 
+  -- A completely new dashboard client is created as approved for this barber.
+  perform public.create_manual_booking_with_access(
+    v_barber_a, v_tenant_a, v_service_a, '2099-03-10', '13:00',
+    'New Manual Client', '0745 888 888', null, null, v_owner
+  );
+  if (select status from public.barber_client_access
+      where barber_id = v_barber_a and phone_normalized = '40745888888') <> 'approved' then
+    raise exception 'new_manual_client_not_approved';
+  end if;
+
   -- Approval never leaks between barbers or tenants.
   update public.barbers set booking_access_mode = 'approved_only' where id = v_barber_b;
+
+  begin
+    insert into public.bookings (
+      barber_id, tenant_id, barber_service_id, date, start_time, end_time,
+      client_name, client_phone, status
+    ) values (
+      v_barber_b, v_tenant_a, v_service_b,
+      '2099-03-09', '09:00', '09:30', 'Blocked Open Client', '0745 555 555', 'confirmed'
+    );
+    raise exception 'blocked_approved_only_client_allowed';
+  exception when others then
+    if sqlerrm = 'blocked_approved_only_client_allowed' then raise; end if;
+    if position('BOOKING_ACCESS_ONLINE_UNAVAILABLE' in sqlerrm) = 0 then raise; end if;
+  end;
+
   begin
     insert into public.bookings (
       barber_id, tenant_id, barber_service_id, date, start_time, end_time,

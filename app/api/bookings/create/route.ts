@@ -20,10 +20,8 @@ import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLink
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import {
-  barberBelongsToTenant,
-  isAuthError,
-  requireTenantAccess,
-} from "@/lib/auth/requireTenantAccess";
+  requireManagedBarber,
+} from "@/lib/barber-access/authorization";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
   checkBarberBookingAccess,
@@ -84,24 +82,16 @@ export async function POST(req: Request) {
     let bypassMinNotice = false;
     let isDashboardBooking = false;
     let dashboardActorId: string | null = null;
-    const auth = booking_context === "dashboard"
-      ? await requireTenantAccess(["owner", "manager", "barber"])
+    const dashboardContext = booking_context === "dashboard"
+      ? await requireManagedBarber(booking.barber_id)
       : null;
 
-    if (auth && isAuthError(auth)) return auth;
+    if (dashboardContext instanceof NextResponse) return dashboardContext;
 
-    if (auth && !isAuthError(auth)) {
-      const belongs = await barberBelongsToTenant(
-        supabase,
-        booking.barber_id,
-        auth.tenantId,
-      );
-
-      if (belongs) {
-        bypassMinNotice = true;
-        isDashboardBooking = true;
-        dashboardActorId = auth.user.id;
-      }
+    if (dashboardContext) {
+      bypassMinNotice = true;
+      isDashboardBooking = true;
+      dashboardActorId = dashboardContext.auth.user.id;
     }
 
     if (!isDashboardBooking) {

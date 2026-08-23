@@ -162,16 +162,70 @@ export async function POST(req: Request) {
     });
 
     if (rows.length > 0) {
-      const { error: upsertError } = await supabaseAdmin
-        .from("barber_client_access")
-        .upsert(rows, { onConflict: "barber_id,phone_normalized" });
+      if (isApproval) {
+        // Insert missing relations without ever overwriting a row that may
+        // have become blocked after the read above. The conditional update
+        // then re-checks `blocked` in Postgres at write time.
+        const { error: insertError } = await supabaseAdmin
+          .from("barber_client_access")
+          .upsert(rows, {
+            onConflict: "barber_id,phone_normalized",
+            ignoreDuplicates: true,
+          });
+        if (insertError) throw insertError;
 
-      if (upsertError) throw upsertError;
+        const { error: updateError } = await supabaseAdmin
+          .from("barber_client_access")
+          .update({
+            status: "approved",
+            decision_source:
+              action === "approve_all_existing"
+                ? "existing_client"
+                : "manual_admin",
+            decided_at: now,
+            decided_by: context.auth.user.id,
+            updated_by: context.auth.user.id,
+          })
+          .eq("tenant_id", context.auth.tenantId)
+          .eq("barber_id", barberId)
+          .in("phone_normalized", actionablePhones)
+          .neq("status", "blocked");
+        if (updateError) throw updateError;
+      } else {
+        const { error: upsertError } = await supabaseAdmin
+          .from("barber_client_access")
+          .upsert(rows, { onConflict: "barber_id,phone_normalized" });
+
+        if (upsertError) throw upsertError;
+      }
     }
 
+    let affected = rows.length;
+    let finalSkippedBlocked = skippedBlocked;
+
     if (isApproval) {
+      const { data: finalRows, error: finalError } = await supabaseAdmin
+        .from("barber_client_access")
+        .select("phone_normalized, status")
+        .eq("tenant_id", context.auth.tenantId)
+        .eq("barber_id", barberId)
+        .in("phone_normalized", requestedPhones);
+      if (finalError) throw finalError;
+
+      const finallyApproved = new Set(
+        (finalRows ?? [])
+          .filter((row) => row.status === "approved")
+          .map((row) => row.phone_normalized),
+      );
+      finalSkippedBlocked = (finalRows ?? []).filter(
+        (row) => row.status === "blocked",
+      ).length;
+      affected = finallyApproved.size;
+
       const newlyApproved = rows.filter(
-        (row) => currentByPhone.get(row.phone_normalized)?.status !== "approved",
+        (row) =>
+          finallyApproved.has(row.phone_normalized) &&
+          currentByPhone.get(row.phone_normalized)?.status !== "approved",
       );
       await Promise.allSettled(
         newlyApproved.map((row) =>
@@ -186,8 +240,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      affected: rows.length,
-      skippedBlocked,
+      affected,
+      skippedBlocked: finalSkippedBlocked,
       status: nextStatus,
     });
   } catch (error) {
