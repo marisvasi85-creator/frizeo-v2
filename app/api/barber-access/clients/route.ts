@@ -3,6 +3,14 @@ import { requireManagedBarber } from "@/lib/barber-access/authorization";
 import { isExistingClient } from "@/lib/barber-access/clientList";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const PRIVATE_NO_STORE_HEADERS = {
+  "Cache-Control": "private, no-store, no-cache, max-age=0, must-revalidate",
+  Vary: "Cookie",
+};
+
 type ExistingClient = {
   tenant_id: string;
   barber_id: string;
@@ -37,7 +45,10 @@ export async function GET(req: Request) {
     const search = (url.searchParams.get("q") ?? "").trim().toLowerCase();
 
     if (!barberId) {
-      return NextResponse.json({ error: "Lipsește frizerul." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Lipsește frizerul." },
+        { status: 400, headers: PRIVATE_NO_STORE_HEADERS },
+      );
     }
 
     const context = await requireManagedBarber(barberId);
@@ -119,21 +130,24 @@ export async function GET(req: Request) {
       { pending: 0, approved: 0, rejected: 0, blocked: 0 },
     );
 
-    return NextResponse.json({
-      clients: merged,
-      totalExisting: [...rows.values()].filter((row) =>
-        isExistingClient({
-          appointmentCount: row.appointment_count,
-          accessStatus: row.access?.status,
-        }),
-      ).length,
-      statusCounts,
-    });
+    return NextResponse.json(
+      {
+        clients: merged,
+        totalExisting: [...rows.values()].filter((row) =>
+          isExistingClient({
+            appointmentCount: row.appointment_count,
+            accessStatus: row.access?.status,
+          }),
+        ).length,
+        statusCounts,
+      },
+      { headers: PRIVATE_NO_STORE_HEADERS },
+    );
   } catch (error) {
     console.error("BARBER ACCESS CLIENTS GET:", error);
     return NextResponse.json(
       { error: "Nu am putut încărca lista de clienți." },
-      { status: 500 },
+      { status: 500, headers: PRIVATE_NO_STORE_HEADERS },
     );
   }
 }

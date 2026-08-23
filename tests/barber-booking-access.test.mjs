@@ -152,3 +152,13 @@ test("accepted clients appear among existing clients before their first booking"
     );
   }
 });
+
+test("client access lists always bypass stale browser and route caches", () => {
+  const page = projectFile("app/admin/client-access/ClientAccessClient.tsx");
+  const route = projectFile("app/api/barber-access/clients/route.ts");
+
+  assert.match(page, /barber-access\/clients[\s\S]*cache: "no-store"/);
+  assert.match(route, /export const dynamic = "force-dynamic"/);
+  assert.match(route, /export const revalidate = 0/);
+  assert.match(route, /private, no-store, no-cache, max-age=0, must-revalidate/);
+});

@@ -159,7 +159,9 @@ export default function ClientAccessClient({
       });
       if (debouncedSearch) params.set("q", debouncedSearch);
 
-      const response = await fetch(`/api/barber-access/clients?${params}`);
+      const response = await fetch(`/api/barber-access/clients?${params}`, {
+        cache: "no-store",
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Nu am putut încărca lista.");
 
