@@ -27,6 +27,7 @@ import {
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
   checkBarberBookingAccess,
+  isMissingBarberAccessSchema,
   publicAccessMessage,
 } from "@/lib/barber-access/server";
 
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       client_phone,
       client_email,
       client_notes,
+      booking_context,
     } = body;
 
     if (!bookingId || !client_name || !client_phone) {
@@ -79,25 +81,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const bookingAccess = await checkBarberBookingAccess({
-      barberId: booking.barber_id,
-      phone: client_phone,
-    });
-
-    if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
-      return NextResponse.json(
-        {
-          error: publicAccessMessage(bookingAccess),
-          accessStatus: bookingAccess.status,
-        },
-        { status: 403 },
-      );
-    }
-
     let bypassMinNotice = false;
-    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
+    let isDashboardBooking = false;
+    let dashboardActorId: string | null = null;
+    const auth = booking_context === "dashboard"
+      ? await requireTenantAccess(["owner", "manager", "barber"])
+      : null;
 
-    if (!isAuthError(auth)) {
+    if (auth && isAuthError(auth)) return auth;
+
+    if (auth && !isAuthError(auth)) {
       const belongs = await barberBelongsToTenant(
         supabase,
         booking.barber_id,
@@ -106,6 +99,25 @@ export async function POST(req: Request) {
 
       if (belongs) {
         bypassMinNotice = true;
+        isDashboardBooking = true;
+        dashboardActorId = auth.user.id;
+      }
+    }
+
+    if (!isDashboardBooking) {
+      const bookingAccess = await checkBarberBookingAccess({
+        barberId: booking.barber_id,
+        phone: client_phone,
+      });
+
+      if (!bookingAccess.canBook) {
+        return NextResponse.json(
+          {
+            error: publicAccessMessage(bookingAccess),
+            accessStatus: bookingAccess.status,
+          },
+          { status: 403 },
+        );
       }
     }
 
@@ -207,18 +219,74 @@ if (!limit.allowed) {
     // =========================
     // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE
     // =========================
-    const { data, error } = await supabase
-      .from("bookings")
-      .update({
-        status: "confirmed",
-        client_name,
-        client_phone,
-        client_email: client_email || null,
-        client_notes: notes,
-      })
-      .eq("id", bookingId)
-      .select()
-      .single();
+    let data: typeof booking = null;
+    let error: { code?: string | null; message?: string | null } | null = null;
+
+    if (isDashboardBooking) {
+      const manualResult = await supabase.rpc("confirm_manual_booking_access", {
+        p_booking_id: bookingId,
+        p_client_name: client_name,
+        p_client_phone: client_phone,
+        p_client_email: client_email || null,
+        p_client_notes: notes,
+        p_actor: dashboardActorId,
+      });
+
+      data = Array.isArray(manualResult.data)
+        ? manualResult.data[0]
+        : manualResult.data;
+      error = manualResult.error;
+
+      // Safe deployment order: before the additive migration reaches the
+      // shared database, dashboard bookings keep their legacy open behavior.
+      if (error && isMissingBarberAccessSchema(error)) {
+        const fallback = await supabase
+          .from("bookings")
+          .update({
+            status: "confirmed",
+            client_name,
+            client_phone,
+            client_email: client_email || null,
+            client_notes: notes,
+          })
+          .eq("id", bookingId)
+          .select()
+          .single();
+        data = fallback.data;
+        error = fallback.error;
+      }
+    } else {
+      const publicResult = await supabase
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          client_name,
+          client_phone,
+          client_email: client_email || null,
+          client_notes: notes,
+        })
+        .eq("id", bookingId)
+        .select()
+        .single();
+      data = publicResult.data;
+      error = publicResult.error;
+    }
+
+    if (error && !isDashboardBooking) {
+      const latestAccess = await checkBarberBookingAccess({
+        barberId: booking.barber_id,
+        phone: client_phone,
+      });
+      if (!latestAccess.canBook) {
+        return NextResponse.json(
+          {
+            error: publicAccessMessage(latestAccess),
+            accessStatus: latestAccess.status,
+          },
+          { status: 403 },
+        );
+      }
+    }
 
     if (error || !data) {
       return NextResponse.json(

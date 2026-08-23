@@ -43,12 +43,22 @@ test("all three public modes exist and unknown values remain safely open", () =>
 
 test("public access rules cover open, approval-required and approved-only", () => {
   assert.equal(canBookForAccess("open", "not_found"), true);
+  assert.equal(canBookForAccess("open", "blocked"), false);
   assert.equal(canBookForAccess("approval_required", "approved"), true);
   assert.equal(canBookForAccess("approval_required", "pending"), false);
   assert.equal(canBookForAccess("approval_required", "rejected"), false);
   assert.equal(canBookForAccess("approval_required", "blocked"), false);
   assert.equal(canBookForAccess("approved_only", "approved"), true);
   assert.equal(canBookForAccess("approved_only", "not_found"), false);
+
+  assert.equal(
+    publicAccessMessage({
+      accessMode: "open",
+      status: "blocked",
+      canBook: false,
+    }),
+    "Momentan nu poți realiza o programare online la acest profesionist.",
+  );
 
   assert.equal(
     publicAccessMessage({

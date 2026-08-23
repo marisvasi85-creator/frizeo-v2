@@ -40,6 +40,7 @@ export async function POST(req: Request) {
       date,
       start_time,
       client_phone,
+      booking_context,
     } = body;
 
     if (!barber_id || !barber_service_id || !date || !start_time) {
@@ -58,19 +59,44 @@ export async function POST(req: Request) {
       );
     }
 
-    const bookingAccess = await checkBarberBookingAccess({
-      barberId: barber_id,
-      phone: typeof client_phone === "string" ? client_phone : "",
-    });
+    let isDashboardBooking = false;
+    let bypassMinNotice = false;
+    let bypassGoogleBusy = false;
+    const auth = booking_context === "dashboard"
+      ? await requireTenantAccess(["owner", "manager", "barber"])
+      : null;
 
-    if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
-      return NextResponse.json(
-        {
-          error: publicAccessMessage(bookingAccess),
-          accessStatus: bookingAccess.status,
-        },
-        { status: 403 },
+    if (auth && isAuthError(auth)) return auth;
+
+    if (auth && !isAuthError(auth)) {
+      const belongs = await barberBelongsToTenant(
+        supabase,
+        barber_id,
+        auth.tenantId,
       );
+
+      if (belongs) {
+        isDashboardBooking = true;
+        bypassMinNotice = true;
+        bypassGoogleBusy = true;
+      }
+    }
+
+    if (!isDashboardBooking) {
+      const bookingAccess = await checkBarberBookingAccess({
+        barberId: barber_id,
+        phone: typeof client_phone === "string" ? client_phone : "",
+      });
+
+      if (!bookingAccess.canBook) {
+        return NextResponse.json(
+          {
+            error: publicAccessMessage(bookingAccess),
+            accessStatus: bookingAccess.status,
+          },
+          { status: 403 },
+        );
+      }
     }
 
     const { data: service } = await supabase
@@ -115,23 +141,6 @@ export async function POST(req: Request) {
         { error: "Slot ocupat" },
         { status: 400 }
       );
-    }
-
-    let bypassMinNotice = false;
-    let bypassGoogleBusy = false;
-    const auth = await requireTenantAccess(["owner", "manager", "barber"]);
-
-    if (!isAuthError(auth)) {
-      const belongs = await barberBelongsToTenant(
-        supabase,
-        barber_id,
-        auth.tenantId,
-      );
-
-      if (belongs) {
-        bypassMinNotice = true;
-        bypassGoogleBusy = true;
-      }
     }
 
     if (!bypassGoogleBusy) {

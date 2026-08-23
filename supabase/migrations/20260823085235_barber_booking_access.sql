@@ -270,7 +270,367 @@ REVOKE ALL ON TABLE public.barber_existing_clients
 GRANT SELECT ON TABLE public.barber_existing_clients TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 6) Final database guard. Holds remain possible as `pending`, but every new
+-- 6) Atomic mode transition. Moving from `open` to a restrictive mode accepts
+--    every historical client for that barber, while `blocked` always wins.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.set_barber_booking_access_mode(
+  p_barber_id uuid,
+  p_tenant_id uuid,
+  p_mode text,
+  p_actor uuid DEFAULT NULL
+)
+RETURNS TABLE (
+  previous_mode text,
+  mode text,
+  approved_existing_count integer
+)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_previous_mode text;
+  v_approved_count integer := 0;
+BEGIN
+  IF p_mode NOT IN ('open', 'approval_required', 'approved_only') THEN
+    RAISE EXCEPTION 'BOOKING_ACCESS_INVALID_MODE';
+  END IF;
+
+  SELECT b.booking_access_mode
+  INTO v_previous_mode
+  FROM public.barbers b
+  WHERE b.id = p_barber_id
+    AND b.tenant_id = p_tenant_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BOOKING_ACCESS_BARBER_NOT_FOUND';
+  END IF;
+
+  UPDATE public.barbers
+  SET booking_access_mode = p_mode
+  WHERE id = p_barber_id
+    AND tenant_id = p_tenant_id;
+
+  IF v_previous_mode = 'open' AND p_mode <> 'open' THEN
+    INSERT INTO public.barber_client_access (
+      tenant_id,
+      barber_id,
+      phone_normalized,
+      client_name,
+      client_email,
+      status,
+      source,
+      decision_source,
+      requested_at,
+      decided_at,
+      decided_by,
+      created_by,
+      updated_by
+    )
+    SELECT
+      c.tenant_id,
+      c.barber_id,
+      c.phone_normalized,
+      coalesce(nullif(btrim(c.client_name), ''), 'Client existent'),
+      c.client_email,
+      'approved',
+      'existing_client',
+      'existing_client',
+      now(),
+      now(),
+      p_actor,
+      p_actor,
+      p_actor
+    FROM public.barber_existing_clients c
+    WHERE c.tenant_id = p_tenant_id
+      AND c.barber_id = p_barber_id
+    ON CONFLICT (barber_id, phone_normalized)
+    DO UPDATE SET
+      client_name = coalesce(
+        nullif(btrim(EXCLUDED.client_name), ''),
+        public.barber_client_access.client_name
+      ),
+      client_email = coalesce(
+        EXCLUDED.client_email,
+        public.barber_client_access.client_email
+      ),
+      status = 'approved',
+      decision_source = 'existing_client',
+      decided_at = now(),
+      decided_by = p_actor,
+      updated_by = p_actor
+    WHERE public.barber_client_access.status IN ('pending', 'rejected');
+
+    GET DIAGNOSTICS v_approved_count = ROW_COUNT;
+  END IF;
+
+  RETURN QUERY SELECT v_previous_mode, p_mode, v_approved_count;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.set_barber_booking_access_mode(
+  uuid, uuid, text, uuid
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.set_barber_booking_access_mode(
+  uuid, uuid, text, uuid
+) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 7) Dashboard/manual booking RPCs. These are the only operations allowed to
+--    bypass public access. They approve absent/pending/rejected clients in the
+--    same transaction, preserve `blocked`, and are service-role only.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.confirm_manual_booking_access(
+  p_booking_id uuid,
+  p_client_name text,
+  p_client_phone text,
+  p_client_email text,
+  p_client_notes text,
+  p_actor uuid DEFAULT NULL
+)
+RETURNS public.bookings
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_booking public.bookings;
+  v_result public.bookings;
+  v_phone text;
+  v_previous_context text;
+BEGIN
+  SELECT b.*
+  INTO v_booking
+  FROM public.bookings b
+  WHERE b.id = p_booking_id
+    AND b.status = 'pending'
+    AND b.expires_at > now()
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BOOKING_HOLD_UNAVAILABLE';
+  END IF;
+
+  v_phone := public.normalize_ro_phone(p_client_phone);
+  IF v_phone IS NULL OR nullif(btrim(p_client_name), '') IS NULL THEN
+    RAISE EXCEPTION 'BOOKING_ACCESS_INVALID_CLIENT';
+  END IF;
+
+  INSERT INTO public.barber_client_access (
+    tenant_id,
+    barber_id,
+    phone_normalized,
+    client_name,
+    client_email,
+    status,
+    source,
+    decision_source,
+    requested_at,
+    decided_at,
+    decided_by,
+    created_by,
+    updated_by
+  ) VALUES (
+    v_booking.tenant_id,
+    v_booking.barber_id,
+    v_phone,
+    btrim(p_client_name),
+    nullif(btrim(p_client_email), ''),
+    'approved',
+    'manual_admin',
+    'manual_admin',
+    now(),
+    now(),
+    p_actor,
+    p_actor,
+    p_actor
+  )
+  ON CONFLICT (barber_id, phone_normalized)
+  DO UPDATE SET
+    client_name = EXCLUDED.client_name,
+    client_email = coalesce(EXCLUDED.client_email, public.barber_client_access.client_email),
+    status = 'approved',
+    decision_source = 'manual_admin',
+    decided_at = now(),
+    decided_by = p_actor,
+    updated_by = p_actor
+  WHERE public.barber_client_access.status IN ('pending', 'rejected');
+
+  v_previous_context := current_setting('frizeo.booking_access_context', true);
+  PERFORM set_config('frizeo.booking_access_context', 'manual_dashboard', true);
+
+  UPDATE public.bookings
+  SET status = 'confirmed',
+      client_name = btrim(p_client_name),
+      client_phone = p_client_phone,
+      client_email = nullif(btrim(p_client_email), ''),
+      client_notes = p_client_notes
+  WHERE id = p_booking_id
+    AND status = 'pending'
+    AND expires_at > now()
+  RETURNING * INTO v_result;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BOOKING_HOLD_UNAVAILABLE';
+  END IF;
+
+  PERFORM set_config(
+    'frizeo.booking_access_context',
+    coalesce(v_previous_context, ''),
+    true
+  );
+
+  RETURN v_result;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.confirm_manual_booking_access(
+  uuid, text, text, text, text, uuid
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.confirm_manual_booking_access(
+  uuid, text, text, text, text, uuid
+) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.create_manual_booking_with_access(
+  p_barber_id uuid,
+  p_tenant_id uuid,
+  p_barber_service_id uuid,
+  p_date date,
+  p_start time without time zone,
+  p_client_name text,
+  p_client_phone text,
+  p_client_email text,
+  p_client_notes text,
+  p_actor uuid DEFAULT NULL
+)
+RETURNS public.bookings
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_duration integer;
+  v_end time without time zone;
+  v_phone text;
+  v_result public.bookings;
+  v_previous_context text;
+BEGIN
+  SELECT s.duration
+  INTO v_duration
+  FROM public.barber_services s
+  JOIN public.barbers b
+    ON b.id = s.barber_id
+   AND b.tenant_id = s.tenant_id
+  WHERE s.id = p_barber_service_id
+    AND s.barber_id = p_barber_id
+    AND s.tenant_id = p_tenant_id
+    AND b.active = true
+    AND coalesce(s.active, true) = true;
+
+  IF v_duration IS NULL OR v_duration < 1 THEN
+    RAISE EXCEPTION 'BOOKING_SERVICE_UNAVAILABLE';
+  END IF;
+
+  v_phone := public.normalize_ro_phone(p_client_phone);
+  IF v_phone IS NULL OR nullif(btrim(p_client_name), '') IS NULL THEN
+    RAISE EXCEPTION 'BOOKING_ACCESS_INVALID_CLIENT';
+  END IF;
+
+  INSERT INTO public.barber_client_access (
+    tenant_id,
+    barber_id,
+    phone_normalized,
+    client_name,
+    client_email,
+    status,
+    source,
+    decision_source,
+    requested_at,
+    decided_at,
+    decided_by,
+    created_by,
+    updated_by
+  ) VALUES (
+    p_tenant_id,
+    p_barber_id,
+    v_phone,
+    btrim(p_client_name),
+    nullif(btrim(p_client_email), ''),
+    'approved',
+    'manual_admin',
+    'manual_admin',
+    now(),
+    now(),
+    p_actor,
+    p_actor,
+    p_actor
+  )
+  ON CONFLICT (barber_id, phone_normalized)
+  DO UPDATE SET
+    client_name = EXCLUDED.client_name,
+    client_email = coalesce(EXCLUDED.client_email, public.barber_client_access.client_email),
+    status = 'approved',
+    decision_source = 'manual_admin',
+    decided_at = now(),
+    decided_by = p_actor,
+    updated_by = p_actor
+  WHERE public.barber_client_access.status IN ('pending', 'rejected');
+
+  v_end := (p_start + make_interval(mins => v_duration))::time;
+  v_previous_context := current_setting('frizeo.booking_access_context', true);
+  PERFORM set_config('frizeo.booking_access_context', 'manual_dashboard', true);
+
+  INSERT INTO public.bookings (
+    barber_id,
+    barber_service_id,
+    tenant_id,
+    date,
+    start_time,
+    end_time,
+    status,
+    client_name,
+    client_phone,
+    client_email,
+    client_notes,
+    cancel_token,
+    reschedule_token
+  ) VALUES (
+    p_barber_id,
+    p_barber_service_id,
+    p_tenant_id,
+    p_date,
+    p_start,
+    v_end,
+    'confirmed',
+    btrim(p_client_name),
+    p_client_phone,
+    nullif(btrim(p_client_email), ''),
+    p_client_notes,
+    gen_random_uuid(),
+    gen_random_uuid()
+  )
+  RETURNING * INTO v_result;
+
+  PERFORM set_config(
+    'frizeo.booking_access_context',
+    coalesce(v_previous_context, ''),
+    true
+  );
+
+  RETURN v_result;
+END;
+$function$;
+
+REVOKE ALL ON FUNCTION public.create_manual_booking_with_access(
+  uuid, uuid, uuid, date, time, text, text, text, text, uuid
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_manual_booking_with_access(
+  uuid, uuid, uuid, date, time, text, text, text, text, uuid
+) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 8) Final database guard. Holds remain possible as `pending`, but every new
 --    transition/insert to `confirmed` is checked. Existing confirmed bookings
 --    and atomic reschedules remain governed by their current rules.
 -- ---------------------------------------------------------------------------
@@ -310,7 +670,7 @@ BEGIN
     RAISE EXCEPTION 'BOOKING_ACCESS_BARBER_UNAVAILABLE';
   END IF;
 
-  IF v_mode = 'open' THEN
+  IF current_setting('frizeo.booking_access_context', true) = 'manual_dashboard' THEN
     RETURN NEW;
   END IF;
 
@@ -334,6 +694,21 @@ BEGIN
 
   IF v_phone IS NULL THEN
     RAISE EXCEPTION 'BOOKING_ACCESS_INVALID_PHONE';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.barber_client_access access_row
+    WHERE access_row.tenant_id = v_tenant_id
+      AND access_row.barber_id = NEW.barber_id
+      AND access_row.phone_normalized = v_phone
+      AND access_row.status = 'blocked'
+  ) THEN
+    RAISE EXCEPTION 'BOOKING_ACCESS_ONLINE_UNAVAILABLE';
+  END IF;
+
+  IF v_mode = 'open' THEN
+    RETURN NEW;
   END IF;
 
   IF NOT EXISTS (

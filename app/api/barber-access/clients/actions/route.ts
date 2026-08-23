@@ -115,6 +115,16 @@ export async function POST(req: Request) {
     const isApproval = ["approve", "bulk_approve", "approve_all_existing"].includes(
       action,
     );
+    const skippedBlocked = isApproval
+      ? requestedPhones.filter(
+          (phone) => currentByPhone.get(phone)?.status === "blocked",
+        ).length
+      : 0;
+    const actionablePhones = isApproval
+      ? requestedPhones.filter(
+          (phone) => currentByPhone.get(phone)?.status !== "blocked",
+        )
+      : requestedPhones;
     const nextStatus = isApproval
       ? "approved"
       : action === "block"
@@ -123,7 +133,7 @@ export async function POST(req: Request) {
           ? "pending"
           : "rejected";
 
-    const rows = requestedPhones.map((phone) => {
+    const rows = actionablePhones.map((phone) => {
       const current = currentByPhone.get(phone);
       const existing = existingByPhone.get(phone);
 
@@ -151,11 +161,13 @@ export async function POST(req: Request) {
       };
     });
 
-    const { error: upsertError } = await supabaseAdmin
-      .from("barber_client_access")
-      .upsert(rows, { onConflict: "barber_id,phone_normalized" });
+    if (rows.length > 0) {
+      const { error: upsertError } = await supabaseAdmin
+        .from("barber_client_access")
+        .upsert(rows, { onConflict: "barber_id,phone_normalized" });
 
-    if (upsertError) throw upsertError;
+      if (upsertError) throw upsertError;
+    }
 
     if (isApproval) {
       const newlyApproved = rows.filter(
@@ -175,6 +187,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       affected: rows.length,
+      skippedBlocked,
       status: nextStatus,
     });
   } catch (error) {

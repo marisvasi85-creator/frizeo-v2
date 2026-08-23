@@ -12,13 +12,16 @@ declare
   v_other_owner uuid := '62000000-0000-4000-8000-000000000004';
   v_barber_a uuid := '63000000-0000-4000-8000-000000000001';
   v_barber_b uuid := '63000000-0000-4000-8000-000000000002';
-  v_barber_other_tenant uuid := '63000000-0000-4000-8000-000000000003';
+  v_barber_other uuid := '63000000-0000-4000-8000-000000000003';
   v_service_a uuid := '64000000-0000-4000-8000-000000000001';
   v_service_b uuid := '64000000-0000-4000-8000-000000000002';
   v_service_other uuid := '64000000-0000-4000-8000-000000000003';
   v_existing_booking uuid := '65000000-0000-4000-8000-000000000001';
-  v_count_before integer;
-  v_count_after integer;
+  v_blocked_booking uuid := '65000000-0000-4000-8000-000000000002';
+  v_hold uuid := '65000000-0000-4000-8000-000000000003';
+  v_blocked_hold uuid := '65000000-0000-4000-8000-000000000004';
+  v_transition record;
+  v_iteration integer;
 begin
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
@@ -43,7 +46,7 @@ begin
   insert into public.barbers (id, user_id, display_name, tenant_id, slug) values
     (v_barber_a, v_owner, 'Access Barber A', v_tenant_a, 'access-barber-a'),
     (v_barber_b, v_barber_user, 'Access Barber B', v_tenant_a, 'access-barber-b'),
-    (v_barber_other_tenant, v_other_owner, 'Access Barber C', v_tenant_b, 'access-barber-c');
+    (v_barber_other, v_other_owner, 'Access Barber C', v_tenant_b, 'access-barber-c');
 
   if (select booking_access_mode from public.barbers where id = v_barber_a) <> 'open' then
     raise exception 'booking_access_default_is_not_open';
@@ -54,7 +57,7 @@ begin
   ) values
     (v_service_a, v_barber_a, v_tenant_a, 'Test', 'Test', 30, 50),
     (v_service_b, v_barber_b, v_tenant_a, 'Test', 'Test', 30, 50),
-    (v_service_other, v_barber_other_tenant, v_tenant_b, 'Test', 'Test', 30, 50);
+    (v_service_other, v_barber_other, v_tenant_b, 'Test', 'Test', 30, 50);
 
   if public.normalize_ro_phone('0745 123 456') <> '40745123456'
     or public.normalize_ro_phone('+40 745 123 456') <> '40745123456'
@@ -62,90 +65,98 @@ begin
     raise exception 'phone_normalization_failed';
   end if;
 
-  -- The current open flow remains valid and creates a normal confirmed booking.
   insert into public.bookings (
     id, barber_id, tenant_id, barber_service_id, date, start_time, end_time,
     client_name, client_phone, status
-  ) values (
-    v_existing_booking, v_barber_a, v_tenant_a, v_service_a,
-    '2099-02-01', '09:00', '09:30', 'Existing Client', '0745 123 456', 'confirmed'
-  );
+  ) values
+    (v_existing_booking, v_barber_a, v_tenant_a, v_service_a, '2099-02-01', '09:00', '09:30', 'Existing Client', '0745 123 456', 'confirmed'),
+    (v_blocked_booking, v_barber_a, v_tenant_a, v_service_a, '2099-02-02', '09:00', '09:30', 'Blocked Existing', '0745 333 333', 'confirmed');
 
   insert into public.bookings (
     barber_id, tenant_id, barber_service_id, date, start_time, end_time,
     client_name, client_phone, status
   ) values (
     v_barber_a, v_tenant_a, v_service_a,
-    '2099-02-02', '09:00', '09:30', 'Existing Client Updated', '+40 745 123 456', 'cancelled'
+    '2099-02-03', '09:00', '09:30', 'Existing Client Updated', '+40 745 123 456', 'cancelled'
   );
 
-  if (
-    select count(*) from public.barber_existing_clients
-    where tenant_id = v_tenant_a
-      and barber_id = v_barber_a
-      and phone_normalized = '40745123456'
-  ) <> 1 then
-    raise exception 'existing_client_deduplication_failed';
-  end if;
+  insert into public.barber_client_access (
+    tenant_id, barber_id, phone_normalized, client_name, status, source
+  ) values
+    (v_tenant_a, v_barber_a, '40745333333', 'Blocked Existing', 'blocked', 'manual_admin'),
+    (v_tenant_a, v_barber_b, '40745555555', 'Blocked Open Client', 'blocked', 'manual_admin');
 
-  if (
-    select appointment_count from public.barber_existing_clients
-    where tenant_id = v_tenant_a
-      and barber_id = v_barber_a
-      and phone_normalized = '40745123456'
-  ) <> 2 then
-    raise exception 'existing_client_appointment_aggregation_failed';
-  end if;
-
-  select count(*) into v_count_before from public.bookings where id = v_existing_booking;
-  update public.barbers set booking_access_mode = 'approval_required' where id in (v_barber_a, v_barber_b);
-  select count(*) into v_count_after from public.bookings where id = v_existing_booking;
-  if v_count_before <> v_count_after then
-    raise exception 'existing_booking_changed_during_mode_transition';
-  end if;
-
-  -- An existing confirmed appointment keeps the current reschedule path even
-  -- after the barber becomes restrictive.
-  perform public.reschedule_booking_safe(
-    v_existing_booking,
-    '2099-02-08',
-    '11:00',
-    'Existing Client',
-    '+40 745 123 456',
-    null,
-    null,
-    v_service_a
-  );
-  if (select status from public.bookings where id = v_existing_booking) <> 'cancelled' then
-    raise exception 'existing_booking_reschedule_failed';
-  end if;
-
-  -- Direct database creation is rejected until this barber/phone is approved.
+  -- blocked overrides even open for public self-booking.
   begin
     insert into public.bookings (
       barber_id, tenant_id, barber_service_id, date, start_time, end_time,
       client_name, client_phone, status
     ) values (
-      v_barber_a, v_tenant_a, v_service_a,
-      '2099-02-03', '09:00', '09:30', 'Unapproved', '0745 222 222', 'confirmed'
+      v_barber_b, v_tenant_a, v_service_b,
+      '2099-02-04', '09:00', '09:30', 'Blocked Open Client', '0745 555 555', 'confirmed'
     );
-    raise exception 'unapproved_direct_booking_allowed';
+    raise exception 'blocked_open_client_allowed';
   exception when others then
-    if sqlerrm = 'unapproved_direct_booking_allowed' then raise; end if;
-    if position('BOOKING_ACCESS_REQUIRED' in sqlerrm) = 0 then raise; end if;
+    if sqlerrm = 'blocked_open_client_allowed' then raise; end if;
+    if position('BOOKING_ACCESS_ONLINE_UNAVAILABLE' in sqlerrm) = 0 then raise; end if;
   end;
 
+  -- An unrelated client still uses the exact open flow.
+  insert into public.bookings (
+    barber_id, tenant_id, barber_service_id, date, start_time, end_time,
+    client_name, client_phone, status
+  ) values (
+    v_barber_b, v_tenant_a, v_service_b,
+    '2099-02-04', '10:00', '10:30', 'Open Client', '0745 666 666', 'confirmed'
+  );
+
+  -- open -> restrictive atomically accepts historical unique clients.
+  select * into v_transition
+  from public.set_barber_booking_access_mode(
+    v_barber_a, v_tenant_a, 'approval_required', v_owner
+  );
+
+  if v_transition.previous_mode <> 'open'
+    or v_transition.mode <> 'approval_required'
+    or v_transition.approved_existing_count <> 1 then
+    raise exception 'mode_transition_result_invalid';
+  end if;
+
+  if not exists (
+    select 1 from public.barber_client_access
+    where barber_id = v_barber_a
+      and phone_normalized = '40745123456'
+      and status = 'approved'
+      and source = 'existing_client'
+  ) then
+    raise exception 'existing_client_not_auto_approved';
+  end if;
+
+  if (select status from public.barber_client_access
+      where barber_id = v_barber_a and phone_normalized = '40745333333') <> 'blocked' then
+    raise exception 'blocked_overwritten_on_mode_transition';
+  end if;
+
+  select * into v_transition
+  from public.set_barber_booking_access_mode(
+    v_barber_a, v_tenant_a, 'approval_required', v_owner
+  );
+  if v_transition.approved_existing_count <> 0 then
+    raise exception 'mode_transition_not_idempotent';
+  end if;
+
+  -- Restrictive public booking allows approved only.
   insert into public.barber_client_access (
     tenant_id, barber_id, phone_normalized, client_name, status, source
   ) values (
     v_tenant_a, v_barber_a, '40745222222', 'Approval Test', 'pending', 'client_request'
   );
 
-  -- pending / rejected / blocked all remain ineligible.
-  foreach v_count_before in array array[1, 2, 3]
+  foreach v_iteration in array array[1, 2, 3]
   loop
     update public.barber_client_access
-    set status = case v_count_before when 1 then 'pending' when 2 then 'rejected' else 'blocked' end
+    set status = case v_iteration
+      when 1 then 'pending' when 2 then 'rejected' else 'blocked' end
     where barber_id = v_barber_a and phone_normalized = '40745222222';
 
     begin
@@ -154,18 +165,22 @@ begin
         client_name, client_phone, status
       ) values (
         v_barber_a, v_tenant_a, v_service_a,
-        ('2099-02-0' || (3 + v_count_before)::text)::date,
-        '10:00', '10:30', 'Approval Test', '+40745222222', 'confirmed'
+        ('2099-03-0' || v_iteration::text)::date,
+        '10:00', '10:30', 'Approval Test', '0745 222 222', 'confirmed'
       );
-      raise exception 'non_approved_status_allowed_booking';
+      raise exception 'non_approved_public_booking_allowed';
     exception when others then
-      if sqlerrm = 'non_approved_status_allowed_booking' then raise; end if;
-      if position('BOOKING_ACCESS_REQUIRED' in sqlerrm) = 0 then raise; end if;
+      if sqlerrm = 'non_approved_public_booking_allowed' then raise; end if;
+      if v_iteration = 3 then
+        if position('BOOKING_ACCESS_ONLINE_UNAVAILABLE' in sqlerrm) = 0 then raise; end if;
+      elsif position('BOOKING_ACCESS_REQUIRED' in sqlerrm) = 0 then
+        raise;
+      end if;
     end;
   end loop;
 
   update public.barber_client_access
-  set status = 'approved', decision_source = 'manual_admin', decided_at = now(), decided_by = v_owner
+  set status = 'approved', decision_source = 'manual_admin', decided_at = now()
   where barber_id = v_barber_a and phone_normalized = '40745222222';
 
   insert into public.bookings (
@@ -173,10 +188,81 @@ begin
     client_name, client_phone, status
   ) values (
     v_barber_a, v_tenant_a, v_service_a,
-    '2099-02-07', '10:00', '10:30', 'Approval Test', '0040 745 222 222', 'confirmed'
+    '2099-03-04', '10:00', '10:30', 'Approval Test', '0040 745 222 222', 'confirmed'
   );
 
-  -- Approval is per barber, never salon-wide.
+  -- Existing appointments may still be rescheduled by a blocked client.
+  perform public.reschedule_booking_safe(
+    v_blocked_booking,
+    '2099-03-05',
+    '11:00',
+    'Blocked Existing',
+    '0745 333 333',
+    null,
+    null,
+    v_service_a
+  );
+  if (select status from public.bookings where id = v_blocked_booking) <> 'cancelled' then
+    raise exception 'blocked_existing_reschedule_failed';
+  end if;
+
+  -- Manual dashboard confirmation approves pending/rejected atomically.
+  update public.barber_client_access
+  set status = 'pending'
+  where barber_id = v_barber_a and phone_normalized = '40745222222';
+
+  insert into public.bookings (
+    id, barber_id, tenant_id, barber_service_id, date, start_time, end_time,
+    status, expires_at
+  ) values (
+    v_hold, v_barber_a, v_tenant_a, v_service_a,
+    '2099-03-06', '12:00', '12:30', 'pending', now() + interval '10 minutes'
+  );
+
+  perform public.confirm_manual_booking_access(
+    v_hold, 'Manual Client', '0745 222 222', null, null, v_owner
+  );
+  if (select status from public.bookings where id = v_hold) <> 'confirmed'
+    or (select status from public.barber_client_access
+        where barber_id = v_barber_a and phone_normalized = '40745222222') <> 'approved' then
+    raise exception 'manual_confirmation_did_not_approve';
+  end if;
+
+  -- Manual booking is allowed for blocked, without clearing blocked.
+  insert into public.bookings (
+    id, barber_id, tenant_id, barber_service_id, date, start_time, end_time,
+    status, expires_at
+  ) values (
+    v_blocked_hold, v_barber_a, v_tenant_a, v_service_a,
+    '2099-03-07', '12:00', '12:30', 'pending', now() + interval '10 minutes'
+  );
+
+  perform public.confirm_manual_booking_access(
+    v_blocked_hold, 'Blocked Existing', '0745 333 333', null, null, v_owner
+  );
+  if (select status from public.bookings where id = v_blocked_hold) <> 'confirmed'
+    or (select status from public.barber_client_access
+        where barber_id = v_barber_a and phone_normalized = '40745333333') <> 'blocked' then
+    raise exception 'manual_blocked_booking_rule_failed';
+  end if;
+
+  -- Assistant/manual direct creation uses the same atomic rule.
+  insert into public.barber_client_access (
+    tenant_id, barber_id, phone_normalized, client_name, status, source
+  ) values (
+    v_tenant_a, v_barber_a, '40745777777', 'Assistant Client', 'rejected', 'client_request'
+  );
+
+  perform public.create_manual_booking_with_access(
+    v_barber_a, v_tenant_a, v_service_a, '2099-03-08', '13:00',
+    'Assistant Client', '0745 777 777', null, null, v_owner
+  );
+  if (select status from public.barber_client_access
+      where barber_id = v_barber_a and phone_normalized = '40745777777') <> 'approved' then
+    raise exception 'manual_direct_booking_did_not_approve';
+  end if;
+
+  -- Approval never leaks between barbers or tenants.
   update public.barbers set booking_access_mode = 'approved_only' where id = v_barber_b;
   begin
     insert into public.bookings (
@@ -184,7 +270,7 @@ begin
       client_name, client_phone, status
     ) values (
       v_barber_b, v_tenant_a, v_service_b,
-      '2099-02-07', '10:00', '10:30', 'Approval Test', '0745 222 222', 'confirmed'
+      '2099-03-09', '10:00', '10:30', 'Approval Test', '0745 222 222', 'confirmed'
     );
     raise exception 'approval_leaked_between_barbers';
   exception when others then
@@ -192,58 +278,6 @@ begin
     if position('BOOKING_ACCESS_REQUIRED' in sqlerrm) = 0 then raise; end if;
   end;
 
-  insert into public.barber_client_access (
-    tenant_id, barber_id, phone_normalized, client_name, status, source
-  ) values (
-    v_tenant_a, v_barber_b, '40745222222', 'Approval Test', 'approved', 'manual_admin'
-  );
-
-  insert into public.bookings (
-    barber_id, tenant_id, barber_service_id, date, start_time, end_time,
-    client_name, client_phone, status
-  ) values (
-    v_barber_b, v_tenant_a, v_service_b,
-    '2099-02-08', '10:00', '10:30', 'Approval Test', '0745 222 222', 'confirmed'
-  );
-
-  -- Atomic upsert is idempotent and the unique key prevents duplicates.
-  insert into public.barber_client_access (
-    tenant_id, barber_id, phone_normalized, client_name, status, source
-  ) values (
-    v_tenant_a, v_barber_a, '40745222222', 'Approval Test', 'approved', 'manual_admin'
-  ) on conflict (barber_id, phone_normalized)
-    do update set status = excluded.status;
-
-  if (
-    select count(*) from public.barber_client_access
-    where barber_id = v_barber_a and phone_normalized = '40745222222'
-  ) <> 1 then
-    raise exception 'duplicate_access_relationship_created';
-  end if;
-
-  -- Bulk approval is one atomic, idempotent upsert over deduplicated booking
-  -- history and creates no second client/contact table.
-  insert into public.barber_client_access (
-    tenant_id, barber_id, phone_normalized, client_name, client_email,
-    status, source, decision_source
-  )
-  select
-    tenant_id, barber_id, phone_normalized,
-    coalesce(client_name, 'Client existent'), client_email,
-    'approved', 'existing_client', 'existing_client'
-  from public.barber_existing_clients
-  where tenant_id = v_tenant_a and barber_id = v_barber_a
-  on conflict (barber_id, phone_normalized)
-  do update set status = excluded.status;
-
-  if (
-    select count(*) from public.barber_client_access
-    where barber_id = v_barber_a and status = 'approved'
-  ) <> 2 then
-    raise exception 'bulk_existing_client_approval_failed';
-  end if;
-
-  -- The composite FK prevents a relationship from carrying another tenant.
   begin
     insert into public.barber_client_access (
       tenant_id, barber_id, phone_normalized, client_name, status, source
@@ -254,25 +288,24 @@ begin
   exception when foreign_key_violation then null;
   end;
 
-  update public.barber_client_access
-  set status = 'pending'
-  where barber_id = v_barber_b and phone_normalized = '40745222222';
-
   insert into public.barber_client_access (
     tenant_id, barber_id, phone_normalized, client_name, status, source
-  ) values
-    (v_tenant_b, v_barber_other_tenant, '40745444444', 'Tenant B Client', 'pending', 'client_request');
+  ) values (
+    v_tenant_b, v_barber_other, '40745444444', 'Tenant B Client', 'pending', 'client_request'
+  );
 
   raise notice 'barber_booking_access_data_tests_ok';
 end $$;
 
--- RLS: tenant owner and manager can see tenant A, the barber only their own
--- rows, and nobody can read another tenant's access list.
+-- RLS: owner/manager see only tenant A; barber sees only their own rows.
 select set_config('request.jwt.claim.sub', '62000000-0000-4000-8000-000000000001', true);
 set local role authenticated;
 do $$
 begin
-  if (select count(*) from public.barber_client_access) <> 3 then
+  if exists (
+    select 1 from public.barber_client_access
+    where tenant_id <> '61000000-0000-4000-8000-000000000001'::uuid
+  ) or not exists (select 1 from public.barber_client_access) then
     raise exception 'owner_rls_scope_failed';
   end if;
 end $$;
@@ -282,7 +315,10 @@ select set_config('request.jwt.claim.sub', '62000000-0000-4000-8000-000000000003
 set local role authenticated;
 do $$
 begin
-  if (select count(*) from public.barber_client_access) <> 3 then
+  if exists (
+    select 1 from public.barber_client_access
+    where tenant_id <> '61000000-0000-4000-8000-000000000001'::uuid
+  ) or not exists (select 1 from public.barber_client_access) then
     raise exception 'manager_rls_scope_failed';
   end if;
 end $$;
@@ -292,11 +328,10 @@ select set_config('request.jwt.claim.sub', '62000000-0000-4000-8000-000000000002
 set local role authenticated;
 do $$
 begin
-  if (select count(*) from public.barber_client_access) <> 1
-    or exists (
-      select 1 from public.barber_client_access
-      where barber_id <> '63000000-0000-4000-8000-000000000002'::uuid
-    ) then
+  if exists (
+    select 1 from public.barber_client_access
+    where barber_id <> '63000000-0000-4000-8000-000000000002'::uuid
+  ) or not exists (select 1 from public.barber_client_access) then
     raise exception 'barber_rls_scope_failed';
   end if;
 end $$;

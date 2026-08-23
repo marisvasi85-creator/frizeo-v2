@@ -95,31 +95,28 @@ export async function PATCH(req: Request) {
     const context = await requireManagedBarber(barberId);
     if (context instanceof NextResponse) return context;
 
-    const previousMode = asBookingAccessMode(
-      context.barber.booking_access_mode,
+    const { data, error } = await supabaseAdmin.rpc(
+      "set_barber_booking_access_mode",
+      {
+        p_barber_id: barberId,
+        p_tenant_id: context.auth.tenantId,
+        p_mode: mode,
+        p_actor: context.auth.user.id,
+      },
     );
 
-    const { error } = await supabaseAdmin
-      .from("barbers")
-      .update({ booking_access_mode: mode })
-      .eq("id", barberId)
-      .eq("tenant_id", context.auth.tenantId);
-
     if (error) throw error;
-
-    const { count } = await supabaseAdmin
-      .from("barber_existing_clients")
-      .select("phone_normalized", { count: "exact", head: true })
-      .eq("tenant_id", context.auth.tenantId)
-      .eq("barber_id", barberId);
+    const transition = Array.isArray(data) ? data[0] : data;
 
     return NextResponse.json({
       success: true,
-      previousMode,
+      previousMode: asBookingAccessMode(
+        transition?.previous_mode ?? context.barber.booking_access_mode,
+      ),
       mode,
-      existingClientCount: count ?? 0,
-      needsExistingClientChoice:
-        previousMode === "open" && mode !== "open",
+      approvedExistingCount: Number(
+        transition?.approved_existing_count ?? 0,
+      ),
     });
   } catch (error) {
     console.error("BARBER ACCESS SETTINGS PATCH:", error);

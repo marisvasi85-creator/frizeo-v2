@@ -98,7 +98,6 @@ export default function ClientAccessClient() {
   const [savingMode, setSavingMode] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [transitionCount, setTransitionCount] = useState<number | null>(null);
   const existingClientsRef = useRef<HTMLDivElement>(null);
   const clientsRequestId = useRef(0);
 
@@ -204,8 +203,14 @@ export default function ClientAccessClient() {
             : barber,
         ),
       );
-      setTransitionCount(data.needsExistingClientChoice ? data.existingClientCount : null);
-      setFeedback({ tone: "success", message: "Modul de acces a fost salvat." });
+      const approvedExistingCount = Number(data.approvedExistingCount ?? 0);
+      setFeedback({
+        tone: "success",
+        message:
+          approvedExistingCount > 0
+            ? `Modul de acces a fost salvat. ${approvedExistingCount} ${approvedExistingCount === 1 ? "client existent a fost acceptat automat" : "clienți existenți au fost acceptați automat"}.`
+            : "Modul de acces a fost salvat.",
+      });
     } catch (error) {
       setFeedback({
         tone: "error",
@@ -237,9 +242,8 @@ export default function ClientAccessClient() {
 
       setFeedback({
         tone: "success",
-        message: `Actualizare aplicată pentru ${data.affected} ${data.affected === 1 ? "client" : "clienți"}.`,
+        message: `Actualizare aplicată pentru ${data.affected} ${data.affected === 1 ? "client" : "clienți"}.${data.skippedBlocked ? ` ${data.skippedBlocked} ${data.skippedBlocked === 1 ? "client blocat a fost păstrat" : "clienți blocați au fost păstrați"}.` : ""}`,
       });
-      setTransitionCount(null);
       await loadClients();
     } catch (error) {
       setFeedback({
@@ -329,7 +333,6 @@ export default function ClientAccessClient() {
                 setSelectedBarberId(nextId);
                 const nextBarber = barbers.find((barber) => barber.id === nextId);
                 if (nextBarber) setMode(nextBarber.booking_access_mode);
-                setTransitionCount(null);
               }}
             >
               {barbers.map((barber) => (
@@ -371,46 +374,6 @@ export default function ClientAccessClient() {
               : "Numai clienții acceptați anterior se pot programa; solicitările noi sunt închise."}
         </p>
       </AdminCard>
-
-      {transitionCount !== null && (
-        <AdminCard className="border-amber-400/40 bg-amber-500/10">
-          <h2 className="font-semibold">Ce facem cu clienții existenți?</h2>
-          <p className="mt-2 text-sm text-frz-muted">
-            Modul restrictiv este activ. Cei {transitionCount} clienți existenți
-            nu au fost acceptați automat, iar programările deja create nu au fost modificate.
-          </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <AdminButton
-              variant="secondary"
-              onClick={() => {
-                setFilter("existing");
-                setTransitionCount(null);
-                window.setTimeout(
-                  () => existingClientsRef.current?.scrollIntoView({ behavior: "smooth" }),
-                  50,
-                );
-              }}
-            >
-              Selectează clienții existenți
-            </AdminButton>
-            <AdminButton
-              onClick={() =>
-                void runAction(
-                  "approve_all_existing",
-                  [],
-                  `Accepți toți cei ${transitionCount} clienți existenți pentru acest frizer?`,
-                )
-              }
-              loading={actionLoading}
-            >
-              Acceptă toți clienții existenți
-            </AdminButton>
-            <AdminButton variant="ghost" onClick={() => setTransitionCount(null)}>
-              Activează fără a accepta clienți acum
-            </AdminButton>
-          </div>
-        </AdminCard>
-      )}
 
       <div ref={existingClientsRef} className="space-y-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">

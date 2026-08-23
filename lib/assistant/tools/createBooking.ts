@@ -34,10 +34,7 @@ import {
   resolveServiceForBarber,
 } from "./helpers";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
-import {
-  checkBarberBookingAccess,
-  publicAccessMessage,
-} from "@/lib/barber-access/server";
+import { isMissingBarberAccessSchema } from "@/lib/barber-access/server";
 
 function resolveDate(args: Record<string, unknown>): string | null {
   const date = asString(args.date);
@@ -280,19 +277,6 @@ export async function createBookingTool(
     };
   }
 
-  const bookingAccess = await checkBarberBookingAccess({
-    barberId: target.barberId,
-    phone: clientPhone,
-  });
-
-  if (bookingAccess.accessMode !== "open" && !bookingAccess.canBook) {
-    return {
-      ok: false,
-      summary: publicAccessMessage(bookingAccess),
-      error: "booking_access_required",
-    };
-  }
-
   const service = await resolveServiceForBarber(
     target.barberId,
     ctx.tenantId,
@@ -436,27 +420,53 @@ export async function createBookingTool(
 
   const phoneNormalized = clientPhone.replace(/\s/g, "");
 
-  const { data: booking, error } = await supabaseAdmin
-    .from("bookings")
-    .insert({
-      barber_id: target.barberId,
-      barber_service_id: service.service.id,
-      tenant_id: ctx.tenantId,
-      date,
-      start_time,
-      end_time,
-      status: "confirmed",
-      client_name: clientName,
-      client_phone: phoneNormalized,
-      client_email: clientEmail,
-      client_notes: notes,
-      cancel_token: crypto.randomUUID(),
-      reschedule_token: crypto.randomUUID(),
-    })
-    .select(
-      "id, date, start_time, end_time, client_name, client_phone, barber_id, tenant_id, cancel_token, reschedule_token",
-    )
-    .single();
+  const manualResult = await supabaseAdmin.rpc(
+    "create_manual_booking_with_access",
+    {
+      p_barber_id: target.barberId,
+      p_tenant_id: ctx.tenantId,
+      p_barber_service_id: service.service.id,
+      p_date: date,
+      p_start: start_time,
+      p_client_name: clientName,
+      p_client_phone: phoneNormalized,
+      p_client_email: clientEmail,
+      p_client_notes: notes,
+      p_actor: ctx.userId,
+    },
+  );
+
+  let booking = Array.isArray(manualResult.data)
+    ? manualResult.data[0]
+    : manualResult.data;
+  let error = manualResult.error;
+
+  // The Preview deployment can precede the additive shared-DB migration.
+  if (error && isMissingBarberAccessSchema(error)) {
+    const fallback = await supabaseAdmin
+      .from("bookings")
+      .insert({
+        barber_id: target.barberId,
+        barber_service_id: service.service.id,
+        tenant_id: ctx.tenantId,
+        date,
+        start_time,
+        end_time,
+        status: "confirmed",
+        client_name: clientName,
+        client_phone: phoneNormalized,
+        client_email: clientEmail,
+        client_notes: notes,
+        cancel_token: crypto.randomUUID(),
+        reschedule_token: crypto.randomUUID(),
+      })
+      .select(
+        "id, date, start_time, end_time, client_name, client_phone, barber_id, tenant_id, cancel_token, reschedule_token",
+      )
+      .single();
+    booking = fallback.data;
+    error = fallback.error;
+  }
 
   if (error || !booking) {
     return {

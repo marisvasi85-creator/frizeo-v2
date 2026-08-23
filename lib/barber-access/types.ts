@@ -30,6 +30,7 @@ export function canBookForAccess(
   mode: BookingAccessMode,
   status: PublicAccessStatus,
 ): boolean {
+  if (status === "blocked") return false;
   return mode === "open" || status === "approved";
 }
 
@@ -37,7 +38,7 @@ export function publicAccessMessage(result: PublicAccessResult): string {
   if (result.canBook) return "Poți continua către programare.";
   if (result.status === "pending") return "Cerere în așteptare";
   if (result.status === "blocked") {
-    return "Accesul la programări este blocat pentru acest număr.";
+    return "Momentan nu poți realiza o programare online la acest profesionist.";
   }
   if (result.status === "rejected") {
     return "Solicitarea anterioară nu a fost acceptată. Pentru o nouă evaluare, contactează direct profesionistul.";

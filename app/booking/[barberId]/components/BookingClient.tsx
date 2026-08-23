@@ -16,13 +16,40 @@ import {
   loadSavedClientDetails,
   saveSavedClientDetails,
 } from "@/lib/bookings/savedClientDetails";
-import BookingAccessPrompt from "@/app/booking/_components/BookingAccessPrompt";
-import type { BookingAccessMode } from "@/lib/barber-access/types";
+import type {
+  BookingAccessMode,
+  PublicAccessStatus,
+} from "@/lib/barber-access/types";
 import { isValidRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
 
 function isValidPhone(phone: string) {
   return isValidRomanianPhone(phone);
 }
+
+type BookingService = {
+  id: string;
+  display_name: string;
+  duration: number;
+};
+
+type WeeklyScheduleRow = {
+  day_of_week: number;
+  is_working?: boolean | null;
+};
+
+type DayOverrideRow = {
+  date: string;
+  is_closed?: boolean | null;
+  [key: string]: unknown;
+};
+
+type RawSlot = {
+  type: string;
+  time?: string;
+  end?: string;
+  start?: string;
+  booking?: { end_time?: string | null };
+};
 
 export default function BookingClient({
   barberId,
@@ -38,12 +65,12 @@ export default function BookingClient({
   const [date, setDate] = useState<string | null>(null);
   const [serviceId, setServiceId] = useState<string | null>(null);
 
-  const [services, setServices] = useState<any[]>([]);
+  const [services, setServices] = useState<BookingService[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
 
-  const [weeklySchedule, setWeeklySchedule] = useState<any[]>([]);
-  const [overrides, setOverrides] = useState<any[]>([]);
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleRow[]>([]);
+  const [overrides, setOverrides] = useState<DayOverrideRow[]>([]);
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [vacationPeriods, setVacationPeriods] = useState<VacationPeriod[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
@@ -58,7 +85,10 @@ export default function BookingClient({
   const [notes, setNotes] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
-  const [accessGranted, setAccessGranted] = useState(accessMode === "open");
+  const [accessStatus, setAccessStatus] = useState<PublicAccessStatus | null>(null);
+  const [referral, setReferral] = useState("");
+  const [requestMessage, setRequestMessage] = useState("");
+  const [requestLoading, setRequestLoading] = useState(false);
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -75,7 +105,6 @@ export default function BookingClient({
   }, []);
 
   useEffect(() => {
-    if (!accessGranted) return;
     const ac = new AbortController();
 
     fetch(`/api/services?barberId=${barberId}`, { signal: ac.signal })
@@ -92,10 +121,9 @@ export default function BookingClient({
       });
 
     return () => ac.abort();
-  }, [barberId, accessGranted]);
+  }, [barberId]);
 
   useEffect(() => {
-    if (!accessGranted) return;
     const ac = new AbortController();
 
     const load = async () => {
@@ -134,7 +162,7 @@ export default function BookingClient({
 
     load();
     return () => ac.abort();
-  }, [barberId, serviceId, accessGranted]);
+  }, [barberId, serviceId]);
 
   useEffect(() => {
     if (!serviceId || !date) return;
@@ -147,7 +175,6 @@ export default function BookingClient({
   }, [availableDays, date, serviceId]);
 
   useEffect(() => {
-    if (!accessGranted) return;
     if (!date || !serviceId) return;
 
     const cacheKey = `${date}_${serviceId}`;
@@ -169,9 +196,10 @@ export default function BookingClient({
       .then((d) => {
         if (ac.signal.aborted) return;
 
-        const fixed: Slot[] = (d.slots || [])
-          .map((s: any) => {
+        const fixed: Slot[] = ((d.slots || []) as RawSlot[])
+          .map((s): Slot | null => {
             if (s.type === "booking") {
+              if (!s.time) return null;
               return {
                 type: "booking",
                 time: s.time,
@@ -179,17 +207,19 @@ export default function BookingClient({
                   s.end ||
                   s.booking?.end_time?.slice(0, 5) ||
                   s.time,
-                booking: s.booking,
+                booking: s.booking ?? {},
               };
             }
 
             if (s.type === "break") {
+              if (!s.start || !s.end) return null;
               return { type: "break", start: s.start, end: s.end };
             }
 
+            if (!s.time) return null;
             return { type: "free", time: s.time };
           })
-          .filter((s: Slot) => s.type === "free");
+          .filter((s): s is Extract<Slot, { type: "free" }> => s?.type === "free");
 
         slotsCache.current[cacheKey] = fixed;
         setSlots(fixed);
@@ -205,7 +235,50 @@ export default function BookingClient({
       });
 
     return () => ac.abort();
-  }, [date, serviceId, barberId, accessGranted]);
+  }, [date, serviceId, barberId]);
+
+  async function submitAccessRequest() {
+    setBookingError("");
+
+    if (!name.trim() || !isValidPhone(phone)) {
+      setBookingError("Completează numele și un număr de telefon valid.");
+      return;
+    }
+
+    setRequestLoading(true);
+    try {
+      const response = await fetch("/api/public/barber-access/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          barberId,
+          name: name.trim(),
+          phone,
+          email: email.trim() || null,
+          referral: referral.trim() || null,
+          message: requestMessage.trim() || null,
+        }),
+      });
+      const data = await response.json();
+
+      if (data.status) setAccessStatus(data.status as PublicAccessStatus);
+      if (!response.ok) {
+        setBookingError(data.error || "Nu am putut trimite solicitarea.");
+        return;
+      }
+
+      saveSavedClientDetails({
+        name: name.trim(),
+        phone: phone.replace(/\s/g, ""),
+        email: email.trim(),
+      });
+      setBookingError(data.message || "Cererea a fost trimisă.");
+    } catch {
+      setBookingError("Eroare de conexiune. Încearcă din nou.");
+    } finally {
+      setRequestLoading(false);
+    }
+  }
 
   function handleDateChange(value: string) {
     if (!serviceId) {
@@ -285,6 +358,9 @@ export default function BookingClient({
       const holdData = await hold.json();
 
       if (!hold.ok) {
+        if (holdData.accessStatus) {
+          setAccessStatus(holdData.accessStatus as PublicAccessStatus);
+        }
         setBookingError(holdData.error || "Slotul nu mai este disponibil.");
         return;
       }
@@ -304,6 +380,9 @@ export default function BookingClient({
       const createData = await create.json();
 
       if (!create.ok) {
+        if (createData.accessStatus) {
+          setAccessStatus(createData.accessStatus as PublicAccessStatus);
+        }
         setBookingError(createData.error || "Nu am putut salva programarea.");
         return;
       }
@@ -324,30 +403,6 @@ export default function BookingClient({
       setBookingLoading(false);
     }
   };
-
-  if (!accessGranted && accessMode !== "open") {
-    return (
-      <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">
-        <div className="text-center">
-          <h1 className="text-3xl font-semibold">Programează-te</h1>
-          <p className="text-frz-muted mt-1">
-            la <span className="font-medium text-frz-ink">{barberName}</span>
-          </p>
-        </div>
-        <BookingAccessPrompt
-          barberId={barberId}
-          mode={accessMode}
-          presentation="embedded"
-          onApproved={(details) => {
-            setName(details.name);
-            setPhone(details.phone);
-            setEmail(details.email);
-            setAccessGranted(true);
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">
@@ -473,7 +528,11 @@ export default function BookingClient({
             placeholder="Telefon (07xxxxxxxx)"
             type="tel"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setAccessStatus(null);
+              setBookingError("");
+            }}
             autoComplete="tel"
             className="w-full p-3 border border-frz-line rounded-xl bg-frz-card text-frz-ink placeholder:text-frz-muted outline-none transition focus:ring-2 focus:ring-frz-ink/10 focus:border-frz-ink/25"
           />
@@ -496,7 +555,49 @@ export default function BookingClient({
           />
 
           {bookingError && (
-            <p className="text-frz-danger text-sm">{bookingError}</p>
+            <p
+              className={`rounded-xl border p-3 text-sm ${
+                accessStatus === "pending"
+                  ? "border-amber-300/50 bg-amber-500/10 text-frz-ink"
+                  : "border-frz-danger/30 bg-frz-danger/5 text-frz-danger"
+              }`}
+            >
+              {bookingError}
+            </p>
+          )}
+
+          {accessMode === "approval_required" && accessStatus === "not_found" && (
+            <div className="space-y-3 rounded-2xl border border-frz-line bg-frz-fog p-4">
+              <div>
+                <p className="font-medium">Solicită acces pentru programări</p>
+                <p className="mt-1 text-sm text-frz-muted">
+                  Folosim numele, telefonul și e-mailul completate mai sus. Poți adăuga opțional o recomandare sau un mesaj.
+                </p>
+              </div>
+              <input
+                value={referral}
+                onChange={(event) => setReferral(event.target.value)}
+                placeholder="Cine te-a recomandat? (opțional)"
+                maxLength={240}
+                className="w-full rounded-xl border border-frz-line bg-frz-card p-3 text-frz-ink outline-none focus:border-frz-ink/30 focus:ring-2 focus:ring-frz-ink/10"
+              />
+              <textarea
+                value={requestMessage}
+                onChange={(event) => setRequestMessage(event.target.value)}
+                placeholder="Mesaj pentru frizer (opțional)"
+                rows={3}
+                maxLength={1200}
+                className="w-full resize-y rounded-xl border border-frz-line bg-frz-card p-3 text-frz-ink outline-none focus:border-frz-ink/30 focus:ring-2 focus:ring-frz-ink/10"
+              />
+              <button
+                type="button"
+                onClick={() => void submitAccessRequest()}
+                disabled={requestLoading}
+                className="w-full rounded-xl border border-frz-ink bg-frz-card px-4 py-3 font-medium text-frz-ink disabled:opacity-60"
+              >
+                {requestLoading ? "Se trimite solicitarea..." : "Trimite solicitarea"}
+              </button>
+            </div>
           )}
 
           <button

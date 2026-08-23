@@ -205,6 +205,7 @@ export default function AddBookingClient({
           start_time: selectedSlot,
           end_time: endTime,
           client_phone: phone,
+          booking_context: "dashboard",
         }),
       });
 
@@ -222,6 +223,7 @@ export default function AddBookingClient({
           client_phone: phone,
           client_email: email || null,
           client_notes: notes.trim() || null,
+          booking_context: "dashboard",
         }),
       });
 

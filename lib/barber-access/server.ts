@@ -26,6 +26,7 @@ export function isMissingBarberAccessSchema(error: {
   return (
     error.code === "42703" ||
     error.code === "42P01" ||
+    error.code === "PGRST202" ||
     Boolean(
       error.message?.includes("booking_access_mode") ||
         error.message?.includes("barber_client_access") ||
@@ -115,16 +116,6 @@ export async function checkBarberBookingAccess(input: {
     };
   }
 
-  if (mode === "open") {
-    return {
-      accessMode: mode,
-      status: "approved",
-      canBook: true,
-      tenantId: barber.tenant_id,
-      schemaReady,
-    };
-  }
-
   const phoneNormalized = normalizeRomanianPhone(input.phone);
   if (!phoneNormalized) {
     return {
@@ -144,6 +135,15 @@ export async function checkBarberBookingAccess(input: {
     .eq("phone_normalized", phoneNormalized)
     .maybeSingle();
 
+  if (error && isMissingBarberAccessSchema(error)) {
+    return {
+      accessMode: "open",
+      status: "not_found",
+      canBook: true,
+      tenantId: barber.tenant_id,
+      schemaReady: false,
+    };
+  }
   if (error) throw error;
 
   const status = (data?.status as ClientAccessStatus | undefined) ?? "not_found";
