@@ -156,7 +156,7 @@ test("GET is read-only and only the explicit POST route calls the accept RPC wra
 
 test("migration enforces hash-only, service-role access and atomic status priority", async () => {
   const sql = await readSource(
-    "supabase/migrations/20260823112417_barber_access_quick_approval.sql",
+    "supabase/migrations/20260823115806_barber_access_quick_approval.sql",
   );
   const blockedCheck = sql.indexOf("v_access.status = 'blocked'");
   const approvalUpdate = sql.indexOf("UPDATE public.barber_client_access a", blockedCheck);
@@ -188,7 +188,7 @@ test("migration enforces hash-only, service-role access and atomic status priori
 
 test("a token is bound to its exact request and cannot select another barber/client", async () => {
   const sql = await readSource(
-    "supabase/migrations/20260823112417_barber_access_quick_approval.sql",
+    "supabase/migrations/20260823115806_barber_access_quick_approval.sql",
   );
   const acceptFunction = sql.slice(
     sql.indexOf("CREATE OR REPLACE FUNCTION public.accept_barber_access_request_token"),

@@ -1,6 +1,6 @@
 -- Per-barber SMS opt-in and one-time quick approval links for client access.
--- IMPORTANT: staging and production currently share one database. This file is
--- intentionally committed without being applied remotely.
+-- IMPORTANT: staging and production currently share one database. Applied
+-- remotely only after the owner's explicit confirmation.
 
 BEGIN;
 
