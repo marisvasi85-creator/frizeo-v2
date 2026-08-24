@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { EMAIL_NAV_ITEMS, emailHref, isEmailNavActive } from "./emailNav";
+import { EMAIL_NAV_ITEMS, isEmailNavActive } from "./emailNav";
+import { useEmailHref } from "./EmailPathContext";
 
 export default function EmailSidebar({
   backUrl,
@@ -12,6 +13,7 @@ export default function EmailSidebar({
   showOwnerAnalytics: boolean;
 }) {
   const pathname = usePathname();
+  const hrefFor = useEmailHref();
 
   return (
     <aside className="hidden md:flex w-64 border-r border-frz-line p-6 flex-col justify-between bg-frz-card">
@@ -27,7 +29,7 @@ export default function EmailSidebar({
           {EMAIL_NAV_ITEMS.filter(
             (item) => !item.ownerOnly || showOwnerAnalytics,
           ).map((item) => {
-            const href = emailHref(item.path);
+            const href = hrefFor(item.path);
             const active = isEmailNavActive(pathname, item.path);
             return (
               <Link

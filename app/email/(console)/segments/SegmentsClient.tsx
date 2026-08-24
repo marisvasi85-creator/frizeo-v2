@@ -16,6 +16,7 @@ import type {
   MarketingSegmentOperator,
   MarketingSegmentSummary,
 } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../components/EmailPathContext";
 
 type SegmentForm = {
   name: string;
@@ -168,6 +169,7 @@ export default function SegmentsClient({
   initialSegments: MarketingSegmentSummary[];
 }) {
   const router = useRouter();
+  const hrefFor = useEmailHref();
   const [segments, setSegments] = useState(initialSegments);
   const [selected, setSelected] = useState<MarketingSegment | null>(null);
   const [members, setMembers] = useState<MarketingSegmentMember[]>([]);
@@ -354,7 +356,7 @@ export default function SegmentsClient({
         setError(data.error || "Nu am putut crea draftul.");
         return;
       }
-      router.push(`/email/campaigns/${data.campaign.id}`);
+      router.push(hrefFor(`/campaigns/${data.campaign.id}`));
     } catch {
       setError("Eroare de rețea la crearea campaniei.");
       setBusyId(null);

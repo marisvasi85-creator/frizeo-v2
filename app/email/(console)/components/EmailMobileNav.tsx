@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { EMAIL_NAV_ITEMS, emailHref, isEmailNavActive } from "./emailNav";
+import { EMAIL_NAV_ITEMS, isEmailNavActive } from "./emailNav";
+import { useEmailHref } from "./EmailPathContext";
 
 export default function EmailMobileNav({
   showOwnerAnalytics,
@@ -11,6 +12,7 @@ export default function EmailMobileNav({
   showOwnerAnalytics: boolean;
 }) {
   const pathname = usePathname();
+  const hrefFor = useEmailHref();
   const [open, setOpen] = useState(false);
 
   const visibleItems = EMAIL_NAV_ITEMS.filter(
@@ -42,7 +44,7 @@ export default function EmailMobileNav({
             {moreItems.map((item) => (
               <Link
                 key={item.path}
-                href={emailHref(item.path)}
+                href={hrefFor(item.path)}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-frz-fog"
               >
@@ -61,7 +63,7 @@ export default function EmailMobileNav({
             return (
               <li key={item.path || "dashboard"}>
                 <Link
-                  href={emailHref(item.path)}
+                  href={hrefFor(item.path)}
                   className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[11px] ${
                     active ? "text-frz-ink" : "text-frz-ink/40"
                   }`}

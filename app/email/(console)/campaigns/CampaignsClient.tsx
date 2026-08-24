@@ -8,6 +8,7 @@ import type {
   MarketingEmailTemplate,
   MarketingSegmentSummary,
 } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../components/EmailPathContext";
 
 function statusClass(status: string): string {
   const colors: Record<string, string> = {
@@ -33,6 +34,7 @@ export default function CampaignsClient({
   segments: MarketingSegmentSummary[];
 }) {
   const router = useRouter();
+  const hrefFor = useEmailHref();
   const [pending, startTransition] = useTransition();
   const [showCreate, setShowCreate] = useState(false);
   const systemTemplates = templates.filter((item) => item.is_system_template);
@@ -61,7 +63,7 @@ export default function CampaignsClient({
       setError(data.error || "Nu am putut crea campania.");
       return;
     }
-    router.push(`/email/campaigns/${data.campaign.id}`);
+    router.push(hrefFor(`/campaigns/${data.campaign.id}`));
   };
 
   const remove = async (campaign: MarketingCampaign) => {
@@ -98,7 +100,7 @@ export default function CampaignsClient({
       setError(data.error || "Nu am putut duplica campania.");
       return;
     }
-    router.push(`/email/campaigns/${data.campaign.id}`);
+    router.push(hrefFor(`/campaigns/${data.campaign.id}`));
   };
 
   const cancel = async (campaign: MarketingCampaign) => {
@@ -130,7 +132,7 @@ export default function CampaignsClient({
         </div>
         <div className="flex gap-2">
           <Link
-            href="/email/campaigns/templates"
+            href={hrefFor("/campaigns/templates")}
             className="rounded-lg border border-frz-line px-4 py-2 text-sm text-frz-ink/80 hover:bg-frz-fog"
           >
             Templates
@@ -239,7 +241,7 @@ export default function CampaignsClient({
                 <tr key={campaign.id} className="border-t border-frz-line/50">
                   <td className="px-4 py-3">
                     <Link
-                      href={`/email/campaigns/${campaign.id}`}
+                      href={hrefFor(`/campaigns/${campaign.id}`)}
                       className="font-medium hover:underline"
                     >
                       {campaign.name}
@@ -269,14 +271,14 @@ export default function CampaignsClient({
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
                       <Link
-                        href={`/email/campaigns/${campaign.id}`}
+                        href={hrefFor(`/campaigns/${campaign.id}`)}
                         className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog"
                       >
                         View
                       </Link>
                       {campaign.status === "draft" && (
                         <Link
-                          href={`/email/campaigns/${campaign.id}`}
+                          href={hrefFor(`/campaigns/${campaign.id}`)}
                           className="rounded-md border border-frz-line px-2.5 py-1.5 text-xs hover:bg-frz-fog"
                         >
                           Edit

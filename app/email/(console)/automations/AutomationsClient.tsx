@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { MarketingAutomationSummary } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../components/EmailPathContext";
 
 function delayLabel(minutes: number): string {
   if (minutes <= 0) return "Immediate";
@@ -24,6 +25,7 @@ export default function AutomationsClient({
   initialAutomations: MarketingAutomationSummary[];
 }) {
   const router = useRouter();
+  const hrefFor = useEmailHref();
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,7 +152,7 @@ export default function AutomationsClient({
                         {automation.is_active ? "Pause" : "Activate"}
                       </button>
                       <Link
-                        href={`/email/automations/${automation.id}`}
+                        href={hrefFor(`/automations/${automation.id}`)}
                         className="rounded-lg bg-frz-ink px-2.5 py-1 text-xs font-medium text-frz-ink-contrast hover:bg-frz-fog"
                       >
                         View / Runs

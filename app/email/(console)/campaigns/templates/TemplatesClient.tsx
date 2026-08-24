@@ -9,6 +9,7 @@ import {
   resolveMarketingTemplateVariables,
 } from "@/lib/frizeo-email/templateVariables";
 import type { MarketingEmailTemplate } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../../components/EmailPathContext";
 
 type TemplateDraft = Pick<
   MarketingEmailTemplate,
@@ -55,6 +56,7 @@ export default function TemplatesClient({
   initialTemplates: MarketingEmailTemplate[];
 }) {
   const router = useRouter();
+  const hrefFor = useEmailHref();
   const [templates, setTemplates] = useState(initialTemplates);
   const [selectedId, setSelectedId] = useState<string | null>(
     initialTemplates[0]?.id ?? null,
@@ -193,7 +195,7 @@ export default function TemplatesClient({
         setError(data.error || "Nu am putut crea campania.");
         return;
       }
-      router.push(`/email/campaigns/${data.campaign.id}`);
+      router.push(hrefFor(`/campaigns/${data.campaign.id}`));
     } catch {
       setError("Eroare de rețea la crearea campaniei.");
       setSaving(false);
@@ -237,7 +239,7 @@ export default function TemplatesClient({
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <Link
-            href="/email/campaigns"
+            href={hrefFor("/campaigns")}
             className="text-xs text-frz-muted hover:text-frz-ink"
           >
             ← Campaigns

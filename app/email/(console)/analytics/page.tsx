@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import {
   ANALYTICS_RANGES,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/analytics/dashboard";
 import { isAnalyticsOwnerEmail } from "@/lib/analytics/ownerAccess";
 import { getEmailSession } from "@/lib/frizeo-email/access";
+import { emailHref } from "../components/emailNav";
 
 type PageProps = {
   searchParams: Promise<{ range?: string }>;
@@ -148,8 +150,11 @@ function DailyChart({ daily }: { daily: AnalyticsDashboard["daily"] }) {
 
 export default async function OwnerAnalyticsPage({ searchParams }: PageProps) {
   const session = await getEmailSession();
-  if (!session.ok || !isAnalyticsOwnerEmail(session.email)) redirect("/email");
-
+  if (!session.ok || !isAnalyticsOwnerEmail(session.email)) {
+    const h = await headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    redirect(emailHref("/", { host }));
+  }
   const { range: rangeParam } = await searchParams;
   const range = parseAnalyticsRange(rangeParam);
   let data: AnalyticsDashboard | null = null;
@@ -186,6 +191,9 @@ export default async function OwnerAnalyticsPage({ searchParams }: PageProps) {
     unsubscribed: 0,
   };
 
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+
   return (
     <div className="mx-auto max-w-6xl space-y-8">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -207,7 +215,7 @@ export default async function OwnerAnalyticsPage({ searchParams }: PageProps) {
           {ANALYTICS_RANGES.map((days) => (
             <Link
               key={days}
-              href={`/email/analytics?range=${days}`}
+              href={emailHref(`/analytics?range=${days}`, { host })}
               className={`rounded-md px-3 py-1.5 text-xs transition ${
                 range === days
                   ? "bg-frz-ink text-frz-ink-contrast"

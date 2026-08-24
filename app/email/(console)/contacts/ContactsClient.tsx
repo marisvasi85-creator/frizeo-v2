@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketingContact } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../components/EmailPathContext";
 
 type Props = {
   initialContacts: MarketingContact[];
@@ -31,6 +32,7 @@ export default function ContactsClient({
   initialQuery,
 }: Props) {
   const router = useRouter();
+  const hrefFor = useEmailHref();
   const [pending, startTransition] = useTransition();
   const contacts = initialContacts;
   const total = initialTotal;
@@ -74,8 +76,9 @@ export default function ContactsClient({
     if (source !== "all") params.set("source", source);
     if (consent !== "all") params.set("consent", consent);
     setSelectedIds(new Set());
+    const qs = params.toString();
     startTransition(() => {
-      router.push(`/email/contacts?${params.toString()}`);
+      router.push(hrefFor(qs ? `/contacts?${qs}` : "/contacts"));
     });
   };
 

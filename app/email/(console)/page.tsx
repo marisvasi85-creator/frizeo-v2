@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { getContactStats } from "@/lib/frizeo-email/contacts";
 import { getCampaignDashboardData } from "@/lib/frizeo-email/campaigns";
 import { getConversionStatsLastDays } from "@/lib/frizeo-email/attribution";
+import { emailHref } from "./components/emailNav";
 
 function StatCard({ label, value }: { label: string; value: number | string }) {
   return (
@@ -54,6 +56,10 @@ export default async function EmailDashboardPage() {
         ? e.message
         : "Nu am putut încărca statisticile (rulează migrarea Supabase).";
   }
+
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const campaignsHref = emailHref("/campaigns", { host });
 
   return (
     <div className="space-y-8 max-w-5xl">
@@ -112,7 +118,7 @@ export default async function EmailDashboardPage() {
             </p>
           </div>
           <Link
-            href="/email/campaigns"
+            href={campaignsHref}
             className="text-sm text-frz-ink/70 hover:text-frz-ink"
           >
             Vezi Campaigns →
@@ -147,7 +153,7 @@ export default async function EmailDashboardPage() {
                   <tr key={campaign.id} className="border-t border-frz-line/50">
                     <td className="px-4 py-3">
                       <Link
-                        href={`/email/campaigns/${campaign.id}`}
+                        href={emailHref(`/campaigns/${campaign.id}`, { host })}
                         className="font-medium hover:underline"
                       >
                         {campaign.name}

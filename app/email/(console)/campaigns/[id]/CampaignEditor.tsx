@@ -17,6 +17,7 @@ import type {
   MarketingSegmentSummary,
   MarketingTestContactOption,
 } from "@/lib/frizeo-email/types";
+import { useEmailHref } from "../../components/EmailPathContext";
 
 type Props = {
   initialCampaign: MarketingCampaign;
@@ -80,6 +81,7 @@ export default function CampaignEditor({
   initialProgress,
   initialConversions,
 }: Props) {
+  const hrefFor = useEmailHref();
   const [campaignStatus, setCampaignStatus] = useState(initialCampaign.status);
   const editable = campaignStatus === "draft";
   const [draft, setDraft] = useState(() => campaignDraft(initialCampaign));
@@ -465,7 +467,7 @@ export default function CampaignEditor({
       <header className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <Link
-            href="/email/campaigns"
+            href={hrefFor("/campaigns")}
             className="text-xs text-frz-muted hover:text-frz-ink"
           >
             ← Campaigns

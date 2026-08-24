@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { headers } from "next/headers";
 import {
   getAutomation,
   listAutomationRuns,
@@ -7,6 +8,7 @@ import {
 import { getConversionStatsForAutomation } from "@/lib/frizeo-email/attribution";
 import { getEmailTemplate } from "@/lib/frizeo-email/templates";
 import AutomationDetailClient from "./AutomationDetailClient";
+import { emailHref } from "../../components/emailNav";
 
 type Params = Promise<{ id: string }>;
 
@@ -40,10 +42,13 @@ export default async function AutomationDetailPage({
     currency: "RON",
   }));
 
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+
   return (
     <div className="space-y-4 max-w-6xl">
       <Link
-        href="/email/automations"
+        href={emailHref("/automations", { host })}
         className="text-sm text-frz-ink/60 hover:text-frz-ink"
       >
         ← Automations
