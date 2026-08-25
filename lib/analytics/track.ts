@@ -16,6 +16,7 @@ declare global {
     __frizeoGaReady?: boolean;
     __frizeoTikTokReady?: boolean;
     __frizeoClarityReady?: boolean;
+    __frizeoClarityBooted?: boolean;
   }
 }
 
@@ -192,9 +193,21 @@ export function markAnalyticsReady() {
 
   if (config.clarityProjectId) {
     window.__frizeoClarityReady = true;
+    grantClarityConsent();
   }
 
   flushPendingTrackers();
+}
+
+/** EEA/UK/CH require an explicit Clarity consent signal to set session cookies. */
+export function grantClarityConsent() {
+  if (typeof window === "undefined" || typeof window.clarity !== "function") {
+    return;
+  }
+  window.clarity("consentv2", {
+    ad_Storage: "granted",
+    analytics_Storage: "granted",
+  });
 }
 
 export function trackPageView(pathname: string, search = "") {

@@ -11,6 +11,7 @@ import {
 } from "@/lib/analytics/firstParty";
 import {
   flushPendingTrackers,
+  grantClarityConsent,
   markAnalyticsReady,
   trackPageView,
 } from "@/lib/analytics/track";
@@ -78,6 +79,12 @@ function AnalyticsInner() {
     trackPageView(pathname, searchParams.toString());
   }, [pathname, searchParams, consent, ready, isAdminRoute, isSensitiveRoute]);
 
+  // Keep Clarity session cookies active once Frizeo consent is granted (EEA).
+  useEffect(() => {
+    if (!consent || isSensitiveRoute || !config.clarityProjectId) return;
+    grantClarityConsent();
+  }, [consent, isSensitiveRoute, config.clarityProjectId, ready]);
+
   function onScriptLoaded() {
     markAnalyticsReady();
     setReady(true);
@@ -85,7 +92,9 @@ function AnalyticsInner() {
 
   if (isSensitiveRoute || !consent || !config.isConfigured) return null;
 
-  const usesClarity = Boolean(config.clarityProjectId) && !isAdminRoute;
+  // Keep Clarity mounted across routes (including /admin) so SPA sessions
+  // are not torn down on soft navigation. Init only once via boot guard.
+  const usesClarity = Boolean(config.clarityProjectId);
   const clarityScript = usesClarity ? (
     <Script
       id="microsoft-clarity"
@@ -94,9 +103,17 @@ function AnalyticsInner() {
     >
       {`
         (function(c,l,a,r,i,t,y){
+          if (c.__frizeoClarityBooted) {
+            if (typeof c[a] === 'function') {
+              c[a]('consentv2', { ad_Storage: 'granted', analytics_Storage: 'granted' });
+            }
+            return;
+          }
+          c.__frizeoClarityBooted = true;
           c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
           t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
           y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          c[a]('consentv2', { ad_Storage: 'granted', analytics_Storage: 'granted' });
         })(window, document, "clarity", "script", ${JSON.stringify(config.clarityProjectId)});
       `}
     </Script>
