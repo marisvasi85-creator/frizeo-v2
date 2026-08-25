@@ -6,6 +6,7 @@ declare global {
   interface Window {
     fbq?: (...args: unknown[]) => void;
     gtag?: (...args: unknown[]) => void;
+    clarity?: (...args: unknown[]) => void;
     ttq?: {
       page?: () => void;
       track?: (event: string, params?: EventParams) => void;
@@ -14,6 +15,7 @@ declare global {
     __frizeoMetaReady?: boolean;
     __frizeoGaReady?: boolean;
     __frizeoTikTokReady?: boolean;
+    __frizeoClarityReady?: boolean;
   }
 }
 
@@ -186,6 +188,10 @@ export function markAnalyticsReady() {
 
   if (config.tiktokPixelId) {
     window.__frizeoTikTokReady = true;
+  }
+
+  if (config.clarityProjectId) {
+    window.__frizeoClarityReady = true;
   }
 
   flushPendingTrackers();

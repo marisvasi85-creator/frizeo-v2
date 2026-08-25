@@ -258,6 +258,7 @@ export default function PrivacyPage() {
         <li>Google Analytics;</li>
         <li>Meta Pixel;</li>
         <li>TikTok Pixel;</li>
+        <li>Microsoft Clarity;</li>
         <li>alte cookie-uri de marketing.</li>
       </ul>
       <p>
@@ -290,6 +291,7 @@ export default function PrivacyPage() {
         <li>Notion (sincronizare internă operațională, când este configurată)</li>
         <li>Meta Platforms</li>
         <li>TikTok</li>
+        <li>Microsoft (Microsoft Clarity)</li>
       </ul>
       <p>
         Datele sunt transmise numai în măsura necesară furnizării serviciilor.

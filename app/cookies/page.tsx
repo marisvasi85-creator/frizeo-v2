@@ -58,6 +58,10 @@ export default function CookiesPage() {
           <strong>Google Analytics 4</strong> — statistici anonime de trafic
           (Google Ireland Ltd.)
         </li>
+        <li>
+          <strong>Microsoft Clarity</strong> — statistici de utilizare și
+          înregistrări de sesiune (Microsoft Corporation)
+        </li>
       </ul>
       <p>
         Aceste cookie-uri se activează <strong>doar după consimțământ</strong>.

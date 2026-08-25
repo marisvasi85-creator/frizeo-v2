@@ -42,7 +42,13 @@ function AnalyticsInner() {
 
     const poll = window.setInterval(() => {
       flushPendingTrackers();
-      if (window.fbq || window.ttq || window.gtag || window.dataLayer) {
+      if (
+        window.fbq ||
+        window.ttq ||
+        window.gtag ||
+        window.dataLayer ||
+        window.clarity
+      ) {
         markAnalyticsReady();
         setReady(true);
       }
@@ -79,6 +85,23 @@ function AnalyticsInner() {
 
   if (isSensitiveRoute || !consent || !config.isConfigured) return null;
 
+  const usesClarity = Boolean(config.clarityProjectId) && !isAdminRoute;
+  const clarityScript = usesClarity ? (
+    <Script
+      id="microsoft-clarity"
+      strategy="afterInteractive"
+      onLoad={onScriptLoaded}
+    >
+      {`
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", ${JSON.stringify(config.clarityProjectId)});
+      `}
+    </Script>
+  ) : null;
+
   if (config.gtmId) {
     return (
       <>
@@ -100,6 +123,7 @@ function AnalyticsInner() {
             title="Google Tag Manager"
           />
         </noscript>
+        {clarityScript}
       </>
     );
   }
@@ -200,6 +224,8 @@ function AnalyticsInner() {
           `}
         </Script>
       )}
+
+      {clarityScript}
     </>
   );
 }
