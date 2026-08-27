@@ -182,6 +182,7 @@ export default function BookingClient({
 
     if (slotsCache.current[cacheKey] && !isToday) {
       setSlots(slotsCache.current[cacheKey]);
+      setLoadingSlots(false);
       return;
     }
 
@@ -288,6 +289,9 @@ export default function BookingClient({
 
     setServiceFirstError("");
     setDate(value);
+    setSelectedSlot(null);
+    setSlots([]);
+    setLoadingSlots(true);
 
     setTimeout(() => {
       slotsRef.current?.scrollIntoView({
@@ -418,8 +422,23 @@ export default function BookingClient({
       )}
 
       {services.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-sm text-frz-muted font-medium">1. Alege serviciul</p>
+        <div
+          className={`space-y-3 rounded-2xl p-1 ${
+            !serviceId ? "ring-2 ring-frz-accent/35 ring-offset-2 ring-offset-frz-bg" : ""
+          }`}
+        >
+          <p
+            className={`text-base font-bold text-frz-ink ${
+              !serviceId ? "animate-frz-attention" : ""
+            }`}
+          >
+            1. Alege serviciul
+          </p>
+          {!serviceId && (
+            <p className="text-sm font-medium text-frz-accent animate-frz-attention">
+              Începe de aici — selectează serviciul dorit
+            </p>
+          )}
           {services.map((s) => (
             <button
               key={s.id}
@@ -428,10 +447,14 @@ export default function BookingClient({
               className={`w-full p-4 rounded-xl border border-frz-line transition ${
                 serviceId === s.id
                   ? "bg-frz-ink text-frz-ink-contrast border-frz-ink"
-                  : "bg-frz-card hover:bg-frz-fog text-frz-ink"
+                  : !serviceId
+                    ? "bg-frz-card hover:bg-frz-fog text-frz-ink shadow-sm"
+                    : "bg-frz-card hover:bg-frz-fog text-frz-ink"
               }`}
             >
-              {s.display_name} ({s.duration} min)
+              <span className={!serviceId ? "font-semibold" : undefined}>
+                {s.display_name} ({s.duration} min)
+              </span>
             </button>
           ))}
         </div>
@@ -439,7 +462,15 @@ export default function BookingClient({
 
       {services.length > 0 && (
         <div ref={calendarRef} className="space-y-3">
-          <p className="text-sm text-frz-muted font-medium">2. Alege data</p>
+          <p
+            className={
+              serviceId && loadingAvailability
+                ? "text-base font-bold text-frz-ink animate-frz-attention"
+                : "text-sm font-medium text-frz-muted"
+            }
+          >
+            2. Alege data
+          </p>
 
           {serviceFirstError && (
             <p className="text-frz-danger text-sm text-center">
@@ -448,9 +479,30 @@ export default function BookingClient({
           )}
 
           {loadingAvailability ? (
-            <p className="text-sm text-frz-muted text-center">
-              Se încarcă zilele disponibile...
-            </p>
+            <div
+              className="rounded-2xl border border-frz-accent/30 bg-frz-accent-soft/40 p-4 space-y-4"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <p className="text-center text-base font-bold text-frz-ink animate-frz-attention">
+                Se încarcă zilele disponibile...
+              </p>
+              <p className="text-center text-sm font-medium text-frz-steel animate-frz-loading-glow">
+                Te rugăm să aștepți — pregătim calendarul
+              </p>
+              <div className="rounded-xl border border-frz-line bg-frz-card p-3 space-y-2">
+                <div className="h-4 w-1/3 mx-auto rounded bg-frz-fog animate-pulse" />
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: 28 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square rounded-lg bg-frz-fog animate-pulse"
+                      style={{ animationDelay: `${(i % 7) * 60}ms` }}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : serviceId && availableDays.length === 0 ? (
             <div className="space-y-3">
               {vacationPeriods.length > 0 && (
@@ -487,22 +539,53 @@ export default function BookingClient({
 
       {serviceId && date && (loadingSlots || slots.length > 0) && (
         <div ref={slotsRef} className="space-y-3">
-          <p className="text-sm text-frz-muted font-medium">3. Alege ora</p>
-          <SlotPicker
-            variant="light"
-            slots={slots}
-            selected={selectedSlot}
-            onSelect={(slot) => {
-              setSelectedSlot(slot);
-              setTimeout(() => {
-                formRef.current?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "center",
-                });
-              }, 200);
-            }}
-            loading={loadingSlots}
-          />
+          <p
+            className={
+              loadingSlots
+                ? "text-base font-bold text-frz-ink animate-frz-attention"
+                : "text-sm font-medium text-frz-muted"
+            }
+          >
+            3. Alege ora
+          </p>
+          {loadingSlots && (
+            <div
+              className="rounded-2xl border border-frz-accent/30 bg-frz-accent-soft/40 p-4 space-y-3"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <p className="text-center text-base font-bold text-frz-ink animate-frz-attention">
+                Se încarcă orele disponibile...
+              </p>
+              <p className="text-center text-sm font-medium text-frz-steel animate-frz-loading-glow">
+                Pregătim locurile libere pentru ziua selectată
+              </p>
+              <SlotPicker
+                variant="light"
+                slots={[]}
+                selected={null}
+                onSelect={() => {}}
+                loading
+              />
+            </div>
+          )}
+          {!loadingSlots && (
+            <SlotPicker
+              variant="light"
+              slots={slots}
+              selected={selectedSlot}
+              onSelect={(slot) => {
+                setSelectedSlot(slot);
+                setTimeout(() => {
+                  formRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "center",
+                  });
+                }, 200);
+              }}
+              loading={false}
+            />
+          )}
         </div>
       )}
 

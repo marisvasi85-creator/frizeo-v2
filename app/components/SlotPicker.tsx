@@ -24,11 +24,14 @@ export default function SlotPicker({
   // =========================
   if (loading) {
     return (
-      <div className="grid grid-cols-3 gap-3 mt-4">
+      <div className="grid grid-cols-3 gap-3 mt-1" aria-hidden="true">
         {Array.from({ length: 9 }).map((_, i) => (
           <div
             key={i}
-            className="h-12 rounded-xl animate-pulse bg-frz-fog"
+            className={`h-12 rounded-xl animate-pulse border border-frz-line/60 ${
+              isLight ? "bg-frz-card" : "bg-frz-fog"
+            }`}
+            style={{ animationDelay: `${(i % 3) * 90}ms` }}
           />
         ))}
       </div>

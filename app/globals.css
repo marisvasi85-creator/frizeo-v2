@@ -178,6 +178,37 @@ body {
   animation: shake 0.4s ease-in-out;
 }
 
+/* Soft attention pulse for booking step prompts */
+@keyframes frzAttentionPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.015);
+  }
+}
+
+.animate-frz-attention {
+  animation: frzAttentionPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes frzLoadingGlow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-frz-loading-glow {
+  animation: frzLoadingGlow 1.2s ease-in-out infinite;
+}
+
 input[type="date"],
 input[type="time"] {
   color-scheme: light dark;
