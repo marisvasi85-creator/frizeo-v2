@@ -132,7 +132,7 @@ export const AUTOMATION_LANE_META: Record<
   },
   countdown: {
     title: "Countdown trial",
-    subtitle: `Zi calendaristică ${AUTOMATION_SCHEDULE_TIMEZONE} față de trial_ends_at`,
+    subtitle: `Se programează din timp pe data ${AUTOMATION_SCHEDULE_TIMEZONE}; dacă worker-ul a lipsit, se trimite la următorul run (fără a intra pe fereastra mesajului următor)`,
   },
   winback: {
     title: "După expirarea trialului",
@@ -189,10 +189,10 @@ export function describeAutomationWhen(
   }
 
   if (automation.trigger_type === "trial_ending_7_days") {
-    return "Când mai sunt exact 7 zile de trial";
+    return "Cu 7 zile înainte de finalul trialului";
   }
   if (automation.trigger_type === "trial_ending_3_days") {
-    return "Când mai sunt exact 3 zile de trial";
+    return "Cu 3 zile înainte de finalul trialului";
   }
   if (automation.trigger_type === "trial_last_day") {
     return "În ultima zi de trial";

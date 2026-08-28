@@ -56,6 +56,13 @@ const fixSql = readFileSync(
   ),
   "utf8",
 );
+const catchupSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260828140000_fix_automation_catchup_primary_contact.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const workerTs = readFileSync(
   new URL("../lib/frizeo-email/automationWorker.ts", import.meta.url),
   "utf8",
@@ -91,12 +98,25 @@ test("system automations map each day to the expected template", () => {
 });
 
 test("trial countdown uses Bucharest calendar dates, not timestamptz::date", () => {
-  assert.match(fixSql, /marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today \+ 7/);
-  assert.match(fixSql, /marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today \+ 3/);
-  assert.match(fixSql, /marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today/);
-  assert.doesNotMatch(
+  assert.match(
     fixSql,
-    /AND subscription\.trial_ends_at::date = v_today \+ 7/,
+    /marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today \+ 7/,
+  );
+  assert.match(
+    fixSql,
+    /marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today \+ 3/,
+  );
+  assert.match(
+    catchupSql,
+    /marketing_bucharest_date\(subscription\.trial_ends_at\) >= v_today \+ 4/,
+  );
+  assert.match(
+    catchupSql,
+    /marketing_primary_contact_id\(contact\.tenant_id\)/,
+  );
+  assert.doesNotMatch(
+    catchupSql,
+    /AND public\.marketing_bucharest_date\(subscription\.trial_ends_at\) = v_today \+ 7/,
   );
 });
 
@@ -110,6 +130,14 @@ test("worker sends the claimed automation template, not a campaign body", () => 
   assert.match(workerTs, /contentFromClaim\(run\)/);
   assert.match(workerTs, /kind: "marketing-automation"/);
   assert.match(workerTs, /utmCampaign: run\.automation_key/);
+});
+
+test("segment facts use Bucharest trial dates and one latest subscription", () => {
+  assert.match(
+    catchupSql,
+    /public\.marketing_bucharest_date\(subscription\.trial_ends_at\) = clock\.today \+ 7/,
+  );
+  assert.match(catchupSql, /LEFT JOIN LATERAL/);
 });
 
 test("trial ending at 00:30 Bucharest is a different UTC calendar day", () => {

@@ -108,6 +108,18 @@ begin
     v_user,
     v_tenant,
     now() - interval '2 days'
+  ), (
+    '61000000-0000-4000-8000-000000000022',
+    'schedule.secondary@example.com',
+    'Secondary',
+    'frizeo_user',
+    'subscribed',
+    true,
+    'test',
+    now(),
+    v_user,
+    v_tenant,
+    now() - interval '1 day'
   );
 
   select id into v_welcome
@@ -137,11 +149,76 @@ begin
 
   if exists (
     select 1 from public.marketing_automation_runs
+    where automation_id = v_trial7
+      and contact_id = '61000000-0000-4000-8000-000000000022'
+      and is_test = false
+  ) then
+    raise exception 'trial_7_sent_to_secondary_contact';
+  end if;
+
+  if (
+    select count(*) from public.marketing_automation_runs
+    where automation_id = v_trial7
+      and tenant_id = v_tenant
+      and is_test = false
+  ) <> 1 then
+    raise exception 'trial_7_not_unique_per_tenant';
+  end if;
+
+  if not exists (
+    select 1 from public.marketing_automation_runs
     where automation_id = v_trial3
       and contact_id = v_contact
       and is_test = false
+      and scheduled_for > now()
   ) then
-    raise exception 'trial_3_discovered_on_7_day_fixture';
+    raise exception 'trial_3_not_scheduled_ahead_on_7_day_fixture';
+  end if;
+
+  insert into public.tenants (id, name, slug)
+  values ('62000000-0000-4000-8000-000000000023', 'Schedule Catchup', 'schedule-catchup');
+
+  insert into public.subscriptions (
+    tenant_id, plan_id, status, stripe_subscription_id, trial_ends_at, created_at
+  ) values (
+    '62000000-0000-4000-8000-000000000023',
+    v_plan_id,
+    'trialing',
+    null,
+    timezone(
+      'Europe/Bucharest',
+      ((v_today + 5)::timestamp + interval '30 minutes')
+    ),
+    now() - interval '20 days'
+  );
+
+  insert into public.marketing_contacts (
+    id, email, first_name, source, status, marketing_consent, consent_source,
+    consent_at, user_id, tenant_id, created_at
+  ) values (
+    '61000000-0000-4000-8000-000000000023',
+    'schedule.catchup@example.com',
+    'Catchup',
+    'frizeo_user',
+    'subscribed',
+    true,
+    'test',
+    now(),
+    v_user,
+    '62000000-0000-4000-8000-000000000023',
+    now() - interval '20 days'
+  );
+
+  perform public.discover_marketing_automation_runs(50);
+
+  if not exists (
+    select 1 from public.marketing_automation_runs
+    where automation_id = v_trial7
+      and contact_id = '61000000-0000-4000-8000-000000000023'
+      and is_test = false
+      and scheduled_for < now()
+  ) then
+    raise exception 'trial_7_catchup_not_scheduled_when_5_days_remain';
   end if;
 
   update public.marketing_automation_runs
