@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { MarketingAutomationSummary } from "@/lib/frizeo-email/types";
 import { useEmailHref } from "../components/EmailPathContext";
+import AutomationScheduleSchema from "./AutomationScheduleSchema";
 
 function delayLabel(minutes: number): string {
   if (minutes <= 0) return "Immediate";
@@ -70,6 +71,11 @@ export default function AutomationsClient({
           {error}
         </p>
       )}
+
+      <AutomationScheduleSchema
+        automations={initialAutomations}
+        hrefFor={hrefFor}
+      />
 
       <div className="overflow-x-auto rounded-xl border border-frz-line">
         <table className="min-w-full text-sm">
