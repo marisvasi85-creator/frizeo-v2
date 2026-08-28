@@ -111,3 +111,16 @@ test("worker sends the claimed automation template, not a campaign body", () => 
   assert.match(workerTs, /kind: "marketing-automation"/);
   assert.match(workerTs, /utmCampaign: run\.automation_key/);
 });
+
+test("trial ending at 00:30 Bucharest is a different UTC calendar day", () => {
+  const trialEnd = new Date("2026-09-03T21:30:00.000Z");
+  const utc = trialEnd.toISOString().slice(0, 10);
+  const bucharest = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Bucharest",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(trialEnd);
+  assert.equal(utc, "2026-09-03");
+  assert.equal(bucharest, "2026-09-04");
+});
