@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { buildSendMailOptions } from "@/lib/email/buildSendMailOptions";
 
 export const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
@@ -33,19 +34,13 @@ export async function sendEmail({
 }: SendEmailArgs) {
   if (!to) return;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM,
-    to,
-    subject,
-    html,
-    ...(icsContent
-      ? {
-          icalEvent: {
-            method: "PUBLISH",
-            filename: icsFilename,
-            content: icsContent,
-          },
-        }
-      : {}),
-  });
+  await transporter.sendMail(
+    buildSendMailOptions({
+      to,
+      subject,
+      html,
+      icsContent,
+      icsFilename,
+    }),
+  );
 }

@@ -187,7 +187,7 @@ export function calendarEmailButtonsHtml(opts: {
           Descarcă pentru Apple / Outlook
         </a>
         <p style="font-size:12px; color:#777; margin:8px 0 0 0;">
-          Am atașat și fișierul .ics la acest email — pe telefon, deschide-l ca să salvezi programarea.
+          Folosește un singur buton (sau atașamentul .ics). Dacă apeși și Google Calendar, și fișierul .ics, programarea apare de două ori.
         </p>
       </div>
   `;
