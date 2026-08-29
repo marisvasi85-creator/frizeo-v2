@@ -18,7 +18,7 @@ import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTokens";
 import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
-import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import { confirmPendingHold } from "@/lib/bookings/confirmPendingHold";
 import {
   requireManagedBarber,
 } from "@/lib/barber-access/authorization";
@@ -207,10 +207,11 @@ if (!limit.allowed) {
     const notes = normalizeClientNotes(client_notes);
 
     // =========================
-    // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE
+    // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE (atomic: un singur winner trimite notificări)
     // =========================
     let data: typeof booking = null;
     let error: { code?: string | null; message?: string | null } | null = null;
+    let didConfirm = false;
 
     if (isDashboardBooking) {
       const manualResult = await supabase.rpc("confirm_manual_booking_access", {
@@ -230,36 +231,53 @@ if (!limit.allowed) {
       // Safe deployment order: before the additive migration reaches the
       // shared database, dashboard bookings keep their legacy open behavior.
       if (error && isMissingBarberAccessSchema(error)) {
-        const fallback = await supabase
-          .from("bookings")
-          .update({
-            status: "confirmed",
-            client_name,
-            client_phone,
-            client_email: client_email || null,
-            client_notes: notes,
-          })
-          .eq("id", bookingId)
-          .select()
-          .single();
-        data = fallback.data;
-        error = fallback.error;
-      }
-    } else {
-      const publicResult = await supabase
-        .from("bookings")
-        .update({
-          status: "confirmed",
+        const fallback = await confirmPendingHold(supabase, {
+          bookingId,
           client_name,
           client_phone,
-          client_email: client_email || null,
+          client_email,
           client_notes: notes,
-        })
-        .eq("id", bookingId)
-        .select()
-        .single();
-      data = publicResult.data;
-      error = publicResult.error;
+        });
+        if (fallback.ok) {
+          data = fallback.booking as typeof booking;
+          error = null;
+          didConfirm = fallback.didConfirm;
+        } else {
+          data = null;
+          error = fallback.error as typeof error;
+        }
+      } else if (data) {
+        didConfirm = true;
+      } else {
+        const { data: existing } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("id", bookingId)
+          .eq("status", "confirmed")
+          .maybeSingle();
+        if (existing) {
+          data = existing;
+          error = null;
+          didConfirm = false;
+        }
+      }
+    } else {
+      const publicResult = await confirmPendingHold(supabase, {
+        bookingId,
+        client_name,
+        client_phone,
+        client_email,
+        client_notes: notes,
+      });
+
+      if (publicResult.ok) {
+        data = publicResult.booking as typeof booking;
+        didConfirm = publicResult.didConfirm;
+        error = null;
+      } else {
+        data = null;
+        error = publicResult.error as typeof error;
+      }
     }
 
     if (error && !isDashboardBooking) {
@@ -283,6 +301,18 @@ if (!limit.allowed) {
         { error: "Eroare confirmare booking" },
         { status: 400 }
       );
+    }
+
+    const replayTokens = await ensureBookingClientTokens(data.id);
+
+    // A concurrent retry already confirmed this hold — return success
+    // without sending a second email, SMS, or Google Calendar event.
+    if (!didConfirm) {
+      return NextResponse.json({
+        success: true,
+        bookingId: data.id,
+        cancelToken: replayTokens?.cancel_token ?? data.cancel_token ?? null,
+      });
     }
 
     // =========================
@@ -333,7 +363,7 @@ if (!limit.allowed) {
     const formattedDate = new Date(data.date).toLocaleDateString("ro-RO");
     const formattedTime = data.start_time?.slice(0, 5);
 
-    const tokens = await ensureBookingClientTokens(data.id);
+    const tokens = replayTokens;
     const bookingForUrls = {
       ...data,
       cancel_token: tokens?.cancel_token ?? data.cancel_token,

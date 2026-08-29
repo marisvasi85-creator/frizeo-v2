@@ -8,6 +8,7 @@ type BookingForSync = {
   date: string;
   start_time: string;
   end_time: string;
+  google_event_id?: string | null;
 };
 
 function toGoogleDateTime(date: string, time: string): string {
@@ -25,6 +26,10 @@ export async function syncBookingToGoogleCalendar(
     notes?: string | null;
   },
 ): Promise<string | null> {
+  if (booking.google_event_id) {
+    return booking.google_event_id;
+  }
+
   const tokens = await getAccessTokenForBarber(supabase, booking.barber_id);
   if (!tokens) {
     console.error("GOOGLE SYNC: no tokens for barber", booking.barber_id);

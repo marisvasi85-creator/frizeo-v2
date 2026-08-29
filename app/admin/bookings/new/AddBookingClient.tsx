@@ -54,6 +54,7 @@ export default function AddBookingClient({
   const [notes, setNotes] = useState("");
 
   const slotsCache = useRef<Record<string, Slot[]>>({});
+  const bookingInFlight = useRef(false);
 
   useEffect(() => {
     async function loadAvailability() {
@@ -168,6 +169,8 @@ export default function AddBookingClient({
   }
 
   async function createBooking() {
+    if (bookingInFlight.current || saving) return;
+
     if (!selectedSlot || !date || !serviceId) return;
 
     if (!name.trim()) {
@@ -179,6 +182,8 @@ export default function AddBookingClient({
       alert("Introdu telefonul");
       return;
     }
+
+    bookingInFlight.current = true;
 
     try {
       setSaving(true);
@@ -236,6 +241,7 @@ export default function AddBookingClient({
       setSaving(false);
       window.setTimeout(() => router.push("/admin/bookings"), 700);
     } catch (err: any) {
+      bookingInFlight.current = false;
       alert(err.message || "Eroare");
       setSaving(false);
     }

@@ -94,6 +94,7 @@ export default function BookingClient({
   const calendarRef = useRef<HTMLDivElement>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const bookingInFlight = useRef(false);
 
   useEffect(() => {
     const saved = loadSavedClientDetails();
@@ -317,6 +318,8 @@ export default function BookingClient({
   }
 
   const createBooking = async () => {
+    if (bookingInFlight.current) return;
+
     setBookingError("");
 
     if (!selectedSlot || !date || !serviceId) return;
@@ -331,7 +334,10 @@ export default function BookingClient({
       return;
     }
 
+    bookingInFlight.current = true;
     setBookingLoading(true);
+
+    let succeeded = false;
 
     try {
       const service = services.find((s) => s.id === serviceId);
@@ -401,9 +407,11 @@ export default function BookingClient({
         ? `?t=${encodeURIComponent(createData.cancelToken)}`
         : "";
       router.push(`/booking/confirmed/${createData.bookingId}${tokenQs}`);
+      succeeded = true;
     } catch {
       setBookingError("Eroare de conexiune. Încearcă din nou.");
     } finally {
+      if (!succeeded) bookingInFlight.current = false;
       setBookingLoading(false);
     }
   };
