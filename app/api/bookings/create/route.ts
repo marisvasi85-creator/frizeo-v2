@@ -19,6 +19,7 @@ import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTok
 import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { confirmPendingHold } from "@/lib/bookings/confirmPendingHold";
+import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import {
   requireManagedBarber,
 } from "@/lib/barber-access/authorization";
