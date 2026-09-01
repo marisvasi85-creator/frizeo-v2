@@ -10,12 +10,14 @@ export default function MobileNav({
   actsAsBarber = true,
   assistantEnabled = false,
   platformAssistantEnabled = false,
+  platformTestimonialsEnabled = false,
   frizeoEmailEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
+  platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
 }) {
   const pathname = usePathname();
@@ -27,6 +29,7 @@ export default function MobileNav({
     actsAsBarber,
     assistantEnabled,
     platformAssistantEnabled,
+    platformTestimonialsEnabled,
     frizeoEmailEnabled,
   });
 

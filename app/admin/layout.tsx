@@ -13,6 +13,7 @@ import {
 import { isPlatformAssistantEnabled } from "@/lib/platform-assistant/config";
 import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
 import { isPlatformAdminEmail } from "@/lib/auth/requirePlatformAdmin";
+import { isMarketingTestimonialsEnabled } from "@/lib/marketing-testimonials/config";
 import { pwaManifestHref } from "@/lib/pwa/manifestContent";
 import { SITE_NAME } from "@/lib/site/metadata";
 
@@ -52,6 +53,9 @@ export default async function AdminLayout({
   const platformAssistantEnabled =
     isPlatformAssistantEnabled() &&
     isPlatformCreatorEmail(session.user.email);
+  const platformTestimonialsEnabled =
+    isMarketingTestimonialsEnabled() &&
+    isPlatformCreatorEmail(session.user.email);
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
 
   return (
@@ -61,6 +65,7 @@ export default async function AdminLayout({
         actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
+        platformTestimonialsEnabled={platformTestimonialsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
       />
 
@@ -73,6 +78,7 @@ export default async function AdminLayout({
         actsAsBarber={actsAsBarber}
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
+        platformTestimonialsEnabled={platformTestimonialsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
       />
       {assistantEnabled && (

@@ -13,7 +13,10 @@ import { SITE_NAME } from "@/lib/site/metadata";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 import BookingHeroVisual from "./components/BookingHeroVisual";
 import BarbershopTeamSection from "./components/BarbershopTeamSection";
+import FrizeoTestimonialsSection from "./components/FrizeoTestimonialsSection";
 import ProductScreens from "./components/ProductScreens";
+import { isMarketingTestimonialsEnabled } from "@/lib/marketing-testimonials/config";
+import { listApprovedMarketingTestimonials } from "@/lib/marketing-testimonials/queries";
 
 const LANDING_VIDEO_ID = "do-k1cNkCOg";
 
@@ -72,7 +75,12 @@ function InlineCta({
   );
 }
 
-export default function Page() {
+export default async function Page() {
+  const testimonialsEnabled = isMarketingTestimonialsEnabled();
+  const testimonials = testimonialsEnabled
+    ? await listApprovedMarketingTestimonials()
+    : [];
+
   return (
     <>
       <JsonLd
@@ -591,6 +599,10 @@ export default function Page() {
             </ul>
           </div>
         </section>
+
+        {testimonialsEnabled && (
+          <FrizeoTestimonialsSection testimonials={testimonials} />
+        )}
 
         {/* 11. COMPARAȚIE */}
         <section className="border-t border-[var(--mkt-line)] bg-[var(--mkt-fog)] px-6 py-20">
