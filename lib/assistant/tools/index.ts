@@ -1,8 +1,11 @@
 import type { AssistantToolDefinition } from "../types";
+import { bookingLinkTool } from "./bookingLink";
 import { cancelBookingTool } from "./cancelBooking";
+import { clientHistoryTool } from "./clientHistory";
 import { createBookingTool } from "./createBooking";
 import { createServiceTool } from "./createService";
 import { findSlotsTool } from "./findSlots";
+import { inviteBarberTool } from "./inviteBarber";
 import { listBarbersTool } from "./listBarbers";
 import { listBookingsTool } from "./listBookings";
 import { listServicesTool } from "./listServices";
@@ -11,6 +14,7 @@ import {
   getTodayBriefingTool,
 } from "./nextBooking";
 import { popularServicesTool } from "./popularServices";
+import { productHelpTool } from "./productHelp";
 import { rescheduleBookingTool } from "./rescheduleBooking";
 import {
   closeDayTool,
@@ -20,7 +24,14 @@ import {
   openDayTool,
 } from "./scheduleTools";
 import { subscriptionStatusTool } from "./subscriptionStatus";
-import { updateBookingTool } from "./updateBooking";
+import {
+  deactivateServiceTool,
+  updateServiceTool,
+} from "./updateService";
+import {
+  listWeeklyScheduleTool,
+  updateWeeklyScheduleTool,
+} from "./weeklySchedule";
 
 const BARBER_ID_PROP = {
   type: "string",
@@ -74,7 +85,7 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "list_bookings",
     description:
-      "Listează programările salonului pe o perioadă (azi, mâine, săptămâna asta sau un interval de date). Nu include programările anulate.",
+      "Listează programările pe o perioadă (azi, mâine, săptămâna, interval). Caută după telefon sau nume. Implicit fără anulate; include_cancelled=true le include. Limită max 100.",
     parameters: {
       type: "object",
       properties: {
@@ -96,6 +107,23 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description:
             "Filtrează pe numele frizerului (opțional; fără filtru = tot salonul).",
+        },
+        client_phone: {
+          type: "string",
+          description:
+            "Caută după telefon (07… sau +40…). Fără date = ultimele 90 zile + 30 înainte.",
+        },
+        client_name: {
+          type: "string",
+          description: "Caută după nume client (parțial).",
+        },
+        include_cancelled: {
+          type: "boolean",
+          description: "Include și programările anulate. Implicit false.",
+        },
+        limit: {
+          type: "number",
+          description: "Câte programări (implicit 50, max 100).",
         },
       },
     },
@@ -285,7 +313,7 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "reschedule_booking",
     description:
-      "Reprogramare ghidată: găsește programarea (booking_id sau client_name), propune ore libere pe o dată nouă, apoi mută după confirmare. Preferă acest tool față de update_booking când utilizatorul zice „mută-l pe X pe mâine”.",
+      "Reprogramare ghidată: găsește programarea (booking_id, client_name sau telefon), propune ore libere, apoi mută după confirmare. Folosește ÎNTOTDEAUNA acest tool (nu update_booking) când utilizatorul zice „mută-l”.",
     parameters: {
       type: "object",
       properties: {
@@ -337,7 +365,7 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
   {
     name: "update_booking",
     description:
-      "Mută o programare pe altă dată/oră când ai booking_id (sau client_name) + dată + oră. Pentru flux ghidat, preferă reschedule_booking. Confirmarea finală se face din butoanele UI.",
+      "Alias intern pentru reschedule_booking. NU-l apela din chat — folosește reschedule_booking.",
     parameters: {
       type: "object",
       properties: {
@@ -361,15 +389,22 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
           type: "string",
           description: "Opțional: schimbă și serviciul.",
         },
+        client_phone: {
+          type: "string",
+          description: "Telefon opțional pentru dezambiguizare.",
+        },
+        when: {
+          type: "string",
+          enum: ["today", "tomorrow"],
+        },
         confirmed: {
           type: "boolean",
           description:
             "Nu seta true din chat — confirmarea vine din butoanele UI.",
         },
       },
-      required: ["date", "start_time"],
     },
-    execute: updateBookingTool,
+    execute: rescheduleBookingTool,
   },
   {
     name: "cancel_booking",
@@ -529,6 +564,174 @@ export const ASSISTANT_TOOLS: AssistantToolDefinition[] = [
     },
     execute: deleteVacationTool,
   },
+  {
+    name: "booking_link",
+    description:
+      "Returnează URL-ul public de programare (salon sau frizer), gata de copiat. Folosește la „care e link-ul”, Instagram bio, WhatsApp.",
+    parameters: {
+      type: "object",
+      properties: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        for_me: {
+          type: "boolean",
+          description: "true = link-ul frizerului curent, nu al salonului.",
+        },
+      },
+    },
+    execute: bookingLinkTool,
+  },
+  {
+    name: "list_weekly_schedule",
+    description:
+      "Citește programul săptămânal Luni–Duminică (1=Luni … 7=Duminică) și modul weekly/selective.",
+    parameters: {
+      type: "object",
+      properties: {
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+      },
+    },
+    execute: listWeeklyScheduleTool,
+  },
+  {
+    name: "update_weekly_schedule",
+    description:
+      "Modifică O ZI din programul săptămânal (nu o dată anume). day_of_week 1=Luni … 7=Duminică. Pentru o zi calendaristică folosește close_day/open_day. IMPORTANT: confirmed=true doar după confirmare.",
+    parameters: {
+      type: "object",
+      properties: {
+        day_of_week: {
+          type: "number",
+          description: "1=Luni … 7=Duminică. Acceptă și day=„luni”.",
+        },
+        day: {
+          type: "string",
+          description: "Numele zilei: luni, marți, … duminică.",
+        },
+        is_working: {
+          type: "boolean",
+          description: "false = ziua e închisă în orarul săptămânal.",
+        },
+        work_start: { type: "string", description: "HH:MM" },
+        work_end: { type: "string", description: "HH:MM" },
+        break_enabled: { type: "boolean" },
+        break_start: { type: "string", description: "HH:MM" },
+        break_end: { type: "string", description: "HH:MM" },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: updateWeeklyScheduleTool,
+  },
+  {
+    name: "update_service",
+    description:
+      "Actualizează un serviciu (nume, durată, preț, activ). Prețul poate fi golit cu clear_price. IMPORTANT: confirmed=true doar după confirmare.",
+    parameters: {
+      type: "object",
+      properties: {
+        service_id: { type: "string" },
+        service_name: { type: "string" },
+        new_name: { type: "string" },
+        duration_minutes: { type: "number" },
+        price_ron: { type: "number" },
+        clear_price: {
+          type: "boolean",
+          description: "true = scoate prețul.",
+        },
+        active: { type: "boolean" },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: updateServiceTool,
+  },
+  {
+    name: "deactivate_service",
+    description:
+      "Dezactivează (sau reactivează cu active=true) un serviciu. Dispare de pe pagina publică. IMPORTANT: confirmed=true doar după confirmare.",
+    parameters: {
+      type: "object",
+      properties: {
+        service_id: { type: "string" },
+        service_name: { type: "string" },
+        active: {
+          type: "boolean",
+          description: "true = reactivează. Implicit dezactivează.",
+        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: deactivateServiceTool,
+  },
+  {
+    name: "invite_barber",
+    description:
+      "Invită un frizer pe email (doar owner/manager). Arată draft + limite de plan, apoi trimite după Confirmă. Fără nume+email: spune dacă planul permite invitații.",
+    parameters: {
+      type: "object",
+      properties: {
+        full_name: { type: "string" },
+        email: { type: "string" },
+        phone: { type: "string" },
+        confirmed: {
+          type: "boolean",
+          description: "true doar după confirmarea utilizatorului.",
+        },
+      },
+    },
+    execute: inviteBarberTool,
+  },
+  {
+    name: "client_history",
+    description:
+      "Istoricul ultimelor programări ale unui client (telefon sau nume). Include anulate. Fără sume / încasări.",
+    parameters: {
+      type: "object",
+      properties: {
+        client_phone: { type: "string" },
+        client_name: { type: "string" },
+        limit: {
+          type: "number",
+          description: "Câte (implicit 10, max 30).",
+        },
+        barber_id: BARBER_ID_PROP,
+        barber_name: BARBER_NAME_PROP,
+      },
+    },
+    execute: clientHistoryTool,
+  },
+  {
+    name: "product_help",
+    description:
+      "Knowledge base despre funcționalitățile admin Frizeo: SMS, Google Calendar, programări, servicii, program, frizeri, link public, acces clienți, rapoarte, Marketing AI, abonament, Assistant, salon, profil. Folosește LA ORICE întrebare „cum funcționează / unde găsesc / ce face pagina X”.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "Întrebarea utilizatorului sau topic (ex: SMS, Google Calendar).",
+        },
+      },
+      required: ["query"],
+    },
+    execute: productHelpTool,
+  },
 ];
 
 export function getAssistantTool(name: string) {
@@ -536,12 +739,14 @@ export function getAssistantTool(name: string) {
 }
 
 export function getOpenAIToolDefinitions() {
-  return ASSISTANT_TOOLS.map((tool) => ({
-    type: "function" as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.parameters,
-    },
-  }));
+  return ASSISTANT_TOOLS.filter((tool) => tool.name !== "update_booking").map(
+    (tool) => ({
+      type: "function" as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      },
+    }),
+  );
 }

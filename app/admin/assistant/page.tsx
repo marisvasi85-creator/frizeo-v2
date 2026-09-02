@@ -22,8 +22,9 @@ export default async function AssistantPage() {
         </div>
         <h1 className="text-2xl font-semibold">Frizeo Assistant</h1>
         <p className="text-frz-ink/60 mt-1">
-          Același chat ca butonul flotant — programări, servicii, acțiuni cu
-          confirmare. Preț opțional. Fără încasări.
+          Același chat ca butonul flotant — programări, servicii, program,
+          link, invitații, și explicații despre SMS / Google / admin.
+          Acțiuni cu confirmare. Preț opțional. Fără încasări.
         </p>
       </div>
 

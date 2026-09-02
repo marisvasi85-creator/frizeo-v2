@@ -4,13 +4,34 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-import { asString, resolveOptionalBarberFilter } from "./helpers";
+import {
+  asBoolean,
+  asNumber,
+  asString,
+  phoneVariants,
+  resolveOptionalBarberFilter,
+} from "./helpers";
 
-function resolveDateRange(range: string | null, from: string | null, to: string | null) {
+function resolveDateRange(
+  range: string | null,
+  from: string | null,
+  to: string | null,
+  searchingClient: boolean,
+) {
   const today = getTodayInBookingTimezone();
 
   if (from && to) {
     return { from, to };
+  }
+  if (from && !to) {
+    return { from, to: from };
+  }
+
+  if (searchingClient && !range) {
+    return {
+      from: addDaysToDateString(today, -90),
+      to: addDaysToDateString(today, 30),
+    };
   }
 
   switch (range) {
@@ -32,8 +53,21 @@ export async function listBookingsTool(
 ): Promise<AssistantToolResult> {
   const range = asString(args.range);
   const from = asString(args.from_date) || asString(args.date);
-  const to = asString(args.to_date) || asString(args.date);
-  const { from: startDate, to: endDate } = resolveDateRange(range, from, to);
+  const to = asString(args.to_date);
+  const phone = asString(args.client_phone) || asString(args.phone);
+  const name = asString(args.client_name) || asString(args.name);
+  const includeCancelled = asBoolean(args.include_cancelled);
+  const searchingClient = Boolean(phone || name);
+  const { from: startDate, to: endDate } = resolveDateRange(
+    range,
+    from,
+    to,
+    searchingClient,
+  );
+  const limit = Math.min(
+    Math.max(asNumber(args.limit) ?? (searchingClient ? 40 : 50), 1),
+    100,
+  );
 
   const resolved = await resolveOptionalBarberFilter(ctx, args);
   if (!resolved.ok) return resolved.result;
@@ -41,18 +75,29 @@ export async function listBookingsTool(
     return { ok: true, summary: "Nu există frizeri în salon.", data: { bookings: [] } };
   }
 
-  const { data, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from("bookings")
     .select(
       "id, date, start_time, end_time, status, client_name, client_phone, barber_id, barber_service_id",
     )
     .in("barber_id", resolved.barberIds)
-    .neq("status", "cancelled")
     .gte("date", startDate)
     .lte("date", endDate)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
-    .limit(50);
+    .limit(limit);
+
+  if (!includeCancelled) {
+    query = query.neq("status", "cancelled");
+  }
+
+  if (phone) {
+    query = query.in("client_phone", phoneVariants(phone));
+  } else if (name) {
+    query = query.ilike("client_name", `%${name}%`);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return { ok: false, summary: "Nu am putut încărca programările.", error: error.message };
@@ -105,10 +150,23 @@ export async function listBookingsTool(
     startDate === endDate
       ? `Programări pe ${startDate}`
       : `Programări ${startDate} → ${endDate}`;
+  const extra = [
+    phone ? `telefon ${phone}` : null,
+    name ? `nume „${name}"` : null,
+    includeCancelled ? "inclusiv anulate" : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return {
     ok: true,
-    summary: `${label}: ${enriched.length} găsite.`,
-    data: { from: startDate, to: endDate, count: enriched.length, bookings: enriched },
+    summary: `${label}${extra ? ` (${extra})` : ""}: ${enriched.length} găsite.`,
+    data: {
+      from: startDate,
+      to: endDate,
+      count: enriched.length,
+      include_cancelled: includeCancelled,
+      bookings: enriched,
+    },
   };
 }

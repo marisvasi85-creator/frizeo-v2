@@ -29,11 +29,11 @@ function isMessage(value: unknown): value is AssistantChatMessage {
 }
 
 export function buildWelcomeMessage(displayName: string): string {
-  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi / cine urmează, să mut sau anulez programări, să aleg frizerul în echipă, să adaug servicii, sau să gestionez zi liberă / concediu. Acțiunile importante cer Confirmă / Renunță din butoane. Prețul e opțional. Nu calculez încasări.`;
+  return `Salut${displayName ? `, ${displayName}` : ""}! Sunt Frizeo Assistant.\n\nPot să-ți spun ce ai azi, să caut programări (și după telefon), să mut/anulez, să dau link-ul de programare, să schimb programul L–D sau un serviciu, să invit un frizer, și să-ți explic cum funcționează SMS, Google Calendar și restul din admin. Acțiunile importante cer Confirmă / Renunță. Prețul e opțional. Nu calculez încasări.`;
 }
 
 export function buildPlatformWelcomeMessage(): string {
-  return `Salut, Maris! Sunt Platform Assistant — doar pentru tine.\n\nPoți cere briefing, health, follow-up pe email (cu confirmare), note, plan/trial, sau ștergere salon (confirmare + slug). Nu încasează bani în Stripe.`;
+  return `Salut, Maris! Sunt Growth Assistant — doar pentru tine.\n\nÎntreabă-mă cum stăm, unde pierdem oameni, cine e inactiv, ce trebuie să faci azi, sau cine merită un review (îți dau draft, nu trimit). Rămân și ops: briefing, health, plan/trial, SMS, ștergere salon. Nu încasează bani în Stripe.`;
 }
 
 export function loadAssistantChat(

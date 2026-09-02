@@ -15,7 +15,7 @@ import type {
   AssistantToolContext,
 } from "./types";
 
-const MAX_TOOL_ROUNDS = 4;
+const MAX_TOOL_ROUNDS = 5;
 
 function getOpenAIKey(): string | null {
   return process.env.OPENAI_API_KEY?.trim() || null;
@@ -252,7 +252,9 @@ async function runWithGemini(
 
   const toolsUsed: string[] = [];
   let pendingConfirmation: AssistantPendingConfirmationPublic | null = null;
-  const toolCatalog = ASSISTANT_TOOLS.map((t) => ({
+  const toolCatalog = ASSISTANT_TOOLS.filter(
+    (t) => t.name !== "update_booking",
+  ).map((t) => ({
     name: t.name,
     description: t.description,
     parameters: t.parameters,

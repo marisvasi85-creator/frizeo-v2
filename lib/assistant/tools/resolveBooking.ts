@@ -5,7 +5,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
-import { asString } from "./helpers";
+import { asString, phoneVariants } from "./helpers";
 
 export type AssistantResolvedBooking = {
   id: string;
@@ -84,22 +84,24 @@ export async function resolveBookingForAssistant(
   }
 
   const clientName = asString(args.client_name) || asString(args.name);
-  if (!clientName) {
+  const phone = asString(args.client_phone) || asString(args.phone);
+  if (!clientName && !phone) {
     return {
       ok: false,
       result: {
         ok: false,
         summary:
-          "Specifică booking_id sau client_name. Folosește list_bookings dacă e nevoie.",
+          "Specifică booking_id, client_name sau client_phone. Folosește list_bookings dacă e nevoie.",
         error: "missing_booking",
       },
     };
   }
 
   const today = getTodayInBookingTimezone();
-  const fromDate = asString(args.from_date) || today;
+  const fromDate =
+    asString(args.from_date) ||
+    (phone && !clientName ? addDaysToDateString(today, -30) : today);
   const toDate = asString(args.to_date) || addDaysToDateString(today, 14);
-  const phone = asString(args.client_phone) || asString(args.phone);
 
   let barberIds: string[] = [];
   if (ctx.role === "barber") {
@@ -145,13 +147,16 @@ export async function resolveBookingForAssistant(
     .neq("status", "cancelled")
     .gte("date", fromDate)
     .lte("date", toDate)
-    .ilike("client_name", `%${clientName}%`)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(10);
 
+  if (clientName) {
+    query = query.ilike("client_name", `%${clientName}%`);
+  }
+
   if (phone) {
-    query = query.eq("client_phone", phone.replace(/\s/g, ""));
+    query = query.in("client_phone", phoneVariants(phone));
   }
 
   const currentDate = asString(args.current_date);
@@ -176,7 +181,7 @@ export async function resolveBookingForAssistant(
       ok: false,
       result: {
         ok: false,
-        summary: `Nu am găsit programări pentru „${clientName}" în perioada ${fromDate}–${toDate}.`,
+        summary: `Nu am găsit programări pentru „${clientName || phone}" în perioada ${fromDate}–${toDate}.`,
         error: "not_found",
       },
     };
@@ -187,7 +192,7 @@ export async function resolveBookingForAssistant(
       ok: false,
       result: {
         ok: false,
-        summary: `Am găsit ${matches.length} programări pentru „${clientName}". Specifică booking_id sau current_date.`,
+        summary: `Am găsit ${matches.length} programări pentru „${clientName || phone}". Specifică booking_id sau current_date.`,
         error: "ambiguous_booking",
         data: {
           candidates: matches.map((b) => ({

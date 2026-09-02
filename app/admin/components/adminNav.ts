@@ -19,7 +19,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/salon", label: "Salon", icon: "🏪" },
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
-  { href: "/admin/platform-assistant", label: "Platform AI", icon: "🛠️" },
+  { href: "/admin/platform-assistant", label: "Growth AI", icon: "🛠️" },
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },

@@ -11,10 +11,10 @@ import {
 } from "../components/assistantChatStorage";
 
 const PLATFORM_SUGGESTIONS = [
-  "Ce am azi pe platformă?",
-  "Health check saloane",
-  "Trimite follow-up trial pe email",
-  "Șterge salonul fake X",
+  "Ce trebuie să fac astăzi?",
+  "Cum stăm astăzi?",
+  "Unde pierdem utilizatori?",
+  "Cine merită un review?",
 ];
 
 export default async function PlatformAssistantPage() {
@@ -31,12 +31,12 @@ export default async function PlatformAssistantPage() {
     <div className="space-y-6 min-w-0">
       <div>
         <div className="inline-flex items-center gap-2 text-xs text-sky-700 bg-sky-50 border border-sky-200 px-2.5 py-1 rounded-full mb-3">
-          Creator only · plan / trial / delete / email
+          Creator only · growth / trial / ops
         </div>
-        <h1 className="text-2xl font-semibold">Platform Assistant</h1>
+        <h1 className="text-2xl font-semibold">Growth Assistant</h1>
         <p className="text-frz-ink/60 mt-1">
-          Asistent intern — briefing, health, follow-up email, note, planuri,
-          ștergere salon. Separat de asistentul de salon.
+          Conversie și retenție — plus ops (plan, trial, delete, SMS). Separat
+          de asistentul de salon.
         </p>
       </div>
 

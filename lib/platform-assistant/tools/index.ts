@@ -12,6 +12,12 @@ import { smsUsageTool } from "./smsUsage";
 import { tenantDetailTool } from "./tenantDetail";
 import { addTenantNoteTool, listTenantNotesTool } from "./tenantNotes";
 import { trialFollowupsTool } from "./trialFollowups";
+import { dailyActionsTool } from "./dailyActions";
+import { growthDashboardTool } from "./growthDashboard";
+import { growthFunnelTool } from "./growthFunnel";
+import { inactiveTenantsTool } from "./inactiveTenants";
+import { reviewCandidatesTool } from "./reviewCandidates";
+import { tenantTimelineTool } from "./tenantTimeline";
 
 export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
   {
@@ -332,6 +338,107 @@ export const PLATFORM_ASSISTANT_TOOLS: PlatformToolDefinition[] = [
       },
     },
     execute: deleteTenantTool,
+  },
+  {
+    name: "growth_dashboard",
+    description:
+      "Dashboard de creștere (read-only): saloane noi, onboarding, prima programare, trial active/expirate, conversii trial → Pro, past_due, owneri activi + recomandări. Pentru „cum stăm astăzi”, „ultimele 7 zile”, „ultimele 30 zile”.",
+    parameters: {
+      type: "object",
+      properties: {
+        days: {
+          type: "number",
+          description: "Fereastră (implicit 7, max 90). 1 = azi.",
+        },
+      },
+    },
+    execute: growthDashboardTool,
+  },
+  {
+    name: "inactive_tenants",
+    description:
+      "Saloane fără activitate (read-only): 0 programări, fără login X zile, fără servicii/program, trial aproape expirat / expirat. Include owner, email, telefon, motiv și sugestie de follow-up. Pentru „cine nu a făcut nicio programare”, „cine nu a mai intrat”.",
+    parameters: {
+      type: "object",
+      properties: {
+        filter: {
+          type: "string",
+          enum: [
+            "zero_bookings",
+            "no_login",
+            "no_services",
+            "no_schedule",
+            "trial_ending_soon",
+            "trial_expired",
+          ],
+          description: "Filtru. Omite pentru toți inactivi, sortați pe urgență.",
+        },
+        days: {
+          type: "number",
+          description: "Pentru no_login: câte zile fără login (implicit 14).",
+        },
+        limit: {
+          type: "number",
+          description: "Câte saloane (implicit 20, max 50).",
+        },
+      },
+    },
+    execute: inactiveTenantsTool,
+  },
+  {
+    name: "growth_funnel",
+    description:
+      "Funnel de conversie (read-only): Signup → onboarding → servicii → program → prima programare → trial/Pro → Pro. Identifică etapa cu cel mai mare abandon. Pentru „unde pierdem utilizatori”.",
+    parameters: { type: "object", properties: {} },
+    execute: growthFunnelTool,
+  },
+  {
+    name: "tenant_timeline",
+    description:
+      "Timeline cronologic pe un salon (read-only): cont creat, login, servicii, program, prima/ultima programare, trial, conversie Pro, ultima actualizare plan. Pentru „ce a făcut X”, „istoria salonului”.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Nume salon." },
+        slug: { type: "string", description: "Slug salon." },
+        tenant_id: { type: "string", description: "ID tenant." },
+      },
+    },
+    execute: tenantTimelineTool,
+  },
+  {
+    name: "review_candidates",
+    description:
+      "Găsește saloanele cele mai potrivite pentru un review Frizeo (read-only) și generează draft de email personalizat. NU trimite email. Criterii: uz activ, programări, login recent, fără probleme, convertit sau fidel. Pentru „cine merită un review”, „draft review”.",
+    parameters: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Câți candidați (implicit 8, max 20).",
+        },
+        include_drafts: {
+          type: "boolean",
+          description: "Include draft email (implicit true). Nu trimite.",
+        },
+      },
+    },
+    execute: reviewCandidatesTool,
+  },
+  {
+    name: "daily_actions",
+    description:
+      "Plan de acțiuni de GROWTH pentru azi (read-only), prioritizat: trial care expiră, inactivi, abandon, past_due, candidați review. Pentru „Ce trebuie să fac astăzi?”, „ce acțiuni de creștere”. Nu înlocuiește daily_briefing (ops/health).",
+    parameters: {
+      type: "object",
+      properties: {
+        limit: {
+          type: "number",
+          description: "Câte acțiuni (implicit 12, max 25).",
+        },
+      },
+    },
+    execute: dailyActionsTool,
   },
 ];
 

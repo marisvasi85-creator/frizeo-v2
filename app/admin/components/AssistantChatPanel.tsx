@@ -15,10 +15,10 @@ export { buildWelcomeMessage };
 
 const DEFAULT_SUGGESTIONS = [
   "Ce am azi?",
+  "Care e link-ul de programare?",
+  "Cum funcționează SMS-ul?",
+  "Ce program am luni–duminică?",
   "Cine e următorul client?",
-  "Ce frizeri avem?",
-  "Închide mâine (zi liberă)",
-  "Ce concedii am?",
   "Ce programări am mâine?",
 ];
 

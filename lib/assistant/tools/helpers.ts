@@ -211,6 +211,23 @@ export function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+/** Phone variants stored in bookings: 07… / +40… / 40… */
+export function phoneVariants(raw: string): string[] {
+  const compact = raw.replace(/[\s.-]/g, "");
+  const out = new Set<string>([compact]);
+  if (compact.startsWith("+40") && compact.length === 12) {
+    out.add(`0${compact.slice(3)}`);
+    out.add(`40${compact.slice(3)}`);
+  } else if (compact.startsWith("40") && compact.length === 11) {
+    out.add(`0${compact.slice(2)}`);
+    out.add(`+${compact}`);
+  } else if (compact.startsWith("0") && compact.length === 10) {
+    out.add(`+40${compact.slice(1)}`);
+    out.add(`40${compact.slice(1)}`);
+  }
+  return [...out];
+}
+
 export function asBoolean(value: unknown): boolean {
   return value === true || value === "true" || value === 1 || value === "1";
 }
@@ -238,6 +255,7 @@ export async function resolveServiceForBarber(
   tenantId: string,
   serviceIdArg: string | null,
   serviceNameArg: string | null,
+  options?: { includeInactive?: boolean },
 ): Promise<
   | {
       ok: true;
@@ -281,7 +299,7 @@ export async function resolveServiceForBarber(
       };
     }
 
-    if (!data.active) {
+    if (!data.active && !options?.includeInactive) {
       return {
         ok: false,
         error: "inactive_service",
@@ -302,11 +320,16 @@ export async function resolveServiceForBarber(
   }
 
   const needle = serviceNameArg.toLowerCase();
-  const { data: services } = await supabaseAdmin
+  let servicesQuery = supabaseAdmin
     .from("barber_services")
     .select("id, display_name, name, duration, barber_id, active")
-    .eq("barber_id", barberId)
-    .eq("active", true);
+    .eq("barber_id", barberId);
+
+  if (!options?.includeInactive) {
+    servicesQuery = servicesQuery.eq("active", true);
+  }
+
+  const { data: services } = await servicesQuery;
 
   const matches = (services ?? []).filter((s) => {
     const label = `${s.display_name || ""} ${s.name || ""}`.toLowerCase();

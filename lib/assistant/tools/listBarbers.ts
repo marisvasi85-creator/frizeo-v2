@@ -7,7 +7,7 @@ export async function listBarbersTool(
 ): Promise<AssistantToolResult> {
   const { data, error } = await supabaseAdmin
     .from("barbers")
-    .select("id, display_name, active, slug")
+    .select("id, display_name, active, slug, google_calendar_connected")
     .eq("tenant_id", ctx.tenantId)
     .order("display_name", { ascending: true });
 
@@ -24,6 +24,7 @@ export async function listBarbersTool(
     name: (row.display_name as string | null) || "Frizer",
     active: Boolean(row.active),
     slug: (row.slug as string | null) || null,
+    google_calendar_connected: Boolean(row.google_calendar_connected),
     is_current: ctx.barberId === row.id,
   }));
 
