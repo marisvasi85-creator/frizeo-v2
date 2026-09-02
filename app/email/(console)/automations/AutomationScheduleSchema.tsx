@@ -13,6 +13,7 @@ import {
 
 const LANE_ORDER: Exclude<AutomationJourneyLane, "other">[] = [
   "onboarding",
+  "activation",
   "trial",
   "countdown",
   "winback",

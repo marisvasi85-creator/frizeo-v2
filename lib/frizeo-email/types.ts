@@ -50,6 +50,8 @@ export const MARKETING_CTA_URL_TYPES = [
   "booking_link",
   "plans",
   "salon",
+  "profile",
+  "barbers",
 ] as const;
 
 export type MarketingCtaUrlType = (typeof MARKETING_CTA_URL_TYPES)[number];
@@ -344,6 +346,7 @@ export const MARKETING_AUTOMATION_TRIGGER_TYPES = [
   "trial_last_day",
   "trial_expired",
   "subscription_activated",
+  "account_inactive",
 ] as const;
 
 export type MarketingAutomationTriggerType =

@@ -22,6 +22,31 @@ const expected = [
     4320,
     "google_visibility",
   ],
+  [
+    "incomplete_onboarding_after_signup",
+    "user_signed_up",
+    1440,
+    "incomplete_onboarding",
+  ],
+  [
+    "no_first_booking",
+    "user_signed_up",
+    10080,
+    "no_first_booking",
+  ],
+  [
+    "google_calendar_after_signup",
+    "user_signed_up",
+    7200,
+    "connect_google_calendar",
+  ],
+  [
+    "invite_team_after_signup",
+    "user_signed_up",
+    10080,
+    "invite_team",
+  ],
+  ["inactive_account", "account_inactive", 0, "inactive_account"],
   ["trial_active_tips", "trial_started", 10080, "trial_use_it"],
   ["trial_ending_7_days", "trial_ending_7_days", 0, "trial_7_days"],
   ["trial_ending_3_days", "trial_ending_3_days", 0, "trial_3_days"],
@@ -49,6 +74,13 @@ const googleSql = readFileSync(
   ),
   "utf8",
 );
+const activationSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260902120000_activation_marketing_automations.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const fixSql = readFileSync(
   new URL(
     "../supabase/migrations/20260828120000_fix_automation_trial_calendar_and_claim.sql",
@@ -69,7 +101,19 @@ const workerTs = readFileSync(
 );
 
 function seedSqlFor(automationKey) {
-  return automationKey.startsWith("google_visibility") ? googleSql : phase6Sql;
+  if (automationKey.startsWith("google_visibility")) return googleSql;
+  if (
+    [
+      "incomplete_onboarding_after_signup",
+      "inactive_account",
+      "no_first_booking",
+      "google_calendar_after_signup",
+      "invite_team_after_signup",
+    ].includes(automationKey)
+  ) {
+    return activationSql;
+  }
+  return phase6Sql;
 }
 
 test("system automations map each day to the expected template", () => {
@@ -95,6 +139,29 @@ test("system automations map each day to the expected template", () => {
       `${automationKey} trigger ${trigger} missing from SQL seed`,
     );
   }
+});
+
+test("activation discover keeps trial catch-up and only skips activation runs", () => {
+  assert.match(
+    activationSql,
+    /trigger_type = 'account_inactive'/,
+  );
+  assert.match(
+    activationSql,
+    /marketing_bucharest_date\(subscription\.trial_ends_at\) >= v_today \+ 4/,
+  );
+  assert.match(
+    activationSql,
+    /incomplete_onboarding_after_signup/,
+  );
+  assert.match(
+    activationSql,
+    /skip_reason = cond\.skip_reason/,
+  );
+  assert.match(
+    activationSql,
+    /automation\.automation_key IN \(/,
+  );
 });
 
 test("trial countdown uses Bucharest calendar dates, not timestamptz::date", () => {
