@@ -7,6 +7,10 @@ export type MarketingVariableContext = {
   first_name?: string | null;
   app_url: string;
   dashboard_url?: string | null;
+  services_url?: string | null;
+  schedule_url?: string | null;
+  profile_url?: string | null;
+  barbers_url?: string | null;
   booking_link?: string | null;
   trial_end_date?: string | null;
   plan_url?: string | null;
@@ -68,18 +72,21 @@ function resolveValue(value: string, context: MarketingVariableContext): string 
       );
   }
 
+  const base = context.app_url.replace(/\/$/, "");
   const variables: Record<string, string> = {
     first_name: context.first_name?.trim() || "",
     app_url: context.app_url,
-    dashboard_url:
-      context.dashboard_url || `${context.app_url.replace(/\/$/, "")}/admin/dashboard`,
+    dashboard_url: context.dashboard_url || `${base}/admin/dashboard`,
+    services_url: context.services_url || `${base}/admin/services`,
+    schedule_url: context.schedule_url || `${base}/admin/settings`,
+    profile_url: context.profile_url || `${base}/admin/profile`,
+    barbers_url: context.barbers_url || `${base}/admin/barbers`,
     booking_link:
       context.booking_link ||
       context.dashboard_url ||
-      `${context.app_url.replace(/\/$/, "")}/admin/dashboard`,
+      `${base}/admin/dashboard`,
     trial_end_date: context.trial_end_date || "",
-    plan_url:
-      context.plan_url || `${context.app_url.replace(/\/$/, "")}/pricing`,
+    plan_url: context.plan_url || `${base}/pricing`,
     feature_name: context.feature_name || "",
     feature_description: context.feature_description || "",
   };

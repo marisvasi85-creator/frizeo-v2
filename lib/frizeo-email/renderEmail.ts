@@ -25,7 +25,16 @@ function safePublicUrl(value: string | null): string | null {
 }
 
 function textToHtml(value: string): string {
-  return escapeHtml(value).replace(/\r?\n/g, "<br>");
+  const escaped = escapeHtml(value).replace(/\r?\n/g, "<br>");
+  return escaped.replace(
+    /https?:\/\/[^\s<]+/gi,
+    (raw) => {
+      const decoded = raw.replaceAll("&amp;", "&");
+      const safe = safePublicUrl(decoded);
+      if (!safe) return raw;
+      return `<a href="${escapeHtml(safe)}" style="color:#111111;text-decoration:underline;word-break:break-all;">${escapeHtml(safe)}</a>`;
+    },
+  );
 }
 
 /**

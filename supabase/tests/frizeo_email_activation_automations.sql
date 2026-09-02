@@ -40,6 +40,50 @@ begin
     raise exception 'activation_templates_missing';
   end if;
 
+  if not exists (
+    select 1 from public.marketing_email_templates
+    where template_key = 'incomplete_onboarding'
+      and body_text like '%{{dashboard_url}}%'
+      and body_text like '%{{services_url}}%'
+      and body_text like '%{{schedule_url}}%'
+      and body_text like '%{{booking_link}}%'
+  ) then
+    raise exception 'activation_onboarding_links_missing';
+  end if;
+
+  if not exists (
+    select 1 from public.marketing_email_templates
+    where template_key = 'inactive_account'
+      and body_text like '%{{dashboard_url}}%'
+  ) then
+    raise exception 'activation_inactive_links_missing';
+  end if;
+
+  if not exists (
+    select 1 from public.marketing_email_templates
+    where template_key = 'no_first_booking'
+      and body_text like '%{{booking_link}}%'
+      and body_text like '%{{dashboard_url}}%'
+  ) then
+    raise exception 'activation_booking_links_missing';
+  end if;
+
+  if not exists (
+    select 1 from public.marketing_email_templates
+    where template_key = 'connect_google_calendar'
+      and body_text like '%{{profile_url}}%'
+  ) then
+    raise exception 'activation_profile_link_missing';
+  end if;
+
+  if not exists (
+    select 1 from public.marketing_email_templates
+    where template_key = 'invite_team'
+      and body_text like '%{{barbers_url}}%'
+  ) then
+    raise exception 'activation_barbers_link_missing';
+  end if;
+
   select id into v_auto_onboarding
     from public.marketing_automations
     where automation_key = 'incomplete_onboarding_after_signup';

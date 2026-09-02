@@ -81,6 +81,13 @@ const activationSql = readFileSync(
   ),
   "utf8",
 );
+const activationLinksSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260902140000_activation_email_account_links.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const fixSql = readFileSync(
   new URL(
     "../supabase/migrations/20260828120000_fix_automation_trial_calendar_and_claim.sql",
@@ -139,6 +146,24 @@ test("system automations map each day to the expected template", () => {
       `${automationKey} trigger ${trigger} missing from SQL seed`,
     );
   }
+});
+
+test("activation emails include account and booking links", () => {
+  assert.match(activationLinksSql, /\{\{dashboard_url\}\}/);
+  assert.match(activationLinksSql, /\{\{services_url\}\}/);
+  assert.match(activationLinksSql, /\{\{schedule_url\}\}/);
+  assert.match(activationLinksSql, /\{\{booking_link\}\}/);
+  assert.match(activationLinksSql, /\{\{profile_url\}\}/);
+  assert.match(activationLinksSql, /\{\{barbers_url\}\}/);
+  assert.match(
+    activationLinksSql,
+    /WHERE template_key = 'incomplete_onboarding'/,
+  );
+  assert.match(
+    activationLinksSql,
+    /WHERE template_key = 'connect_google_calendar'/,
+  );
+  assert.match(activationLinksSql, /WHERE template_key = 'invite_team'/);
 });
 
 test("activation discover keeps trial catch-up and only skips activation runs", () => {
