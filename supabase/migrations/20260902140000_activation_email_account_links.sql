@@ -1,6 +1,10 @@
 -- Clickable account / booking URLs in activation automation templates.
+-- System templates are protected by protect_system_marketing_template.
 
 BEGIN;
+
+ALTER TABLE public.marketing_email_templates
+  DISABLE TRIGGER protect_system_marketing_template;
 
 UPDATE public.marketing_email_templates
 SET body_text = E'Salut, {{first_name}}!\n\nContul tău Frizeo este creat, dar pagina de programări nu e încă gata de clienți.\n\nÎn cont poți face totul de aici:\n{{dashboard_url}}\n\n1. Configurează serviciile (nume, durată, preț opțional):\n{{services_url}}\n\n2. Configurează programul de lucru:\n{{schedule_url}}\n\n3. Distribuie linkul de booking clienților tăi:\n{{booking_link}}\n\nDupă acești pași, clienții se pot programa singuri, fără să te mai sune.'
@@ -26,5 +30,8 @@ UPDATE public.marketing_email_templates
 SET body_text = E'Salut, {{first_name}}!\n\nPe Pro+ poți invita colegii în Frizeo, din pagina Frizeri:\n{{barbers_url}}\n\nFiecare frizer:\n• își administrează programul și zilele libere\n• își setează serviciile\n• are un link propriu de booking, pe lângă pagina salonului\n\nTu vezi tot salonul. Ei își văd programul.\n\nInvitațiile se trimit cu nume și email, tot din Frizeri.'
 WHERE template_key = 'invite_team'
   AND is_system_template = true;
+
+ALTER TABLE public.marketing_email_templates
+  ENABLE TRIGGER protect_system_marketing_template;
 
 COMMIT;
