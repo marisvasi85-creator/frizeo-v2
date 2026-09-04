@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { MarketingAutomationSummary } from "@/lib/frizeo-email/types";
+import { describeAutomationTrigger } from "@/lib/frizeo-email/automationSchedule";
 import { useEmailHref } from "../components/EmailPathContext";
 import AutomationScheduleSchema from "./AutomationScheduleSchema";
 
@@ -116,7 +117,7 @@ export default function AutomationsClient({
                     </div>
                   </td>
                   <td className="px-4 py-3 text-frz-ink/60">
-                    {automation.trigger_type}
+                    {describeAutomationTrigger(automation)}
                   </td>
                   <td className="px-4 py-3 text-frz-ink/60">
                     {delayLabel(automation.delay_minutes)}
