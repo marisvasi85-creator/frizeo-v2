@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { isMarketingTestimonialsEnabled } from "@/lib/marketing-testimonials/config";
+import { isMarketingTestimonialsCollectEnabled } from "@/lib/marketing-testimonials/config";
 import { parseMarketingTestimonialFields } from "@/lib/marketing-testimonials/validation";
 import { validateImageUpload } from "@/lib/uploads/imageUpload";
 
 export async function POST(req: Request) {
-  if (!isMarketingTestimonialsEnabled()) {
+  if (!isMarketingTestimonialsCollectEnabled()) {
     return NextResponse.json(
       { error: "Recenziile nu sunt disponibile momentan." },
       { status: 404 },

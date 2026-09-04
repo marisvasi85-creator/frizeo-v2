@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
-import { isMarketingTestimonialsEnabled } from "@/lib/marketing-testimonials/config";
+import { isMarketingTestimonialsCollectEnabled } from "@/lib/marketing-testimonials/config";
 import SubmitMarketingTestimonialForm from "./SubmitMarketingTestimonialForm";
 
 export const metadata = createPageMetadata({
@@ -13,7 +13,7 @@ export const metadata = createPageMetadata({
 });
 
 export default function MarketingReviewPage() {
-  if (!isMarketingTestimonialsEnabled()) {
+  if (!isMarketingTestimonialsCollectEnabled()) {
     notFound();
   }
 
