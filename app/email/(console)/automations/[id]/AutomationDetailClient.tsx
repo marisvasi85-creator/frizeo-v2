@@ -8,6 +8,7 @@ import type {
   MarketingAutomationRunStatus,
   MarketingConversionStats,
 } from "@/lib/frizeo-email/types";
+import { describeAutomationTrigger } from "@/lib/frizeo-email/automationSchedule";
 
 const STATUS_FILTERS: Array<MarketingAutomationRunStatus | "all"> = [
   "all",
@@ -122,7 +123,7 @@ export default function AutomationDetailClient({
             </div>
             <div>
               <dt className="text-frz-muted text-xs">Trigger</dt>
-              <dd>{automation.trigger_type}</dd>
+              <dd>{describeAutomationTrigger(automation)}</dd>
             </div>
             <div>
               <dt className="text-frz-muted text-xs">Delay</dt>

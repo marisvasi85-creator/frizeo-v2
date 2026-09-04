@@ -22,8 +22,7 @@ export default async function TestimonialsAdminPage() {
     return (
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900">
         Rulează migrarea{" "}
-        <code>20260901120000_frizeo_marketing_testimonials.sql</code> pe
-        staging.
+        <code>20260901120000_frizeo_marketing_testimonials.sql</code>.
       </div>
     );
   }

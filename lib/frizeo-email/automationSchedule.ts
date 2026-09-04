@@ -102,6 +102,14 @@ export const EXPECTED_AUTOMATION_SCHEDULE: readonly ExpectedAutomationSchedule[]
       lane: "activation",
     },
     {
+      automation_key: "review_after_10_bookings",
+      name: "Review după 10 programări",
+      trigger_type: "min_bookings",
+      delay_minutes: 0,
+      template_key: "review_request_active_user",
+      lane: "activation",
+    },
+    {
       automation_key: "trial_active_tips",
       name: "Trial active tips",
       trigger_type: "trial_started",
@@ -190,6 +198,20 @@ export const AUTOMATION_LANE_META: Record<
   },
 };
 
+export function describeAutomationTrigger(
+  automation: Pick<
+    MarketingAutomationSummary,
+    "trigger_type" | "automation_key" | "conditions"
+  >,
+): string {
+  if (automation.trigger_type === "min_bookings") {
+    const raw = Number(automation.conditions?.min_bookings);
+    const threshold = Number.isInteger(raw) && raw > 0 ? raw : 10;
+    return `Minimum ${threshold} programări`;
+  }
+  return automation.trigger_type;
+}
+
 export function delayDays(minutes: number): number | null {
   if (minutes < 0 || minutes % 1440 !== 0) return null;
   return minutes / 1440;
@@ -206,10 +228,12 @@ export function automationLane(
   }
   if (
     automation.trigger_type === "account_inactive" ||
+    automation.trigger_type === "min_bookings" ||
     automation.automation_key === "incomplete_onboarding_after_signup" ||
     automation.automation_key === "no_first_booking" ||
     automation.automation_key === "google_calendar_after_signup" ||
-    automation.automation_key === "invite_team_after_signup"
+    automation.automation_key === "invite_team_after_signup" ||
+    automation.automation_key === "review_after_10_bookings"
   ) {
     return "activation";
   }
@@ -255,6 +279,10 @@ export function describeAutomationWhen(
 
   if (automation.trigger_type === "account_inactive") {
     return "Ultima autentificare mai veche de 7 zile (cooldown 30 zile)";
+  }
+
+  if (automation.trigger_type === "min_bookings") {
+    return "Când salonul ajunge la minimum 10 programări neanulate";
   }
 
   if (automation.trigger_type === "trial_started") {

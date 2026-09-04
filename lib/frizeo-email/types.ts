@@ -347,6 +347,7 @@ export const MARKETING_AUTOMATION_TRIGGER_TYPES = [
   "trial_expired",
   "subscription_activated",
   "account_inactive",
+  "min_bookings",
 ] as const;
 
 export type MarketingAutomationTriggerType =
