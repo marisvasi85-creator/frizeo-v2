@@ -47,6 +47,12 @@ const expected = [
     "invite_team",
   ],
   ["inactive_account", "account_inactive", 0, "inactive_account"],
+  [
+    "review_after_10_bookings",
+    "min_bookings",
+    0,
+    "review_request_active_user",
+  ],
   ["trial_active_tips", "trial_started", 10080, "trial_use_it"],
   ["trial_ending_7_days", "trial_ending_7_days", 0, "trial_7_days"],
   ["trial_ending_3_days", "trial_ending_3_days", 0, "trial_3_days"],
@@ -81,6 +87,13 @@ const activationSql = readFileSync(
   ),
   "utf8",
 );
+const reviewSql = readFileSync(
+  new URL(
+    "../supabase/migrations/20260904120000_review_request_after_10_bookings.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const activationLinksSql = readFileSync(
   new URL(
     "../supabase/migrations/20260902140000_activation_email_account_links.sql",
@@ -109,6 +122,7 @@ const workerTs = readFileSync(
 
 function seedSqlFor(automationKey) {
   if (automationKey.startsWith("google_visibility")) return googleSql;
+  if (automationKey === "review_after_10_bookings") return reviewSql;
   if (
     [
       "incomplete_onboarding_after_signup",
@@ -243,4 +257,22 @@ test("trial ending at 00:30 Bucharest is a different UTC calendar day", () => {
   }).format(trialEnd);
   assert.equal(utc, "2026-09-03");
   assert.equal(bucharest, "2026-09-04");
+});
+
+test("review after 10 bookings is paused, one-shot per tenant, excludes cancelled", () => {
+  assert.match(reviewSql, /'review_request_active_user'/);
+  assert.match(reviewSql, /https:\/\/staging\.frizeo\.ro\/review/);
+  assert.match(reviewSql, /'Lasă-ne o recenzie'/);
+  assert.match(reviewSql, /trigger_type = 'min_bookings'/);
+  assert.match(reviewSql, /'min_bookings:' \|\| contact\.tenant_id::text/);
+  assert.match(reviewSql, /booking\.status <> 'cancelled'/);
+  assert.match(reviewSql, /ON CONFLICT \(automation_id, trigger_reference\) DO NOTHING/);
+  assert.match(reviewSql, /'review_after_10_bookings'/);
+  assert.match(reviewSql, /"min_bookings":10/);
+  assert.match(
+    reviewSql,
+    /'review_after_10_bookings'[\s\S]{0,900}true,\s+false/,
+  );
+  assert.doesNotMatch(reviewSql, /review_request_sent_at/);
+  assert.match(scheduleTs, /function describeAutomationTrigger/);
 });
