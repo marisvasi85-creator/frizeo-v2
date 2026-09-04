@@ -41,7 +41,11 @@ export async function GET(request: Request) {
       discover,
       execute,
     });
-    return NextResponse.json({ success: true, mode, ...result });
+    return NextResponse.json({
+      success: !result.discoverError,
+      mode,
+      ...result,
+    });
   } catch (error) {
     const detail =
       error instanceof Error ? error.message : "Unknown worker error";

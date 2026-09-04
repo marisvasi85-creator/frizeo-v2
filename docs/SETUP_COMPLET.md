@@ -132,6 +132,8 @@ După setare în Vercel, creează job-uri HTTP GET. **Preferat:** header `Author
 
 Folosește **www.frizeo.ro**, nu `email.frizeo.ro` și nu apex-ul `frizeo.ro` (redirect 307/308 poate pierde header-ul `Authorization`). Endpoint-urile `/api/cron/*` răspund `401` dacă `CRON_SECRET` lipsește sau e greșit. Workerii marketing răspund `401` dacă `MARKETING_WORKER_SECRET` e greșit și `503` dacă lipsește.
 
+Dacă cron-job.org dezactivează **Email Automations** după 500-uri consecutive: aplică migrarea `discover_marketing_automation_runs` în Supabase, re-activează job-ul, și până atunci poți folosi temporar `?mode=execute` (trimite run-urile deja programate, fără discover).
+
 ### Stripe (upgrade plan plătit — opțional la beta)
 
 ```

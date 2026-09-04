@@ -98,6 +98,7 @@ export type AutomationWorkerResult = {
   retryScheduled: number;
   failed: number;
   staleResults: number;
+  discoverError?: string;
 };
 
 export async function processAutomationDiscoverAndExecute(input: {
@@ -109,9 +110,23 @@ export async function processAutomationDiscoverAndExecute(input: {
   const shouldExecute = input.execute !== false;
 
   let discovered = 0;
+  let discoverError: string | undefined;
   if (shouldDiscover) {
-    const discovery = await discoverAutomationRuns(200);
-    discovered = Number(discovery?.inserted || 0);
+    try {
+      const discovery = await discoverAutomationRuns(200);
+      discovered = Number(discovery?.inserted || 0);
+    } catch (error) {
+      discoverError =
+        error instanceof Error ? error.message : String(error);
+      console.error("[marketing-automation-worker] discover failed", {
+        message: discoverError,
+      });
+      // cron-job.org disables jobs after repeated 500s. Keep mode=all
+      // alive so already-queued emails still send while discover is broken.
+      if (!shouldExecute) {
+        throw error;
+      }
+    }
   }
 
   const result: AutomationWorkerResult = {
@@ -123,6 +138,7 @@ export async function processAutomationDiscoverAndExecute(input: {
     retryScheduled: 0,
     failed: 0,
     staleResults: 0,
+    ...(discoverError ? { discoverError } : {}),
   };
 
   if (!shouldExecute) return result;
