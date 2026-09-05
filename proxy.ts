@@ -3,19 +3,10 @@ import { createServerClient } from "@supabase/ssr";
 import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
 import { getFrizeoAppUrl, isEmailHost } from "@/lib/frizeo-email/config";
 import { isPlatformAdminEmail } from "@/lib/auth/requirePlatformAdmin";
-
-function isPublicEmailPath(pathname: string): boolean {
-  if (pathname.startsWith("/unsubscribe")) return true;
-  if (pathname.startsWith("/email/unsubscribe")) return true;
-  if (pathname.startsWith("/api/email/sso")) return true;
-  if (pathname.startsWith("/api/email/unsubscribe")) return true;
-  if (pathname.startsWith("/_next")) return true;
-  if (pathname === "/favicon.ico") return true;
-  if (pathname === "/robots.txt") return true;
-  // Static assets
-  if (/\.[a-zA-Z0-9]+$/.test(pathname)) return true;
-  return false;
-}
+import {
+  isPublicEmailPath,
+  isSecretAuthenticatedApiPath,
+} from "@/lib/frizeo-email/publicEmailPaths";
 
 function rewriteEmailHostPath(req: NextRequest): NextResponse | null {
   const host = req.headers.get("host");
@@ -46,6 +37,15 @@ function rewriteEmailHostPath(req: NextRequest): NextResponse | null {
 }
 
 export async function proxy(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+
+  // Cron / webhooks / internal workers auth with secrets, not cookies.
+  // Skip the email login gate and the extra getUser() round-trip so a
+  // request to email.frizeo.ro/api/internal/marketing/* is not 307'd to /login.
+  if (isSecretAuthenticatedApiPath(pathname)) {
+    return NextResponse.next();
+  }
+
   const emailRewrite = rewriteEmailHostPath(req);
   const res = emailRewrite ?? NextResponse.next();
 
@@ -71,7 +71,6 @@ export async function proxy(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = req.nextUrl.pathname;
   const host = req.headers.get("host");
   const onEmailHost = isEmailHost(host);
   const onEmailApp =
@@ -116,6 +115,6 @@ export const config = {
      * Broad matcher so email.frizeo.ro root paths (/contacts, etc.) are rewritten.
      * Skips Next internals / common static files.
      */
-    "/((?!_next/static|_next/image|monitoring|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|monitoring|api/cron|api/internal|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

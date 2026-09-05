@@ -41,14 +41,23 @@ export async function GET(request: Request) {
       discover,
       execute,
     });
-    return NextResponse.json({ success: true, mode, ...result });
+    return NextResponse.json({
+      success: !result.discoverError,
+      mode,
+      ...result,
+    });
   } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : "Unknown worker error";
     console.error("[marketing-automation-worker] failed", {
       name: error instanceof Error ? error.name : "WorkerError",
-      message: error instanceof Error ? error.message : "Unknown worker error",
+      message: detail,
     });
     return NextResponse.json(
-      { error: "Marketing automation worker failed." },
+      {
+        error: "Marketing automation worker failed.",
+        detail,
+      },
       { status: 500 },
     );
   }
