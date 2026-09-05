@@ -121,14 +121,18 @@ Planul Vercel Free **nu** suportă cron-uri frecvente — folosim un **serviciu 
 
 După setare în Vercel, creează job-uri HTTP GET. **Preferat:** header `Authorization: Bearer SECRET` (secretul nu apare în loguri URL). Alternativ `?secret=SECRET`.
 
-| Job | URL | Program |
-|-----|-----|---------|
-| Reminder | `https://www.frizeo.ro/api/cron/reminder` + Bearer | La 15 min (`*/15 * * * *`) |
-| Cleanup | `https://www.frizeo.ro/api/cron/cleanup` + Bearer | La fiecare oră (`0 * * * *`) |
-| Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup` + Bearer | Zilnic 03:00 UTC (`0 3 * * *`) |
-| Notion sync | `https://www.frizeo.ro/api/cron/notion-sync` + Bearer | Zilnic 04:00 UTC (`0 4 * * *`) |
+| Job | URL | Program | Secret |
+|-----|-----|---------|--------|
+| Reminder | `https://www.frizeo.ro/api/cron/reminder` + Bearer | La 15 min (`*/15 * * * *`) | `CRON_SECRET` |
+| Cleanup | `https://www.frizeo.ro/api/cron/cleanup` + Bearer | La fiecare oră (`0 * * * *`) | `CRON_SECRET` |
+| Trial cleanup | `https://www.frizeo.ro/api/cron/trial-cleanup` + Bearer | Zilnic 03:00 UTC (`0 3 * * *`) | `CRON_SECRET` |
+| Notion sync | `https://www.frizeo.ro/api/cron/notion-sync` + Bearer | Zilnic 04:00 UTC (`0 4 * * *`) | `CRON_SECRET` |
+| Campaign worker | `https://www.frizeo.ro/api/internal/marketing/worker` + Bearer | La 15 min (`*/15 * * * *`) | `MARKETING_WORKER_SECRET` |
+| Automations worker | `https://www.frizeo.ro/api/internal/marketing/automations` + Bearer | La 15 min (`*/15 * * * *`) | `MARKETING_WORKER_SECRET` |
 
-Endpoint-urile răspund `401` dacă `CRON_SECRET` lipsește sau e greșit.
+Folosește **www.frizeo.ro**, nu `email.frizeo.ro` și nu apex-ul `frizeo.ro` (redirect 307/308 poate pierde header-ul `Authorization`). Endpoint-urile `/api/cron/*` răspund `401` dacă `CRON_SECRET` lipsește sau e greșit. Workerii marketing răspund `401` dacă `MARKETING_WORKER_SECRET` e greșit și `503` dacă lipsește.
+
+Dacă cron-job.org dezactivează **Email Automations** după 500-uri consecutive: aplică migrarea `discover_marketing_automation_runs` în Supabase, re-activează job-ul, și până atunci poți folosi temporar `?mode=execute` (trimite run-urile deja programate, fără discover).
 
 ### Stripe (upgrade plan plătit — opțional la beta)
 

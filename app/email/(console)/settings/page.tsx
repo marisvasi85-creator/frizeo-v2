@@ -107,7 +107,9 @@ export default function EmailSettingsPage() {
         </div>
         <p className="text-xs text-frz-muted">
           Ambele folosesc `MARKETING_WORKER_SECRET` (același worker intern
-          marketing). Nu folosi Vercel Cron.
+          marketing), nu `CRON_SECRET`. Apelează `www.frizeo.ro` — pe
+          `email.frizeo.ro` proxy-ul redirecționa cronul neautentificat către
+          login. Nu folosi Vercel Cron.
         </p>
       </section>
 
