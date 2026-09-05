@@ -60,10 +60,7 @@ function isBookingLinkCustomizationEnabled(env) {
   const explicit = env.BOOKING_LINK_CUSTOMIZATION_ENABLED?.trim().toLowerCase();
   if (explicit === "true" || explicit === "1") return true;
   if (explicit === "false" || explicit === "0") return false;
-  if (env.VERCEL_GIT_COMMIT_REF?.trim() === "staging") return true;
-  if (env.VERCEL_ENV === "production") return false;
-  if (env.NODE_ENV === "development") return true;
-  return env.VERCEL_ENV === "preview";
+  return true;
 }
 
 test("slugify transliterates Romanian letters", () => {
@@ -91,27 +88,18 @@ test("parseBookingSlug accepts a custom handle and rejects junk", () => {
   assert.match(parseBookingSlug("").error || "", /nume pentru link/);
 });
 
-test("customization is off on production unless explicitly enabled", () => {
+test("customization is on unless explicitly disabled", () => {
   const source = readFileSync(
     new URL("../lib/slugs/bookingLinkCustomization.ts", import.meta.url),
     "utf8",
   );
+  assert.match(source, /process\.env\[name\]/);
   assert.match(source, /BOOKING_LINK_CUSTOMIZATION_ENABLED/);
-  assert.match(source, /branch === "staging"/);
-  assert.match(source, /VERCEL_ENV === "production"/);
 
   assert.equal(
     isBookingLinkCustomizationEnabled({
       VERCEL_ENV: "production",
       NODE_ENV: "production",
-    }),
-    false,
-  );
-  assert.equal(
-    isBookingLinkCustomizationEnabled({
-      VERCEL_ENV: "production",
-      NODE_ENV: "production",
-      VERCEL_GIT_COMMIT_REF: "staging",
     }),
     true,
   );
@@ -122,6 +110,14 @@ test("customization is off on production unless explicitly enabled", () => {
       BOOKING_LINK_CUSTOMIZATION_ENABLED: "true",
     }),
     true,
+  );
+  assert.equal(
+    isBookingLinkCustomizationEnabled({
+      VERCEL_ENV: "production",
+      NODE_ENV: "production",
+      BOOKING_LINK_CUSTOMIZATION_ENABLED: "false",
+    }),
+    false,
   );
 });
 
