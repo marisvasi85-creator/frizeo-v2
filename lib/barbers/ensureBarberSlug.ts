@@ -10,8 +10,9 @@ type BarberSlugInput = {
 };
 
 export async function ensureBarberSlug(barber: BarberSlugInput): Promise<string> {
-  // Keep existing slug unless it collides; explicit customization records redirects.
-  if (barber.slug && (await isBarberSlugAvailable(barber.tenant_id, barber.slug, barber.id))) {
+  // Never rewrite an existing slug on page load. Explicit customization
+  // (updateBarberBookingSlug) records redirects so old links stay valid.
+  if (barber.slug) {
     return barber.slug;
   }
 

@@ -158,6 +158,20 @@ test("dashboard and public booking pages keep old links via redirects", () => {
   assert.match(actions, /updateBarberBookingSlug/);
 });
 
+test("ensureBarberSlug never rewrites an existing slug on page load", () => {
+  const source = readFileSync(
+    new URL("../lib/barbers/ensureBarberSlug.ts", import.meta.url),
+    "utf8",
+  );
+  const tenantEnsure = readFileSync(
+    new URL("../lib/tenant/ensureTenantSlug.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /if \(barber\.slug\) \{\s*return barber\.slug;/);
+  assert.match(tenantEnsure, /if \(tenant\.slug\) \{\s*return tenant\.slug;/);
+});
+
 test("allocation skips slugs reserved by redirects", () => {
   const tenantAlloc = readFileSync(
     new URL("../lib/tenant/allocateTenantSlug.ts", import.meta.url),
