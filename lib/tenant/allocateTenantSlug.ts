@@ -1,22 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils/slugify";
-
-async function isTenantSlugAvailable(
-  slug: string,
-  excludeTenantId?: string,
-): Promise<boolean> {
-  let query = supabaseAdmin
-    .from("tenants")
-    .select("id")
-    .eq("slug", slug)
-    .maybeSingle();
-
-  const { data } = await query;
-
-  if (!data) return true;
-  if (excludeTenantId && data.id === excludeTenantId) return true;
-  return false;
-}
+import { isTenantSlugAvailable } from "@/lib/slugs/slugAvailability";
 
 /** Allocate a unique tenant slug once; callers must not rewrite it on rename. */
 export async function allocateTenantSlug(

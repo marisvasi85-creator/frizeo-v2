@@ -1,22 +1,5 @@
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils/slugify";
-
-async function isBarberSlugAvailable(
-  tenantId: string,
-  slug: string,
-  excludeBarberId?: string,
-): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from("barbers")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("slug", slug)
-    .maybeSingle();
-
-  if (!data) return true;
-  if (excludeBarberId && data.id === excludeBarberId) return true;
-  return false;
-}
+import { isBarberSlugAvailable } from "@/lib/slugs/slugAvailability";
 
 /** Allocate a unique barber slug once within a tenant; never rewrite on rename. */
 export async function allocateBarberSlug(

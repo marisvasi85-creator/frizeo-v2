@@ -2,14 +2,19 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireActsAsBarber } from "../lib/requireActsAsBarber";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
+import { getCurrentRole } from "@/lib/auth/getCurrentRole";
 import { updateProfile } from "./actions";
 import AvatarUpload from "./AvatarUpload";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
+import BookingLinkCard from "../components/BookingLinkCard";
 import BarberLocationSection from "@/app/components/location/BarberLocationSection";
 import GoogleCalendarConnectDisclosure from "./GoogleCalendarConnectDisclosure";
 import GoogleCalendarSyncButton from "./GoogleCalendarSyncButton";
 import { formatLocationAddress } from "@/lib/location/resolveLocation";
 import ThemeSelector from "../components/ThemeSelector";
+import { getAppUrl } from "@/lib/app/getAppUrl";
+import { publicBookingUrl, stableBookingUrl } from "@/lib/booking/publicBookingPath";
+import { isBookingLinkCustomizationEnabled } from "@/lib/slugs/bookingLinkCustomization";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
@@ -39,6 +44,10 @@ export default async function ProfilePage({
   if (!barber) {
     redirect("/login");
   }
+
+  const role = await getCurrentRole();
+  const customizationEnabled = isBookingLinkCustomizationEnabled();
+  const appUrl = getAppUrl();
 
   const [googleAccountRes, tenantRes] = await Promise.all([
     supabase
@@ -80,6 +89,10 @@ export default async function ProfilePage({
     googleStatus === "connected" || googleStatus === "disconnected";
 
   const salonPreview = tenant ? formatLocationAddress(tenant) : null;
+  const bookingUrl =
+    barber.slug && tenantRes.data?.slug
+      ? publicBookingUrl(tenantRes.data.slug, barber.slug, appUrl)
+      : stableBookingUrl(barber.id, appUrl);
 
   return (
     <div className="space-y-6">
@@ -174,6 +187,18 @@ export default async function ProfilePage({
 
       <AvatarUpload currentUrl={barber.avatar_url} />
 
+      <BookingLinkCard
+        initialUrl={bookingUrl}
+        appUrl={appUrl}
+        tenantSlug={tenantRes.data?.slug || undefined}
+        barberSlug={typeof barber.slug === "string" ? barber.slug : null}
+        canEditTenantSlug={customizationEnabled && role === "owner"}
+        canEditBarberSlug={customizationEnabled}
+        customizationEnabled={customizationEnabled}
+        barberId={barber.id}
+        title="Link programări"
+      />
+
       <FormWithSaveFeedback
         action={updateProfile}
         className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-5"
@@ -200,23 +225,6 @@ export default async function ProfilePage({
             defaultValue={barber.phone || ""}
             className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-frz-ink outline-none focus:ring-2 focus:ring-frz-ink/10"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm text-frz-ink/60 mb-2">
-            Link programări
-          </label>
-
-          <p className="text-xs text-frz-ink/40">
-            Linkul frumos se creează o singură dată și nu se schimbă când îți
-            actualizezi numele. Îl poți trimite clienților fără griji.
-          </p>
-
-          <p className="mt-2 text-sm text-frz-ink/50 font-mono break-all">
-            {barber.slug && tenantRes.data?.slug
-              ? `/booking/salon/${tenantRes.data.slug}/${barber.slug}`
-              : `/booking/${barber.id}`}
-          </p>
         </div>
 
         <div>

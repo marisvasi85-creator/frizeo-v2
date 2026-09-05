@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import getDashboardStatus from "@/lib/onboarding/getDashboardStatus";
-import BookingLinkCard from "./BookingLinkCard";
+import BookingLinkCard from "../components/BookingLinkCard";
+import { isBookingLinkCustomizationEnabled } from "@/lib/slugs/bookingLinkCustomization";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { getCurrentPlan } from "@/lib/billing/getCurrentPlan";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -84,6 +85,7 @@ export default async function DashboardPage() {
 
   let bookingUrl = stableBookingUrl(barber.id, appUrl);
   let bookingLinkLabel = "Linkul tău de programări";
+  let barberSlug: string | null = null;
 
   if (!actsAsBarber && tenantSlug) {
     bookingUrl = publicSalonUrl(tenantSlug, appUrl);
@@ -93,7 +95,7 @@ export default async function DashboardPage() {
       typeof barber.slug === "string" && barber.slug.trim()
         ? barber.slug
         : null;
-    const barberSlug = await ensureBarberSlug({
+    barberSlug = await ensureBarberSlug({
       id: barber.id,
       tenant_id: barber.tenant_id,
       display_name: barber.display_name,
@@ -101,6 +103,8 @@ export default async function DashboardPage() {
     });
     bookingUrl = publicBookingUrl(tenantSlug, barberSlug, appUrl);
   }
+
+  const customizationEnabled = isBookingLinkCustomizationEnabled();
 
   const showSetupChecklist = actsAsBarber && !anyBookingRes.data?.length;
   let pendingAccessQuery = supabaseAdmin
@@ -152,6 +156,12 @@ export default async function DashboardPage() {
 
       <BookingLinkCard
         initialUrl={bookingUrl}
+        appUrl={appUrl}
+        tenantSlug={tenantSlug || undefined}
+        barberSlug={actsAsBarber ? barberSlug : null}
+        canEditTenantSlug={customizationEnabled && role === "owner"}
+        canEditBarberSlug={customizationEnabled && actsAsBarber}
+        customizationEnabled={customizationEnabled}
         barberId={actsAsBarber ? barber.id : undefined}
         title={bookingLinkLabel}
       />

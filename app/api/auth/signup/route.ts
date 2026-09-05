@@ -131,7 +131,8 @@ export async function POST(req: Request) {
     });
     if (profileError) throw profileError;
 
-    // Slug-uri stabile: se alocă o singură dată la creare, nu se rescriu la redenumire.
+    // Slug-uri stabile la creare. Utilizatorii le pot personaliza ulterior
+    // din dashboard; slug-urile vechi rămân ca redirect.
     const tenantSlug = await allocateTenantSlug(tenantDisplayName);
     // =========================
     // 🔥 TENANT

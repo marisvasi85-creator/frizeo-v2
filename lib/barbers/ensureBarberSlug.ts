@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { slugify } from "@/lib/utils/slugify";
+import { isBarberSlugAvailable } from "@/lib/slugs/slugAvailability";
 
 type BarberSlugInput = {
   id: string;
@@ -8,24 +9,10 @@ type BarberSlugInput = {
   slug: string | null;
 };
 
-async function isSlugAvailable(
-  tenantId: string,
-  slug: string,
-  barberId: string
-): Promise<boolean> {
-  const { data } = await supabaseAdmin
-    .from("barbers")
-    .select("id")
-    .eq("tenant_id", tenantId)
-    .eq("slug", slug)
-    .maybeSingle();
-
-  return !data || data.id === barberId;
-}
-
 export async function ensureBarberSlug(barber: BarberSlugInput): Promise<string> {
-  // Keep existing slug forever so rename does not break shared booking links.
-  if (barber.slug && (await isSlugAvailable(barber.tenant_id, barber.slug, barber.id))) {
+  // Never rewrite an existing slug on page load. Explicit customization
+  // (updateBarberBookingSlug) records redirects so old links stay valid.
+  if (barber.slug) {
     return barber.slug;
   }
 
@@ -37,7 +24,7 @@ export async function ensureBarberSlug(barber: BarberSlugInput): Promise<string>
   let slug = base;
   let suffix = 2;
 
-  while (!(await isSlugAvailable(barber.tenant_id, slug, barber.id))) {
+  while (!(await isBarberSlugAvailable(barber.tenant_id, slug, barber.id))) {
     slug = `${base}-${suffix}`;
     suffix += 1;
   }

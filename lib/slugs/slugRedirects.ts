@@ -167,20 +167,20 @@ export async function recordSlugRedirect(input: {
   entityId: string;
   oldSlug: string;
   tenantId?: string;
-}) {
+}): Promise<boolean> {
   if (!(await hasSlugRedirectsMigration())) {
-    return;
+    return false;
   }
 
   const oldSlug = input.oldSlug.trim().toLowerCase();
 
   if (!oldSlug) {
-    return;
+    return false;
   }
 
   let existingQuery = supabaseAdmin
     .from("slug_redirects")
-    .select("id")
+    .select("id, entity_id")
     .eq("entity_type", input.entityType)
     .eq("old_slug", oldSlug);
 
@@ -191,7 +191,21 @@ export async function recordSlugRedirect(input: {
   const { data: existing } = await existingQuery.maybeSingle();
 
   if (existing) {
-    return;
+    if (existing.entity_id === input.entityId) {
+      return true;
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from("slug_redirects")
+      .update({ entity_id: input.entityId })
+      .eq("id", existing.id);
+
+    if (updateError) {
+      console.error("recordSlugRedirect update:", updateError);
+      return false;
+    }
+
+    return true;
   }
 
   const payload =
@@ -213,5 +227,63 @@ export async function recordSlugRedirect(input: {
 
   if (error) {
     console.error("recordSlugRedirect:", error);
+    return false;
   }
+
+  return true;
+}
+
+export async function clearOwnSlugRedirect(input: {
+  entityType: "tenant" | "barber";
+  entityId: string;
+  slug: string;
+  tenantId?: string;
+}): Promise<void> {
+  if (!(await hasSlugRedirectsMigration())) {
+    return;
+  }
+
+  const slug = input.slug.trim().toLowerCase();
+  if (!slug) return;
+
+  let query = supabaseAdmin
+    .from("slug_redirects")
+    .delete()
+    .eq("entity_type", input.entityType)
+    .eq("entity_id", input.entityId)
+    .eq("old_slug", slug);
+
+  if (input.entityType === "barber") {
+    query = query.eq("tenant_id", input.tenantId ?? "");
+  }
+
+  const { error } = await query;
+
+  if (error) {
+    console.error("clearOwnSlugRedirect:", error);
+  }
+}
+
+export async function countRecentSlugChanges(input: {
+  entityType: "tenant" | "barber";
+  entityId: string;
+  sinceIso: string;
+}): Promise<number> {
+  if (!(await hasSlugRedirectsMigration())) {
+    return 0;
+  }
+
+  const { count, error } = await supabaseAdmin
+    .from("slug_redirects")
+    .select("id", { count: "exact", head: true })
+    .eq("entity_type", input.entityType)
+    .eq("entity_id", input.entityId)
+    .gte("created_at", input.sinceIso);
+
+  if (error) {
+    console.error("countRecentSlugChanges:", error);
+    return 0;
+  }
+
+  return count ?? 0;
 }

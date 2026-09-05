@@ -12,7 +12,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Dashboard",
     tags: ["dashboard", "acasă", "checklist", "link"],
     admin_path: "/admin/dashboard",
-    body: `Dashboard-ul e prima pagină din admin (/admin/dashboard). Vezi programările de azi, următoarele clienți, planul/trial-ul și checklist-ul de setup (servicii + program) dacă ești frizer activ. De aici copiezi și link-ul public de programare. Owner-ul doar-administrator vede tot salonul, nu un loc propriu de programări.`,
+    body: `Dashboard-ul e prima pagină din admin (/admin/dashboard). Vezi programările de azi, următoarele clienți, planul/trial-ul și checklist-ul de setup (servicii + program) dacă ești frizer activ. De aici copiezi și link-ul public de programare. Pe staging poți personaliza numele din link; linkurile vechi redirecționează automat. Owner-ul doar-administrator vede tot salonul, nu un loc propriu de programări.`,
   },
   {
     id: "bookings",
@@ -26,7 +26,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Link public de programare",
     tags: ["link", "pagină publică", "instagram", "whatsapp", "bio", "slug"],
     admin_path: "/admin/dashboard",
-    body: `Fiecare salon are un link de forma /booking/salon/{slug-salon}. Fiecare frizer activ are și un link propriu /booking/salon/{slug-salon}/{slug-frizer} (sau /booking/{id} ca variantă stabilă). Clienții aleg serviciul, ziua și ora. Pune-l în Instagram bio, Google, WhatsApp. Link-ul salonului e și în /admin/salon. Cere booking_link pentru URL-ul exact, gata de copiat.`,
+    body: `Fiecare salon are un link de forma /booking/salon/{slug-salon}. Fiecare frizer activ are și un link propriu /booking/salon/{slug-salon}/{slug-frizer} (sau /booking/{id} ca variantă stabilă). Clienții aleg serviciul, ziua și ora. Pune-l în Instagram bio, Google, WhatsApp. Link-ul salonului e și în /admin/salon. Pe staging poți personaliza numele din link din Dashboard, Salon sau Profil; linkurile vechi rămân valabile și redirecționează automat. Cere booking_link pentru URL-ul exact, gata de copiat.`,
   },
   {
     id: "services",
@@ -75,7 +75,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Date salon",
     tags: ["salon", "logo", "galerie", "adresă", "slug"],
     admin_path: "/admin/salon",
-    body: `Pagina Salon (/admin/salon, doar owner): nume, slug public, adresă/locație, logo, galerie. De aici copiezi link-ul public al salonului. Fără slug, pagina de programare a salonului nu e publică.`,
+    body: `Pagina Salon (/admin/salon, doar owner): nume, slug public, adresă/locație, logo, galerie. De aici copiezi link-ul public al salonului. Fără slug, pagina de programare a salonului nu e publică. Pe staging, owner-ul poate personaliza slug-ul; linkurile vechi redirecționează către cel nou.`,
   },
   {
     id: "client-access",
