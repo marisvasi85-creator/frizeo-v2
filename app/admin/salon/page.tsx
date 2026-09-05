@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { updateSalon } from "./actions";
-import CopySalonLink from "./CopySalonLink";
 import LogoUpload from "./LogoUpload";
 import GalleryUpload from "./GalleryUpload";
 import { publicSalonUrl } from "@/lib/booking/publicBookingPath";
@@ -9,9 +8,11 @@ import { getAppUrl } from "@/lib/app/getAppUrl";
 import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import FormWithSaveFeedback from "../components/FormWithSaveFeedback";
+import BookingLinkCard from "../components/BookingLinkCard";
 import LocationFormFields from "@/app/components/location/LocationFormFields";
 import LocationMigrationBanner from "../components/LocationMigrationBanner";
 import { hasLocationMigration } from "@/lib/location/hasLocationMigration";
+import { isBookingLinkCustomizationEnabled } from "@/lib/slugs/bookingLinkCustomization";
 
 export default async function SalonPage() {
   const session = await getAdminSession();
@@ -77,6 +78,7 @@ export default async function SalonPage() {
 
   const tenantSlug = tenant ? await ensureTenantSlug(tenant) : "";
   const salonUrl = publicSalonUrl(tenantSlug, getAppUrl());
+  const customizationEnabled = isBookingLinkCustomizationEnabled();
   const plan = subscription?.plans as
     | { name?: string; max_barbers?: number | null }
     | null
@@ -88,31 +90,16 @@ export default async function SalonPage() {
 
       <LocationMigrationBanner ready={locationMigrationReady} />
 
-      <div className="bg-frz-card border border-frz-line rounded-xl p-6 space-y-4">
-        <div>
-          <p className="text-sm text-frz-ink/60">Link public salon</p>
+      <BookingLinkCard
+        initialUrl={salonUrl}
+        appUrl={getAppUrl()}
+        tenantSlug={tenantSlug || undefined}
+        canEditTenantSlug={customizationEnabled}
+        customizationEnabled={customizationEnabled}
+        title="Link public salon"
+      />
 
-          <div className="mt-2 flex flex-col md:flex-row gap-2">
-            <input
-              value={salonUrl}
-              readOnly
-              className="w-full min-w-0 bg-frz-fog border border-frz-line rounded-lg px-4 py-3 truncate"
-            />
-
-            <div className="flex gap-2">
-              <a
-                href={salonUrl}
-                target="_blank"
-                className="flex-1 text-center px-4 py-3 bg-frz-card text-frz-ink rounded-lg"
-              >
-                Deschide
-              </a>
-
-              <CopySalonLink url={salonUrl} />
-            </div>
-          </div>
-        </div>
-
+      <div className="bg-frz-card border border-frz-line rounded-xl p-6">
         <div className="grid md:grid-cols-3 gap-4">
           <div>
             <p className="text-sm text-frz-ink/60">Plan curent</p>
@@ -150,7 +137,7 @@ export default async function SalonPage() {
           />
         </div>
 
-        {tenant?.slug && (
+        {tenant?.slug && !customizationEnabled && (
           <div>
             <label className="block text-sm text-frz-ink/60 mb-2">
               Link public salon
