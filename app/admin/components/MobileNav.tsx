@@ -57,6 +57,7 @@ export default function MobileNav({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-frz-fog"
               >
@@ -83,6 +84,7 @@ export default function MobileNav({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               aria-label={item.label}
               className={`text-xl transition ${
                 active ? "text-frz-ink" : "text-frz-ink/40"

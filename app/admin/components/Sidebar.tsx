@@ -46,6 +46,7 @@ export default function Sidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   ${
                     active
@@ -65,6 +66,7 @@ export default function Sidebar({
         {role === "owner" && (
           <Link
             href="/admin/billing"
+            prefetch={false}
             className="block text-center bg-frz-fog text-frz-ink py-2 rounded-lg text-sm font-medium hover:bg-frz-mist transition"
           >
             Abonament

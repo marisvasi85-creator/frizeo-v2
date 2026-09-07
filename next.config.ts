@@ -70,6 +70,11 @@ const nextConfig: NextConfig = {
         destination: "/frizerii",
         permanent: true,
       },
+      {
+        source: "/icon",
+        destination: "/icon.png",
+        permanent: true,
+      },
     ];
   },
   async headers() {

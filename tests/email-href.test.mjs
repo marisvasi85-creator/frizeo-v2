@@ -71,6 +71,12 @@ test("email console no longer hardcodes /email page navigations", () => {
   for (const file of files) {
     const source = readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
     assert.match(source, /useEmailHref/, `${file} should use useEmailHref`);
+    if (
+      file.endsWith("EmailMobileNav.tsx") ||
+      file.endsWith("EmailSidebar.tsx")
+    ) {
+      assert.match(source, /prefetch=\{false\}/, `${file} should disable Link prefetch`);
+    }
     assert.doesNotMatch(
       source,
       /router\.push\(`\/email\//,

@@ -35,6 +35,7 @@ export default function EmailSidebar({
               <Link
                 key={item.path || "dashboard"}
                 href={href}
+                prefetch={false}
                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
                   ${
                     active

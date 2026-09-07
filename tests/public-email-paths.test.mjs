@@ -65,6 +65,10 @@ test("proxy wires secret-auth bypass and matcher exclusions", () => {
     new URL("../lib/frizeo-email/publicEmailPaths.ts", import.meta.url),
     "utf8",
   );
+  const routing = readFileSync(
+    new URL("../lib/proxy/emailHostRouting.ts", import.meta.url),
+    "utf8",
+  );
   const proxy = readFileSync(new URL("../proxy.ts", import.meta.url), "utf8");
 
   assert.match(helper, /export function isPublicEmailPath/);
@@ -76,7 +80,8 @@ test("proxy wires secret-auth bypass and matcher exclusions", () => {
     /pathname\.startsWith\("\/api\/"\) && !pathname\.startsWith\("\/api\/email"\)/,
   );
 
-  assert.match(proxy, /from "@\/lib\/frizeo-email\/publicEmailPaths"/);
+  assert.match(routing, /from "@\/lib\/frizeo-email\/publicEmailPaths"/);
+  assert.match(proxy, /from "@\/lib\/proxy\/emailHostRouting"/);
   assert.match(proxy, /isSecretAuthenticatedApiPath\(pathname\)/);
   assert.match(proxy, /!isPublicEmailPath\(pathname\)/);
   assert.match(proxy, /api\/cron\|api\/internal\|api\/webhooks/);

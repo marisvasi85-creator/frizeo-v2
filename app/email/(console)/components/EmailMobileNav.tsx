@@ -45,6 +45,7 @@ export default function EmailMobileNav({
               <Link
                 key={item.path}
                 href={hrefFor(item.path)}
+                prefetch={false}
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-frz-fog"
               >
@@ -64,6 +65,7 @@ export default function EmailMobileNav({
               <li key={item.path || "dashboard"}>
                 <Link
                   href={hrefFor(item.path)}
+                  prefetch={false}
                   className={`flex flex-col items-center gap-0.5 rounded-lg px-1 py-2 text-[11px] ${
                     active ? "text-frz-ink" : "text-frz-ink/40"
                   }`}

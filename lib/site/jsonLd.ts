@@ -15,7 +15,7 @@ export function organizationJsonLd() {
     name: LEGAL_COMPANY.name,
     legalName: LEGAL_COMPANY.name,
     url: LEGAL_COMPANY.website,
-    logo: pageUrl("/icon"),
+    logo: pageUrl("/icon.png"),
     email: LEGAL_COMPANY.email,
     address: {
       "@type": "PostalAddress",
