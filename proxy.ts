@@ -97,18 +97,6 @@ export async function proxy(req: NextRequest) {
   return res;
 }
 
-/**
- * www / staging / preview: only gated surfaces.
- * email.frizeo.ro: keep a broad matcher so /contacts, /campaigns, / etc.
- * still rewrite into /email/*. Cron/internal/webhooks stay out of this
- * catch-all so they never hit the email login gate.
- */
-const emailHostCatchAll = {
-  source:
-    "/((?!_next/static|_next/image|monitoring|api/cron|api/internal|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|js|map|woff2?|ttf)$).*)",
-  has: [{ type: "host" as const, value: "email.frizeo.ro" }],
-};
-
 export const config = {
   matcher: [
     "/admin",
@@ -116,8 +104,20 @@ export const config = {
     "/email",
     "/email/:path*",
     "/api/email/:path*",
-    emailHostCatchAll,
-    { ...emailHostCatchAll, has: [{ type: "host" as const, value: "email.localhost" }] },
-    { ...emailHostCatchAll, has: [{ type: "host" as const, value: "email.local" }] },
+    {
+      source:
+        "/((?!_next/static|_next/image|monitoring|api/cron|api/internal|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|js|map|woff2?|ttf)$).*)",
+      has: [{ type: "host", value: "email.frizeo.ro" }],
+    },
+    {
+      source:
+        "/((?!_next/static|_next/image|monitoring|api/cron|api/internal|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|js|map|woff2?|ttf)$).*)",
+      has: [{ type: "host", value: "email.localhost" }],
+    },
+    {
+      source:
+        "/((?!_next/static|_next/image|monitoring|api/cron|api/internal|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|js|map|woff2?|ttf)$).*)",
+      has: [{ type: "host", value: "email.local" }],
+    },
   ],
 };

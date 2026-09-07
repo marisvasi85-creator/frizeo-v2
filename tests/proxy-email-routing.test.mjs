@@ -131,9 +131,14 @@ test("proxy matcher is host-scoped instead of a global catch-all", () => {
   assert.match(source, /"\/admin"/);
   assert.match(source, /"\/email"/);
   assert.match(source, /"\/api\/email\/:path\*"/);
+  assert.equal(
+    (source.match(/type: "host"/g) || []).length,
+    3,
+    "every catch-all matcher must be host-scoped",
+  );
   assert.doesNotMatch(
     source,
-    /matcher:\s*\[[^\]]*["']\/\(\(\?!_next\/static/,
-    "must not keep a host-agnostic catch-all matcher",
+    /(?:matcher:\s*\[|,)\s*"\/\(\(\?!_next\/static/,
+    "must not keep a host-agnostic string catch-all",
   );
 });
