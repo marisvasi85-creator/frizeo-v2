@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { getEmailAppUrlForRequest } from "@/lib/frizeo-email/config";
 import {
   isAuthorizedMarketingWorker,
@@ -30,6 +31,12 @@ export async function GET(request: Request) {
   if (!isAuthorizedMarketingWorker(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(
+    request,
+    "marketing-automations",
+  );
+  if (skipped) return skipped;
 
   const mode = new URL(request.url).searchParams.get("mode") || "all";
   const discover = mode === "all" || mode === "discover";

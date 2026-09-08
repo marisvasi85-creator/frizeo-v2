@@ -1,3 +1,10 @@
+import {
+  isDevelopment,
+  isPreview,
+  isProduction,
+  isStaging,
+} from "@/lib/app/environment";
+
 /**
  * Platform (creator) assistant — separate from salon Frizeo Assistant.
  * Default: on for staging/preview/dev; off on production unless flagged.
@@ -7,12 +14,8 @@ export function isPlatformAssistantEnabled(): boolean {
   if (explicit === "true" || explicit === "1") return true;
   if (explicit === "false" || explicit === "0") return false;
 
-  const branch = process.env.VERCEL_GIT_COMMIT_REF?.trim();
-  if (branch === "staging") return true;
-
-  if (process.env.VERCEL_ENV === "production") return false;
-  if (process.env.NODE_ENV === "development") return true;
-  return process.env.VERCEL_ENV === "preview";
+  if (isProduction()) return false;
+  return isStaging() || isPreview() || isDevelopment();
 }
 
 export function getPlatformAssistantModel(): string {

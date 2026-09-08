@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { getEmailAppUrlForRequest } from "@/lib/frizeo-email/config";
 import {
   isAuthorizedMarketingWorker,
@@ -21,6 +22,9 @@ export async function GET(request: Request) {
   if (!isAuthorizedMarketingWorker(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(request, "marketing-worker");
+  if (skipped) return skipped;
 
   try {
     const result = await processMarketingBatch({

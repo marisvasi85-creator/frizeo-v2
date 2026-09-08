@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { sendSms } from "@/lib/sms/sendSms";
@@ -24,6 +25,9 @@ export async function GET(req: Request) {
       { status: 401 }
     );
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(req, "cron-reminder");
+  if (skipped) return skipped;
 
   try {
     const now = new Date();

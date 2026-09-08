@@ -140,7 +140,7 @@ export function getSentryEnvironment(): string {
 export function getTracesSampleRate(): number {
   if (process.env.NODE_ENV !== "production") return 0.1;
   const env = getSentryEnvironment();
-  if (env === "preview" || env === "staging") return 0.05;
+  if (env === "preview" || env === "staging") return 0.01;
   return 0.02;
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { shouldIndexForSearchEngines } from "@/lib/app/environment";
 import {
   pwaIconHref,
   pwaManifestHref,
@@ -99,9 +100,10 @@ export function createPageMetadata({
       description,
       images: [twitterImage],
     },
-    robots: noIndex
-      ? { index: false, follow: false }
-      : { index: true, follow: true },
+    robots:
+      noIndex || !shouldIndexForSearchEngines()
+        ? { index: false, follow: false }
+        : { index: true, follow: true },
   };
 }
 

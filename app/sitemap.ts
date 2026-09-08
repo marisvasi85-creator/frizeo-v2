@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { shouldIndexForSearchEngines } from "@/lib/app/environment";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
 import { listDirectoryCities } from "@/lib/seo/directorySalons";
@@ -35,6 +36,10 @@ type ActiveBarberRow = {
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  if (!shouldIndexForSearchEngines()) {
+    return [];
+  }
+
   const base = await getPublicBaseUrl();
   const lastModified = new Date();
 

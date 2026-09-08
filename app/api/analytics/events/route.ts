@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import {
+  hostnameFromRequest,
+  isMarketingAnalyticsEnabled,
+} from "@/lib/app/environment";
+import {
   FIRST_PARTY_EVENT_NAMES,
   type FirstPartyEventName,
 } from "@/lib/analytics/firstParty";
@@ -66,6 +70,13 @@ function requestComesFromFrizeo(req: Request): boolean {
 export async function POST(req: Request) {
   if (!requestComesFromFrizeo(req)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  if (!isMarketingAnalyticsEnabled(hostnameFromRequest(req))) {
+    return NextResponse.json(
+      { accepted: false, skipped: true, reason: "disabled_on_staging" },
+      { status: 202 },
+    );
   }
 
   const userAgent = req.headers.get("user-agent") || "";

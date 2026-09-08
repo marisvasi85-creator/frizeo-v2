@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 
@@ -9,6 +10,9 @@ export async function GET(req: Request) {
       { status: 401 }
     );
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(req, "cron-cleanup");
+  if (skipped) return skipped;
 
   try {
     const now = new Date().toISOString();

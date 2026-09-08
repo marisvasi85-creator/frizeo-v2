@@ -156,10 +156,17 @@ export default function CampaignEditor({
   );
 
   useEffect(() => {
-    if (campaignStatus === "draft") return;
+    const isActiveStatus =
+      campaignStatus === "scheduled" ||
+      campaignStatus === "queued" ||
+      campaignStatus === "sending";
+    if (!isActiveStatus) return;
 
     let stopped = false;
+    let interval: number | null = null;
+
     const poll = async () => {
+      if (stopped || document.hidden) return;
       try {
         const response = await fetch(
           `/api/email/campaigns/${initialCampaign.id}/progress`,
@@ -181,16 +188,51 @@ export default function CampaignEditor({
         if (recipientsResponse.ok && !stopped) {
           setRecipients(recipientsData.recipients || []);
         }
+
+        if (
+          nextStatus !== "scheduled" &&
+          nextStatus !== "queued" &&
+          nextStatus !== "sending"
+        ) {
+          stopped = true;
+          if (interval != null) {
+            window.clearInterval(interval);
+            interval = null;
+          }
+        }
       } catch {
         // Polling is best-effort; the next interval retries without UI noise.
       }
     };
 
-    void poll();
-    const interval = window.setInterval(poll, 10_000);
+    const start = () => {
+      if (stopped || interval != null) return;
+      void poll();
+      interval = window.setInterval(poll, 10_000);
+    };
+
+    const stopTimer = () => {
+      if (interval != null) {
+        window.clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        stopTimer();
+        return;
+      }
+      start();
+    };
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+
     return () => {
       stopped = true;
-      window.clearInterval(interval);
+      stopTimer();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [campaignStatus, initialCampaign.id]);
 

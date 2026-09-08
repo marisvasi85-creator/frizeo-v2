@@ -1,8 +1,18 @@
 import type { MetadataRoute } from "next";
+import { shouldIndexForSearchEngines } from "@/lib/app/environment";
 import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const base = await getPublicBaseUrl();
+
+  if (!shouldIndexForSearchEngines()) {
+    return {
+      rules: {
+        userAgent: "*",
+        disallow: "/",
+      },
+    };
+  }
 
   return {
     rules: {

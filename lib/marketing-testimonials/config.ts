@@ -5,6 +5,12 @@
  * section only after at least 3 approved reviews with display consent.
  */
 
+import {
+  isDevelopment,
+  isPreview,
+  isStaging,
+} from "@/lib/app/environment";
+
 export const MIN_APPROVED_TESTIMONIALS_FOR_PRODUCTION = 3;
 
 function envFlag(name: string): boolean | null {
@@ -15,12 +21,7 @@ function envFlag(name: string): boolean | null {
 }
 
 export function isNonProductionMarketingEnv(): boolean {
-  const branch = process.env.VERCEL_GIT_COMMIT_REF?.trim();
-  if (branch === "staging") return true;
-  if (process.env.VERCEL_ENV === "preview") return true;
-  if (process.env.NODE_ENV === "development") return true;
-  if (process.env.VERCEL_ENV === "production") return false;
-  return process.env.NODE_ENV !== "production";
+  return isStaging() || isPreview() || isDevelopment();
 }
 
 /** Admin Recenzii + moderate API. On unless MARKETING_TESTIMONIALS_ENABLED=false. */

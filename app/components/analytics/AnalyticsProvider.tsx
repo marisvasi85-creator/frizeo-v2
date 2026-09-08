@@ -42,6 +42,7 @@ function AnalyticsInner() {
     if (!consent || isSensitiveRoute) return;
 
     const poll = window.setInterval(() => {
+      if (document.hidden) return;
       flushPendingTrackers();
       if (
         window.fbq ||

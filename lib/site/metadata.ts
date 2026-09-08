@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { shouldIndexForSearchEngines } from "@/lib/app/environment";
 import { LEGAL_COMPANY } from "@/lib/legal/company";
 
 export const SITE_NAME = "Frizeo";
@@ -44,10 +45,9 @@ export const siteMetadata: Metadata = {
     title: `${SITE_NAME} — ${SITE_TAGLINE}`,
     description: SITE_DESCRIPTION,
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  robots: shouldIndexForSearchEngines()
+    ? { index: true, follow: true }
+    : { index: false, follow: false },
   appleWebApp: {
     capable: true,
     title: SITE_NAME,

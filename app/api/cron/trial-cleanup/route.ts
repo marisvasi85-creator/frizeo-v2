@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 import { getPlanIdBySlug } from "@/lib/billing/getPlanIdBySlug";
@@ -9,6 +10,9 @@ export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(req, "cron-trial-cleanup");
+  if (skipped) return skipped;
 
   try {
     const now = new Date().toISOString();

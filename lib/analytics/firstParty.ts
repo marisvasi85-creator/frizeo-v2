@@ -1,3 +1,4 @@
+import { isMarketingAnalyticsEnabled } from "@/lib/app/environment";
 import { hasAnalyticsConsent } from "./consent";
 
 export const FIRST_PARTY_EVENT_NAMES = [
@@ -167,6 +168,7 @@ export async function trackFirstPartyEvent(
   eventName: FirstPartyEventName,
   properties: Record<string, string | number | boolean | null> = {},
 ): Promise<boolean> {
+  if (!isMarketingAnalyticsEnabled()) return false;
   const context = getFirstPartyAnalyticsContext();
   if (!context) return false;
 

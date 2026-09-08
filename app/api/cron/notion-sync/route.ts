@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { skipBackgroundJobsIfDisabled } from "@/lib/app/backgroundJobs";
 import { isAuthorizedCron } from "@/lib/cron/isAuthorizedCron";
 import { getNotionToken } from "@/lib/notion/client";
 import { syncSmsUsageToNotion } from "@/lib/notion/syncSmsUsage";
@@ -11,6 +12,9 @@ export async function GET(req: Request) {
   if (!isAuthorizedCron(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const skipped = skipBackgroundJobsIfDisabled(req, "cron-notion-sync");
+  if (skipped) return skipped;
 
   if (!getNotionToken()) {
     return NextResponse.json(
