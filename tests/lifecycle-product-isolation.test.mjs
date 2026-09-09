@@ -22,13 +22,13 @@ test("NextBestActionCard hides itself when there is nothing to show", () => {
   assert.match(source, /if \(!action \|\| action === "none"\) return null/);
 });
 
-test("booking hold still creates a timed hold and only adds created_via", () => {
+test("booking hold still creates a timed pending hold and tags created_via", () => {
   const source = readRepo("app/api/bookings/hold/route.ts");
   assert.match(source, /expires_at: expiresAt\.toISOString\(\)/);
   assert.match(source, /cancel_token: crypto\.randomUUID\(\)/);
   assert.match(
     source,
-    /created_via: isDashboardBooking \? "dashboard" : "public"/,
+    /status: "pending",\s*created_via: isDashboardBooking \? "dashboard" : "public"/,
   );
 });
 

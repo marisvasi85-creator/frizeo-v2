@@ -173,6 +173,9 @@ export async function POST(req: Request) {
         date,
         start_time,
         end_time,
+        // bookings.status defaults to "confirmed". Holds must stay pending
+        // or /api/bookings/create cannot find them (public booking breaks).
+        status: "pending",
         created_via: isDashboardBooking ? "dashboard" : "public",
         expires_at: expiresAt.toISOString(),
         cancel_token: crypto.randomUUID(),
