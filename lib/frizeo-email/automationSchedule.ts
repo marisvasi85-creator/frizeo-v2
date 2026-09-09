@@ -178,7 +178,7 @@ export const AUTOMATION_LANE_META: Record<
   activation: {
     title: "Activare / prima programare",
     subtitle:
-      "Timp + stare: onboarding, inactivitate, prima programare, Google Calendar, invitații. Worker-ul revalidează înainte de trimitere.",
+      "Stadiu real + delay. Worker-ul revalidează înainte de trimitere. Lifecycle v2 e oprit implicit.",
   },
   trial: {
     title: "Trial activ",
@@ -259,18 +259,37 @@ export function describeAutomationWhen(
 ): string {
   const days = delayDays(automation.delay_minutes);
 
+  if (automation.automation_key === "check_schedule_services_after_signup") {
+    return "La 2 zile, doar dacă setup-ul e incomplet (lifecycle v2)";
+  }
+  if (automation.automation_key === "share_booking_link_after_signup") {
+    return "După câteva zile în stadiul fără programări online";
+  }
+  if (automation.automation_key === "google_visibility_after_signup") {
+    return "După prima programare online";
+  }
+  if (automation.automation_key === "google_calendar_after_signup") {
+    return "După 2–3 programări, dacă Google Calendar nu e conectat";
+  }
+  if (automation.automation_key === "invite_team_after_signup") {
+    return "Doar dacă salonul are mai mulți frizeri";
+  }
+  if (automation.automation_key === "no_first_booking") {
+    return "Flux zero programări după setup complet (nu după zile de la signup)";
+  }
+  if (automation.automation_key === "inactive_account") {
+    return "Doar saloane anterior active, apoi fără activitate";
+  }
+  if (automation.automation_key === "review_after_10_bookings") {
+    return "După minimum 10 programări finalizate";
+  }
+  if (automation.automation_key === "trial_expired") {
+    return "Confirmă trecerea pe Free (80 programări/lună)";
+  }
+
   if (automation.trigger_type === "user_signed_up") {
     if (automation.automation_key === "incomplete_onboarding_after_signup") {
-      return "La 24h după signup, dacă onboardingul e incomplet";
-    }
-    if (automation.automation_key === "no_first_booking") {
-      return "La 7 zile după signup, dacă nu există nicio programare";
-    }
-    if (automation.automation_key === "google_calendar_after_signup") {
-      return "La 5 zile după signup, dacă Google Calendar nu e conectat";
-    }
-    if (automation.automation_key === "invite_team_after_signup") {
-      return "La 7 zile după signup, pe Pro+ cu locuri libere";
+      return "La 2 zile după signup, dacă onboardingul e incomplet";
     }
     if (automation.delay_minutes <= 0) return "Ziua 0 — imediat după signup";
     if (days != null) return `Ziua ${days} după signup`;
@@ -282,7 +301,7 @@ export function describeAutomationWhen(
   }
 
   if (automation.trigger_type === "min_bookings") {
-    return "Când salonul ajunge la minimum 10 programări neanulate";
+    return "Când salonul ajunge la pragul de programări al automatizării";
   }
 
   if (automation.trigger_type === "trial_started") {
@@ -291,13 +310,13 @@ export function describeAutomationWhen(
   }
 
   if (automation.trigger_type === "trial_ending_7_days") {
-    return "Cu 7 zile înainte de finalul trialului";
+    return "Cu 7 zile înainte de finalul trialului, dacă există activitate";
   }
   if (automation.trigger_type === "trial_ending_3_days") {
-    return "Cu 3 zile înainte de finalul trialului";
+    return "Cu 3 zile înainte de finalul trialului, doar utilizatori activați";
   }
   if (automation.trigger_type === "trial_last_day") {
-    return "În ultima zi de trial";
+    return "În ultima zi de trial — un singur email clar";
   }
 
   if (automation.trigger_type === "trial_expired") {

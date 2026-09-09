@@ -246,6 +246,15 @@ export async function processAutomationDiscoverAndExecute(input: {
 
       if (recorded) {
         result.sent += 1;
+        if (run.tenant_id) {
+          await supabaseAdmin
+            .from("tenant_lifecycle_state")
+            .update({
+              last_automation_key: run.automation_key,
+              last_automation_sent_at: new Date().toISOString(),
+            })
+            .eq("tenant_id", run.tenant_id);
+        }
         console.info("[marketing-automation-worker] sent", {
           ...logContext,
           providerMessageId: providerResult.messageId,

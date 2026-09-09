@@ -16,6 +16,8 @@ import { ensureTenantSlug } from "@/lib/tenant/ensureTenantSlug";
 import AdminCard from "../components/AdminCard";
 import AdminButton from "../components/AdminButton";
 import SetupChecklist from "../components/SetupChecklist";
+import NextBestActionCard from "../components/NextBestActionCard";
+import type { NextBestAction } from "@/lib/frizeo-email/lifecycle";
 import { sessionActsAsBarber } from "../components/adminNav";
 
 export default async function DashboardPage() {
@@ -34,7 +36,15 @@ export default async function DashboardPage() {
     ? { column: "barber_id" as const, value: barber.id }
     : { column: "tenant_id" as const, value: tenantId };
 
-  const [currentPlan, status, todayRes, upcomingRes, anyBookingRes, tenantRes] =
+  const [
+    currentPlan,
+    status,
+    todayRes,
+    upcomingRes,
+    anyBookingRes,
+    tenantRes,
+    lifecycleRes,
+  ] =
     await Promise.all([
       getCurrentPlan(tenantId),
       actsAsBarber
@@ -50,21 +60,24 @@ export default async function DashboardPage() {
         .from("bookings")
         .select("id, client_name, start_time, date, status")
         .eq(bookingScope.column, bookingScope.value)
-        .eq("status", "confirmed")
         .gt("date", today)
+        .eq("status", "confirmed")
         .order("date", { ascending: true })
-        .order("start_time", { ascending: true })
         .limit(5),
       supabaseAdmin
         .from("bookings")
         .select("id")
         .eq(bookingScope.column, bookingScope.value)
+        .neq("status", "cancelled")
         .limit(1),
       supabaseAdmin
         .from("tenants")
-        .select("id, name, slug")
+        .select("id, name, slug, logo_url")
         .eq("id", tenantId)
-        .single(),
+        .maybeSingle(),
+      supabaseAdmin.rpc("compute_tenant_lifecycle_snapshot", {
+        p_tenant_id: tenantId,
+      }),
     ]);
 
   if (actsAsBarber && !status.completed) {
@@ -107,6 +120,22 @@ export default async function DashboardPage() {
   const customizationEnabled = isBookingLinkCustomizationEnabled();
 
   const showSetupChecklist = actsAsBarber && !anyBookingRes.data?.length;
+  const lifecycle = lifecycleRes.error
+    ? null
+    : ((lifecycleRes.data ?? null) as {
+        ok?: boolean;
+        stage?: string;
+        next_best_action?: NextBestAction;
+        recorded_bookings?: number;
+        online_bookings?: number;
+      } | null);
+  const nextAction =
+    lifecycle?.ok && lifecycle.next_best_action
+      ? lifecycle.next_best_action
+      : null;
+  const showAgendaLive =
+    lifecycle?.stage === "manual_booking_only" &&
+    (lifecycle.online_bookings ?? 0) === 0;
   let pendingAccessQuery = supabaseAdmin
     .from("barber_client_access")
     .select("id", { count: "exact", head: true })
@@ -137,6 +166,21 @@ export default async function DashboardPage() {
           eligible={showSetupChecklist}
         />
       )}
+
+      {showAgendaLive && (
+        <AdminCard>
+          <h2 className="font-semibold">Agenda e activă</h2>
+          <p className="mt-1 text-sm text-frz-ink/65">
+            Ai programări introduse manual. Următorul pas e linkul public —
+            clienții pot rezerva singuri, fără să te sune.
+          </p>
+        </AdminCard>
+      )}
+
+      <NextBestActionCard
+        action={nextAction}
+        stageLabel={lifecycle?.stage?.replace(/_/g, " ")}
+      />
 
       {(pendingAccessCount ?? 0) > 0 && (
         <AdminCard className="border-amber-400/40 bg-amber-500/10">
