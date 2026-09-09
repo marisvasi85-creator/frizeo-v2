@@ -57,47 +57,67 @@ export default function BookingsClient({
     setLoading(true);
     setLoadError("");
 
-    const [bookingsRes, barbersRes] = await Promise.all([
-      fetch("/api/bookings/list"),
-      fetch("/api/barbers"),
-    ]);
+    try {
+      const [bookingsRes, barbersRes] = await Promise.all([
+        fetch("/api/bookings/list"),
+        fetch("/api/barbers"),
+      ]);
 
-    const bookingsData = await bookingsRes.json();
-    const barbersData = await barbersRes.json();
+      const bookingsData = (await bookingsRes.json().catch(() => ({}))) as {
+        error?: string;
+        bookings?: BookingRow[];
+      };
+      const barbersData = (await barbersRes.json().catch(() => ({}))) as {
+        barbers?: BarberOption[];
+      };
 
-    if (!bookingsRes.ok) {
-      setLoadError(bookingsData.error || "Nu am putut încărca programările.");
-      setBookings([]);
+      if (!bookingsRes.ok) {
+        setLoadError(bookingsData.error || "Nu am putut încărca programările.");
+        setBookings([]);
+        return;
+      }
+
+      setBookings(bookingsData.bookings || []);
+      if (Array.isArray(barbersData.barbers)) {
+        // keep filter options fresh after mutations if needed
+      }
+    } catch {
+      // iOS WebKit (Chrome Mobile iOS / Safari) rejects fetch with
+      // TypeError: Load failed. Keep the list already on screen instead of
+      // an unhandledrejection and a stuck "Se încarcă...".
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setBookings(bookingsData.bookings || []);
-    if (Array.isArray(barbersData.barbers)) {
-      // keep filter options fresh after mutations if needed
-    }
-    setLoading(false);
   }
 
   async function cancelBooking(booking: BookingRow) {
     setCancellingId(booking.id);
 
-    const res = await fetch("/api/bookings/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId: booking.id }),
-    });
+    try {
+      const res = await fetch("/api/bookings/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
 
-    const data = await res.json();
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
 
-    if (!res.ok) {
-      alert(data.error || "Nu s-a putut anula programarea");
+      if (!res.ok) {
+        alert(data.error || "Nu s-a putut anula programarea");
+        return;
+      }
+
+      setBookings((current) => current.filter((row) => row.id !== booking.id));
+      await loadData();
+    } catch {
+      alert(
+        "Nu s-a putut anula programarea. Verifică conexiunea și încearcă din nou.",
+      );
+    } finally {
       setCancellingId(null);
-      return;
     }
-
-    setCancellingId(null);
-    await loadData();
   }
 
   const filteredBookings =
