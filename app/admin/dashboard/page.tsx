@@ -75,9 +75,14 @@ export default async function DashboardPage() {
         .select("id, name, slug, logo_url")
         .eq("id", tenantId)
         .maybeSingle(),
-      supabaseAdmin.rpc("compute_tenant_lifecycle_snapshot", {
-        p_tenant_id: tenantId,
-      }),
+      supabaseAdmin
+        .rpc("compute_tenant_lifecycle_snapshot", {
+          p_tenant_id: tenantId,
+        })
+        .then(
+          (res) => res,
+          () => ({ data: null, error: { message: "lifecycle_rpc_failed" } }),
+        ),
     ]);
 
   if (actsAsBarber && !status.completed) {
