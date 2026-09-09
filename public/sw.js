@@ -6,6 +6,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
-});
+// Fetch handler required for PWA installability. Leave requests to the
+// browser: proxying every fetch on iOS WebKit rejects with TypeError
+// "Load failed" (unhandledrejection on /admin/bookings after cancel/reload).
+self.addEventListener("fetch", () => {});

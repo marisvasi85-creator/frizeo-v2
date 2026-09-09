@@ -188,6 +188,11 @@ export function getSharedSentryOptions() {
       /^NetworkError/,
       /^AbortError/,
       /Loading chunk [\d]+ failed/,
+      // WebKit (Safari / Chrome iOS): fetch() network failure.
+      "Load failed",
+      // Chromium: fetch() network failure.
+      "Failed to fetch",
+      "Network request failed",
     ],
   };
 }

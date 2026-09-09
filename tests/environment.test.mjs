@@ -325,6 +325,48 @@ test("sentry production traces sample rate stays 0.02", () => {
   assert.match(source, /return 0\.02;/);
 });
 
+test("sentry ignores iOS WebKit fetch Load failed noise", () => {
+  const source = readRepo("lib/sentry/shared.ts");
+  assert.match(source, /ignoreErrors/);
+  assert.match(source, /"Load failed"/);
+  assert.match(source, /"Failed to fetch"/);
+  assert.match(source, /"Network request failed"/);
+});
+
+test("PWA service worker does not proxy fetches through respondWith", () => {
+  const source = readRepo("public/sw.js");
+  assert.match(source, /addEventListener\("fetch"/);
+  assert.doesNotMatch(source, /event\.respondWith\(/);
+});
+
+test("admin bookings client catches fetch failures on cancel and reload", () => {
+  const source = readRepo("app/admin/bookings/BookingsClient.tsx");
+  assert.match(source, /async function loadData\(\)/);
+  assert.match(source, /async function cancelBooking/);
+  assert.match(source, /fetch\("\/api\/bookings\/list"\)/);
+  assert.match(source, /fetch\("\/api\/bookings\/cancel"/);
+  assert.match(source, /} catch \{/);
+  assert.match(source, /} finally \{[\s\S]*setLoading\(false\)/);
+  assert.match(source, /} finally \{[\s\S]*setCancellingId\(null\)/);
+});
+
+test("iOS TypeError Load failed from Promise.all fetch is catchable", async () => {
+  const result = await (async () => {
+    try {
+      await Promise.all([
+        Promise.reject(new TypeError("Load failed")),
+        Promise.resolve({ ok: true }),
+      ]);
+      return "threw-nothing";
+    } catch (error) {
+      assert.equal(error instanceof TypeError, true);
+      assert.equal(error.message, "Load failed");
+      return "kept-list";
+    }
+  })();
+  assert.equal(result, "kept-list");
+});
+
 test("campaign progress polling stops on terminal status and hidden tabs", () => {
   const source = readRepo(
     "app/email/(console)/campaigns/[id]/CampaignEditor.tsx",
