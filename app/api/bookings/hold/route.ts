@@ -173,7 +173,7 @@ export async function POST(req: Request) {
         date,
         start_time,
         end_time,
-        status: "pending",
+        created_via: isDashboardBooking ? "dashboard" : "public",
         expires_at: expiresAt.toISOString(),
         cancel_token: crypto.randomUUID(),
         reschedule_token: crypto.randomUUID(),

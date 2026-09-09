@@ -453,6 +453,7 @@ export async function createBookingTool(
         start_time,
         end_time,
         status: "confirmed",
+        created_via: "assistant",
         client_name: clientName,
         client_phone: phoneNormalized,
         client_email: clientEmail,

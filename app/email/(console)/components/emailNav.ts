@@ -20,6 +20,7 @@ export const EMAIL_NAV_ITEMS: EmailNavItem[] = [
   { path: "/segments", label: "Segments", icon: "🗂️" },
   { path: "/campaigns", label: "Campaigns", icon: "📨" },
   { path: "/automations", label: "Automations", icon: "⚡" },
+  { path: "/lifecycle", label: "Lifecycle", icon: "🧭" },
   { path: "/settings", label: "Settings", icon: "⚙️" },
 ];
 
