@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createGoogleEvent } from "@/lib/google/createEvent";
+import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 
 type BookingForSync = {
@@ -58,6 +59,11 @@ Serviciu: ${details.serviceName}${details.notes ? `\nMentiuni: ${details.notes}`
 
   if (error) {
     console.error("GOOGLE SYNC: failed to save event id", error);
+    await deleteGoogleEvent({
+      accessToken: tokens.accessToken,
+      calendarId: tokens.calendarId,
+      eventId: event.id,
+    });
     return null;
   }
 

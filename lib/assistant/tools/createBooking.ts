@@ -1,4 +1,5 @@
 import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
+import { reclaimExpiredHolds } from "@/lib/bookings/reclaimExpiredHolds";
 import { checkBookingLimit } from "@/lib/billing/checkBookingLimit";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
@@ -419,6 +420,11 @@ export async function createBookingTool(
   }
 
   const phoneNormalized = clientPhone.replace(/\s/g, "");
+
+  await reclaimExpiredHolds(supabaseAdmin, {
+    barberId: target.barberId,
+    date,
+  });
 
   const manualResult = await supabaseAdmin.rpc(
     "create_manual_booking_with_access",

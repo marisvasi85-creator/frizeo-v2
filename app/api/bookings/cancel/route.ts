@@ -8,8 +8,7 @@ import {
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
-import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
+import { releaseGoogleEventForBarber } from "@/lib/google/releaseCancelledBookingEvents";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
 import { extendedSmsAllowedForTenant } from "@/lib/billing/smsAllowedForTenant";
@@ -81,29 +80,17 @@ export async function POST(req: NextRequest) {
     const settings = await getNotificationSettings(booking.tenant_id);
     const smsAllowed = await extendedSmsAllowedForTenant(booking.tenant_id);
 
-    try {
-      if (booking.google_event_id) {
-        const tokens = await getAccessTokenForBarber(
-          supabaseAdmin,
-          booking.barber_id,
-        );
-
-        if (tokens) {
-          await deleteGoogleEvent({
-            accessToken: tokens.accessToken,
-            calendarId: tokens.calendarId,
-            eventId: booking.google_event_id,
-          });
-        }
-      }
-    } catch (e) {
-      console.error("GOOGLE DELETE ERROR:", e);
-    }
+    const googleReleased = await releaseGoogleEventForBarber({
+      supabase: supabaseAdmin,
+      barberId: booking.barber_id,
+      googleEventId: booking.google_event_id,
+    });
 
     const { error: cancelError } = await supabaseAdmin
       .from("bookings")
       .update({
         status: "cancelled",
+        google_event_id: googleReleased ? null : booking.google_event_id,
       })
       .eq("id", booking.id);
 

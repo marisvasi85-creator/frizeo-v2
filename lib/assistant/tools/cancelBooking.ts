@@ -39,9 +39,18 @@ export async function cancelBookingTool(
     };
   }
 
+  const googleReleased = await deleteBookingGoogleEvent({
+    barberId: booking.barber_id,
+    googleEventId: booking.google_event_id,
+    bookingId: booking.id,
+  });
+
   const { error } = await supabaseAdmin
     .from("bookings")
-    .update({ status: "cancelled" })
+    .update({
+      status: "cancelled",
+      google_event_id: googleReleased ? null : booking.google_event_id,
+    })
     .eq("id", booking.id);
 
   if (error) {
@@ -51,11 +60,6 @@ export async function cancelBookingTool(
       error: error.message,
     };
   }
-
-  await deleteBookingGoogleEvent({
-    barberId: booking.barber_id,
-    googleEventId: booking.google_event_id,
-  });
 
   await notifyBookingCancelled({ booking });
 

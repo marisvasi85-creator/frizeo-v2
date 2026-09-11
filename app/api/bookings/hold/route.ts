@@ -4,6 +4,7 @@ import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBar
 import {
   requireManagedBarber,
 } from "@/lib/barber-access/authorization";
+import { reclaimExpiredHolds } from "@/lib/bookings/reclaimExpiredHolds";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import {
@@ -108,6 +109,11 @@ export async function POST(req: Request) {
     const end_time = addMinutesToTime(start_time, service.duration);
 
     const barber = barberCheck.barber;
+
+    await reclaimExpiredHolds(supabase, {
+      barberId: barber_id,
+      date,
+    });
 
     const { data: existing } = await supabase
       .from("bookings")

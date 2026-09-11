@@ -6,6 +6,7 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { queryFreeBusy } from "@/lib/google/queryFreeBusy";
+import { releaseLeftoverCancelledGoogleEvents } from "@/lib/google/releaseCancelledBookingEvents";
 import { minutesToTime, timeToMinutes } from "@/lib/schedule/time";
 
 export type BusyInterval = {
@@ -66,6 +67,14 @@ export async function getGoogleBusyIntervalsForDate(
     return [];
   }
 
+  await releaseLeftoverCancelledGoogleEvents(
+    supabase,
+    barberId,
+    date,
+    date,
+    auth,
+  );
+
   const timeMin = new Date(zonedDateTimeToUtcMs(date, "00:00")).toISOString();
   const timeMax = new Date(
     zonedDateTimeToUtcMs(date, "23:59") + 59 * 1000,
@@ -93,6 +102,14 @@ export async function getGoogleBusyIntervalsByDate(
   if (!auth) {
     return {};
   }
+
+  await releaseLeftoverCancelledGoogleEvents(
+    supabase,
+    barberId,
+    fromDate,
+    toDate,
+    auth,
+  );
 
   const timeMin = new Date(
     zonedDateTimeToUtcMs(fromDate, "00:00"),

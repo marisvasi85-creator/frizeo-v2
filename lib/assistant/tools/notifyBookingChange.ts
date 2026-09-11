@@ -4,8 +4,7 @@ import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLink
 import { sendEmail } from "@/lib/email/email";
 import { cancelBookingTemplate } from "@/lib/email/templates/cancel-booking";
 import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
-import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
+import { releaseGoogleEventForBarber } from "@/lib/google/releaseCancelledBookingEvents";
 import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
@@ -16,19 +15,25 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export async function deleteBookingGoogleEvent(input: {
   barberId: string;
   googleEventId: string | null | undefined;
-}) {
-  if (!input.googleEventId) return;
-  try {
-    const google = await getAccessTokenForBarber(supabaseAdmin, input.barberId);
-    if (!google) return;
-    await deleteGoogleEvent({
-      accessToken: google.accessToken,
-      calendarId: google.calendarId,
-      eventId: input.googleEventId,
-    });
-  } catch (err) {
-    console.error("assistant google delete:", err);
+  bookingId?: string;
+}): Promise<boolean> {
+  const released = await releaseGoogleEventForBarber({
+    supabase: supabaseAdmin,
+    barberId: input.barberId,
+    googleEventId: input.googleEventId,
+  });
+
+  if (released && input.bookingId && input.googleEventId) {
+    const { error } = await supabaseAdmin
+      .from("bookings")
+      .update({ google_event_id: null })
+      .eq("id", input.bookingId);
+    if (error) {
+      console.error("assistant google event id clear:", error);
+    }
   }
+
+  return released;
 }
 
 export async function notifyBookingCancelled(input: {

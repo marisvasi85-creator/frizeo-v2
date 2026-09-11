@@ -3,6 +3,27 @@ export type GoogleBusyBlock = {
   end: string;
 };
 
+type FreeBusyCalendar = {
+  busy?: GoogleBusyBlock[] | null;
+};
+
+export function busyIntervalsFromFreeBusyResponse(
+  data: { calendars?: Record<string, FreeBusyCalendar> | null } | null | undefined,
+  calendarId: string,
+): GoogleBusyBlock[] {
+  const calendars = data?.calendars ?? {};
+  const requested = calendars[calendarId];
+  if (Array.isArray(requested?.busy)) return requested.busy;
+
+  // Google sometimes keys the response by the real calendar email even
+  // when the request used "primary".
+  for (const entry of Object.values(calendars)) {
+    if (Array.isArray(entry?.busy)) return entry.busy;
+  }
+
+  return [];
+}
+
 export async function queryFreeBusy({
   accessToken,
   calendarId,
@@ -34,5 +55,5 @@ export async function queryFreeBusy({
     return [];
   }
 
-  return data.calendars?.[calendarId]?.busy ?? [];
+  return busyIntervalsFromFreeBusyResponse(data, calendarId);
 }

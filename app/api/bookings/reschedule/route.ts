@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { rescheduleConfirmationTemplate } from "@/lib/email/templates/reschedule-confirmation";
-import { deleteGoogleEvent } from "@/lib/google/deleteEvent";
-import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
+import { releaseGoogleEventForBarber } from "@/lib/google/releaseCancelledBookingEvents";
 import { syncBookingToGoogleCalendar } from "@/lib/google/syncBookingEvent";
 import { sendSms } from "@/lib/sms/sendSms";
 import { getNotificationSettings } from "@/lib/notifications/getNotificationSettings";
@@ -249,18 +248,11 @@ export async function POST(req: Request) {
         service?.display_name || service?.name || "Serviciu";
 
       if (oldBooking.google_event_id) {
-        const tokens = await getAccessTokenForBarber(
+        await releaseGoogleEventForBarber({
           supabase,
-          oldBooking.barber_id,
-        );
-
-        if (tokens) {
-          await deleteGoogleEvent({
-            accessToken: tokens.accessToken,
-            calendarId: tokens.calendarId,
-            eventId: oldBooking.google_event_id,
-          });
-        }
+          barberId: oldBooking.barber_id,
+          googleEventId: oldBooking.google_event_id,
+        });
       }
 
       await syncBookingToGoogleCalendar(supabase, newBooking, {
