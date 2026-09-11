@@ -90,7 +90,6 @@ export default function BookingClient({
   const [requestMessage, setRequestMessage] = useState("");
   const [requestLoading, setRequestLoading] = useState(false);
 
-  const slotsCache = useRef<Record<string, Slot[]>>({});
   const calendarRef = useRef<HTMLDivElement>(null);
   const slotsRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
@@ -145,6 +144,7 @@ export default function BookingClient({
       try {
         const res = await fetch(`/api/availability?${params.toString()}`, {
           signal: ac.signal,
+          cache: "no-store",
         });
         const data = await res.json();
 
@@ -178,21 +178,12 @@ export default function BookingClient({
   useEffect(() => {
     if (!date || !serviceId) return;
 
-    const cacheKey = `${date}_${serviceId}`;
-    const isToday = date === getTodayInBookingTimezone();
-
-    if (slotsCache.current[cacheKey] && !isToday) {
-      setSlots(slotsCache.current[cacheKey]);
-      setLoadingSlots(false);
-      return;
-    }
-
     const ac = new AbortController();
     setLoadingSlots(true);
 
     fetch(
       `/api/slots?barberId=${barberId}&date=${date}&serviceId=${serviceId}&mode=public`,
-      { signal: ac.signal },
+      { signal: ac.signal, cache: "no-store" },
     )
       .then((r) => r.json())
       .then((d) => {
@@ -223,7 +214,6 @@ export default function BookingClient({
           })
           .filter((s): s is Extract<Slot, { type: "free" }> => s?.type === "free");
 
-        slotsCache.current[cacheKey] = fixed;
         setSlots(fixed);
         setSelectedSlot(null);
       })

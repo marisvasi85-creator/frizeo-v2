@@ -23,6 +23,8 @@ import {
 } from "@/lib/google/getGoogleBusyIntervals";
 import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
 
@@ -180,6 +182,8 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       slots: freeSlots.map((time) => ({ type: "free", time })),
+    }, {
+      headers: { "Cache-Control": "no-store" },
     });
   }
 
@@ -261,5 +265,8 @@ export async function GET(req: Request) {
     ];
   }
 
-  return NextResponse.json({ slots: finalSlots });
+  return NextResponse.json(
+    { slots: finalSlots },
+    { headers: { "Cache-Control": "no-store" } },
+  );
 }

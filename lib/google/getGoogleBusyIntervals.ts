@@ -7,6 +7,7 @@ import {
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { queryFreeBusy } from "@/lib/google/queryFreeBusy";
 import { releaseLeftoverCancelledGoogleEvents } from "@/lib/google/releaseCancelledBookingEvents";
+import { subtractBusyIntervals } from "@/lib/schedule/subtractBusyIntervals";
 import { minutesToTime, timeToMinutes } from "@/lib/schedule/time";
 
 export type BusyInterval = {
@@ -57,6 +58,42 @@ function busyBlockToInterval(
   return { start, end };
 }
 
+const RELEASED_BOOKING_STATUSES = ["cancelled", "completed", "no_show"];
+
+function bookingDateKey(value: string): string {
+  return String(value).slice(0, 10);
+}
+
+async function getReleasedBookingIntervalsByDate(
+  supabase: SupabaseClient,
+  barberId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<Record<string, BusyInterval[]>> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("date, start_time, end_time")
+    .eq("barber_id", barberId)
+    .in("status", RELEASED_BOOKING_STATUSES)
+    .gte("date", fromDate)
+    .lte("date", toDate);
+
+  if (error) {
+    console.error("RELEASED BOOKING INTERVALS ERROR:", error);
+    return {};
+  }
+
+  const byDate: Record<string, BusyInterval[]> = {};
+  for (const row of data ?? []) {
+    const date = bookingDateKey(row.date);
+    const start = String(row.start_time).slice(0, 5);
+    const end = String(row.end_time).slice(0, 5);
+    if (!byDate[date]) byDate[date] = [];
+    byDate[date].push({ start, end });
+  }
+  return byDate;
+}
+
 export async function getGoogleBusyIntervalsForDate(
   supabase: SupabaseClient,
   barberId: string,
@@ -87,9 +124,18 @@ export async function getGoogleBusyIntervalsForDate(
     timeMax,
   });
 
-  return busyBlocks
+  const busy = busyBlocks
     .map((block) => busyBlockToInterval(block.start, block.end, date))
     .filter((interval): interval is BusyInterval => interval !== null);
+
+  const released = await getReleasedBookingIntervalsByDate(
+    supabase,
+    barberId,
+    date,
+    date,
+  );
+
+  return subtractBusyIntervals(busy, released[date] ?? []);
 }
 
 export async function getGoogleBusyIntervalsByDate(
@@ -125,13 +171,24 @@ export async function getGoogleBusyIntervalsByDate(
     timeMax,
   });
 
+  const releasedByDate = await getReleasedBookingIntervalsByDate(
+    supabase,
+    barberId,
+    fromDate,
+    toDate,
+  );
+
   const byDate: Record<string, BusyInterval[]> = {};
   let current = fromDate;
 
   while (current <= toDate) {
-    byDate[current] = busyBlocks
+    const busy = busyBlocks
       .map((block) => busyBlockToInterval(block.start, block.end, current))
       .filter((interval): interval is BusyInterval => interval !== null);
+    byDate[current] = subtractBusyIntervals(
+      busy,
+      releasedByDate[current] ?? [],
+    );
     current = addDaysToDateString(current, 1);
   }
 

@@ -11,6 +11,7 @@ import {
   releaseGoogleCalendarEvent,
 } from "../lib/google/deleteEvent.ts";
 import { busyIntervalsFromFreeBusyResponse } from "../lib/google/queryFreeBusy.ts";
+import { subtractBusyIntervals } from "../lib/schedule/subtractBusyIntervals.ts";
 import { getActiveBookings } from "../lib/schedule/bookings.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -186,6 +187,28 @@ test("assistant cancel also releases the Google event before marking cancelled",
 test("public slot generation drops leftover cancelled Google events before FreeBusy", () => {
   const source = readRepo("lib/google/getGoogleBusyIntervals.ts");
   assert.match(source, /releaseLeftoverCancelledGoogleEvents/);
+  assert.match(source, /subtractBusyIntervals/);
+  assert.match(source, /cancelled.*completed.*no_show|RELEASED_BOOKING_STATUSES/);
+});
+
+test("Google FreeBusy leftover from a cancelled booking is punched out of the slot", () => {
+  assert.deepEqual(
+    subtractBusyIntervals(
+      [{ start: "10:00", end: "10:30" }],
+      [{ start: "10:00", end: "10:30" }],
+    ),
+    [],
+  );
+  assert.deepEqual(
+    subtractBusyIntervals(
+      [{ start: "09:00", end: "12:00" }],
+      [{ start: "10:00", end: "10:30" }],
+    ),
+    [
+      { start: "09:00", end: "10:00" },
+      { start: "10:30", end: "12:00" },
+    ],
+  );
 });
 
 test("hold and assistant create reclaim expired pending holds so the unique slot is free", () => {
@@ -206,6 +229,17 @@ test("overlap trigger cancels expired holds and unique index ignores cancelled r
     /WHERE status IN \('confirmed', 'pending'\)/,
   );
   assert.match(sql, /DROP INDEX IF EXISTS public\.bookings_unique_slot/);
+});
+
+test("booking UIs refetch slots instead of keeping a cancelled hour cached", () => {
+  const publicBooking = readRepo(
+    "app/booking/[barberId]/components/BookingClient.tsx",
+  );
+  const adminBooking = readRepo(
+    "app/admin/bookings/new/AddBookingClient.tsx",
+  );
+  assert.doesNotMatch(publicBooking, /slotsCache/);
+  assert.doesNotMatch(adminBooking, /slotsCache/);
 });
 
 test("public slot generator still filters occupancy through getActiveBookings", () => {

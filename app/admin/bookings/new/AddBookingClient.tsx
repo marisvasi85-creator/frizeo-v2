@@ -53,7 +53,6 @@ export default function AddBookingClient({
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
 
-  const slotsCache = useRef<Record<string, Slot[]>>({});
   const bookingInFlight = useRef(false);
 
   useEffect(() => {
@@ -73,7 +72,9 @@ export default function AddBookingClient({
       }
 
       try {
-        const res = await fetch(`/api/availability?${params.toString()}`);
+        const res = await fetch(`/api/availability?${params.toString()}`, {
+          cache: "no-store",
+        });
         const data = await res.json();
 
         setAvailableDays(data.availableDays || []);
@@ -99,7 +100,6 @@ export default function AddBookingClient({
       setDate(null);
       setSlots([]);
       setSelectedSlot(null);
-      slotsCache.current = {};
     }
 
     if (role === "owner") {
@@ -120,19 +120,12 @@ export default function AddBookingClient({
   useEffect(() => {
     if (!date || !serviceId) return;
 
-    const cacheKey = `${date}_${serviceId}`;
-    const isToday = date === getTodayInBookingTimezone();
-
-    if (slotsCache.current[cacheKey] && !isToday) {
-      setSlots(slotsCache.current[cacheKey]);
-      return;
-    }
-
     async function loadSlots() {
       setLoadingSlots(true);
 
       const res = await fetch(
         `/api/slots?barberId=${selectedBarberId}&date=${date}&serviceId=${serviceId}&mode=admin`,
+        { cache: "no-store" },
       );
       const data = await res.json();
 
@@ -140,7 +133,6 @@ export default function AddBookingClient({
         (s: Slot) => s.type === "free",
       );
 
-      slotsCache.current[cacheKey] = freeSlots;
       setSlots(freeSlots);
       setSelectedSlot(null);
       setLoadingSlots(false);
@@ -155,7 +147,6 @@ export default function AddBookingClient({
     setDate(null);
     setSelectedSlot(null);
     setSlots([]);
-    slotsCache.current = {};
   }
 
   function handleDateChange(value: string) {

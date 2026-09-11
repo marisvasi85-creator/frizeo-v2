@@ -10,6 +10,8 @@ import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
 import { getGoogleBusyIntervalsByDate } from "@/lib/google/getGoogleBusyIntervals";
 import { groupVacationPeriods } from "@/lib/schedule/vacationPeriods";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -168,6 +170,8 @@ export async function GET(req: Request) {
       overrides: overrides ?? [],
       vacationPeriods,
       scheduleMode,
+    }, {
+      headers: { "Cache-Control": "no-store" },
     });
   } catch (err) {
     console.error("AVAILABILITY ERROR:", err);
