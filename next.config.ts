@@ -87,7 +87,8 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(self)",
+            // Same-origin microphone is required for assistant dictation.
+            value: "camera=(), microphone=(self), geolocation=(self)",
           },
           {
             key: "Strict-Transport-Security",
