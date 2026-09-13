@@ -44,6 +44,34 @@ export function isSpeechDictationSupported(): boolean {
   return Boolean(getSpeechRecognitionConstructor());
 }
 
+type DocumentPolicyLike = {
+  featurePolicy?: { allowsFeature: (feature: string) => boolean };
+  permissionsPolicy?: { allowsFeature: (feature: string) => boolean };
+};
+
+/** False when Permissions-Policy disables microphone for this origin. */
+export function isMicrophoneAllowedByDocumentPolicy(
+  doc: DocumentPolicyLike | null | undefined = typeof document === "undefined"
+    ? null
+    : document,
+): boolean {
+  if (!doc) return true;
+  const policy = doc.permissionsPolicy ?? doc.featurePolicy;
+  if (!policy?.allowsFeature) return true;
+  return policy.allowsFeature("microphone");
+}
+
+export function dictationErrorMessage(code: string): string | null {
+  if (code === "aborted" || code === "no-speech") return null;
+  if (code === "not-allowed" || code === "service-not-allowed") {
+    return "Permite accesul la microfon. Dacă e blocat, deschide lacătul de lângă adresă și alege Permite.";
+  }
+  if (code === "audio-capture") {
+    return "Nu am găsit un microfon.";
+  }
+  return "Dictarea s-a oprit. Încearcă din nou.";
+}
+
 function subscribeSpeechSupport() {
   return () => {};
 }
@@ -103,6 +131,16 @@ export function useSpeechDictation({
       setError("Dictarea nu e disponibilă pe acest browser.");
       return;
     }
+    if (typeof window !== "undefined" && !window.isSecureContext) {
+      setError("Dictarea merge doar pe HTTPS.");
+      return;
+    }
+    if (!isMicrophoneAllowedByDocumentPolicy()) {
+      setError(
+        "Site-ul blochează microfonul. Reîncarcă pagina după actualizare.",
+      );
+      return;
+    }
 
     stop();
     setError(null);
@@ -140,16 +178,9 @@ export function useSpeechDictation({
 
     recognition.onerror = (event) => {
       const code = event.error || "unknown";
-      if (code === "aborted" || code === "no-speech") {
-        return;
-      }
-      if (code === "not-allowed" || code === "service-not-allowed") {
-        setError("Permite accesul la microfon pentru dictare.");
-      } else if (code === "audio-capture") {
-        setError("Nu am găsit un microfon.");
-      } else {
-        setError("Dictarea s-a oprit. Încearcă din nou.");
-      }
+      const message = dictationErrorMessage(code);
+      if (!message) return;
+      setError(message);
       shouldListenRef.current = false;
       setListening(false);
     };
