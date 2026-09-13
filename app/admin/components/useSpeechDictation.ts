@@ -51,12 +51,15 @@ type DocumentPolicyLike = {
 
 /** False when Permissions-Policy disables microphone for this origin. */
 export function isMicrophoneAllowedByDocumentPolicy(
-  doc: DocumentPolicyLike | null | undefined = typeof document === "undefined"
-    ? null
-    : document,
+  doc?: DocumentPolicyLike | null,
 ): boolean {
-  if (!doc) return true;
-  const policy = doc.permissionsPolicy ?? doc.featurePolicy;
+  const source =
+    doc ??
+    (typeof document === "undefined"
+      ? null
+      : (document as unknown as DocumentPolicyLike));
+  if (!source) return true;
+  const policy = source.permissionsPolicy ?? source.featurePolicy;
   if (!policy?.allowsFeature) return true;
   return policy.allowsFeature("microphone");
 }
