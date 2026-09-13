@@ -205,49 +205,28 @@ test("slots API fails open so a Google error cannot 500 the public picker", () =
   assert.match(source, /slots: \[\]/);
 });
 
-test("leftover Google sweep swallows per-event fetch failures", async () => {
+test("leftover Google sweep isolates per-event failures so one Google error cannot abort the rest", () => {
+  const source = readRepo("lib/google/releaseCancelledBookingEvents.ts");
+  assert.match(source, /GOOGLE LEFTOVER EVENT RELEASE ERROR/);
+  assert.match(source, /GOOGLE LEFTOVER EVENT SWEEP ERROR/);
+});
+
+test("FreeBusy returns no busy blocks when Google fetch throws so public days still load", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => {
     throw new Error("network down");
   };
 
   try {
-    const { releaseLeftoverCancelledGoogleEvents } = await import(
-      "../lib/google/releaseCancelledBookingEvents.ts"
-    );
-
-    await releaseLeftoverCancelledGoogleEvents(
-      {
-        from() {
-          return {
-            select() {
-              return this;
-            },
-            eq() {
-              return this;
-            },
-            not() {
-              return this;
-            },
-            gte() {
-              return this;
-            },
-            lte() {
-              return this;
-            },
-            limit() {
-              return Promise.resolve({
-                data: [{ id: "b1", google_event_id: "evt-1" }],
-                error: null,
-              });
-            },
-          };
-        },
-      },
-      "barber-1",
-      "2026-09-11",
-      "2026-09-11",
-      { accessToken: "t", calendarId: "primary" },
+    const { queryFreeBusy } = await import("../lib/google/queryFreeBusy.ts");
+    assert.deepEqual(
+      await queryFreeBusy({
+        accessToken: "t",
+        calendarId: "primary",
+        timeMin: "2026-09-11T00:00:00.000Z",
+        timeMax: "2026-09-11T23:59:59.000Z",
+      }),
+      [],
     );
   } finally {
     globalThis.fetch = originalFetch;
