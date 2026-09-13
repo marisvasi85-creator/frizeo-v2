@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { resolveRateLimit } from "@/lib/security/rateLimitDecision";
 
 type RateLimitOptions = {
   bucket: string;
@@ -32,25 +33,25 @@ export async function enforceRateLimit(
     p_window_seconds: options.windowSeconds,
   });
 
-  if (error) {
-    console.error("RATE LIMIT ERROR:", error.message);
-    return NextResponse.json(
-      { error: "Serviciu temporar indisponibil. Încearcă din nou." },
-      { status: 503 },
-    );
+  if (
+    resolveRateLimit({
+      allowed: data === true,
+      errorMessage: error?.message ?? null,
+    }) === "allow"
+  ) {
+    if (error) {
+      console.error("RATE LIMIT ERROR:", error.message);
+    }
+    return null;
   }
 
-  if (data !== true) {
-    return NextResponse.json(
-      { error: "Prea multe solicitări. Încearcă din nou mai târziu." },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(options.windowSeconds),
-        },
+  return NextResponse.json(
+    { error: "Prea multe solicitări. Încearcă din nou mai târziu." },
+    {
+      status: 429,
+      headers: {
+        "Retry-After": String(options.windowSeconds),
       },
-    );
-  }
-
-  return null;
+    },
+  );
 }
