@@ -26,6 +26,18 @@ import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots"
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  try {
+    return await getSlots(req);
+  } catch (err) {
+    console.error("SLOTS ERROR:", err);
+    return NextResponse.json(
+      { slots: [] },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+}
+
+async function getSlots(req: Request) {
   const { searchParams } = new URL(req.url);
 
   const barberId = searchParams.get("barberId");

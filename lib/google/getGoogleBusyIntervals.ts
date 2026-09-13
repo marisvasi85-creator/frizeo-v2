@@ -6,7 +6,6 @@ import {
 } from "@/lib/bookings/bookingTimezone";
 import { getAccessTokenForBarber } from "@/lib/google/getAccessTokenForBarber";
 import { queryFreeBusy } from "@/lib/google/queryFreeBusy";
-import { releaseLeftoverCancelledGoogleEvents } from "@/lib/google/releaseCancelledBookingEvents";
 import { subtractBusyIntervals } from "@/lib/schedule/subtractBusyIntervals";
 import { minutesToTime, timeToMinutes } from "@/lib/schedule/time";
 
@@ -94,7 +93,7 @@ async function getReleasedBookingIntervalsByDate(
   return byDate;
 }
 
-export async function getGoogleBusyIntervalsForDate(
+async function loadGoogleBusyIntervalsForDate(
   supabase: SupabaseClient,
   barberId: string,
   date: string,
@@ -104,13 +103,11 @@ export async function getGoogleBusyIntervalsForDate(
     return [];
   }
 
-  await releaseLeftoverCancelledGoogleEvents(
-    supabase,
-    barberId,
-    date,
-    date,
-    auth,
-  );
+  // Do not delete leftover Google events here. Public /api/availability
+  // and /api/slots await this helper; sequential DELETE/PATCH of cancelled
+  // events times out the calendar and looks like "no public slots".
+  // subtractBusyIntervals already punches cancelled Frizeo bookings out
+  // of FreeBusy for display and hold checks.
 
   const timeMin = new Date(zonedDateTimeToUtcMs(date, "00:00")).toISOString();
   const timeMax = new Date(
@@ -138,7 +135,20 @@ export async function getGoogleBusyIntervalsForDate(
   return subtractBusyIntervals(busy, released[date] ?? []);
 }
 
-export async function getGoogleBusyIntervalsByDate(
+export async function getGoogleBusyIntervalsForDate(
+  supabase: SupabaseClient,
+  barberId: string,
+  date: string,
+): Promise<BusyInterval[]> {
+  try {
+    return await loadGoogleBusyIntervalsForDate(supabase, barberId, date);
+  } catch (err) {
+    console.error("GOOGLE BUSY INTERVALS ERROR:", err);
+    return [];
+  }
+}
+
+async function loadGoogleBusyIntervalsByDate(
   supabase: SupabaseClient,
   barberId: string,
   fromDate: string,
@@ -148,14 +158,6 @@ export async function getGoogleBusyIntervalsByDate(
   if (!auth) {
     return {};
   }
-
-  await releaseLeftoverCancelledGoogleEvents(
-    supabase,
-    barberId,
-    fromDate,
-    toDate,
-    auth,
-  );
 
   const timeMin = new Date(
     zonedDateTimeToUtcMs(fromDate, "00:00"),
@@ -193,6 +195,25 @@ export async function getGoogleBusyIntervalsByDate(
   }
 
   return byDate;
+}
+
+export async function getGoogleBusyIntervalsByDate(
+  supabase: SupabaseClient,
+  barberId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<Record<string, BusyInterval[]>> {
+  try {
+    return await loadGoogleBusyIntervalsByDate(
+      supabase,
+      barberId,
+      fromDate,
+      toDate,
+    );
+  } catch (err) {
+    console.error("GOOGLE BUSY INTERVALS ERROR:", err);
+    return {};
+  }
 }
 
 export function slotOverlapsBusyIntervals(

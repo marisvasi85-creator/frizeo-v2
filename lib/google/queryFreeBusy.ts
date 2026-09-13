@@ -35,25 +35,31 @@ export async function queryFreeBusy({
   timeMin: string;
   timeMax: string;
 }): Promise<GoogleBusyBlock[]> {
-  const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      timeMin,
-      timeMax,
-      items: [{ id: calendarId }],
-    }),
-  });
+  try {
+    const res = await fetch("https://www.googleapis.com/calendar/v3/freeBusy", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        timeMin,
+        timeMax,
+        items: [{ id: calendarId }],
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
 
-  const data = await res.json();
+    const data = await res.json();
 
-  if (!res.ok) {
-    console.error("GOOGLE FREEBUSY ERROR:", JSON.stringify(data, null, 2));
+    if (!res.ok) {
+      console.error("GOOGLE FREEBUSY ERROR:", JSON.stringify(data, null, 2));
+      return [];
+    }
+
+    return busyIntervalsFromFreeBusyResponse(data, calendarId);
+  } catch (err) {
+    console.error("GOOGLE FREEBUSY ERROR:", err);
     return [];
   }
-
-  return busyIntervalsFromFreeBusyResponse(data, calendarId);
 }

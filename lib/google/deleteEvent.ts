@@ -28,6 +28,7 @@ export async function deleteGoogleEvent({
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
+    signal: AbortSignal.timeout(5000),
   });
 
   return googleEventReleased(res.status);
@@ -61,6 +62,7 @@ export async function releaseGoogleCalendarEvent({
       transparency: "transparent",
       status: "cancelled",
     }),
+    signal: AbortSignal.timeout(5000),
   });
 
   return googleEventReleased(res.status);

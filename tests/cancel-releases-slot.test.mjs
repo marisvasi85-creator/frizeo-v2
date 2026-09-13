@@ -184,11 +184,74 @@ test("assistant cancel also releases the Google event before marking cancelled",
   assert.match(source, /google_event_id: googleReleased \? null/);
 });
 
-test("public slot generation drops leftover cancelled Google events before FreeBusy", () => {
+test("public Google busy reads punch cancelled leftovers out of FreeBusy without deleting them first", () => {
   const source = readRepo("lib/google/getGoogleBusyIntervals.ts");
-  assert.match(source, /releaseLeftoverCancelledGoogleEvents/);
+  assert.doesNotMatch(source, /releaseLeftoverCancelledGoogleEvents/);
   assert.match(source, /subtractBusyIntervals/);
+  assert.match(source, /GOOGLE BUSY INTERVALS ERROR/);
   assert.match(source, /cancelled.*completed.*no_show|RELEASED_BOOKING_STATUSES/);
+});
+
+test("Google FreeBusy and event release fetches time out instead of hanging public booking", () => {
+  const freeBusy = readRepo("lib/google/queryFreeBusy.ts");
+  const deleteEvent = readRepo("lib/google/deleteEvent.ts");
+  assert.match(freeBusy, /AbortSignal\.timeout\(4000\)/);
+  assert.match(deleteEvent, /AbortSignal\.timeout\(5000\)/);
+});
+
+test("slots API fails open so a Google error cannot 500 the public picker", () => {
+  const source = readRepo("app/api/slots/route.ts");
+  assert.match(source, /SLOTS ERROR/);
+  assert.match(source, /slots: \[\]/);
+});
+
+test("leftover Google sweep swallows per-event fetch failures", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("network down");
+  };
+
+  try {
+    const { releaseLeftoverCancelledGoogleEvents } = await import(
+      "../lib/google/releaseCancelledBookingEvents.ts"
+    );
+
+    await releaseLeftoverCancelledGoogleEvents(
+      {
+        from() {
+          return {
+            select() {
+              return this;
+            },
+            eq() {
+              return this;
+            },
+            not() {
+              return this;
+            },
+            gte() {
+              return this;
+            },
+            lte() {
+              return this;
+            },
+            limit() {
+              return Promise.resolve({
+                data: [{ id: "b1", google_event_id: "evt-1" }],
+                error: null,
+              });
+            },
+          };
+        },
+      },
+      "barber-1",
+      "2026-09-11",
+      "2026-09-11",
+      { accessToken: "t", calendarId: "primary" },
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("Google FreeBusy leftover from a cancelled booking is punched out of the slot", () => {
