@@ -23,6 +23,8 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
+  { href: "/admin/account", label: "Cont", icon: "🛡️" },
+  { href: "/admin/account-deletions", label: "Ștergeri cont", icon: "🗑️" },
 ];
 
 /** Personal barber tools — only when the user takes bookings. */
@@ -60,6 +62,7 @@ export const INVITED_BARBER_ITEMS: AdminNavItem[] = [
   ...BARBER_WORKSTATION_ITEMS,
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
+  { href: "/admin/account", label: "Cont", icon: "🛡️" },
 ];
 
 export function buildAdminNavItems(options: {
@@ -69,6 +72,7 @@ export function buildAdminNavItems(options: {
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
+  accountDeletionsEnabled?: boolean;
 }): AdminNavItem[] {
   const {
     role,
@@ -77,6 +81,7 @@ export function buildAdminNavItems(options: {
     platformAssistantEnabled = false,
     platformTestimonialsEnabled = false,
     frizeoEmailEnabled = false,
+    accountDeletionsEnabled = false,
   } = options;
 
   let items: AdminNavItem[];
@@ -98,6 +103,7 @@ export function buildAdminNavItems(options: {
       return platformTestimonialsEnabled;
     }
     if (item.href === "/api/email/sso") return frizeoEmailEnabled;
+    if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;
     if (item.requiresBarber && !actsAsBarber) return false;
     return true;
   });
@@ -154,6 +160,7 @@ export function buildMobileMoreItems(options: {
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
+  accountDeletionsEnabled?: boolean;
 }): AdminNavItem[] {
   const mainHrefs = new Set(
     buildMobileMainItems(options).map((i) => i.href),
