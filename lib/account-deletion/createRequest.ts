@@ -3,9 +3,12 @@ import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import {
+  ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
   hasActiveDeletionRequest,
+  isMissingAccountDeletionTableError,
   parseOptionalReason,
 } from "@/lib/account-deletion/decisions";
+import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 import { sendAccountDeletionRequestedEmail } from "@/lib/account-deletion/emails";
 import {
   ACCOUNT_DELETION_SELECT,
@@ -27,7 +30,8 @@ export async function getActiveDeletionRequest(
 
   if (error) {
     console.error("account deletion load active", error);
-    throw new Error("Nu am putut verifica solicitarea de ștergere.");
+    // Missing table (staging app still on production DB) must not crash /admin/account.
+    return null;
   }
 
   return (data as AccountDeletionRequestRow | null) ?? null;
@@ -71,6 +75,11 @@ export async function createAccountDeletionRequest(input: {
     windowSeconds: 60 * 60,
   });
   if (limited) return { ok: false, response: limited };
+
+  const blocked = accountDeletionWriteBlockResponse();
+  if (blocked) {
+    return { ok: false, response: blocked };
+  }
 
   const parsed = parseOptionalReason({
     reason: input.reason,
@@ -117,6 +126,18 @@ export async function createAccountDeletionRequest(input: {
         ok: false,
         response: NextResponse.json(
           { error: "Există deja o solicitare de ștergere activă." },
+          { status: 409 },
+        ),
+      };
+    }
+    if (isMissingAccountDeletionTableError(error)) {
+      return {
+        ok: false,
+        response: NextResponse.json(
+          {
+            error: ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
+            code: "schema_missing",
+          },
           { status: 409 },
         ),
       };

@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { transferTenantOwnership } from "@/lib/account-deletion/ownership";
+import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
+  const blocked = accountDeletionWriteBlockResponse();
+  if (blocked) return blocked;
+
   const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

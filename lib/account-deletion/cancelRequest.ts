@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { canUserCancelRequest } from "@/lib/account-deletion/decisions";
 import { sendAccountDeletionCancelledEmail } from "@/lib/account-deletion/emails";
+import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 import {
   ACCOUNT_DELETION_SELECT,
   type AccountDeletionRequestRow,
@@ -15,6 +16,11 @@ export async function cancelAccountDeletionRequest(input: {
   | { ok: true; request: AccountDeletionRequestRow }
   | { ok: false; response: NextResponse }
 > {
+  const blocked = accountDeletionWriteBlockResponse();
+  if (blocked) {
+    return { ok: false, response: blocked };
+  }
+
   let query = supabaseAdmin
     .from("account_deletion_requests")
     .select(ACCOUNT_DELETION_SELECT)

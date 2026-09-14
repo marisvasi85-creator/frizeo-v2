@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { requirePlatformCreator } from "@/lib/auth/requirePlatformCreator";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { ACCOUNT_DELETION_SELECT } from "@/lib/account-deletion/types";
+import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 
 export async function GET() {
+  const blocked = accountDeletionWriteBlockResponse();
+  if (blocked) return blocked;
+
   const auth = await requirePlatformCreator();
   if (!auth.ok) return auth.response;
 

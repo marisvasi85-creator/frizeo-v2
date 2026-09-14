@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { getActiveDeletionRequest } from "@/lib/account-deletion/createRequest";
+import { ACCOUNT_DELETION_PRODUCTION_DB_CODE } from "@/lib/account-deletion/decisions";
 import { loadOwnershipTransferBlocks } from "@/lib/account-deletion/ownership";
+import { accountDeletionWritesAreAllowed } from "@/lib/account-deletion/runtimeGuard";
 
 export async function GET() {
   const user = await getAuthUser();
@@ -14,7 +16,10 @@ export async function GET() {
     loadOwnershipTransferBlocks(user.id),
   ]);
 
+  const writesAllowed = accountDeletionWritesAreAllowed();
   return NextResponse.json({
+    writesAllowed,
+    code: writesAllowed ? undefined : ACCOUNT_DELETION_PRODUCTION_DB_CODE,
     request: request
       ? {
           id: request.id,

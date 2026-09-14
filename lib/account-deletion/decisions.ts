@@ -357,3 +357,48 @@ export function simulateExpiryAllowed(env: {
   if (env.isProduction) return false;
   return env.isStaging || env.isDevelopment || env.isPreview;
 }
+
+/** Production Supabase project ref — never run account deletion against it. */
+export const PRODUCTION_SUPABASE_PROJECT_REF = "shsompeyazrvswnjmlmw";
+
+export const ACCOUNT_DELETION_PRODUCTION_DB_CODE = "production_database";
+
+export const ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE =
+  "Ștergerea contului nu rulează pe baza de producție. Conectează staging.frizeo.ro la proiectul Supabase Staging.";
+
+export function supabaseProjectRefFromUrl(url: string): string {
+  const trimmed = url.trim();
+  if (!trimmed) return "";
+  try {
+    return new URL(trimmed).hostname.split(".")[0]?.toLowerCase() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function accountDeletionWritesAllowed(input: {
+  supabaseUrl: string;
+}): boolean {
+  const ref = supabaseProjectRefFromUrl(input.supabaseUrl);
+  if (!ref) return false;
+  return ref !== PRODUCTION_SUPABASE_PROJECT_REF;
+}
+
+export function isMissingAccountDeletionTableError(error: {
+  code?: string | null;
+  message?: string | null;
+} | null | undefined): boolean {
+  if (!error) return false;
+  const code = (error.code ?? "").toUpperCase();
+  const message = (error.message ?? "").toLowerCase();
+  if (code === "42P01" || code === "PGRST205") return true;
+  if (!message) return false;
+  const mentionsTable = message.includes("account_deletion_requests");
+  return (
+    (mentionsTable &&
+      (message.includes("does not exist") ||
+        message.includes("could not find") ||
+        message.includes("schema cache"))) ||
+    message.includes("could not find the table")
+  );
+}

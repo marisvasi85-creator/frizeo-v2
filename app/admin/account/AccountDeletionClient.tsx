@@ -43,10 +43,14 @@ export default function AccountDeletionClient({
   email,
   activeRequest,
   ownershipBlocks,
+  writesAllowed = true,
+  unavailableMessage = null,
 }: {
   email: string;
   activeRequest: ActiveRequest | null;
   ownershipBlocks: OwnershipBlock[];
+  writesAllowed?: boolean;
+  unavailableMessage?: string | null;
 }) {
   const router = useRouter();
   const [request, setRequest] = useState(activeRequest);
@@ -70,6 +74,18 @@ export default function AccountDeletionClient({
     [request],
   );
   const ownershipBlocked = blocks.length > 0;
+
+  if (!writesAllowed) {
+    return (
+      <AdminCard className="border-amber-200 bg-amber-50/60 space-y-3">
+        <h2 className="text-lg font-semibold text-frz-ink">Ștergere cont</h2>
+        <p className="text-sm text-frz-ink">
+          {unavailableMessage ||
+            "Ștergerea contului nu este disponibilă pe această instanță."}
+        </p>
+      </AdminCard>
+    );
+  }
 
   function resetModal() {
     setOpen(false);

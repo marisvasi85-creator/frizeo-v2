@@ -1,7 +1,9 @@
 import AdminPageHeader from "../components/AdminPageHeader";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { getActiveDeletionRequest } from "@/lib/account-deletion/createRequest";
+import { ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE } from "@/lib/account-deletion/decisions";
 import { loadOwnershipTransferBlocks } from "@/lib/account-deletion/ownership";
+import { accountDeletionWritesAreAllowed } from "@/lib/account-deletion/runtimeGuard";
 import { redirect } from "next/navigation";
 import AccountDeletionClient from "./AccountDeletionClient";
 
@@ -11,6 +13,7 @@ export default async function AccountPage() {
     redirect("/login");
   }
 
+  const writesAllowed = accountDeletionWritesAreAllowed();
   const [active, ownershipBlocks] = await Promise.all([
     getActiveDeletionRequest(session.user.id),
     loadOwnershipTransferBlocks(session.user.id),
@@ -24,6 +27,10 @@ export default async function AccountPage() {
       />
       <AccountDeletionClient
         email={session.user.email}
+        writesAllowed={writesAllowed}
+        unavailableMessage={
+          writesAllowed ? null : ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE
+        }
         activeRequest={
           active
             ? {

@@ -14,11 +14,15 @@ import {
   isStaging,
 } from "@/lib/app/environment";
 import { simulateExpiryAllowed } from "@/lib/account-deletion/decisions";
+import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, context: RouteContext) {
+  const blocked = accountDeletionWriteBlockResponse();
+  if (blocked) return blocked;
+
   const auth = await requirePlatformCreator();
   if (!auth.ok) return auth.response;
 

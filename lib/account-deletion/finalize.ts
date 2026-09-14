@@ -1,6 +1,7 @@
 import { ANONYMIZED_BARBER_DISPLAY_NAME } from "@/lib/account-deletion/constants";
 import { cancelFutureActiveBookingsForBarber } from "@/lib/account-deletion/cancelFutureBookings";
 import {
+  accountDeletionWritesAllowed,
   buildFinalizationPlan,
   OWNERSHIP_TRANSFER_REQUIRED,
   type BarberSnapshot,
@@ -368,6 +369,20 @@ export async function runDueAccountDeletions(limit = 5): Promise<{
   skipped: number;
   errors: string[];
 }> {
+  if (
+    !accountDeletionWritesAllowed({
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    })
+  ) {
+    return {
+      claimed: 0,
+      completed: 0,
+      failed: 0,
+      skipped: 0,
+      errors: ["production_database"],
+    };
+  }
+
   const claimed = await claimDueAccountDeletions(limit);
   let completed = 0;
   let failed = 0;

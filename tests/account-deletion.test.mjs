@@ -28,6 +28,12 @@ import {
   shouldNotifyAfterCancelUpdate,
   shouldSoftCloseTenant,
   simulateExpiryAllowed,
+  accountDeletionWritesAllowed,
+  ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
+  ACCOUNT_DELETION_PRODUCTION_DB_CODE,
+  isMissingAccountDeletionTableError,
+  PRODUCTION_SUPABASE_PROJECT_REF,
+  supabaseProjectRefFromUrl,
 } from "../lib/account-deletion/decisions.ts";
 import { dispositionFor } from "../lib/account-deletion/policy.ts";
 import {
@@ -620,4 +626,80 @@ test("nullable barber.user_id guards cover public booking, RPC, RLS-equivalent h
   assert.match(worker, /OWNERSHIP_TRANSFER_REQUIRED/);
   assert.match(worker, /skipped \+= 1/);
   assert.doesNotMatch(worker, /deleteTenant/);
+});
+
+test("account deletion reads do not crash when the table is missing", () => {
+  const load = readRepo("lib/account-deletion/createRequest.ts");
+  assert.match(load, /account deletion load active/);
+  assert.doesNotMatch(
+    load,
+    /throw new Error\("Nu am putut verifica solicitarea de ștergere\."\)/,
+  );
+
+  assert.equal(
+    supabaseProjectRefFromUrl(
+      "https://shsompeyazrvswnjmlmw.supabase.co",
+    ),
+    PRODUCTION_SUPABASE_PROJECT_REF,
+  );
+  assert.equal(
+    accountDeletionWritesAllowed({
+      supabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
+    }),
+    false,
+  );
+  assert.equal(
+    accountDeletionWritesAllowed({
+      supabaseUrl: "https://fanxxytfuhnakfdzwssd.supabase.co",
+    }),
+    true,
+  );
+  assert.equal(accountDeletionWritesAllowed({ supabaseUrl: "" }), false);
+  assert.equal(
+    isMissingAccountDeletionTableError({
+      code: "PGRST205",
+      message:
+        "Could not find the table 'public.account_deletion_requests' in the schema cache",
+    }),
+    true,
+  );
+  assert.equal(
+    isMissingAccountDeletionTableError({
+      code: "42P01",
+      message: 'relation "account_deletion_requests" does not exist',
+    }),
+    true,
+  );
+  assert.equal(
+    isMissingAccountDeletionTableError({
+      code: "42501",
+      message: "permission denied",
+    }),
+    false,
+  );
+
+  const page = readRepo("app/admin/account/page.tsx");
+  assert.match(page, /accountDeletionWritesAreAllowed/);
+  assert.match(page, /unavailableMessage/);
+  const ui = readRepo("app/admin/account/AccountDeletionClient.tsx");
+  assert.match(ui, /writesAllowed/);
+  assert.match(ui, /unavailableMessage/);
+  assert.match(ui, /Ștergerea contului nu este disponibilă pe această instanță/);
+
+  const requestApi = readRepo("app/api/account-deletion/request/route.ts");
+  const create = readRepo("lib/account-deletion/createRequest.ts");
+  assert.match(create, /accountDeletionWriteBlockResponse/);
+  const cancel = readRepo("lib/account-deletion/cancelRequest.ts");
+  assert.match(cancel, /accountDeletionWriteBlockResponse/);
+  const transfer = readRepo(
+    "app/api/account-deletion/transfer-ownership/route.ts",
+  );
+  assert.match(transfer, /accountDeletionWriteBlockResponse/);
+  const admin = readRepo("app/api/admin/account-deletion/[id]/route.ts");
+  assert.match(admin, /accountDeletionWriteBlockResponse/);
+  const worker = readRepo("lib/account-deletion/finalize.ts");
+  assert.match(worker, /accountDeletionWritesAllowed/);
+  assert.equal(ACCOUNT_DELETION_PRODUCTION_DB_CODE, "production_database");
+  assert.match(ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE, /Supabase Staging/);
+  assert.ok(requestApi.includes("createAccountDeletionRequest"));
 });
