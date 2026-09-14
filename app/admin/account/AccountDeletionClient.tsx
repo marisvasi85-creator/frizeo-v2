@@ -17,17 +17,40 @@ type ActiveRequest = {
   status: string;
   scheduled_for: string;
   requested_at: string;
+  failure_reason?: string | null;
 };
+
+type EligibleMember = {
+  userId: string;
+  role: string;
+  displayName: string | null;
+  email: string | null;
+};
+
+type OwnershipBlock = {
+  tenantId: string;
+  tenantName: string | null;
+  eligibleMembers: EligibleMember[];
+};
+
+function memberLabel(member: EligibleMember): string {
+  const name = member.displayName || member.email || "Membru";
+  const email = member.email && member.email !== name ? ` (${member.email})` : "";
+  return `${name}${email} — ${member.role}`;
+}
 
 export default function AccountDeletionClient({
   email,
   activeRequest,
+  ownershipBlocks,
 }: {
   email: string;
   activeRequest: ActiveRequest | null;
+  ownershipBlocks: OwnershipBlock[];
 }) {
   const router = useRouter();
   const [request, setRequest] = useState(activeRequest);
+  const [blocks, setBlocks] = useState(ownershipBlocks);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"warn" | "confirm">("warn");
   const [reason, setReason] = useState<AccountDeletionReason | "">("");
@@ -37,11 +60,16 @@ export default function AccountDeletionClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [transferSelections, setTransferSelections] = useState<Record<string, string>>(
+    {},
+  );
+  const [transferLoading, setTransferLoading] = useState<string | null>(null);
 
   const scheduledLabel = useMemo(
     () => (request ? formatDeletionDateRo(request.scheduled_for) : ""),
     [request],
   );
+  const ownershipBlocked = blocks.length > 0;
 
   function resetModal() {
     setOpen(false);
@@ -49,6 +77,16 @@ export default function AccountDeletionClient({
     setPassword("");
     setTypedEmail("");
     setError("");
+  }
+
+  async function refreshOwnership() {
+    const res = await fetch("/api/account-deletion/status", {
+      credentials: "include",
+    });
+    const data = await res.json();
+    if (res.ok && Array.isArray(data.ownership?.tenants)) {
+      setBlocks(data.ownership.tenants);
+    }
   }
 
   async function submitRequest() {
@@ -111,7 +149,86 @@ export default function AccountDeletionClient({
     }
   }
 
-  if (request?.status === "pending") {
+  async function transferOwnership(tenantId: string) {
+    const toUserId = transferSelections[tenantId];
+    if (!toUserId) {
+      setError("Alege un membru căruia să-i transferi ownership-ul.");
+      return;
+    }
+    setTransferLoading(tenantId);
+    setError("");
+    try {
+      const res = await fetch("/api/account-deletion/transfer-ownership", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tenantId, toUserId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error || "Nu am putut transfera ownership-ul.");
+        return;
+      }
+      await refreshOwnership();
+      router.refresh();
+    } catch {
+      setError("Eroare de rețea. Încearcă din nou.");
+    } finally {
+      setTransferLoading(null);
+    }
+  }
+
+  const ownershipNotice = ownershipBlocked ? (
+    <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p className="text-sm text-amber-950">
+        Salonul nu poate rămâne fără owner. Poți programa ștergerea, dar
+        finalizarea este blocată până transferi ownership-ul unui membru
+        eligibil. Transferul nu se face automat.
+      </p>
+      {blocks.map((block) => (
+        <div key={block.tenantId} className="space-y-2">
+          <p className="text-sm font-medium text-frz-ink">
+            {block.tenantName || "Salon"}
+          </p>
+          {block.eligibleMembers.length === 0 ? (
+            <p className="text-sm text-frz-muted">
+              Nu există un alt membru eligibil în acest salon.
+            </p>
+          ) : (
+            <>
+              <select
+                className="w-full bg-white border border-frz-line rounded-lg px-4 py-3 text-sm"
+                value={transferSelections[block.tenantId] || ""}
+                onChange={(e) =>
+                  setTransferSelections((prev) => ({
+                    ...prev,
+                    [block.tenantId]: e.target.value,
+                  }))
+                }
+              >
+                <option value="">Alege membrul care preia salonul</option>
+                {block.eligibleMembers.map((member) => (
+                  <option key={member.userId} value={member.userId}>
+                    {memberLabel(member)}
+                  </option>
+                ))}
+              </select>
+              <AdminButton
+                variant="secondary"
+                onClick={() => transferOwnership(block.tenantId)}
+                loading={transferLoading === block.tenantId}
+                loadingLabel="Se transferă..."
+              >
+                Transferă ownership-ul
+              </AdminButton>
+            </>
+          )}
+        </div>
+      ))}
+    </div>
+  ) : null;
+
+  if (request?.status === "pending" || request?.status === "processing") {
     return (
       <AdminCard className="border-red-200 bg-red-50/40 space-y-4">
         <h2 className="text-lg font-semibold text-red-800">Ștergere cont</h2>
@@ -122,6 +239,7 @@ export default function AccountDeletionClient({
           Contul rămâne funcțional până la această dată. Poți anula oricând
           înainte.
         </p>
+        {ownershipNotice}
         {error && <p className="text-sm text-red-700">{error}</p>}
         <AdminButton
           variant="secondary"
@@ -142,8 +260,9 @@ export default function AccountDeletionClient({
         <p className="text-sm text-frz-muted">
           Aceasta este zona de risc. Ștergerea contului este ireversibilă după
           perioada de 7 zile. Salonul și programările celorlalți membri nu sunt
-          șterse automat.
+          șterse automat. Facturile rămân ca evidențe financiar-contabile.
         </p>
+        {ownershipNotice}
         {error && <p className="text-sm text-red-700">{error}</p>}
         <AdminButton variant="danger" onClick={() => setOpen(true)}>
           Șterge contul
@@ -161,9 +280,18 @@ export default function AccountDeletionClient({
               <p className="text-sm text-frz-ink">
                 Contul tău va fi programat pentru ștergere. Ai la dispoziție 7
                 zile pentru a anula solicitarea. După această perioadă, datele
-                care nu trebuie păstrate conform obligațiilor legale vor fi
-                șterse sau anonimizate.
+                care nu trebuie păstrate vor fi șterse sau anonimizate.
+                Programările viitoare ale frizerului tău sunt anulate, iar
+                clienții sunt notificați. Evenimentele din Google Calendar nu
+                sunt șterse.
               </p>
+              {ownershipBlocked && (
+                <p className="text-sm text-amber-900">
+                  Ești owner și salonul mai are alți membri. Ștergerea se poate
+                  programa, dar nu se finalizează până transferi ownership-ul
+                  unui membru ales de tine.
+                </p>
+              )}
               <div>
                 <label className="block text-sm text-frz-muted mb-2">
                   De ce dorești să renunți la Frizeo? (opțional)

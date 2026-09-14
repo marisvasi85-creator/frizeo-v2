@@ -6,24 +6,35 @@ import test from "node:test";
 import {
   ACCOUNT_DELETION_GRACE_DAYS,
   ACCOUNT_DELETION_REASONS,
-  formatDeletionDateRo,
-  scheduledForFrom,
-} from "../lib/account-deletion/decisions.ts";
-import {
   authDeletionIsLast,
+  blockedOwnershipMemberships,
   buildFinalizationPlan,
   buildRequestSchedule,
   canAdminDeleteNow,
+  canFinalizeAccountDeletion,
   canUserCancelRequest,
   canUserReadRequest,
+  demoteOwnerRoleAfterTransfer,
+  formatDeletionDateRo,
   hasActiveDeletionRequest,
+  isActiveOccupancyBooking,
   isDueForWorker,
+  membershipNeedsOwnershipTransfer,
+  OWNERSHIP_TRANSFER_REQUIRED,
   parseOptionalReason,
+  scheduledForFrom,
+  shouldCancelBookingOnAccountDeletion,
   shouldCancelStripe,
+  shouldNotifyAfterCancelUpdate,
   shouldSoftCloseTenant,
   simulateExpiryAllowed,
 } from "../lib/account-deletion/decisions.ts";
 import { dispositionFor } from "../lib/account-deletion/policy.ts";
+import {
+  canBarberGeneratePublicSlots,
+  canBarberReceiveNewBookings,
+  isAnonymizedBarber,
+} from "../lib/barbers/schedulableBarber.ts";
 import {
   accountDeletionCancelledTemplate,
   accountDeletionCompletedTemplate,
@@ -132,6 +143,7 @@ test("10 multi-tenant user is detached per membership without deleting tenants",
         tenantName: "A",
         role: "barber",
         otherMemberCount: 2,
+        otherOwnerCount: 1,
         stripeSubscriptionId: "sub_1",
       },
       {
@@ -139,6 +151,7 @@ test("10 multi-tenant user is detached per membership without deleting tenants",
         tenantName: "B",
         role: "owner",
         otherMemberCount: 1,
+        otherOwnerCount: 0,
         stripeSubscriptionId: null,
       },
     ],
@@ -156,6 +169,29 @@ test("10 multi-tenant user is detached per membership without deleting tenants",
   assert.deepEqual(plan.cancelStripeTenantIds, []);
   assert.equal(plan.never.deleteTenants, true);
   assert.equal(plan.never.deleteOtherMembers, true);
+  assert.equal(plan.ownershipTransferRequired, true);
+  assert.deepEqual(plan.blockedTenantIds, ["t2"]);
+  assert.equal(
+    canFinalizeAccountDeletion([
+      {
+        tenantId: "t1",
+        tenantName: "A",
+        role: "barber",
+        otherMemberCount: 2,
+        otherOwnerCount: 1,
+        stripeSubscriptionId: "sub_1",
+      },
+      {
+        tenantId: "t2",
+        tenantName: "B",
+        role: "owner",
+        otherMemberCount: 1,
+        otherOwnerCount: 0,
+        stripeSubscriptionId: null,
+      },
+    ]),
+    false,
+  );
 });
 
 test("11 tenant with other members is not closed or unsubscribed from Stripe", () => {
@@ -171,6 +207,7 @@ test("12 sole remaining user soft-closes the salon but does not delete it", () =
         tenantName: "Solo",
         role: "owner",
         otherMemberCount: 0,
+        otherOwnerCount: 0,
         stripeSubscriptionId: "sub_solo",
       },
     ],
@@ -196,7 +233,9 @@ test("13 existing bookings are kept", () => {
   });
   assert.equal(plan.never.deleteBookings, true);
   assert.equal(dispositionFor("bookings"), "KEEP");
+  assert.deepEqual(plan.cancelFutureBarberIds, ["b1"]);
   const finalize = readRepo("lib/account-deletion/finalize.ts");
+  assert.match(finalize, /cancelFutureActiveBookingsForBarber/);
   assert.doesNotMatch(finalize, /\.from\("bookings"\)\s*\.delete\(/);
   assert.doesNotMatch(finalize, /\.from\("tenants"\)\s*\.delete\(/);
 });
@@ -221,6 +260,12 @@ test("14 Google Calendar connected disconnects tokens and does not delete events
   assert.match(finalize, /revokeGoogleOAuthToken/);
   assert.doesNotMatch(finalize, /deleteGoogleEvent/);
   assert.doesNotMatch(finalize, /releaseGoogleCalendarEvent/);
+  assert.doesNotMatch(finalize, /releaseGoogleEventForBarber/);
+  const cancel = readRepo("lib/account-deletion/cancelFutureBookings.ts");
+  assert.match(cancel, /notifyBookingCancelled/);
+  assert.doesNotMatch(cancel, /releaseGoogleEventForBarber/);
+  assert.doesNotMatch(cancel, /deleteGoogleEvent/);
+  assert.doesNotMatch(cancel, /\.delete\(/);
 });
 
 test("15 storage objects: only barber avatars are removed", () => {
@@ -251,6 +296,11 @@ test("16 Auth deletion is last mutating step", () => {
   assert.equal(authDeletionIsLast(plan.steps), true);
   assert.equal(plan.steps.at(-2), "delete_auth_user");
   assert.equal(plan.steps.at(-1), "mark_completed");
+  assert.equal(plan.steps.includes("cancel_future_bookings"), true);
+  assert.ok(
+    plan.steps.indexOf("cancel_future_bookings") <
+      plan.steps.indexOf("disconnect_google"),
+  );
   const finalize = readRepo("lib/account-deletion/finalize.ts");
   const authIdx = finalize.indexOf("auth.admin.deleteUser");
   const completeIdx = finalize.indexOf('status: "completed"');
@@ -279,9 +329,13 @@ test("19 final email is sent before Auth deletion using email_snapshot", () => {
   const html = accountDeletionCompletedTemplate();
   assert.match(html, /Contul Frizeo a fost șters/);
   const finalize = readRepo("lib/account-deletion/finalize.ts");
-  const emailIdx = finalize.indexOf("sendAccountDeletionCompletedEmail");
+  const emailCallIdx = finalize.indexOf(
+    "await sendAccountDeletionCompletedEmail(request.email_snapshot)",
+  );
   const authIdx = finalize.indexOf("auth.admin.deleteUser");
-  assert.ok(emailIdx > 0 && emailIdx < authIdx);
+  const ownershipIdx = finalize.indexOf("plan.ownershipTransferRequired");
+  assert.ok(emailCallIdx > 0 && emailCallIdx < authIdx);
+  assert.ok(ownershipIdx > 0 && ownershipIdx < emailCallIdx);
   assert.match(finalize, /request.email_snapshot/);
   assert.match(finalize, /final_email_sent_at/);
 });
@@ -394,4 +448,176 @@ test("public booking and login routes are not rewritten by account deletion", ()
     const source = readRepo(file);
     assert.doesNotMatch(source, /account_deletion_requests/);
   }
+});
+
+test("anonymized barber with null user_id cannot receive new bookings or public slots", () => {
+  const anonymized = { id: "b1", active: false, user_id: null };
+  const inactiveAttached = { id: "b2", active: false, user_id: userA };
+  const activeAttached = { id: "b3", active: true, user_id: userA };
+
+  assert.equal(isAnonymizedBarber(anonymized), true);
+  assert.equal(canBarberReceiveNewBookings(anonymized), false);
+  assert.equal(canBarberGeneratePublicSlots(anonymized), false);
+  assert.equal(
+    canBarberGeneratePublicSlots(anonymized, {
+      excludeBookingId: "bk1",
+      bookingBarberId: "b1",
+    }),
+    false,
+  );
+  assert.equal(canBarberReceiveNewBookings(inactiveAttached), false);
+  assert.equal(
+    canBarberGeneratePublicSlots(inactiveAttached, {
+      excludeBookingId: "bk1",
+      bookingBarberId: "b2",
+    }),
+    true,
+  );
+  assert.equal(canBarberReceiveNewBookings(activeAttached), true);
+  assert.equal(canBarberGeneratePublicSlots(activeAttached), true);
+});
+
+test("future active bookings are cancelled idempotently without duplicate notify", () => {
+  const now = new Date("2026-09-21T10:00:00.000Z");
+  const nowMs = now.getTime();
+  assert.equal(isActiveOccupancyBooking("confirmed", null, now), true);
+  assert.equal(isActiveOccupancyBooking("pending", "2026-09-21T11:00:00.000Z", now), true);
+  assert.equal(isActiveOccupancyBooking("pending", "2026-09-21T09:00:00.000Z", now), false);
+  assert.equal(isActiveOccupancyBooking("cancelled", null, now), false);
+  assert.equal(isActiveOccupancyBooking("completed", null, now), false);
+  assert.equal(isActiveOccupancyBooking("no_show", null, now), false);
+
+  assert.equal(
+    shouldCancelBookingOnAccountDeletion({
+      status: "confirmed",
+      expiresAt: null,
+      startMs: nowMs + 60_000,
+      nowMs,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldCancelBookingOnAccountDeletion({
+      status: "confirmed",
+      expiresAt: null,
+      startMs: nowMs - 60_000,
+      nowMs,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldCancelBookingOnAccountDeletion({
+      status: "pending",
+      expiresAt: new Date(nowMs - 1000).toISOString(),
+      startMs: nowMs + 60_000,
+      nowMs,
+    }),
+    false,
+  );
+  assert.equal(shouldNotifyAfterCancelUpdate({ id: "bk-1" }), true);
+  assert.equal(shouldNotifyAfterCancelUpdate(null), false);
+
+  const cancel = readRepo("lib/account-deletion/cancelFutureBookings.ts");
+  assert.match(cancel, /\.in\("status", \[\.\.\.ACCOUNT_DELETION_CANCELLABLE_STATUSES\]\)/);
+  assert.match(cancel, /maybeSingle/);
+  assert.match(cancel, /notifyBookingCancelled/);
+  assert.match(cancel, /shouldNotifyAfterCancelUpdate/);
+});
+
+test("sole owner with other members is blocked until explicit transfer", () => {
+  const blocked = {
+    tenantId: "t1",
+    tenantName: "Salon",
+    role: "owner",
+    otherMemberCount: 2,
+    otherOwnerCount: 0,
+    stripeSubscriptionId: null,
+  };
+  const lastMember = {
+    ...blocked,
+    otherMemberCount: 0,
+  };
+  const alreadyHasOwner = {
+    ...blocked,
+    otherOwnerCount: 1,
+  };
+  const barberMember = {
+    ...blocked,
+    role: "barber",
+  };
+
+  assert.equal(membershipNeedsOwnershipTransfer(blocked), true);
+  assert.equal(membershipNeedsOwnershipTransfer(lastMember), false);
+  assert.equal(membershipNeedsOwnershipTransfer(alreadyHasOwner), false);
+  assert.equal(membershipNeedsOwnershipTransfer(barberMember), false);
+  assert.deepEqual(blockedOwnershipMemberships([blocked, barberMember]).map((m) => m.tenantId), [
+    "t1",
+  ]);
+  assert.equal(canFinalizeAccountDeletion([lastMember]), true);
+  assert.equal(demoteOwnerRoleAfterTransfer(true), "barber");
+  assert.equal(demoteOwnerRoleAfterTransfer(false), "manager");
+  assert.equal(OWNERSHIP_TRANSFER_REQUIRED, "ownership_transfer_required");
+
+  const sql = readRepo(
+    "supabase/migrations/20260914190000_account_deletion_ownership_and_barber_null.sql",
+  );
+  assert.match(sql, /transfer_tenant_ownership/);
+  assert.match(sql, /v_from uuid := auth\.uid\(\)/);
+  assert.match(sql, /FOR UPDATE/);
+  assert.match(sql, /RAISE EXCEPTION 'not_owner'/);
+  assert.match(sql, /p_to_user_id/);
+  assert.match(sql, /auth\.uid\(\)/);
+
+  const ui = readRepo("app/admin/account/AccountDeletionClient.tsx");
+  assert.match(ui, /Salonul nu poate rămâne fără owner/);
+  assert.match(ui, /Transferă ownership-ul/);
+  assert.match(ui, /transfer-ownership/);
+
+  const transferApi = readRepo(
+    "app/api/account-deletion/transfer-ownership/route.ts",
+  );
+  assert.match(transferApi, /getAuthUser/);
+  assert.doesNotMatch(transferApi, /body\.fromUserId/);
+  assert.doesNotMatch(transferApi, /body\.user_id/);
+});
+
+test("nullable barber.user_id guards cover public booking, RPC, RLS-equivalent helpers", () => {
+  const sql = readRepo(
+    "supabase/migrations/20260914190000_account_deletion_ownership_and_barber_null.sql",
+  );
+  assert.match(sql, /barbers_detached_must_be_inactive/);
+  assert.match(sql, /user_id IS NOT NULL OR active = false/);
+  assert.match(sql, /barbers_require_user_id_on_insert/);
+  assert.match(sql, /barbers\.user_id is required on insert/);
+  assert.match(sql, /AND b\.active = true/);
+  assert.match(sql, /AND b\.user_id IS NOT NULL/);
+  assert.match(sql, /Barber is not accepting bookings/);
+
+  const scheduling = readRepo("lib/barbers/requireActiveBarberForBooking.ts");
+  assert.match(scheduling, /canBarberReceiveNewBookings/);
+  assert.match(scheduling, /canBarberGeneratePublicSlots/);
+  assert.match(scheduling, /user_id/);
+
+  const reschedule = readRepo("app/api/bookings/reschedule/route.ts");
+  assert.match(reschedule, /allowBarberScheduling/);
+
+  const findSlots = readRepo("lib/assistant/tools/findSlots.ts");
+  assert.match(findSlots, /requireActiveBarberForNewBooking/);
+
+  const listBarbers = readRepo("lib/assistant/tools/listBarbers.ts");
+  assert.match(listBarbers, /\.eq\("active", true\)/);
+
+  const publicPage = readRepo("app/booking/[barberId]/page.tsx");
+  assert.match(publicPage, /\.eq\("active", true\)/);
+
+  const invoices = readRepo("lib/account-deletion/policy.ts");
+  assert.match(invoices, /Retained financial records/);
+  assert.equal(dispositionFor("tenant_fiscal_invoices"), "KEEP");
+  assert.equal(dispositionFor("subscriptions"), "KEEP");
+
+  const worker = readRepo("lib/account-deletion/finalize.ts");
+  assert.match(worker, /releaseClaimToPending/);
+  assert.match(worker, /OWNERSHIP_TRANSFER_REQUIRED/);
+  assert.match(worker, /skipped \+= 1/);
+  assert.doesNotMatch(worker, /deleteTenant/);
 });

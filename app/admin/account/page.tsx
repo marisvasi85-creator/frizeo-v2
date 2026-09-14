@@ -1,6 +1,7 @@
 import AdminPageHeader from "../components/AdminPageHeader";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { getActiveDeletionRequest } from "@/lib/account-deletion/createRequest";
+import { loadOwnershipTransferBlocks } from "@/lib/account-deletion/ownership";
 import { redirect } from "next/navigation";
 import AccountDeletionClient from "./AccountDeletionClient";
 
@@ -10,7 +11,10 @@ export default async function AccountPage() {
     redirect("/login");
   }
 
-  const active = await getActiveDeletionRequest(session.user.id);
+  const [active, ownershipBlocks] = await Promise.all([
+    getActiveDeletionRequest(session.user.id),
+    loadOwnershipTransferBlocks(session.user.id),
+  ]);
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -27,9 +31,11 @@ export default async function AccountPage() {
                 status: active.status,
                 scheduled_for: active.scheduled_for,
                 requested_at: active.requested_at,
+                failure_reason: active.failure_reason,
               }
             : null
         }
+        ownershipBlocks={ownershipBlocks}
       />
     </div>
   );

@@ -82,6 +82,7 @@ export type TenantMembershipSnapshot = {
   tenantName: string | null;
   role: string;
   otherMemberCount: number;
+  otherOwnerCount: number;
   stripeSubscriptionId: string | null;
 };
 
@@ -95,6 +96,7 @@ export type BarberSnapshot = {
 
 export type FinalizationStep =
   | "send_final_email"
+  | "cancel_future_bookings"
   | "disconnect_google"
   | "delete_barber_avatars"
   | "anonymize_barber"
@@ -106,6 +108,8 @@ export type FinalizationStep =
   | "delete_profile"
   | "delete_auth_user"
   | "mark_completed";
+
+export const OWNERSHIP_TRANSFER_REQUIRED = "ownership_transfer_required";
 
 export function hasActiveDeletionRequest(
   existing: Array<{ status: string }> | null | undefined,
@@ -194,6 +198,82 @@ export function shouldCancelStripe(otherMemberCount: number): boolean {
   return otherMemberCount <= 0;
 }
 
+export function membershipNeedsOwnershipTransfer(
+  membership: Pick<
+    TenantMembershipSnapshot,
+    "role" | "otherOwnerCount" | "otherMemberCount"
+  >,
+): boolean {
+  return (
+    membership.role === "owner" &&
+    membership.otherOwnerCount === 0 &&
+    membership.otherMemberCount > 0
+  );
+}
+
+export function blockedOwnershipMemberships(
+  memberships: TenantMembershipSnapshot[],
+): TenantMembershipSnapshot[] {
+  return memberships.filter(membershipNeedsOwnershipTransfer);
+}
+
+export function canFinalizeAccountDeletion(
+  memberships: TenantMembershipSnapshot[],
+): boolean {
+  return blockedOwnershipMemberships(memberships).length === 0;
+}
+
+export function demoteOwnerRoleAfterTransfer(
+  hasBarberRow: boolean,
+): "barber" | "manager" {
+  return hasBarberRow ? "barber" : "manager";
+}
+
+export const ACCOUNT_DELETION_CANCELLABLE_STATUSES = [
+  "pending",
+  "confirmed",
+] as const;
+
+export function isExpiredPendingHold(
+  status: string,
+  expiresAt: string | null | undefined,
+  now: Date,
+): boolean {
+  if (status !== "pending") return false;
+  if (!expiresAt) return false;
+  return new Date(expiresAt).getTime() <= now.getTime();
+}
+
+export function isActiveOccupancyBooking(
+  status: string,
+  expiresAt: string | null | undefined,
+  now: Date,
+): boolean {
+  if (status === "confirmed") return true;
+  if (status === "pending") {
+    return !isExpiredPendingHold(status, expiresAt, now);
+  }
+  return false;
+}
+
+export function shouldCancelBookingOnAccountDeletion(input: {
+  status: string;
+  expiresAt?: string | null;
+  startMs: number;
+  nowMs: number;
+}): boolean {
+  return (
+    isActiveOccupancyBooking(input.status, input.expiresAt, new Date(input.nowMs)) &&
+    input.startMs > input.nowMs
+  );
+}
+
+export function shouldNotifyAfterCancelUpdate(
+  updatedRow: { id: string } | null | undefined,
+): boolean {
+  return Boolean(updatedRow?.id);
+}
+
 export function buildFinalizationPlan(input: {
   memberships: TenantMembershipSnapshot[];
   barbers: BarberSnapshot[];
@@ -203,13 +283,18 @@ export function buildFinalizationPlan(input: {
   cancelStripeTenantIds: string[];
   disconnectBarberIds: string[];
   avatarBarberIds: string[];
+  cancelFutureBarberIds: string[];
+  ownershipTransferRequired: boolean;
+  blockedTenantIds: string[];
   never: {
     deleteTenants: true;
     deleteBookings: true;
     deleteOtherMembers: true;
     deleteGoogleCalendarEvents: true;
+    autoPromoteOwner: true;
   };
 } {
+  const ownershipBlocks = blockedOwnershipMemberships(input.memberships);
   const softCloseTenantIds = input.memberships
     .filter((m) => shouldSoftCloseTenant(m.otherMemberCount))
     .map((m) => m.tenantId);
@@ -222,6 +307,7 @@ export function buildFinalizationPlan(input: {
 
   const steps: FinalizationStep[] = [
     "send_final_email",
+    "cancel_future_bookings",
     "disconnect_google",
     "delete_barber_avatars",
     "anonymize_barber",
@@ -241,11 +327,15 @@ export function buildFinalizationPlan(input: {
     cancelStripeTenantIds,
     disconnectBarberIds: input.barbers.filter((b) => b.hasGoogle).map((b) => b.id),
     avatarBarberIds: input.barbers.filter((b) => b.hasAvatar).map((b) => b.id),
+    cancelFutureBarberIds: input.barbers.map((b) => b.id),
+    ownershipTransferRequired: ownershipBlocks.length > 0,
+    blockedTenantIds: ownershipBlocks.map((m) => m.tenantId),
     never: {
       deleteTenants: true,
       deleteBookings: true,
       deleteOtherMembers: true,
       deleteGoogleCalendarEvents: true,
+      autoPromoteOwner: true,
     },
   };
 }

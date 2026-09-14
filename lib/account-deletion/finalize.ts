@@ -1,10 +1,12 @@
 import { ANONYMIZED_BARBER_DISPLAY_NAME } from "@/lib/account-deletion/constants";
+import { cancelFutureActiveBookingsForBarber } from "@/lib/account-deletion/cancelFutureBookings";
 import {
   buildFinalizationPlan,
+  OWNERSHIP_TRANSFER_REQUIRED,
   type BarberSnapshot,
-  type TenantMembershipSnapshot,
 } from "@/lib/account-deletion/decisions";
 import { sendAccountDeletionCompletedEmail } from "@/lib/account-deletion/emails";
+import { loadMembershipSnapshots } from "@/lib/account-deletion/ownership";
 import {
   ACCOUNT_DELETION_SELECT,
   type AccountDeletionRequestRow,
@@ -14,7 +16,12 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revokeGoogleOAuthToken } from "@/lib/google/revokeToken";
 
 export type FinalizeResult =
-  | { ok: true; request: AccountDeletionRequestRow; skipped?: boolean }
+  | {
+      ok: true;
+      request: AccountDeletionRequestRow;
+      skipped?: boolean;
+      reason?: string;
+    }
   | { ok: false; error: string; request?: AccountDeletionRequestRow | null };
 
 async function markFailed(id: string, reason: string): Promise<void> {
@@ -74,47 +81,25 @@ async function disconnectGoogleForBarber(barberId: string): Promise<void> {
     .eq("id", barberId);
 }
 
-async function loadMemberships(
-  userId: string,
-): Promise<TenantMembershipSnapshot[]> {
-  const { data: memberships, error } = await supabaseAdmin
-    .from("tenant_users")
-    .select("tenant_id, role, tenants(name)")
-    .eq("user_id", userId);
+async function releaseClaimToPending(
+  request: AccountDeletionRequestRow,
+  reason: string,
+): Promise<AccountDeletionRequestRow> {
+  const { data } = await supabaseAdmin
+    .from("account_deletion_requests")
+    .update({
+      status: "pending",
+      claimed_at: null,
+      claim_token: null,
+      failure_reason: reason.slice(0, 1000),
+      attempt_count: Math.max(0, (request.attempt_count || 1) - 1),
+    })
+    .eq("id", request.id)
+    .eq("status", "processing")
+    .select(ACCOUNT_DELETION_SELECT)
+    .maybeSingle();
 
-  if (error) throw new Error(`tenant_users: ${error.message}`);
-
-  const rows = memberships ?? [];
-  const result: TenantMembershipSnapshot[] = [];
-
-  for (const row of rows) {
-    const { count } = await supabaseAdmin
-      .from("tenant_users")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", row.tenant_id)
-      .neq("user_id", userId);
-
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("stripe_subscription_id")
-      .eq("tenant_id", row.tenant_id)
-      .maybeSingle();
-
-    const tenant = row.tenants as { name?: string } | { name?: string }[] | null;
-    const tenantName = Array.isArray(tenant)
-      ? tenant[0]?.name ?? null
-      : tenant?.name ?? null;
-
-    result.push({
-      tenantId: row.tenant_id,
-      tenantName,
-      role: row.role,
-      otherMemberCount: count ?? 0,
-      stripeSubscriptionId: sub?.stripe_subscription_id ?? null,
-    });
-  }
-
-  return result;
+  return (data as AccountDeletionRequestRow | null) ?? request;
 }
 
 async function loadBarbers(userId: string): Promise<BarberSnapshot[]> {
@@ -188,22 +173,40 @@ export async function finalizeAccountDeletion(
   const warnings: string[] = [];
 
   try {
-    if (!request.final_email_sent_at && request.email_snapshot) {
-      await sendAccountDeletionCompletedEmail(request.email_snapshot);
-      await supabaseAdmin
-        .from("account_deletion_requests")
-        .update({ final_email_sent_at: new Date().toISOString() })
-        .eq("id", request.id);
-    }
-
     if (userId) {
       const [memberships, barbers] = await Promise.all([
-        loadMemberships(userId),
+        loadMembershipSnapshots(userId),
         loadBarbers(userId),
       ]);
       const plan = buildFinalizationPlan({ memberships, barbers });
 
+      if (plan.ownershipTransferRequired) {
+        const released = await releaseClaimToPending(
+          request,
+          OWNERSHIP_TRANSFER_REQUIRED,
+        );
+        console.info("account deletion blocked pending ownership transfer", {
+          id: request.id,
+          blockedTenantIds: plan.blockedTenantIds,
+        });
+        return {
+          ok: true,
+          request: released,
+          skipped: true,
+          reason: OWNERSHIP_TRANSFER_REQUIRED,
+        };
+      }
+
+      if (!request.final_email_sent_at && request.email_snapshot) {
+        await sendAccountDeletionCompletedEmail(request.email_snapshot);
+        await supabaseAdmin
+          .from("account_deletion_requests")
+          .update({ final_email_sent_at: new Date().toISOString() })
+          .eq("id", request.id);
+      }
+
       for (const barber of barbers) {
+        await cancelFutureActiveBookingsForBarber(barber.id);
         await disconnectGoogleForBarber(barber.id);
         await emptyStorageFolder("barber-avatars", barber.id);
         const { error: anonError } = await supabaseAdmin
@@ -280,6 +283,12 @@ export async function finalizeAccountDeletion(
           throw new Error(`auth delete: ${authErr.message}`);
         }
       }
+    } else if (!request.final_email_sent_at && request.email_snapshot) {
+      await sendAccountDeletionCompletedEmail(request.email_snapshot);
+      await supabaseAdmin
+        .from("account_deletion_requests")
+        .update({ final_email_sent_at: new Date().toISOString() })
+        .eq("id", request.id);
     }
 
     const { data: completed, error: completeError } = await supabaseAdmin
@@ -356,21 +365,24 @@ export async function runDueAccountDeletions(limit = 5): Promise<{
   claimed: number;
   completed: number;
   failed: number;
+  skipped: number;
   errors: string[];
 }> {
   const claimed = await claimDueAccountDeletions(limit);
   let completed = 0;
   let failed = 0;
+  let skipped = 0;
   const errors: string[] = [];
 
   for (const request of claimed) {
     const result = await finalizeAccountDeletion(request);
-    if (result.ok) completed += 1;
+    if (result.ok && result.skipped) skipped += 1;
+    else if (result.ok) completed += 1;
     else {
       failed += 1;
       errors.push(`${request.id}: ${result.error}`);
     }
   }
 
-  return { claimed: claimed.length, completed, failed, errors };
+  return { claimed: claimed.length, completed, failed, skipped, errors };
 }

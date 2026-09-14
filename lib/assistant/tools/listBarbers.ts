@@ -9,6 +9,7 @@ export async function listBarbersTool(
     .from("barbers")
     .select("id, display_name, active, slug, google_calendar_connected")
     .eq("tenant_id", ctx.tenantId)
+    .eq("active", true)
     .order("display_name", { ascending: true });
 
   if (error) {

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { requirePlatformCreator } from "@/lib/auth/requirePlatformCreator";
 import { cancelAccountDeletionRequest } from "@/lib/account-deletion/cancelRequest";
+import { loadOwnershipTransferBlocks } from "@/lib/account-deletion/ownership";
+import { OWNERSHIP_TRANSFER_REQUIRED } from "@/lib/account-deletion/decisions";
 import {
   claimAccountDeletionById,
   finalizeAccountDeletion,
@@ -44,6 +46,27 @@ export async function POST(req: Request, context: RouteContext) {
   }
 
   if (action === "delete_now") {
+    const { data: existing } = await supabaseAdmin
+      .from("account_deletion_requests")
+      .select("id, user_id, status")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (existing?.user_id) {
+      const blocks = await loadOwnershipTransferBlocks(existing.user_id);
+      if (blocks.length > 0) {
+        return NextResponse.json(
+          {
+            error:
+              "Finalizarea este blocată până când owner-ul transferă ownership-ul unui alt membru.",
+            code: OWNERSHIP_TRANSFER_REQUIRED,
+            tenants: blocks,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
     const claimed = await claimAccountDeletionById(id);
     if (!claimed) {
       return NextResponse.json(
@@ -56,6 +79,17 @@ export async function POST(req: Request, context: RouteContext) {
       return NextResponse.json(
         { error: result.error || "Finalizarea a eșuat." },
         { status: 500 },
+      );
+    }
+    if (result.skipped && result.reason === OWNERSHIP_TRANSFER_REQUIRED) {
+      return NextResponse.json(
+        {
+          error:
+            "Finalizarea este blocată până când owner-ul transferă ownership-ul unui alt membru.",
+          code: OWNERSHIP_TRANSFER_REQUIRED,
+          request: result.request,
+        },
+        { status: 409 },
       );
     }
     return NextResponse.json({ success: true, request: result.request });
