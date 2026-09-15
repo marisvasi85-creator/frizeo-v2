@@ -1,0 +1,10 @@
+# Booking core — public clients and barbers share these write paths.
+# Email / lifecycle / PWA / Sentry PRs must not land here without review.
+/app/api/bookings/ @marisvasi85-creator
+/app/api/slots/ @marisvasi85-creator
+/app/api/availability/ @marisvasi85-creator
+/app/api/services/ @marisvasi85-creator
+/lib/bookings/ @marisvasi85-creator
+/app/booking/ @marisvasi85-creator
+/tests/booking-core-contract.test.mjs @marisvasi85-creator
+/tests/confirm-pending-hold.test.mjs @marisvasi85-creator
