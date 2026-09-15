@@ -484,6 +484,10 @@ export default function TermsPage() {
       <p>
         <a href={`mailto:${c.billingEmail}`}>{c.billingEmail}</a>
       </p>
+      <p>Telefon și WhatsApp Business:</p>
+      <p>
+        <a href={`tel:${c.phoneE164}`}>{c.phone}</a>
+      </p>
       <p>
         <strong>Operator:</strong>
       </p>

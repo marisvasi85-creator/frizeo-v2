@@ -1,4 +1,8 @@
-import { LEGAL_COMPANY, LEGAL_PRICING } from "@/lib/legal/company";
+import {
+  LEGAL_COMPANY,
+  LEGAL_PRICING,
+  companyWhatsAppUrl,
+} from "@/lib/legal/company";
 import type { FaqItem } from "@/lib/site/faqContent";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site/metadata";
 import { pageUrl } from "@/lib/site/pageMetadata";
@@ -17,6 +21,8 @@ export function organizationJsonLd() {
     url: LEGAL_COMPANY.website,
     logo: pageUrl("/icon.png"),
     email: LEGAL_COMPANY.email,
+    telephone: LEGAL_COMPANY.phoneE164,
+    sameAs: [companyWhatsAppUrl()],
     address: {
       "@type": "PostalAddress",
       addressCountry: "RO",
@@ -178,18 +184,22 @@ export function contactPageJsonLd() {
       "@type": "Organization",
       name: LEGAL_COMPANY.name,
       email: LEGAL_COMPANY.email,
+      telephone: LEGAL_COMPANY.phoneE164,
       url: LEGAL_COMPANY.website,
+      sameAs: [companyWhatsAppUrl()],
       contactPoint: [
         {
           "@type": "ContactPoint",
           contactType: "customer support",
           email: LEGAL_COMPANY.email,
+          telephone: LEGAL_COMPANY.phoneE164,
           availableLanguage: ["Romanian"],
         },
         {
           "@type": "ContactPoint",
           contactType: "billing support",
           email: LEGAL_COMPANY.billingEmail,
+          telephone: LEGAL_COMPANY.phoneE164,
           availableLanguage: ["Romanian"],
         },
       ],

@@ -2,6 +2,7 @@
 
 import UpgradeButton from "./UpgradeButton";
 import { isPlanDowngrade } from "@/lib/billing/plans";
+import { LEGAL_COMPANY } from "@/lib/legal/company";
 import Link from "next/link";
 
 type Plan = {
@@ -119,12 +120,17 @@ export default function BillingPlansSection({
 
               <div className="mt-6">
                 {plan.slug === "custom" ? (
-                  <a
-                    href="mailto:office@frizeo.ro"
-                    className="block w-full text-center bg-frz-ink text-frz-ink-contrast py-2 rounded"
-                  >
-                    Contactează-ne
-                  </a>
+                  <div className="space-y-2">
+                    <Link
+                      href="/contact"
+                      className="block w-full text-center bg-frz-ink text-frz-ink-contrast py-2 rounded"
+                    >
+                      Contactează-ne
+                    </Link>
+                    <p className="text-xs text-frz-ink/50 text-center">
+                      {LEGAL_COMPANY.phone} · WhatsApp Business
+                    </p>
+                  </div>
                 ) : isLowerPlan ? (
                   <div className="space-y-2">
                     <button

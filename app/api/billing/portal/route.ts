@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { getCurrentRole } from "@/lib/auth/getCurrentRole";
+import { LEGAL_COMPANY } from "@/lib/legal/company";
 import { getStripe, stripeErrorMessage } from "@/lib/stripe";
 import { getActiveTenant } from "@/lib/tenant/getActiveTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -38,7 +39,7 @@ export async function POST() {
       return NextResponse.json(
         {
           error:
-            "Nu există un client Stripe pe acest cont. Scrie-ne la office@frizeo.ro dacă ai nevoie de ajutor.",
+            `Nu există un client Stripe pe acest cont. Scrie-ne la ${LEGAL_COMPANY.billingEmail} sau la ${LEGAL_COMPANY.phone} (WhatsApp) dacă ai nevoie de ajutor.`,
         },
         { status: 400 },
       );

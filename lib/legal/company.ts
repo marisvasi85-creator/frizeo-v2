@@ -7,9 +7,22 @@ export const LEGAL_COMPANY = {
   email: "info@frizeo.ro",
   privacyEmail: "info@frizeo.ro",
   billingEmail: "office@frizeo.ro",
+  /** Display format used on the site (Romanian mobile). */
+  phone: "0753 332 181",
+  /** E.164 for `tel:` links, schema.org and WhatsApp. */
+  phoneE164: "+40753332181",
   website: "https://www.frizeo.ro",
-  lastUpdated: "29 iulie 2026",
+  lastUpdated: "15 septembrie 2026",
 };
+
+export function companyTelHref(): string {
+  return `tel:${LEGAL_COMPANY.phoneE164}`;
+}
+
+/** WhatsApp Business for Frizeo on the company phone. */
+export function companyWhatsAppUrl(): string {
+  return `https://wa.me/${LEGAL_COMPANY.phoneE164.replace(/^\+/, "")}`;
+}
 
 export const LEGAL_LINKS = {
   anpc: "https://anpc.ro",

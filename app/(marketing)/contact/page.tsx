@@ -1,15 +1,24 @@
 import Link from "next/link";
 import JsonLd from "@/app/components/JsonLd";
-import { LEGAL_COMPANY } from "@/lib/legal/company";
+import {
+  companyTelHref,
+  companyWhatsAppUrl,
+  LEGAL_COMPANY,
+} from "@/lib/legal/company";
 import { breadcrumbJsonLd, contactPageJsonLd } from "@/lib/site/jsonLd";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 
 export const metadata = createPageMetadata({
   title: "Contact",
   description:
-    "Contactează echipa Frizeo pentru suport, întrebări despre cont sau planuri Pro, Pro+ și Custom.",
+    `Contactează echipa Frizeo pe telefon, WhatsApp Business (${LEGAL_COMPANY.phone}) sau email pentru suport, cont și planuri Pro, Pro+ și Custom.`,
   path: "/contact",
-  keywords: ["contact frizeo", "suport programări frizerie"],
+  keywords: [
+    "contact frizeo",
+    "suport programări frizerie",
+    "whatsapp frizeo",
+    "telefon frizeo",
+  ],
 });
 
 export default function ContactPage() {
@@ -33,6 +42,29 @@ export default function ContactPage() {
         </p>
 
         <div className="space-y-6">
+          <div className="rounded-2xl border border-gray-200 p-6">
+            <h2 className="font-semibold mb-1">Telefon & WhatsApp Business</h2>
+            <p className="text-sm text-gray-600 mb-3">
+              Sună sau scrie-ne pe WhatsApp. Numărul aparține Frizeo.
+            </p>
+            <a
+              href={companyTelHref()}
+              className="text-black font-medium hover:underline"
+            >
+              {LEGAL_COMPANY.phone}
+            </a>
+            <div className="mt-3">
+              <a
+                href={companyWhatsAppUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-black font-medium hover:underline"
+              >
+                Deschide WhatsApp
+              </a>
+            </div>
+          </div>
+
           <div className="rounded-2xl border border-gray-200 p-6">
             <h2 className="font-semibold mb-1">Suport general</h2>
             <p className="text-sm text-gray-600 mb-3">

@@ -115,6 +115,10 @@ export default function CookiesPage() {
         Întrebări:{" "}
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>
       </p>
+      <p>
+        Telefon / WhatsApp Business:{" "}
+        <a href={`tel:${c.phoneE164}`}>{c.phone}</a>
+      </p>
     </LegalPageLayout>
   );
 }

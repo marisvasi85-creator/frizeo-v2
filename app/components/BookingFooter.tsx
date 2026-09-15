@@ -1,6 +1,8 @@
 import Link from "next/link";
 import {
   companyFooterLine,
+  companyTelHref,
+  companyWhatsAppUrl,
   LEGAL_COMPANY,
   LEGAL_LINKS,
 } from "@/lib/legal/company";
@@ -71,6 +73,21 @@ export default function BookingFooter() {
                 className="hover:text-frz-ink"
               >
                 {LEGAL_COMPANY.email}
+              </a>
+            </li>
+            <li>
+              <a href={companyTelHref()} className="hover:text-frz-ink">
+                {LEGAL_COMPANY.phone}
+              </a>
+            </li>
+            <li>
+              <a
+                href={companyWhatsAppUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-frz-ink"
+              >
+                WhatsApp Business
               </a>
             </li>
           </ul>

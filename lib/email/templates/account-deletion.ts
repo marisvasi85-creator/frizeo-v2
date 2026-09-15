@@ -48,6 +48,6 @@ export function accountDeletionCompletedTemplate(): string {
   return wrap(`
     <h2>Contul Frizeo a fost șters</h2>
     <p>Contul Frizeo a fost șters.</p>
-    <p>Dacă nu ai solicitat această acțiune, scrie-ne la info@frizeo.ro.</p>
+    <p>Dacă nu ai solicitat această acțiune, scrie-ne la info@frizeo.ro sau la 0753 332 181 (WhatsApp Business).</p>
   `);
 }
