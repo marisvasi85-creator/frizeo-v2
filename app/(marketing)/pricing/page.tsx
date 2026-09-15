@@ -125,7 +125,16 @@ export default function PricingPage() {
             >
               {LEGAL_COMPANY.billingEmail}
             </a>
-            . Se aplică{" "}
+            {" "}
+            sau{" "}
+            <a
+              href={`tel:${LEGAL_COMPANY.phoneE164}`}
+              className="text-black underline"
+            >
+              {LEGAL_COMPANY.phone}
+            </a>
+            {" "}
+            (WhatsApp Business). Se aplică{" "}
             <a href="/terms" className="text-black underline">
               Politica de utilizare rezonabilă (Fair Use)
             </a>

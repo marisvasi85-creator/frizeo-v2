@@ -105,4 +105,4 @@ Google permite maxim **100 de test users**. Pentru acces public fără listă, t
 
 ## Suport
 
-Probleme la testare: **info@frizeo.ro**
+Probleme la testare: **info@frizeo.ro** · **0753 332 181** (WhatsApp Business)

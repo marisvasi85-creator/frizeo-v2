@@ -51,6 +51,10 @@ export const FRIZEO_FAQS: FaqItem[] = [
   },
   {
     question: "Frizeo facturează în România?",
-    answer: `Da. Operatorul este ${LEGAL_COMPANY.name} (CUI ${LEGAL_COMPANY.cui}), cu facturare fiscală în România. Contact: ${LEGAL_COMPANY.email}.`,
+    answer: `Da. Operatorul este ${LEGAL_COMPANY.name} (CUI ${LEGAL_COMPANY.cui}), cu facturare fiscală în România. Contact: ${LEGAL_COMPANY.email}, telefon și WhatsApp Business ${LEGAL_COMPANY.phone}.`,
+  },
+  {
+    question: "Cum pot contacta Frizeo?",
+    answer: `Suport: ${LEGAL_COMPANY.email}. Abonamente: ${LEGAL_COMPANY.billingEmail}. Telefon și WhatsApp Business: ${LEGAL_COMPANY.phone}.`,
   },
 ];

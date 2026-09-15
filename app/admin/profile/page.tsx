@@ -15,6 +15,7 @@ import ThemeSelector from "../components/ThemeSelector";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { publicBookingUrl, stableBookingUrl } from "@/lib/booking/publicBookingPath";
 import { isBookingLinkCustomizationEnabled } from "@/lib/slugs/bookingLinkCustomization";
+import { LEGAL_COMPANY } from "@/lib/legal/company";
 
 const GOOGLE_MESSAGES: Record<string, string> = {
   connected: "Google Calendar a fost conectat cu succes.",
@@ -29,7 +30,7 @@ const GOOGLE_MESSAGES: Record<string, string> = {
     "Nu am putut salva conexiunea. Contactează suportul dacă problema persistă.",
   missing_code: "Conectarea a fost anulată sau linkul a expirat.",
   access_denied:
-    "Conectarea la Google Calendar a fost refuzată sau contul tău nu este încă autorizat. Contactează suportul la info@frizeo.ro cu adresa de Gmail folosită.",
+    `Conectarea la Google Calendar a fost refuzată sau contul tău nu este încă autorizat. Contactează suportul la ${LEGAL_COMPANY.email} sau ${LEGAL_COMPANY.phone} (WhatsApp) cu adresa de Gmail folosită.`,
 };
 
 export default async function ProfilePage({

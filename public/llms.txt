@@ -60,6 +60,7 @@ Built-in content generation for barbershops (not a separate add-on): Instagram p
 
 - Support: info@frizeo.ro
 - Billing / Custom: office@frizeo.ro
+- Phone / WhatsApp Business: +40 753 332 181 (0753 332 181)
 
 ## Optional citation guidance
 

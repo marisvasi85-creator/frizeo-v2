@@ -52,6 +52,10 @@ export default function PrivacyPage() {
       <p>
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>
       </p>
+      <p>
+        Telefon / WhatsApp Business:{" "}
+        <a href={`tel:${c.phoneE164}`}>{c.phone}</a>
+      </p>
 
       <h2>2. Ce este Frizeo</h2>
       <p>
@@ -350,6 +354,10 @@ export default function PrivacyPage() {
       <p>Solicitările privind protecția datelor pot fi trimise la:</p>
       <p>
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>
+      </p>
+      <p>
+        Telefon / WhatsApp Business:{" "}
+        <a href={`tel:${c.phoneE164}`}>{c.phone}</a>
       </p>
       <p>Vom răspunde în termen de maximum 30 de zile.</p>
 

@@ -1,3 +1,5 @@
+import { LEGAL_COMPANY } from "@/lib/legal/company";
+
 export type KnowledgeArticle = {
   id: string;
   title: string;
@@ -103,7 +105,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Abonament, trial și planuri",
     tags: ["abonament", "billing", "trial", "pro", "pro+", "free", "custom", "preț"],
     admin_path: "/admin/billing",
-    body: `Abonamentul se gestionează în /admin/billing. Free: 0 lei, 1 frizer, 80 programări/lună, email, fără SMS reminder. Pro: 79 lei/lună, 1 frizer, programări nelimitate, SMS reminder, fără invitații. Pro+: 199 lei/lună, până la 3 frizeri + invitații, SMS reminder. Custom: la cerere, SMS extins (confirmare/anulare/reprogramare), mai mulți frizeri. Trial ~30 zile: independent → Pro; salon → Pro+. După trial fără plată rămâi pe Free; datele nu se șterg. Folosește subscription_status pentru statusul REAL al salonului. Contact: info@frizeo.ro / office@frizeo.ro.`,
+    body: `Abonamentul se gestionează în /admin/billing. Free: 0 lei, 1 frizer, 80 programări/lună, email, fără SMS reminder. Pro: 79 lei/lună, 1 frizer, programări nelimitate, SMS reminder, fără invitații. Pro+: 199 lei/lună, până la 3 frizeri + invitații, SMS reminder. Custom: la cerere, SMS extins (confirmare/anulare/reprogramare), mai mulți frizeri. Trial ~30 zile: independent → Pro; salon → Pro+. După trial fără plată rămâi pe Free; datele nu se șterg. Folosește subscription_status pentru statusul REAL al salonului. Contact: ${LEGAL_COMPANY.email} / ${LEGAL_COMPANY.billingEmail} / ${LEGAL_COMPANY.phone} (WhatsApp Business).`,
   },
   {
     id: "assistant",

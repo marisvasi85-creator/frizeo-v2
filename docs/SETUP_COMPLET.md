@@ -239,4 +239,4 @@ Detalii: [GOOGLE_OAUTH_PRODUCTION.md](./GOOGLE_OAUTH_PRODUCTION.md)
 
 ---
 
-**Suport:** info@frizeo.ro
+**Suport:** info@frizeo.ro · 0753 332 181 (WhatsApp Business)
