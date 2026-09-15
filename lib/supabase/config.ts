@@ -4,7 +4,6 @@ import {
 } from "@/lib/app/environment";
 import {
   serviceRoleMatchesUrl,
-  shouldUseStagingSupabaseFrom,
   STAGING_SUPABASE_URL,
 } from "@/lib/account-deletion/decisions";
 
@@ -27,36 +26,18 @@ export function noteRequestHostname(hostname?: string | null): void {
   requestHostnameHint = normalized || null;
 }
 
-function gitBranchFromEnv(): string | undefined {
-  return (
-    process.env.VERCEL_GIT_COMMIT_REF ||
-    process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF
-  );
-}
-
 function resolvedHostname(hostname?: string | null): string | null {
   if (hostname) return hostname;
   if (typeof window !== "undefined") return window.location.hostname;
   return requestHostnameHint;
 }
 
-function isNextProductionBuild(): boolean {
-  return process.env.NEXT_PHASE === "phase-production-build";
-}
-
 export function shouldUseStagingSupabase(hostname?: string | null): boolean {
   const host = resolvedHostname(hostname);
   if (isProductionHostname(host)) return false;
-  if (isStagingHostname(host)) return true;
-  // Prerender during `next build` must keep Vercel env URLs. Staging is missing
-  // some production tables, and hostname is not available at build time.
-  if (isNextProductionBuild()) return false;
-  return shouldUseStagingSupabaseFrom({
-    hostname: host,
-    gitBranch: gitBranchFromEnv(),
-    appUrl: process.env.NEXT_PUBLIC_APP_URL,
-    vercelUrl: process.env.VERCEL_URL || process.env.NEXT_PUBLIC_VERCEL_URL,
-  });
+  // Hostname only. Git branch / APP_URL would flip Staging during `next build`
+  // prerender (no Host header) and break Vercel on missing Staging tables.
+  return isStagingHostname(host);
 }
 
 export function getSupabaseUrl(hostname?: string | null): string {

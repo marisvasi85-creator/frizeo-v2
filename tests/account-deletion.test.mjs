@@ -759,9 +759,13 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   const proxy = readRepo("proxy.ts");
   assert.match(proxy, /hostnameFromRequest/);
   const config = readRepo("lib/supabase/config.ts");
-  assert.match(config, /phase-production-build/);
+  assert.match(config, /isStagingHostname\(host\)/);
+  assert.doesNotMatch(config, /gitBranchFromEnv/);
+  assert.doesNotMatch(config, /VERCEL_GIT_COMMIT_REF/);
   const testimonials = readRepo("lib/marketing-testimonials/queries.ts");
   assert.match(testimonials, /PGRST205/);
+  const homepage = readRepo("app/(marketing)/page.tsx");
+  assert.match(homepage, /homepage testimonials/);
   const login = readRepo("app/api/auth/login/route.ts");
   assert.doesNotMatch(login, /supabaseAdmin/);
   const self = readRepo("app/api/account-deletion/finalize-self/route.ts");
