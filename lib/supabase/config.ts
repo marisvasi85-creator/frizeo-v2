@@ -40,10 +40,17 @@ function resolvedHostname(hostname?: string | null): string | null {
   return requestHostnameHint;
 }
 
+function isNextProductionBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 export function shouldUseStagingSupabase(hostname?: string | null): boolean {
   const host = resolvedHostname(hostname);
   if (isProductionHostname(host)) return false;
   if (isStagingHostname(host)) return true;
+  // Prerender during `next build` must keep Vercel env URLs. Staging is missing
+  // some production tables, and hostname is not available at build time.
+  if (isNextProductionBuild()) return false;
   return shouldUseStagingSupabaseFrom({
     hostname: host,
     gitBranch: gitBranchFromEnv(),
