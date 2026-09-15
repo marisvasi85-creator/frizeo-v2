@@ -98,11 +98,16 @@ test("migration keeps booking FKs and allows reschedule of the original service"
   const sql = readRepo(
     "supabase/migrations/20260915140000_barber_service_delete_keeps_bookings.sql",
   );
+  const restoreFk = readRepo(
+    "supabase/migrations/20260915143000_barber_service_fk_keep_restrict.sql",
+  );
   assert.match(sql, /ADD COLUMN IF NOT EXISTS deleted_at timestamptz/);
-  assert.match(sql, /ON DELETE SET NULL/);
   assert.match(sql, /AND s\.deleted_at IS NULL/);
   assert.match(
     sql,
     /s\.id IS NOT DISTINCT FROM old_booking\.barber_service_id/,
   );
+  assert.match(restoreFk, /bookings_barber_service_id_fkey/);
+  assert.match(restoreFk, /REFERENCES public\.barber_services\(id\);/);
+  assert.doesNotMatch(restoreFk, /ON DELETE/);
 });
