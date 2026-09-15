@@ -51,7 +51,7 @@ Constrângeri:
 - Cookie-urile de auth rămân host-only pe `staging.frizeo.ro`, ca un login de test să nu suprascrie sesiunea de pe `www.frizeo.ro`.
 - `simulate_expiry` și butonul **Finalizează acum (staging)** răspund 404 pe `www.frizeo.ro`. Pe staging, finalizarea imediată mută `scheduled_for` la acum cu `service_role`, apoi rulează același worker (`claim_account_deletion_batch` + `auth.admin.deleteUser`).
 - Worker-ul de pe staging este oprit implicit (`STAGING_BACKGROUND_JOBS_ENABLED`). Cron-ul de producție de pe `www` rulează finalizările scadente.
-- Contul de test izolat: `qa-deletion-a@frizeo.test`, salon `directory_listed = false`, singur owner. Finalizarea face soft-close doar pe acest salon; nu șterge tenants, bookings sau facturi.
+- Pentru test: creezi un cont nou pe `staging.frizeo.ro`, programezi ștergerea din Cont, apoi **Finalizează acum (staging)** dacă vrei să vezi finalizarea fără așteptarea de 7 zile. Nu folosim conturi de test create din afara aplicației.
 - `barbers.user_id` este `ON DELETE SET NULL` înainte de orice Auth delete. Nu aplica `20260915120000_account_deletion_self_finalize.sql` pe baza comună (RPC-ul ștearge Auth ca user, nu ca service_role).
 
 ## Rollback migrație
