@@ -49,8 +49,9 @@ Constrângeri:
 
 - `simulate_expiry` și cron-ul zilnic sunt pentru test.
 - `simulate_expiry` răspunde 404 în production.
-- Worker-ul de pe staging este oprit implicit (`STAGING_BACKGROUND_JOBS_ENABLED`). Folosește **Delete now** din admin pentru a rula aceeași procedură. Delete now e blocat de același ownership check.
-- Hostname-ul `staging.frizeo.ro` nu e suficient: `NEXT_PUBLIC_SUPABASE_URL` trebuie să fie proiectul **Frizeo Staging** (`fanxxytfuhnakfdzwssd`), nu producția (`shsompeyazrvswnjmlmw`). Dacă Vercel Preview/staging rămâne pe baza de producție, pagina Cont se încarcă, dar request/cancel/finalize/transfer sunt blocate. Nu aplica migrarea pe producție.
+- Worker-ul de pe staging este oprit implicit (`STAGING_BACKGROUND_JOBS_ENABLED`). Folosește **Delete now** din admin sau **Finalizează acum (staging)** pe un cont de test.
+- `staging.frizeo.ro` folosește proiectul Supabase Staging (`fanxxytfuhnakfdzwssd`), nu producția. Cookie-urile de auth rămân host-only pe staging, ca să nu fie amestecate cu `www.frizeo.ro`.
+- Nu aplica migrarea pe producție.
 
 ## Rollback migrație
 

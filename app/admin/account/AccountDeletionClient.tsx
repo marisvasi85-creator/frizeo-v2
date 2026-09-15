@@ -45,12 +45,14 @@ export default function AccountDeletionClient({
   ownershipBlocks,
   writesAllowed = true,
   unavailableMessage = null,
+  allowImmediateFinalize = false,
 }: {
   email: string;
   activeRequest: ActiveRequest | null;
   ownershipBlocks: OwnershipBlock[];
   writesAllowed?: boolean;
   unavailableMessage?: string | null;
+  allowImmediateFinalize?: boolean;
 }) {
   const router = useRouter();
   const [request, setRequest] = useState(activeRequest);
@@ -64,6 +66,8 @@ export default function AccountDeletionClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [finalizeNowLoading, setFinalizeNowLoading] = useState(false);
+  const [finalizePassword, setFinalizePassword] = useState("");
   const [transferSelections, setTransferSelections] = useState<Record<string, string>>(
     {},
   );
@@ -140,6 +144,33 @@ export default function AccountDeletionClient({
       setError("Eroare de rețea. Încearcă din nou.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function finalizeNow() {
+    if (!finalizePassword) {
+      setError("Parola este obligatorie.");
+      return;
+    }
+    setFinalizeNowLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/account-deletion/finalize-self", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password: finalizePassword }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        setError(data.error || "Nu am putut finaliza ștergerea.");
+        return;
+      }
+      window.location.href = "/login?deleted=1";
+    } catch {
+      setError("Eroare de rețea. Încearcă din nou.");
+    } finally {
+      setFinalizeNowLoading(false);
     }
   }
 
@@ -265,6 +296,30 @@ export default function AccountDeletionClient({
         >
           Anulează ștergerea
         </AdminButton>
+        {allowImmediateFinalize && (
+          <div className="space-y-2 pt-2 border-t border-red-200">
+            <p className="text-xs text-frz-muted">
+              Doar staging: poți finaliza imediat pe un cont de test, fără
+              așteptarea de 7 zile.
+            </p>
+            <input
+              type="password"
+              autoComplete="current-password"
+              className="w-full bg-white border border-frz-line rounded-lg px-4 py-3 text-sm"
+              placeholder="Parola contului de test"
+              value={finalizePassword}
+              onChange={(e) => setFinalizePassword(e.target.value)}
+            />
+            <AdminButton
+              variant="danger"
+              onClick={finalizeNow}
+              loading={finalizeNowLoading}
+              loadingLabel="Se șterge..."
+            >
+              Finalizează acum (staging)
+            </AdminButton>
+          </div>
+        )}
       </AdminCard>
     );
   }

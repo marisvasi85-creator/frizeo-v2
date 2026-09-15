@@ -8,6 +8,7 @@ import {
   finalizeAccountDeletion,
 } from "@/lib/account-deletion/finalize";
 import {
+  hostnameFromRequest,
   isDevelopment,
   isPreview,
   isProduction,
@@ -20,7 +21,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, context: RouteContext) {
-  const blocked = accountDeletionWriteBlockResponse();
+  const blocked = accountDeletionWriteBlockResponse(hostnameFromRequest(req));
   if (blocked) return blocked;
 
   const auth = await requirePlatformCreator();

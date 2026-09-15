@@ -40,7 +40,12 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      ...(supabaseHost
+      {
+        protocol: "https" as const,
+        hostname: "fanxxytfuhnakfdzwssd.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+      ...(supabaseHost && supabaseHost !== "fanxxytfuhnakfdzwssd.supabase.co"
         ? [
             {
               protocol: "https" as const,
@@ -48,13 +53,7 @@ const nextConfig: NextConfig = {
               pathname: "/storage/v1/object/public/**",
             },
           ]
-        : [
-            {
-              protocol: "https" as const,
-              hostname: "*.supabase.co",
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]),
+        : []),
     ],
   },
   async redirects() {

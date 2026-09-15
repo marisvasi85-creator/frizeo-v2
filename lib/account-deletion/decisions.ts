@@ -384,6 +384,61 @@ export function accountDeletionWritesAllowed(input: {
   return ref !== PRODUCTION_SUPABASE_PROJECT_REF;
 }
 
+export const STAGING_SUPABASE_PROJECT_REF = "fanxxytfuhnakfdzwssd";
+export const STAGING_SUPABASE_URL = `https://${STAGING_SUPABASE_PROJECT_REF}.supabase.co`;
+
+const PRODUCTION_FRIEZO_HOSTS = new Set([
+  "www.frizeo.ro",
+  "frizeo.ro",
+  "email.frizeo.ro",
+]);
+
+export function shouldUseStagingSupabaseFrom(input: {
+  hostname?: string | null;
+  gitBranch?: string | null;
+  appUrl?: string | null;
+  vercelUrl?: string | null;
+}): boolean {
+  const hostname = (input.hostname ?? "").split(":")[0]?.trim().toLowerCase() ?? "";
+  if (PRODUCTION_FRIEZO_HOSTS.has(hostname)) return false;
+  if (hostname === "staging.frizeo.ro") return true;
+  if ((input.gitBranch ?? "").trim() === "staging") return true;
+  const appUrl = (input.appUrl ?? "").toLowerCase();
+  if (appUrl.includes("staging.frizeo.ro")) return true;
+  const vercelUrl = (input.vercelUrl ?? "").toLowerCase();
+  return vercelUrl.includes("staging.frizeo.ro");
+}
+
+export function supabaseProjectRefFromJwt(token: string): string {
+  const part = token.split(".")[1];
+  if (!part) return "";
+  try {
+    const padded = part.replace(/-/g, "+").replace(/_/g, "/");
+    const json = atob(padded);
+    const payload = JSON.parse(json) as { ref?: unknown; iss?: unknown };
+    if (typeof payload.ref === "string" && payload.ref.trim()) {
+      return payload.ref.trim().toLowerCase();
+    }
+    if (typeof payload.iss === "string") {
+      return supabaseProjectRefFromUrl(payload.iss);
+    }
+  } catch {
+    return "";
+  }
+  return "";
+}
+
+export function serviceRoleMatchesUrl(input: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+}): boolean {
+  const urlRef = supabaseProjectRefFromUrl(input.supabaseUrl);
+  if (!urlRef || !input.serviceRoleKey) return false;
+  const keyRef = supabaseProjectRefFromJwt(input.serviceRoleKey);
+  if (!keyRef) return false;
+  return keyRef === urlRef;
+}
+
 export function isMissingAccountDeletionTableError(error: {
   code?: string | null;
   message?: string | null;

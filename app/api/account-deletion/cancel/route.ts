@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
+import { hostnameFromRequest } from "@/lib/app/environment";
 import { cancelAccountDeletionRequest } from "@/lib/account-deletion/cancelRequest";
 
-export async function POST() {
+export async function POST(req: Request) {
   const user = await getAuthUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -10,6 +11,7 @@ export async function POST() {
 
   const result = await cancelAccountDeletionRequest({
     actorUserId: user.id,
+    hostname: hostnameFromRequest(req),
   });
 
   if (!result.ok) return result.response;

@@ -1,5 +1,6 @@
 import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/account-deletion/constants";
 import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
+import { hostnameFromRequest } from "@/lib/app/environment";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import {
@@ -76,7 +77,9 @@ export async function createAccountDeletionRequest(input: {
   });
   if (limited) return { ok: false, response: limited };
 
-  const blocked = accountDeletionWriteBlockResponse();
+  const blocked = accountDeletionWriteBlockResponse(
+    hostnameFromRequest(input.req),
+  );
   if (blocked) {
     return { ok: false, response: blocked };
   }

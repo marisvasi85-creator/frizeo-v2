@@ -83,6 +83,14 @@ export function hostnameFromRequest(request: Request): string {
   }
 }
 
+export function hostnameFromHeaderStore(headerStore: {
+  get(name: string): string | null;
+}): string {
+  const forwarded = headerStore.get("x-forwarded-host");
+  if (forwarded) return normalizeHostname(forwarded.split(",")[0]);
+  return normalizeHostname(headerStore.get("host"));
+}
+
 export function isDevelopment(): boolean {
   if (vercelEnv() === "development") return true;
   return !vercelEnv() && process.env.NODE_ENV === "development";

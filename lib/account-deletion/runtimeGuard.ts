@@ -4,17 +4,24 @@ import {
   ACCOUNT_DELETION_PRODUCTION_DB_CODE,
   accountDeletionWritesAllowed,
 } from "@/lib/account-deletion/decisions";
+import { getSupabaseUrl } from "@/lib/supabase/config";
 
-export function currentSupabaseUrl(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+export function currentSupabaseUrl(hostname?: string | null): string {
+  return getSupabaseUrl(hostname);
 }
 
-export function accountDeletionWritesAreAllowed(): boolean {
-  return accountDeletionWritesAllowed({ supabaseUrl: currentSupabaseUrl() });
+export function accountDeletionWritesAreAllowed(
+  hostname?: string | null,
+): boolean {
+  return accountDeletionWritesAllowed({
+    supabaseUrl: currentSupabaseUrl(hostname),
+  });
 }
 
-export function accountDeletionWriteBlockResponse(): NextResponse | null {
-  if (accountDeletionWritesAreAllowed()) return null;
+export function accountDeletionWriteBlockResponse(
+  hostname?: string | null,
+): NextResponse | null {
+  if (accountDeletionWritesAreAllowed(hostname)) return null;
   return NextResponse.json(
     {
       error: ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,

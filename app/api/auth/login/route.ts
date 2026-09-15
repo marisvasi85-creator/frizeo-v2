@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
   isValidEmail,
   mapAuthError,
@@ -46,7 +45,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: memberships } = await supabaseAdmin
+    const { data: memberships } = await supabase
       .from("tenant_users")
       .select("tenant_id, role")
       .eq("user_id", data.user.id);

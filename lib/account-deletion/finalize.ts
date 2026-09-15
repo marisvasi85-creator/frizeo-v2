@@ -14,6 +14,7 @@ import {
 } from "@/lib/account-deletion/types";
 import { getStripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { canUseServiceRoleAdmin, getSupabaseUrl } from "@/lib/supabase/config";
 import { revokeGoogleOAuthToken } from "@/lib/google/revokeToken";
 
 export type FinalizeResult =
@@ -273,14 +274,23 @@ export async function finalizeAccountDeletion(
       await supabaseAdmin.from("platform_admins").delete().eq("user_id", userId);
       await supabaseAdmin.from("profiles").delete().eq("id", userId);
 
-      const { data: authUser, error: authLookupError } =
-        await supabaseAdmin.auth.admin.getUserById(userId);
-      if (authLookupError && !/not.*found|user not found/i.test(authLookupError.message)) {
-        throw new Error(`auth lookup: ${authLookupError.message}`);
-      }
-      if (authUser?.user) {
-        const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
-        if (authErr && !/not.*found|user not found/i.test(authErr.message)) {
+      if (canUseServiceRoleAdmin()) {
+        const { data: authUser, error: authLookupError } =
+          await supabaseAdmin.auth.admin.getUserById(userId);
+        if (authLookupError && !/not.*found|user not found/i.test(authLookupError.message)) {
+          throw new Error(`auth lookup: ${authLookupError.message}`);
+        }
+        if (authUser?.user) {
+          const { error: authErr } = await supabaseAdmin.auth.admin.deleteUser(userId);
+          if (authErr && !/not.*found|user not found/i.test(authErr.message)) {
+            throw new Error(`auth delete: ${authErr.message}`);
+          }
+        }
+      } else {
+        const { error: authErr } = await supabaseAdmin.rpc(
+          "delete_own_auth_user_if_processing",
+        );
+        if (authErr && !/not.*found|user not found|no_processing_request/i.test(authErr.message)) {
           throw new Error(`auth delete: ${authErr.message}`);
         }
       }
@@ -347,6 +357,17 @@ export async function claimDueAccountDeletions(limit = 5): Promise<AccountDeleti
 export async function claimAccountDeletionById(
   requestId: string,
 ): Promise<AccountDeletionRequestRow | null> {
+  if (!canUseServiceRoleAdmin()) {
+    const { data, error } = await supabaseAdmin.rpc("claim_own_account_deletion", {
+      p_id: requestId,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    const rows = (data ?? []) as AccountDeletionRequestRow[];
+    return rows[0] ?? null;
+  }
+
   const { data, error } = await supabaseAdmin.rpc("claim_account_deletion_batch", {
     p_limit: 1,
     p_lease_seconds: 900,
@@ -371,7 +392,7 @@ export async function runDueAccountDeletions(limit = 5): Promise<{
 }> {
   if (
     !accountDeletionWritesAllowed({
-      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+      supabaseUrl: getSupabaseUrl(),
     })
   ) {
     return {
