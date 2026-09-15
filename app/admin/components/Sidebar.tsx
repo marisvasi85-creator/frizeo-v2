@@ -11,6 +11,7 @@ export default function Sidebar({
   platformAssistantEnabled = false,
   platformTestimonialsEnabled = false,
   frizeoEmailEnabled = false,
+  accountDeletionsEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
@@ -18,6 +19,7 @@ export default function Sidebar({
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
+  accountDeletionsEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const navItems = buildAdminNavItems({
@@ -27,6 +29,7 @@ export default function Sidebar({
     platformAssistantEnabled,
     platformTestimonialsEnabled,
     frizeoEmailEnabled,
+    accountDeletionsEnabled,
   });
 
   return (

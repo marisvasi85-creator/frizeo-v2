@@ -1,3 +1,4 @@
+import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { resolveDaySchedule } from "@/lib/schedule/resolveDaySchedule";
@@ -74,6 +75,17 @@ export async function updateBookingTool(
         instruct_user:
           "Prezintă propunerea. Utilizatorul confirmă din butoanele din chat (nu seta confirmed=true singur).",
       },
+    };
+  }
+
+  const barberCheck = await allowBarberScheduling(booking.barber_id, {
+    excludeBookingId: booking.id,
+  });
+  if (!barberCheck.ok) {
+    return {
+      ok: false,
+      summary: barberCheck.error,
+      error: "inactive_barber",
     };
   }
 

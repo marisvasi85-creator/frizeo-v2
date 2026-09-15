@@ -1,3 +1,4 @@
+import { requireActiveBarberForNewBooking } from "@/lib/barbers/requireActiveBarberForBooking";
 import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
 import {
   addDaysToDateString,
@@ -43,6 +44,15 @@ export async function findSlotsTool(
 
   const target = await resolveBarberFromArgs(ctx, args);
   if (!target.ok) return target.result;
+
+  const barberCheck = await requireActiveBarberForNewBooking(target.barberId);
+  if (!barberCheck.ok) {
+    return {
+      ok: false,
+      summary: barberCheck.error,
+      error: "inactive_barber",
+    };
+  }
 
   const service = await resolveServiceForBarber(
     target.barberId,

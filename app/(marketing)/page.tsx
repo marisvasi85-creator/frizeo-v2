@@ -79,9 +79,16 @@ function InlineCta({
 }
 
 export default async function Page() {
-  const testimonials = isMarketingTestimonialsEnabled()
-    ? await listApprovedMarketingTestimonials()
-    : [];
+  let testimonials: Awaited<
+    ReturnType<typeof listApprovedMarketingTestimonials>
+  > = [];
+  if (isMarketingTestimonialsEnabled()) {
+    try {
+      testimonials = await listApprovedMarketingTestimonials();
+    } catch (error) {
+      console.error("homepage testimonials", error);
+    }
+  }
   const testimonialsEnabled = isMarketingTestimonialsPublicEnabled(
     testimonials.length,
   );

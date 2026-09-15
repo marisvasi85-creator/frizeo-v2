@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { getCurrentBarberInTenant } from "@/lib/supabase/getCurrentBarberInTenant";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { revokeGoogleOAuthToken } from "@/lib/google/revokeToken";
 
 function redirectToProfile(params?: Record<string, string>) {
   const url = new URL(`${getAppUrl()}/admin/profile`);
@@ -11,18 +12,6 @@ function redirectToProfile(params?: Record<string, string>) {
     });
   }
   return NextResponse.redirect(url.toString());
-}
-
-async function revokeGoogleToken(token: string) {
-  try {
-    await fetch("https://oauth2.googleapis.com/revoke", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ token }),
-    });
-  } catch {
-    // Local disconnect still proceeds if Google revoke fails.
-  }
 }
 
 export async function POST() {
@@ -42,7 +31,7 @@ export async function POST() {
     googleAccount?.refresh_token ?? googleAccount?.access_token ?? null;
 
   if (tokenToRevoke) {
-    await revokeGoogleToken(tokenToRevoke);
+    await revokeGoogleOAuthToken(tokenToRevoke);
   }
 
   await supabaseAdmin

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
+import { hostnameFromRequest } from "@/lib/app/environment";
 import { getFrizeoAppUrl, isEmailHost } from "@/lib/frizeo-email/config";
 import { isPlatformAdminEmail } from "@/lib/auth/requirePlatformAdmin";
 import {
@@ -38,6 +39,7 @@ export async function proxy(req: NextRequest) {
   const res = emailRewrite ?? NextResponse.next();
 
   const host = req.headers.get("host");
+  const hostname = hostnameFromRequest(req);
   const onEmailHost = isEmailHost(host);
 
   if (!needsSessionLookup(pathname, onEmailHost)) {
@@ -48,7 +50,7 @@ export async function proxy(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: getAuthCookieOptions(),
+      cookieOptions: getAuthCookieOptions(hostname),
       cookies: {
         getAll() {
           return req.cookies.getAll();

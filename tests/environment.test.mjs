@@ -253,6 +253,7 @@ const backgroundJobRoutes = [
   "app/api/cron/cleanup/route.ts",
   "app/api/cron/trial-cleanup/route.ts",
   "app/api/cron/notion-sync/route.ts",
+  "app/api/cron/account-deletion/route.ts",
 ];
 
 test("background job routes skip after auth and keep the endpoint", () => {

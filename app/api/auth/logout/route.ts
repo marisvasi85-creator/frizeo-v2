@@ -1,16 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
+import { hostnameFromRequest } from "@/lib/app/environment";
+import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
 
 export async function POST(request: NextRequest) {
   let response = NextResponse.redirect(new URL("/login", request.url), {
     status: 302,
   });
+  const hostname = hostnameFromRequest(request);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: getAuthCookieOptions(hostname),
       cookies: {
         getAll() {
           return request.cookies.getAll();

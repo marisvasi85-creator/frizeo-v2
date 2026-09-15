@@ -20,6 +20,7 @@ import {
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
 import { addMinutesToTime } from "@/lib/schedule/time";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
+import { allowBarberScheduling } from "@/lib/barbers/requireActiveBarberForBooking";
 
 export async function POST(req: Request) {
   try {
@@ -156,6 +157,16 @@ export async function POST(req: Request) {
 
     if (!leadTime.ok) {
       return NextResponse.json({ error: leadTime.error }, { status: 400 });
+    }
+
+    const barberCheck = await allowBarberScheduling(oldBooking.barber_id, {
+      excludeBookingId: oldBooking.id,
+    });
+    if (!barberCheck.ok) {
+      return NextResponse.json(
+        { error: barberCheck.error },
+        { status: barberCheck.status },
+      );
     }
 
     // 🔥 FOLOSIM DATELE NOI SAU FALLBACK
