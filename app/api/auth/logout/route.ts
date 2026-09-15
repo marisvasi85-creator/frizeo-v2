@@ -2,7 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { revalidatePath } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 import { hostnameFromRequest } from "@/lib/app/environment";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
 
 export async function POST(request: NextRequest) {
@@ -12,8 +11,8 @@ export async function POST(request: NextRequest) {
   const hostname = hostnameFromRequest(request);
 
   const supabase = createServerClient(
-    getSupabaseUrl(hostname),
-    getSupabaseAnonKey(hostname),
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: getAuthCookieOptions(hostname),
       cookies: {

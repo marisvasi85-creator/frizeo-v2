@@ -3,7 +3,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 import { hostnameFromHeaderStore } from "@/lib/app/environment";
 import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
 /**
  * Supabase client for Route Handlers that attaches session cookies to the
@@ -22,8 +21,8 @@ export async function createSupabaseRouteHandlerClient(
   }
 
   const supabase = createServerClient(
-    getSupabaseUrl(hostname),
-    getSupabaseAnonKey(hostname),
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: getAuthCookieOptions(hostname),
       cookies: {

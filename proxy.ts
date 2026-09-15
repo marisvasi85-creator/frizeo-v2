@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getAuthCookieOptions } from "@/lib/supabase/cookieOptions";
-import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 import { hostnameFromRequest } from "@/lib/app/environment";
 import { getFrizeoAppUrl, isEmailHost } from "@/lib/frizeo-email/config";
 import { isPlatformAdminEmail } from "@/lib/auth/requirePlatformAdmin";
@@ -48,8 +47,8 @@ export async function proxy(req: NextRequest) {
   }
 
   const supabase = createServerClient(
-    getSupabaseUrl(hostname),
-    getSupabaseAnonKey(hostname),
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookieOptions: getAuthCookieOptions(hostname),
       cookies: {
