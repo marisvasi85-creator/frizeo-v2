@@ -106,7 +106,8 @@ export async function listDirectorySalons(options?: {
       .from("barber_services")
       .select("barber_id, name, display_name")
       .in("barber_id", barberIds)
-      .eq("active", true);
+      .eq("active", true)
+      .is("deleted_at", null);
 
     for (const s of services || []) {
       const tid = barberTenant.get(s.barber_id as string);

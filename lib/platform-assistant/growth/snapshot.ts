@@ -124,6 +124,7 @@ export async function loadGrowthSnapshot(): Promise<{
         .from("barber_services")
         .select("tenant_id, barber_id, active, created_at")
         .eq("active", true)
+        .is("deleted_at", null)
         .order("created_at", { ascending: true })
         .range(from, to),
     ),

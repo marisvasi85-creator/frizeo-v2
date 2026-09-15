@@ -4,6 +4,10 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import {
+  CATALOG_SERVICE_DELETED_MESSAGE,
+  isDeletedFromCatalog,
+} from "@/lib/services/catalog";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
@@ -26,10 +30,24 @@ export async function POST(req: Request) {
       return access.response;
     }
 
+    const { data: existing } = await supabaseAdmin
+      .from("barber_services")
+      .select("deleted_at")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (isDeletedFromCatalog(existing)) {
+      return NextResponse.json(
+        { error: CATALOG_SERVICE_DELETED_MESSAGE },
+        { status: 400 },
+      );
+    }
+
     const { data, error } = await supabaseAdmin
       .from("barber_services")
       .update({ active: Boolean(active) })
       .eq("id", id)
+      .is("deleted_at", null)
       .select()
       .single();
 

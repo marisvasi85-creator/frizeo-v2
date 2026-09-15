@@ -11,6 +11,7 @@ import { addMinutesToTime, timesOverlap } from "@/lib/schedule/time";
 import { getActiveBookings } from "@/lib/schedule/bookings";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import { assertBookingLeadTimeForBarber } from "@/lib/bookings/bookingLeadTime";
+import { canUseServiceForExistingBooking } from "@/lib/services/catalog";
 
 export async function POST(req: Request) {
   try {
@@ -66,15 +67,26 @@ export async function POST(req: Request) {
 
     const { data: booking } = await supabaseAdmin
       .from("bookings")
-      .select("barber_id")
+      .select("barber_id, barber_service_id")
       .eq("id", id)
       .single();
 
     const { data: service } = await supabaseAdmin
       .from("barber_services")
-      .select("duration")
+      .select("duration, active, deleted_at")
       .eq("id", barber_service_id)
-      .single();
+      .maybeSingle();
+
+    if (
+      barber_service_id &&
+      !canUseServiceForExistingBooking({
+        service,
+        requestedServiceId: barber_service_id,
+        originalServiceId: booking?.barber_service_id,
+      })
+    ) {
+      return NextResponse.json({ error: "Serviciu invalid" }, { status: 400 });
+    }
 
     const duration = service?.duration || 30;
     const end_time = addMinutesToTime(start_time, duration);

@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       .eq("barber_id", barber_id)
       .eq("tenant_id", barberCheck.barber.tenant_id)
       .eq("active", true)
+      .is("deleted_at", null)
       .single();
 
     if (!service) {

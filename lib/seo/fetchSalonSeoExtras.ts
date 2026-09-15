@@ -35,6 +35,7 @@ export async function fetchSalonSeoExtras(tenantId: string): Promise<{
           .select("price")
           .in("barber_id", barberIds)
           .eq("active", true)
+          .is("deleted_at", null)
       : Promise.resolve({ data: [] as Array<{ price: number | null }> }),
     supabaseAdmin
       .from("salon_gallery")

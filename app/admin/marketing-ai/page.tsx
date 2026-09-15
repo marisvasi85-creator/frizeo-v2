@@ -55,6 +55,7 @@ export default async function MarketingAIPage() {
         .select("id, display_name, name, duration")
         .eq("barber_id", defaultBarberId)
         .eq("active", true)
+        .is("deleted_at", null)
         .order("sort_order", { ascending: true })
     : { data: [] as { id: string; display_name: string | null; name: string; duration: number }[] };
 

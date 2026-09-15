@@ -24,6 +24,7 @@ export async function GET(req: Request) {
     `)
     .eq("barber_id", barberId)
     .eq("active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (error) {

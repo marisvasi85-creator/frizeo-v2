@@ -23,6 +23,7 @@ export default async function ServicesPage() {
     `,
     )
     .eq("barber_id", barber.id)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (error) {

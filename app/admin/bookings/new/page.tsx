@@ -76,6 +76,7 @@ export default async function Page() {
     .select("*")
     .eq("barber_id", defaultBarberId)
     .eq("active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   return (

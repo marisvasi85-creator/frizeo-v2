@@ -19,7 +19,12 @@ export default function ServicesClient({
 
   // 🔥 DELETE
   async function handleDelete(id: string) {
-    if (!confirm("Ștergi serviciul?")) return;
+    if (
+      !confirm(
+        "Ștergi serviciul din listă? Programările existente rămân în calendar.",
+      )
+    )
+      return;
 
     const res = await fetch("/api/services/delete", {
       method: "POST",

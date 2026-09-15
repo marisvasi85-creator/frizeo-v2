@@ -44,7 +44,8 @@ async function healthForTenant(
       .from("barber_services")
       .select("id, active")
       .eq("tenant_id", tenant.id)
-      .eq("active", true),
+      .eq("active", true)
+      .is("deleted_at", null),
     supabaseAdmin
       .from("subscriptions")
       .select("status, trial_ends_at, stripe_subscription_id, plans(name, slug)")
@@ -190,7 +191,8 @@ export async function healthCheckTool(
     supabaseAdmin
       .from("barber_services")
       .select("tenant_id")
-      .eq("active", true),
+      .eq("active", true)
+      .is("deleted_at", null),
     supabaseAdmin
       .from("subscriptions")
       .select("tenant_id, status, trial_ends_at"),

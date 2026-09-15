@@ -272,8 +272,9 @@ export async function resolveServiceForBarber(
   if (serviceIdArg) {
     const { data } = await supabaseAdmin
       .from("barber_services")
-      .select("id, display_name, name, duration, barber_id, active")
+      .select("id, display_name, name, duration, barber_id, active, deleted_at")
       .eq("id", serviceIdArg)
+      .is("deleted_at", null)
       .maybeSingle();
 
     if (!data || data.barber_id !== barberId) {
@@ -322,8 +323,9 @@ export async function resolveServiceForBarber(
   const needle = serviceNameArg.toLowerCase();
   let servicesQuery = supabaseAdmin
     .from("barber_services")
-    .select("id, display_name, name, duration, barber_id, active")
-    .eq("barber_id", barberId);
+    .select("id, display_name, name, duration, barber_id, active, deleted_at")
+    .eq("barber_id", barberId)
+    .is("deleted_at", null);
 
   if (!options?.includeInactive) {
     servicesQuery = servicesQuery.eq("active", true);

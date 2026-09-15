@@ -19,7 +19,7 @@ export const ACCOUNT_DELETION_TABLE_POLICY: AccountDeletionTablePolicy[] = [
   { table: "barbers", disposition: "ANONYMIZE", notes: "Keep row for booking FK. Null user_id, deactivate, strip PII." },
   { table: "bookings", disposition: "KEEP", notes: "Never hard-DELETE. Future active bookings of the departing barber are cancelled in place (status=cancelled) and clients are notified. History stays." },
   { table: "booking_cancellations", disposition: "KEEP", notes: "Follows bookings." },
-  { table: "barber_services", disposition: "KEEP", notes: "Needed by booking FKs; deactivate public use via barber.active=false." },
+  { table: "barber_services", disposition: "KEEP", notes: "Needed by booking FKs. Catalog delete is soft (deleted_at); deactivate public use via barber.active=false or service deleted_at." },
   { table: "barber_settings", disposition: "KEEP", notes: "Tied to surviving barber row." },
   { table: "barber_weekly_schedule", disposition: "KEEP", notes: "Tied to surviving barber row." },
   { table: "barber_day_overrides", disposition: "KEEP", notes: "Tied to surviving barber row." },

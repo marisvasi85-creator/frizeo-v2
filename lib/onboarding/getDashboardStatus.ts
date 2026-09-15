@@ -33,6 +33,7 @@ export default async function getDashboardStatus(
       .from("barber_services")
       .select("id")
       .eq("barber_id", resolvedBarberId)
+      .is("deleted_at", null)
       .limit(1),
     supabaseAdmin
       .from("barber_weekly_schedule")

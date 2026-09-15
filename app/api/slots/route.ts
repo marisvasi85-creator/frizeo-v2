@@ -22,6 +22,7 @@ import {
   getGoogleBusyIntervalsForDate,
 } from "@/lib/google/getGoogleBusyIntervals";
 import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots";
+import { isBookableCatalogService } from "@/lib/services/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -153,11 +154,19 @@ async function getSlots(req: Request) {
   if (serviceId) {
     const { data: service } = await supabase
       .from("barber_services")
-      .select("duration")
+      .select("duration, active, deleted_at")
       .eq("id", serviceId)
-      .single();
+      .maybeSingle();
 
-    if (service) duration = service.duration;
+    if (!service) {
+      if (!excludeBookingId) {
+        return NextResponse.json({ slots: [] });
+      }
+    } else if (!excludeBookingId && !isBookableCatalogService(service)) {
+      return NextResponse.json({ slots: [] });
+    } else {
+      duration = service.duration;
+    }
   }
 
   const { data: bookings } = await supabase

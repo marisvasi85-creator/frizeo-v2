@@ -4,6 +4,7 @@ import {
   isAuthError,
   requireTenantAccess,
 } from "@/lib/auth/requireTenantAccess";
+import { catalogDeletePatch } from "@/lib/services/catalog";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
@@ -26,18 +27,32 @@ export async function POST(req: Request) {
       return access.response;
     }
 
+    const { data: service, error: loadError } = await supabaseAdmin
+      .from("barber_services")
+      .select("id, deleted_at")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (loadError) {
+      return NextResponse.json({ error: loadError.message }, { status: 400 });
+    }
+
+    if (!service) {
+      return NextResponse.json({ error: "Serviciu inexistent" }, { status: 404 });
+    }
+
+    if (service.deleted_at) {
+      return NextResponse.json({ success: true });
+    }
+
     const { error } = await supabaseAdmin
       .from("barber_services")
-      .delete()
-      .eq("id", id);
+      .update(catalogDeletePatch())
+      .eq("id", id)
+      .is("deleted_at", null);
 
     if (error) {
-      const message =
-        error.code === "23503"
-          ? "Serviciul nu poate fi șters — există programări asociate. Dezactivează-l în loc."
-          : error.message;
-
-      return NextResponse.json({ error: message }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({ success: true });

@@ -1,4 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  CATALOG_SERVICE_DELETED_MESSAGE,
+  isDeletedFromCatalog,
+} from "@/lib/services/catalog";
 import type { AssistantToolContext, AssistantToolResult } from "../types";
 import {
   asBoolean,
@@ -25,18 +29,20 @@ async function loadServiceForEdit(
     const { data } = await supabaseAdmin
       .from("barber_services")
       .select(
-        "id, barber_id, display_name, name, duration, price, show_price, active",
+        "id, barber_id, display_name, name, duration, price, show_price, active, deleted_at",
       )
       .eq("id", serviceId)
       .maybeSingle();
 
-    if (!data) {
+    if (!data || isDeletedFromCatalog(data)) {
       return {
         ok: false as const,
         result: {
           ok: false,
-          summary: "Serviciul nu a fost găsit.",
-          error: "not_found",
+          summary: data
+            ? CATALOG_SERVICE_DELETED_MESSAGE
+            : "Serviciul nu a fost găsit.",
+          error: data ? "deleted_service" : "not_found",
         },
       };
     }
@@ -98,18 +104,20 @@ async function loadServiceForEdit(
   const { data } = await supabaseAdmin
     .from("barber_services")
     .select(
-      "id, barber_id, display_name, name, duration, price, show_price, active",
+      "id, barber_id, display_name, name, duration, price, show_price, active, deleted_at",
     )
     .eq("id", resolved.service.id)
     .maybeSingle();
 
-  if (!data) {
+  if (!data || isDeletedFromCatalog(data)) {
     return {
       ok: false as const,
       result: {
         ok: false,
-        summary: "Serviciul nu a fost găsit.",
-        error: "not_found",
+        summary: data
+          ? CATALOG_SERVICE_DELETED_MESSAGE
+          : "Serviciul nu a fost găsit.",
+        error: data ? "deleted_service" : "not_found",
       },
     };
   }
@@ -186,6 +194,7 @@ export async function updateServiceTool(
       active,
     })
     .eq("id", current.id)
+    .is("deleted_at", null)
     .select("id, display_name, name, duration, price, show_price, active")
     .single();
 
@@ -261,6 +270,7 @@ export async function deactivateServiceTool(
     .from("barber_services")
     .update({ active: activate })
     .eq("id", current.id)
+    .is("deleted_at", null)
     .select("id, display_name, name, active")
     .single();
 

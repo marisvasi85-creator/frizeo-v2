@@ -9,6 +9,7 @@ import { generatePublicFreeSlots } from "@/lib/schedule/generatePublicFreeSlots"
 import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
 import { getGoogleBusyIntervalsByDate } from "@/lib/google/getGoogleBusyIntervals";
 import { groupVacationPeriods } from "@/lib/schedule/vacationPeriods";
+import { isBookableCatalogService } from "@/lib/services/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -57,10 +58,16 @@ export async function GET(req: Request) {
       serviceId
         ? supabaseAdmin
             .from("barber_services")
-            .select("duration")
+            .select("duration, active, deleted_at")
             .eq("id", serviceId)
             .maybeSingle()
-        : Promise.resolve({ data: null as { duration: number } | null }),
+        : Promise.resolve({
+            data: null as {
+              duration: number;
+              active?: boolean | null;
+              deleted_at?: string | null;
+            } | null,
+          }),
       supabaseAdmin
         .from("barbers")
         .select("schedule_mode")
@@ -75,6 +82,19 @@ export async function GET(req: Request) {
       barberRes.data?.schedule_mode === "selective" ? "selective" : "weekly";
 
     if (serviceId && !serviceRes.data) {
+      return NextResponse.json({
+        availableDays: [],
+        weeklySchedule: weekly ?? [],
+        overrides: overrides ?? [],
+      });
+    }
+
+    if (
+      serviceId &&
+      serviceRes.data &&
+      !excludeBookingId &&
+      !isBookableCatalogService(serviceRes.data)
+    ) {
       return NextResponse.json({
         availableDays: [],
         weeklySchedule: weekly ?? [],

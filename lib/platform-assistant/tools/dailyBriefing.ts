@@ -100,6 +100,7 @@ export async function dailyBriefingTool(
         .from("barber_services")
         .select("barber_id")
         .eq("active", true)
+        .is("deleted_at", null)
         .in("barber_id", activeBarberIds.slice(0, 500))
     : { data: [] as { barber_id: string }[] };
 

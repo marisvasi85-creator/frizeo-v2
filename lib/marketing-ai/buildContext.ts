@@ -30,6 +30,7 @@ export async function buildMarketingContext(
     .select("id, display_name, name, duration, price, show_price")
     .eq("barber_id", barberId)
     .eq("active", true)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   const tenantSlug = await ensureTenantSlug(tenant);

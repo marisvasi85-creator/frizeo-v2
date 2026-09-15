@@ -27,6 +27,7 @@ export async function listServicesTool(
       "id, barber_id, name, display_name, duration, price, show_price, active, featured, sort_order",
     )
     .in("barber_id", barberIds)
+    .is("deleted_at", null)
     .order("sort_order", { ascending: true });
 
   if (!includeInactive) {

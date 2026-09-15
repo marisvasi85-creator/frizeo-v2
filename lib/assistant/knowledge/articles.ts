@@ -33,7 +33,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Servicii",
     tags: ["servicii", "preț", "durată", "tuns", "inactiv"],
     admin_path: "/admin/services",
-    body: `Serviciile se editează în /admin/services (doar dacă apari ca frizer). Fiecare frizer are lista lui: nume, durată (15–120 min), preț opțional, activ/inactiv, featured. Prețul poate lipsi — nu e obligatoriu. Dezactivarea scoate serviciul de pe pagina publică; programările vechi rămân. Assistant: list_services, create_service, update_service, deactivate_service (cu confirmare).`,
+    body: `Serviciile se editează în /admin/services (doar dacă apari ca frizer). Fiecare frizer are lista lui: nume, durată (15–120 min), preț opțional, activ/inactiv, featured. Prețul poate lipsi — nu e obligatoriu. Dezactivarea scoate serviciul de pe pagina publică; programările vechi rămân. Ștergerea îl scoate din catalog (nu mai apare la programări noi), dar programările deja făcute rămân cu numele și durata serviciului. Anularea unei programări nu o șterge din baza de date — rămâne ca „anulată”, deci nu deblochează o ștergere hard. Assistant: list_services, create_service, update_service, deactivate_service (cu confirmare).`,
   },
   {
     id: "weekly-schedule",
