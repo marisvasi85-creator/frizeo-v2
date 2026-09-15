@@ -8,11 +8,13 @@ import {
 } from "@/lib/account-deletion/finalize";
 import { OWNERSHIP_TRANSFER_REQUIRED } from "@/lib/account-deletion/decisions";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { hostnameFromRequest } from "@/lib/app/environment";
-import { shouldUseStagingSupabase } from "@/lib/supabase/config";
+import {
+  hostnameFromRequest,
+  isStagingHostname,
+} from "@/lib/app/environment";
 
 export async function POST(req: Request) {
-  if (!shouldUseStagingSupabase(hostnameFromRequest(req))) {
+  if (!isStagingHostname(hostnameFromRequest(req))) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -42,9 +44,14 @@ export async function POST(req: Request) {
     );
   }
 
-  const { error: dueError } = await supabaseAdmin.rpc("qa_mark_own_deletion_due");
+  const { error: dueError } = await supabaseAdmin
+    .from("account_deletion_requests")
+    .update({ scheduled_for: new Date().toISOString() })
+    .eq("id", active.id)
+    .eq("user_id", user.id)
+    .eq("status", "pending");
   if (dueError) {
-    console.error("qa_mark_own_deletion_due", dueError);
+    console.error("account deletion mark due", dueError);
     return NextResponse.json(
       { error: "Nu am putut marca solicitarea ca scadentă." },
       { status: 500 },

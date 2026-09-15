@@ -1,10 +1,9 @@
 import { ACCOUNT_DELETION_GRACE_DAYS } from "@/lib/account-deletion/constants";
 import { isPlatformCreatorEmail } from "@/lib/auth/requirePlatformCreator";
-import { hostnameFromRequest } from "@/lib/app/environment";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import {
-  ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
+  ACCOUNT_DELETION_SCHEMA_MISSING_MESSAGE,
   hasActiveDeletionRequest,
   isMissingAccountDeletionTableError,
   parseOptionalReason,
@@ -77,9 +76,7 @@ export async function createAccountDeletionRequest(input: {
   });
   if (limited) return { ok: false, response: limited };
 
-  const blocked = accountDeletionWriteBlockResponse(
-    hostnameFromRequest(input.req),
-  );
+  const blocked = accountDeletionWriteBlockResponse();
   if (blocked) {
     return { ok: false, response: blocked };
   }
@@ -138,7 +135,7 @@ export async function createAccountDeletionRequest(input: {
         ok: false,
         response: NextResponse.json(
           {
-            error: ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
+            error: ACCOUNT_DELETION_SCHEMA_MISSING_MESSAGE,
             code: "schema_missing",
           },
           { status: 409 },

@@ -47,11 +47,12 @@ Constrângeri:
 
 ## Staging
 
-- `simulate_expiry` și cron-ul zilnic sunt pentru test.
-- `simulate_expiry` răspunde 404 în production.
-- Worker-ul de pe staging este oprit implicit (`STAGING_BACKGROUND_JOBS_ENABLED`). Folosește **Delete now** din admin sau **Finalizează acum (staging)** pe un cont de test.
-- `staging.frizeo.ro` folosește proiectul Supabase Staging (`fanxxytfuhnakfdzwssd`), nu producția. Cookie-urile de auth rămân host-only pe staging, ca să nu fie amestecate cu `www.frizeo.ro`.
-- Nu aplica migrarea pe producție.
+- `staging.frizeo.ro` și `www.frizeo.ro` folosesc **aceeași bază Supabase** (`shsompeyazrvswnjmlmw`). Staging este un hostname/branch de QA, nu un proiect separat.
+- Cookie-urile de auth rămân host-only pe `staging.frizeo.ro`, ca un login de test să nu suprascrie sesiunea de pe `www.frizeo.ro`.
+- `simulate_expiry` și butonul **Finalizează acum (staging)** răspund 404 pe `www.frizeo.ro`. Pe staging, finalizarea imediată mută `scheduled_for` la acum cu `service_role`, apoi rulează același worker (`claim_account_deletion_batch` + `auth.admin.deleteUser`).
+- Worker-ul de pe staging este oprit implicit (`STAGING_BACKGROUND_JOBS_ENABLED`). Cron-ul de producție de pe `www` rulează finalizările scadente.
+- Contul de test izolat: `qa-deletion-a@frizeo.test`, salon `directory_listed = false`, singur owner. Finalizarea face soft-close doar pe acest salon; nu șterge tenants, bookings sau facturi.
+- `barbers.user_id` este `ON DELETE SET NULL` înainte de orice Auth delete. Nu aplica `20260915120000_account_deletion_self_finalize.sql` pe baza comună (RPC-ul ștearge Auth ca user, nu ca service_role).
 
 ## Rollback migrație
 

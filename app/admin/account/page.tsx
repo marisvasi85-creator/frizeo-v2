@@ -5,8 +5,10 @@ import { getActiveDeletionRequest } from "@/lib/account-deletion/createRequest";
 import { ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE } from "@/lib/account-deletion/decisions";
 import { loadOwnershipTransferBlocks } from "@/lib/account-deletion/ownership";
 import { accountDeletionWritesAreAllowed } from "@/lib/account-deletion/runtimeGuard";
-import { hostnameFromHeaderStore } from "@/lib/app/environment";
-import { shouldUseStagingSupabase } from "@/lib/supabase/config";
+import {
+  hostnameFromHeaderStore,
+  isStagingHostname,
+} from "@/lib/app/environment";
 import { redirect } from "next/navigation";
 import AccountDeletionClient from "./AccountDeletionClient";
 
@@ -17,7 +19,7 @@ export default async function AccountPage() {
   }
 
   const hostname = hostnameFromHeaderStore(await headers());
-  const writesAllowed = accountDeletionWritesAreAllowed(hostname);
+  const writesAllowed = accountDeletionWritesAreAllowed();
   const [active, ownershipBlocks] = await Promise.all([
     getActiveDeletionRequest(session.user.id),
     loadOwnershipTransferBlocks(session.user.id),
@@ -32,7 +34,7 @@ export default async function AccountPage() {
       <AccountDeletionClient
         email={session.user.email}
         writesAllowed={writesAllowed}
-        allowImmediateFinalize={shouldUseStagingSupabase(hostname)}
+        allowImmediateFinalize={isStagingHostname(hostname)}
         unavailableMessage={
           writesAllowed ? null : ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE
         }

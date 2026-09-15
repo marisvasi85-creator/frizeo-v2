@@ -28,17 +28,15 @@ import {
   shouldNotifyAfterCancelUpdate,
   shouldSoftCloseTenant,
   simulateExpiryAllowed,
+  ACCOUNT_DELETION_SCHEMA_MISSING_MESSAGE,
   accountDeletionWritesAllowed,
   ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE,
   ACCOUNT_DELETION_PRODUCTION_DB_CODE,
   isMissingAccountDeletionTableError,
   PRODUCTION_SUPABASE_PROJECT_REF,
   supabaseProjectRefFromUrl,
-  STAGING_SUPABASE_PROJECT_REF,
-  STAGING_SUPABASE_URL,
   serviceRoleMatchesUrl,
   serviceRoleCanAccessUrl,
-  shouldUseStagingSupabaseFrom,
   supabaseProjectRefFromJwt,
 } from "../lib/account-deletion/decisions.ts";
 import { dispositionFor } from "../lib/account-deletion/policy.ts";
@@ -652,7 +650,7 @@ test("account deletion reads do not crash when the table is missing", () => {
     accountDeletionWritesAllowed({
       supabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
     }),
-    false,
+    true,
   );
   assert.equal(
     accountDeletionWritesAllowed({
@@ -705,36 +703,15 @@ test("account deletion reads do not crash when the table is missing", () => {
   assert.match(admin, /accountDeletionWriteBlockResponse/);
   const worker = readRepo("lib/account-deletion/finalize.ts");
   assert.match(worker, /accountDeletionWritesAllowed/);
-  assert.equal(ACCOUNT_DELETION_PRODUCTION_DB_CODE, "production_database");
-  assert.match(ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE, /Supabase Staging/);
+  assert.doesNotMatch(worker, /delete_own_auth_user_if_processing/);
+  assert.match(worker, /auth\.admin\.deleteUser/);
+  assert.equal(ACCOUNT_DELETION_PRODUCTION_DB_CODE, "supabase_unconfigured");
+  assert.match(ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE, /configurația Supabase/);
+  assert.match(ACCOUNT_DELETION_SCHEMA_MISSING_MESSAGE, /nu este instalată/);
   assert.ok(requestApi.includes("createAccountDeletionRequest"));
 });
 
-test("staging.frizeo.ro uses the staging Supabase project, not production", () => {
-  assert.equal(STAGING_SUPABASE_PROJECT_REF, "fanxxytfuhnakfdzwssd");
-  assert.equal(
-    STAGING_SUPABASE_URL,
-    "https://fanxxytfuhnakfdzwssd.supabase.co",
-  );
-  assert.equal(
-    shouldUseStagingSupabaseFrom({ hostname: "staging.frizeo.ro" }),
-    true,
-  );
-  assert.equal(
-    shouldUseStagingSupabaseFrom({ gitBranch: "staging" }),
-    true,
-  );
-  assert.equal(
-    shouldUseStagingSupabaseFrom({ hostname: "www.frizeo.ro", gitBranch: "main" }),
-    false,
-  );
-  assert.equal(
-    shouldUseStagingSupabaseFrom({
-      hostname: "www.frizeo.ro",
-      gitBranch: "staging",
-    }),
-    false,
-  );
+test("staging.frizeo.ro shares the production database and keeps host-only cookies", () => {
   assert.equal(
     supabaseProjectRefFromJwt(
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWYiOiJzaHNvbXBleWF6cnZzd25qbWxtdyIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.sig",
@@ -743,7 +720,7 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   );
   assert.equal(
     serviceRoleMatchesUrl({
-      supabaseUrl: STAGING_SUPABASE_URL,
+      supabaseUrl: "https://fanxxytfuhnakfdzwssd.supabase.co",
       serviceRoleKey:
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyZWYiOiJzaHNvbXBleWF6cnZzd25qbWxtdyIsInJvbGUiOiJzZXJ2aWNlX3JvbGUifQ.sig",
     }),
@@ -759,7 +736,7 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   );
   assert.equal(
     serviceRoleCanAccessUrl({
-      supabaseUrl: STAGING_SUPABASE_URL,
+      supabaseUrl: "https://fanxxytfuhnakfdzwssd.supabase.co",
       serviceRoleKey: "sb_secret_not_a_jwt",
       envSupabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
     }),
@@ -767,21 +744,21 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   );
 
   const client = readRepo("lib/supabase/client.ts");
-  assert.match(client, /getSupabaseUrl\(\)/);
-  assert.match(client, /getSupabaseAnonKey\(\)/);
+  assert.match(client, /process\.env\.NEXT_PUBLIC_SUPABASE_URL/);
+  assert.match(client, /process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY/);
+  assert.doesNotMatch(client, /getSupabaseUrl/);
   const server = readRepo("lib/supabase/server.ts");
-  assert.match(server, /getSupabaseUrl\(hostname\)/);
+  assert.match(server, /process\.env\.NEXT_PUBLIC_SUPABASE_URL/);
+  assert.match(server, /getAuthCookieOptions\(hostname\)/);
   const cookies = readRepo("lib/supabase/cookieOptions.ts");
-  assert.match(cookies, /shouldUseStagingSupabase/);
+  assert.match(cookies, /isStagingHostname/);
+  assert.match(cookies, /even though both hosts use the same Supabase project/);
   const proxy = readRepo("proxy.ts");
   const rateLimit = readRepo("lib/security/rateLimit.ts");
-  assert.match(rateLimit, /canUseServiceRoleAdmin/);
-  assert.match(rateLimit, /noteRequestHostname/);
+  assert.match(rateLimit, /consume_api_rate_limit/);
+  assert.doesNotMatch(rateLimit, /canUseServiceRoleAdmin/);
   assert.match(proxy, /hostnameFromRequest/);
-  const config = readRepo("lib/supabase/config.ts");
-  assert.match(config, /isStagingHostname\(host\)/);
-  assert.doesNotMatch(config, /gitBranchFromEnv/);
-  assert.doesNotMatch(config, /VERCEL_GIT_COMMIT_REF/);
+  assert.doesNotMatch(proxy, /getSupabaseUrl/);
   const testimonials = readRepo("lib/marketing-testimonials/queries.ts");
   assert.match(testimonials, /PGRST205/);
   const homepage = readRepo("app/(marketing)/page.tsx");
@@ -789,9 +766,16 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   const login = readRepo("app/api/auth/login/route.ts");
   assert.doesNotMatch(login, /supabaseAdmin/);
   const self = readRepo("app/api/account-deletion/finalize-self/route.ts");
-  assert.match(self, /shouldUseStagingSupabase/);
-  assert.match(self, /qa_mark_own_deletion_due/);
+  assert.match(self, /isStagingHostname/);
+  assert.match(self, /scheduled_for/);
+  assert.doesNotMatch(self, /qa_mark_own_deletion_due/);
+  assert.doesNotMatch(self, /shouldUseStagingSupabase/);
+  const page = readRepo("app/admin/account/page.tsx");
+  assert.match(page, /isStagingHostname/);
+  assert.doesNotMatch(page, /shouldUseStagingSupabase/);
   const ui = readRepo("app/admin/account/AccountDeletionClient.tsx");
   assert.match(ui, /allowImmediateFinalize/);
   assert.match(ui, /finalize-self/);
+  const nextConfig = readRepo("next.config.ts");
+  assert.doesNotMatch(nextConfig, /fanxxytfuhnakfdzwssd/);
 });

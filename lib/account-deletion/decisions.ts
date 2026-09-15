@@ -358,13 +358,16 @@ export function simulateExpiryAllowed(env: {
   return env.isStaging || env.isDevelopment || env.isPreview;
 }
 
-/** Production Supabase project ref — never run account deletion against it. */
+/** Shared main + staging Supabase project ref. */
 export const PRODUCTION_SUPABASE_PROJECT_REF = "shsompeyazrvswnjmlmw";
 
-export const ACCOUNT_DELETION_PRODUCTION_DB_CODE = "production_database";
+export const ACCOUNT_DELETION_PRODUCTION_DB_CODE = "supabase_unconfigured";
 
 export const ACCOUNT_DELETION_PRODUCTION_BLOCK_MESSAGE =
-  "Ștergerea contului nu rulează pe baza de producție. Conectează staging.frizeo.ro la proiectul Supabase Staging.";
+  "Ștergerea contului nu este disponibilă: lipsește configurația Supabase.";
+
+export const ACCOUNT_DELETION_SCHEMA_MISSING_MESSAGE =
+  "Schema de ștergere a contului nu este instalată încă.";
 
 export function supabaseProjectRefFromUrl(url: string): string {
   const trimmed = url.trim();
@@ -379,34 +382,7 @@ export function supabaseProjectRefFromUrl(url: string): string {
 export function accountDeletionWritesAllowed(input: {
   supabaseUrl: string;
 }): boolean {
-  const ref = supabaseProjectRefFromUrl(input.supabaseUrl);
-  if (!ref) return false;
-  return ref !== PRODUCTION_SUPABASE_PROJECT_REF;
-}
-
-export const STAGING_SUPABASE_PROJECT_REF = "fanxxytfuhnakfdzwssd";
-export const STAGING_SUPABASE_URL = `https://${STAGING_SUPABASE_PROJECT_REF}.supabase.co`;
-
-const PRODUCTION_FRIEZO_HOSTS = new Set([
-  "www.frizeo.ro",
-  "frizeo.ro",
-  "email.frizeo.ro",
-]);
-
-export function shouldUseStagingSupabaseFrom(input: {
-  hostname?: string | null;
-  gitBranch?: string | null;
-  appUrl?: string | null;
-  vercelUrl?: string | null;
-}): boolean {
-  const hostname = (input.hostname ?? "").split(":")[0]?.trim().toLowerCase() ?? "";
-  if (PRODUCTION_FRIEZO_HOSTS.has(hostname)) return false;
-  if (hostname === "staging.frizeo.ro") return true;
-  if ((input.gitBranch ?? "").trim() === "staging") return true;
-  const appUrl = (input.appUrl ?? "").toLowerCase();
-  if (appUrl.includes("staging.frizeo.ro")) return true;
-  const vercelUrl = (input.vercelUrl ?? "").toLowerCase();
-  return vercelUrl.includes("staging.frizeo.ro");
+  return Boolean(supabaseProjectRefFromUrl(input.supabaseUrl));
 }
 
 export function supabaseProjectRefFromJwt(token: string): string {

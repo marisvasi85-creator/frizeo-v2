@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
 import { transferTenantOwnership } from "@/lib/account-deletion/ownership";
-import { hostnameFromRequest } from "@/lib/app/environment";
 import { accountDeletionWriteBlockResponse } from "@/lib/account-deletion/runtimeGuard";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: Request) {
-  const blocked = accountDeletionWriteBlockResponse(hostnameFromRequest(req));
+  const blocked = accountDeletionWriteBlockResponse();
   if (blocked) return blocked;
 
   const user = await getAuthUser();

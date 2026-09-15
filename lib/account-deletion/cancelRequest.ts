@@ -12,12 +12,11 @@ export async function cancelAccountDeletionRequest(input: {
   requestId?: string;
   actorUserId: string;
   asAdmin?: boolean;
-  hostname?: string | null;
 }): Promise<
   | { ok: true; request: AccountDeletionRequestRow }
   | { ok: false; response: NextResponse }
 > {
-  const blocked = accountDeletionWriteBlockResponse(input.hostname);
+  const blocked = accountDeletionWriteBlockResponse();
   if (blocked) {
     return { ok: false, response: blocked };
   }
