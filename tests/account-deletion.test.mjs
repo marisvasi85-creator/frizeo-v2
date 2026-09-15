@@ -37,6 +37,7 @@ import {
   STAGING_SUPABASE_PROJECT_REF,
   STAGING_SUPABASE_URL,
   serviceRoleMatchesUrl,
+  serviceRoleCanAccessUrl,
   shouldUseStagingSupabaseFrom,
   supabaseProjectRefFromJwt,
 } from "../lib/account-deletion/decisions.ts";
@@ -748,6 +749,22 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
     }),
     false,
   );
+  assert.equal(
+    serviceRoleCanAccessUrl({
+      supabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
+      serviceRoleKey: "sb_secret_not_a_jwt",
+      envSupabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
+    }),
+    true,
+  );
+  assert.equal(
+    serviceRoleCanAccessUrl({
+      supabaseUrl: STAGING_SUPABASE_URL,
+      serviceRoleKey: "sb_secret_not_a_jwt",
+      envSupabaseUrl: "https://shsompeyazrvswnjmlmw.supabase.co",
+    }),
+    false,
+  );
 
   const client = readRepo("lib/supabase/client.ts");
   assert.match(client, /getSupabaseUrl\(\)/);
@@ -757,6 +774,9 @@ test("staging.frizeo.ro uses the staging Supabase project, not production", () =
   const cookies = readRepo("lib/supabase/cookieOptions.ts");
   assert.match(cookies, /shouldUseStagingSupabase/);
   const proxy = readRepo("proxy.ts");
+  const rateLimit = readRepo("lib/security/rateLimit.ts");
+  assert.match(rateLimit, /canUseServiceRoleAdmin/);
+  assert.match(rateLimit, /noteRequestHostname/);
   assert.match(proxy, /hostnameFromRequest/);
   const config = readRepo("lib/supabase/config.ts");
   assert.match(config, /isStagingHostname\(host\)/);

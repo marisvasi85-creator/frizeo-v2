@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import { hostnameFromRequest } from "@/lib/app/environment";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  canUseServiceRoleAdmin,
+  noteRequestHostname,
+} from "@/lib/supabase/config";
 
 type RateLimitOptions = {
   bucket: string;
@@ -20,6 +25,10 @@ export async function enforceRateLimit(
   req: Request,
   options: RateLimitOptions,
 ): Promise<NextResponse | null> {
+  noteRequestHostname(hostnameFromRequest(req));
+  if (!canUseServiceRoleAdmin()) {
+    return null;
+  }
   const rawIdentifier = `${requestIp(req)}:${options.identifier ?? ""}`;
   const identifierHash = createHash("sha256")
     .update(rawIdentifier)

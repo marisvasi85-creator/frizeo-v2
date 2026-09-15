@@ -3,7 +3,7 @@ import {
   isStagingHostname,
 } from "@/lib/app/environment";
 import {
-  serviceRoleMatchesUrl,
+  serviceRoleCanAccessUrl,
   STAGING_SUPABASE_URL,
 } from "@/lib/account-deletion/decisions";
 
@@ -69,8 +69,9 @@ export function getSupabaseServiceRoleKey(): string {
 }
 
 export function canUseServiceRoleAdmin(): boolean {
-  return serviceRoleMatchesUrl({
+  return serviceRoleCanAccessUrl({
     supabaseUrl: getSupabaseUrl(),
     serviceRoleKey: getSupabaseServiceRoleKey(),
+    envSupabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
   });
 }

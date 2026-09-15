@@ -439,6 +439,19 @@ export function serviceRoleMatchesUrl(input: {
   return keyRef === urlRef;
 }
 
+/** Non-JWT secrets (sb_secret_...) cannot be project-checked from the token. */
+export function serviceRoleCanAccessUrl(input: {
+  supabaseUrl: string;
+  serviceRoleKey: string;
+  envSupabaseUrl?: string | null;
+}): boolean {
+  if (!input.supabaseUrl?.trim() || !input.serviceRoleKey.trim()) return false;
+  if (serviceRoleMatchesUrl(input)) return true;
+  if (supabaseProjectRefFromJwt(input.serviceRoleKey)) return false;
+  const envUrl = (input.envSupabaseUrl ?? "").trim();
+  return Boolean(envUrl) && envUrl === input.supabaseUrl.trim();
+}
+
 export function isMissingAccountDeletionTableError(error: {
   code?: string | null;
   message?: string | null;
