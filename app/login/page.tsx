@@ -1,17 +1,23 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { isValidEmail } from "@/lib/auth/credentials";
+import { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { isValidEmail, loginQueryError } from "@/lib/auth/credentials";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [shake, setShake] = useState(false);
+
+  useEffect(() => {
+    const fromQuery = loginQueryError(searchParams.get("error"));
+    if (fromQuery) setError(fromQuery);
+  }, [searchParams]);
 
   function triggerError(msg: string) {
     setError(msg);
