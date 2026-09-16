@@ -326,12 +326,16 @@ test("sentry production traces sample rate stays 0.02", () => {
   assert.match(source, /return 0\.02;/);
 });
 
-test("sentry ignores iOS WebKit fetch Load failed noise", () => {
+test("sentry does not globally ignore fetch or network failures", () => {
   const source = readRepo("lib/sentry/shared.ts");
   assert.match(source, /ignoreErrors/);
-  assert.match(source, /"Load failed"/);
-  assert.match(source, /"Failed to fetch"/);
-  assert.match(source, /"Network request failed"/);
+  assert.match(source, /shouldDropExternalBrowserNoise/);
+  const ignoreBlock = source.match(/ignoreErrors:\s*\[([\s\S]*?)\],/)?.[1] ?? "";
+  assert.doesNotMatch(ignoreBlock, /Load failed/);
+  assert.doesNotMatch(ignoreBlock, /Failed to fetch/);
+  assert.doesNotMatch(ignoreBlock, /Network request failed/);
+  assert.doesNotMatch(ignoreBlock, /NetworkError/);
+  assert.doesNotMatch(ignoreBlock, /Loading chunk/);
 });
 
 test("PWA service worker does not proxy fetches through respondWith", () => {

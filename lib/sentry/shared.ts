@@ -1,5 +1,6 @@
 import type { ErrorEvent } from "@sentry/nextjs";
 import type { HttpBodyCollectionTarget } from "@sentry/core";
+import { shouldDropExternalBrowserNoise } from "./browserNoise";
 
 const SENSITIVE_QUERY_KEYS = [
   "token",
@@ -180,19 +181,21 @@ export function getSharedSentryOptions() {
       genAI: { inputs: false, outputs: false },
     },
     beforeSend(event: ErrorEvent) {
+      // Narrow injected-browser drops only. Do not hide fetch/network
+      // failures (Load failed, Failed to fetch, NetworkError, chunk load)
+      // — those can be real Frizeo request errors, including on /admin/**.
+      if (shouldDropExternalBrowserNoise(event)) {
+        return null;
+      }
       return scrubEvent(event);
     },
+    // Keep ignoreErrors tiny. Do NOT add Load failed, Failed to fetch,
+    // network error, postMessage, Unexpected end of input, or generic
+    // TypeError/SyntaxError here — they are too broad for production.
     ignoreErrors: [
       "ResizeObserver loop",
       "Non-Error promise rejection captured",
-      /^NetworkError/,
       /^AbortError/,
-      /Loading chunk [\d]+ failed/,
-      // WebKit (Safari / Chrome iOS): fetch() network failure.
-      "Load failed",
-      // Chromium: fetch() network failure.
-      "Failed to fetch",
-      "Network request failed",
     ],
   };
 }
