@@ -56,7 +56,9 @@ export default function BookingConfirmed({
         ✔ Programare confirmată
       </h1>
 
-      <p className="mt-2 text-frz-muted">Am trimis un email de confirmare.</p>
+      <p className="mt-2 text-frz-muted">
+        Vei primi un email de confirmare în câteva momente.
+      </p>
 
       <p className="text-sm text-frz-muted">Verifică inbox / spam.</p>
 

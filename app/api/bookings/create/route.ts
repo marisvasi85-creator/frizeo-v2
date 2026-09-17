@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/email";
 import { clientConfirmationTemplate } from "@/lib/email/templates/client-confirmation";
@@ -19,6 +19,12 @@ import { ensureBookingClientTokens } from "@/lib/bookings/ensureBookingClientTok
 import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { confirmPendingHold } from "@/lib/bookings/confirmPendingHold";
+import {
+  confirmPendingHoldWithOutbox,
+  isMissingBookingNotificationOutboxSchema,
+} from "@/lib/bookings/confirmPendingHoldWithOutbox";
+import { isBookingNotificationOutboxEnabled } from "@/lib/bookings/notificationOutboxConfig";
+import { processBookingNotificationBatch } from "@/lib/bookings/notificationOutboxWorker";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
 import {
   requireManagedBarber,
@@ -128,16 +134,11 @@ export async function POST(req: Request) {
 // 🔥 PLAN LIMIT
 // =========================
 
-const limit = await checkBookingLimit(
-  booking.tenant_id
-);
-
-const settings =
-  await getNotificationSettings(
-    booking.tenant_id
-  );
-
-const smsAllowed = await extendedSmsAllowedForTenant(booking.tenant_id);
+const [limit, settings, smsAllowed] = await Promise.all([
+  checkBookingLimit(booking.tenant_id),
+  getNotificationSettings(booking.tenant_id),
+  extendedSmsAllowedForTenant(booking.tenant_id),
+]);
 
 if (!limit.allowed) {
   return NextResponse.json(
@@ -206,6 +207,9 @@ if (!limit.allowed) {
     }
 
     const notes = normalizeClientNotes(client_notes);
+    const useNotificationOutbox =
+      !isDashboardBooking && isBookingNotificationOutboxEnabled();
+    let notificationOutboxActive = useNotificationOutbox;
 
     // =========================
     // 🔥 CONFIRMĂ DOAR DUPĂ VALIDARE (atomic: un singur winner trimite notificări)
@@ -263,13 +267,38 @@ if (!limit.allowed) {
         }
       }
     } else {
-      const publicResult = await confirmPendingHold(supabase, {
-        bookingId,
-        client_name,
-        client_phone,
-        client_email,
-        client_notes: notes,
-      });
+      let publicResult = useNotificationOutbox
+        ? await confirmPendingHoldWithOutbox<typeof booking>({
+            bookingId,
+            clientName: client_name,
+            clientPhone: client_phone,
+            clientEmail: client_email,
+            clientNotes: notes,
+          })
+        : await confirmPendingHold(supabase, {
+            bookingId,
+            client_name,
+            client_phone,
+            client_email,
+            client_notes: notes,
+          });
+
+      // Additive deployment safety: code can reach staging before the SQL
+      // migration. Keep booking functional through the legacy path.
+      if (
+        !publicResult.ok &&
+        useNotificationOutbox &&
+        isMissingBookingNotificationOutboxSchema(publicResult.error)
+      ) {
+        notificationOutboxActive = false;
+        publicResult = await confirmPendingHold(supabase, {
+          bookingId,
+          client_name,
+          client_phone,
+          client_email,
+          client_notes: notes,
+        });
+      }
 
       if (publicResult.ok) {
         data = publicResult.booking as typeof booking;
@@ -309,6 +338,28 @@ if (!limit.allowed) {
     // A concurrent retry already confirmed this hold — return success
     // without sending a second email, SMS, or Google Calendar event.
     if (!didConfirm) {
+      return NextResponse.json({
+        success: true,
+        bookingId: data.id,
+        cancelToken: replayTokens?.cancel_token ?? data.cancel_token ?? null,
+      });
+    }
+
+    if (notificationOutboxActive) {
+      // The durable rows already exist in the same DB transaction as the
+      // confirmation. `after` provides low-latency delivery; the cron worker
+      // remains the retry/failure-recovery path.
+      after(async () => {
+        try {
+          await processBookingNotificationBatch({
+            bookingId: data.id,
+            limit: 4,
+          });
+        } catch (error) {
+          console.error("BOOKING NOTIFICATION AFTER ERROR:", error);
+        }
+      });
+
       return NextResponse.json({
         success: true,
         bookingId: data.id,
