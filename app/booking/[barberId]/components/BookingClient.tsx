@@ -330,19 +330,7 @@ export default function BookingClient({
     let succeeded = false;
 
     try {
-      const service = services.find((s) => s.id === serviceId);
-      const duration = service?.duration || 30;
-
-      const [y, m, dDay] = date.split("-").map(Number);
-      const [h, min] = selectedSlot.split(":").map(Number);
-
-      const d = new Date(y, m - 1, dDay);
-      d.setHours(h);
-      d.setMinutes(min + duration);
-
-      const endTime = d.toTimeString().slice(0, 5);
-
-      const hold = await fetch("/api/bookings/hold", {
+      const create = await fetch("/api/bookings/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -350,26 +338,6 @@ export default function BookingClient({
           barber_service_id: serviceId,
           date,
           start_time: selectedSlot,
-          end_time: endTime,
-          client_phone: phone,
-        }),
-      });
-
-      const holdData = await hold.json();
-
-      if (!hold.ok) {
-        if (holdData.accessStatus) {
-          setAccessStatus(holdData.accessStatus as PublicAccessStatus);
-        }
-        setBookingError(holdData.error || "Slotul nu mai este disponibil.");
-        return;
-      }
-
-      const create = await fetch("/api/bookings/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: holdData.holdId,
           client_name: name.trim(),
           client_phone: phone.replace(/\s/g, ""),
           client_email: email.trim() || null,

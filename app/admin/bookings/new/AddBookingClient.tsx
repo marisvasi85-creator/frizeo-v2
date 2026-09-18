@@ -180,41 +180,14 @@ export default function AddBookingClient({
       setSaving(true);
       clearSaved();
 
-      const service = services.find((s) => s.id === serviceId);
-      const duration = service?.duration || 30;
-
-      const [y, m, d] = date.split("-").map(Number);
-      const [h, min] = selectedSlot.split(":").map(Number);
-
-      const endDate = new Date(y, m - 1, d);
-      endDate.setHours(h);
-      endDate.setMinutes(min + duration);
-
-      const endTime = endDate.toTimeString().slice(0, 5);
-
-      const holdRes = await fetch("/api/bookings/hold", {
+      const createRes = await fetch("/api/bookings/create", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           barber_id: selectedBarberId,
           barber_service_id: serviceId,
           date,
           start_time: selectedSlot,
-          end_time: endTime,
-          client_phone: phone,
-          booking_context: "dashboard",
-        }),
-      });
-
-      const holdData = await holdRes.json();
-
-      if (!holdRes.ok) {
-        throw new Error(holdData.error || "Slot ocupat");
-      }
-
-      const createRes = await fetch("/api/bookings/create", {
-        method: "POST",
-        body: JSON.stringify({
-          bookingId: holdData.holdId,
           client_name: name,
           client_phone: phone,
           client_email: email || null,

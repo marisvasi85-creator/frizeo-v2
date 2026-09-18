@@ -26,6 +26,7 @@ import {
 import { isBookingNotificationOutboxEnabled } from "@/lib/bookings/notificationOutboxConfig";
 import { processBookingNotificationBatch } from "@/lib/bookings/notificationOutboxWorker";
 import { normalizeClientNotes } from "@/lib/bookings/normalizeClientNotes";
+import { reservePendingHold } from "@/lib/bookings/reservePendingHold";
 import {
   requireManagedBarber,
 } from "@/lib/barber-access/authorization";
@@ -35,6 +36,7 @@ import {
   isMissingBarberAccessSchema,
   publicAccessMessage,
 } from "@/lib/barber-access/server";
+import { enforceRateLimit } from "@/lib/security/rateLimit";
 
 export async function POST(req: Request) {
   try {
@@ -43,6 +45,10 @@ export async function POST(req: Request) {
 
     const {
       bookingId,
+      barber_id,
+      barber_service_id,
+      date,
+      start_time,
       client_name,
       client_phone,
       client_email,
@@ -50,23 +56,90 @@ export async function POST(req: Request) {
       booking_context,
     } = body;
 
-    if (!bookingId || !client_name || !client_phone) {
+    if (!client_name || !client_phone) {
       return NextResponse.json(
         { error: "Date incomplete" },
         { status: 400 }
       );
     }
 
+    const isOneShot = Boolean(
+      !bookingId && barber_id && barber_service_id && date && start_time,
+    );
+
+    if (!bookingId && !isOneShot) {
+      return NextResponse.json(
+        { error: "Date incomplete" },
+        { status: 400 }
+      );
+    }
+
+    let booking: any = null;
+    let isDashboardBooking = false;
+    let dashboardActorId: string | null = null;
+    let bypassMinNotice = false;
+    let slotAlreadyReserved = false;
+    let settings: Awaited<ReturnType<typeof getNotificationSettings>> | null =
+      null;
+    let smsAllowed = false;
+
+    if (isOneShot) {
+      const limited = await enforceRateLimit(req, {
+        bucket: "booking-hold",
+        limit: 30,
+        windowSeconds: 600,
+      });
+      if (limited) return limited;
+
+      const dashboardContext = booking_context === "dashboard"
+        ? await requireManagedBarber(barber_id)
+        : null;
+
+      if (dashboardContext instanceof NextResponse) return dashboardContext;
+
+      if (dashboardContext) {
+        bypassMinNotice = true;
+        isDashboardBooking = true;
+        dashboardActorId = dashboardContext.auth.user.id;
+      }
+
+      const reserved = await reservePendingHold({
+        barberId: barber_id,
+        barberServiceId: barber_service_id,
+        date,
+        startTime: start_time,
+        clientPhone: client_phone,
+        isDashboardBooking,
+        bypassMinNotice,
+        bypassGoogleBusy: isDashboardBooking,
+      });
+
+      if (!reserved.ok) {
+        return NextResponse.json(
+          reserved.accessStatus
+            ? { error: reserved.error, accessStatus: reserved.accessStatus }
+            : { error: reserved.error },
+          { status: reserved.status },
+        );
+      }
+
+      booking = reserved.hold;
+      slotAlreadyReserved = true;
+    }
+
     // =========================
     // 🔥 LUĂM BOOKING ÎNAINTE
     // =========================
-    const { data: booking, error: fetchError } = await supabase
+    if (!slotAlreadyReserved) {
+    const { data: fetchedBooking, error: fetchError } = await supabase
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
       .eq("status", "pending")
       .gt("expires_at", new Date().toISOString())
       .single();
+
+    booking = fetchedBooking;
 
     if (fetchError || !booking) {
       return NextResponse.json(
@@ -86,9 +159,6 @@ export async function POST(req: Request) {
       );
     }
 
-    let bypassMinNotice = false;
-    let isDashboardBooking = false;
-    let dashboardActorId: string | null = null;
     const dashboardContext = booking_context === "dashboard"
       ? await requireManagedBarber(booking.barber_id)
       : null;
@@ -134,11 +204,13 @@ export async function POST(req: Request) {
 // 🔥 PLAN LIMIT
 // =========================
 
-const [limit, settings, smsAllowed] = await Promise.all([
+const [limit, fetchedSettings, fetchedSmsAllowed] = await Promise.all([
   checkBookingLimit(booking.tenant_id),
   getNotificationSettings(booking.tenant_id),
   extendedSmsAllowedForTenant(booking.tenant_id),
 ]);
+settings = fetchedSettings;
+smsAllowed = fetchedSmsAllowed;
 
 if (!limit.allowed) {
   return NextResponse.json(
@@ -205,7 +277,16 @@ if (!limit.allowed) {
         );
       }
     }
+    }
 
+    if (!booking) {
+      return NextResponse.json(
+        { error: "Slot indisponibil sau expirat" },
+        { status: 400 }
+      );
+    }
+
+    const confirmId = String(bookingId || booking.id);
     const notes = normalizeClientNotes(client_notes);
     const useNotificationOutbox =
       !isDashboardBooking && isBookingNotificationOutboxEnabled();
@@ -220,7 +301,7 @@ if (!limit.allowed) {
 
     if (isDashboardBooking) {
       const manualResult = await supabase.rpc("confirm_manual_booking_access", {
-        p_booking_id: bookingId,
+        p_booking_id: confirmId,
         p_client_name: client_name,
         p_client_phone: client_phone,
         p_client_email: client_email || null,
@@ -237,7 +318,7 @@ if (!limit.allowed) {
       // shared database, dashboard bookings keep their legacy open behavior.
       if (error && isMissingBarberAccessSchema(error)) {
         const fallback = await confirmPendingHold(supabase, {
-          bookingId,
+          bookingId: confirmId,
           client_name,
           client_phone,
           client_email,
@@ -257,7 +338,7 @@ if (!limit.allowed) {
         const { data: existing } = await supabase
           .from("bookings")
           .select("*")
-          .eq("id", bookingId)
+          .eq("id", confirmId)
           .eq("status", "confirmed")
           .maybeSingle();
         if (existing) {
@@ -269,14 +350,14 @@ if (!limit.allowed) {
     } else {
       let publicResult = useNotificationOutbox
         ? await confirmPendingHoldWithOutbox<typeof booking>({
-            bookingId,
+            bookingId: confirmId,
             clientName: client_name,
             clientPhone: client_phone,
             clientEmail: client_email,
             clientNotes: notes,
           })
         : await confirmPendingHold(supabase, {
-            bookingId,
+            bookingId: confirmId,
             client_name,
             client_phone,
             client_email,
@@ -292,7 +373,7 @@ if (!limit.allowed) {
       ) {
         notificationOutboxActive = false;
         publicResult = await confirmPendingHold(supabase, {
-          bookingId,
+          bookingId: confirmId,
           client_name,
           client_phone,
           client_email,
@@ -333,7 +414,13 @@ if (!limit.allowed) {
       );
     }
 
-    const replayTokens = await ensureBookingClientTokens(data.id);
+    const replayTokens =
+      data.cancel_token && data.reschedule_token
+        ? {
+            cancel_token: String(data.cancel_token),
+            reschedule_token: String(data.reschedule_token),
+          }
+        : await ensureBookingClientTokens(data.id);
 
     // A concurrent retry already confirmed this hold — return success
     // without sending a second email, SMS, or Google Calendar event.
@@ -370,6 +457,15 @@ if (!limit.allowed) {
     // =========================
     // 🔥 SERVICE
     // =========================
+    if (!settings) {
+      const [fetchedSettings, fetchedSmsAllowed] = await Promise.all([
+        getNotificationSettings(String(data.tenant_id)),
+        extendedSmsAllowedForTenant(String(data.tenant_id)),
+      ]);
+      settings = fetchedSettings;
+      smsAllowed = fetchedSmsAllowed;
+    }
+
     const { data: service } = await supabase
       .from("barber_services")
       .select("display_name, name")
