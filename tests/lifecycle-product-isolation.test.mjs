@@ -23,7 +23,7 @@ test("NextBestActionCard hides itself when there is nothing to show", () => {
 });
 
 test("booking hold still creates a timed pending hold and tags created_via", () => {
-  const source = readRepo("app/api/bookings/hold/route.ts");
+  const source = readRepo("lib/bookings/reservePendingHold.ts");
   assert.match(source, /expires_at: expiresAt\.toISOString\(\)/);
   assert.match(source, /cancel_token: crypto\.randomUUID\(\)/);
   assert.match(

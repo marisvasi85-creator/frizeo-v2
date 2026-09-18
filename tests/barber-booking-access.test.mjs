@@ -94,6 +94,7 @@ test("direct booking keeps the existing phone field and enforces access server-s
   );
   const holdRoute = projectFile("app/api/bookings/hold/route.ts");
   const createRoute = projectFile("app/api/bookings/create/route.ts");
+  const reserve = projectFile("lib/bookings/reservePendingHold.ts");
 
   assert.equal(bookingClient.includes("BookingAccessPrompt"), false);
   assert.equal(
@@ -101,8 +102,10 @@ test("direct booking keeps the existing phone field and enforces access server-s
     1,
   );
 
+  assert.equal(reserve.includes("checkBarberBookingAccess"), true);
+  assert.equal(createRoute.includes("checkBarberBookingAccess"), true);
+
   for (const route of [holdRoute, createRoute]) {
-    assert.equal(route.includes("checkBarberBookingAccess"), true);
     assert.equal(route.includes("requireManagedBarber"), true);
     assert.equal(route.includes('booking_context === "dashboard"'), true);
   }

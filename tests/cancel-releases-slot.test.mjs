@@ -254,9 +254,9 @@ test("Google FreeBusy leftover from a cancelled booking is punched out of the sl
 });
 
 test("hold and assistant create reclaim expired pending holds so the unique slot is free", () => {
-  const hold = readRepo("app/api/bookings/hold/route.ts");
+  const reserve = readRepo("lib/bookings/reservePendingHold.ts");
   const assistant = readRepo("lib/assistant/tools/createBooking.ts");
-  assert.match(hold, /reclaimExpiredHolds/);
+  assert.match(reserve, /reclaimExpiredHolds/);
   assert.match(assistant, /reclaimExpiredHolds/);
 });
 
