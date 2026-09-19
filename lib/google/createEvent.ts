@@ -29,6 +29,12 @@ export async function createGoogleEvent({
         summary: title,
         description,
 
+        transparency: "opaque",
+        extendedProperties: {
+          private: {
+            frizeo: "1",
+          },
+        },
         start: {
           dateTime: start,
           timeZone: "Europe/Bucharest",

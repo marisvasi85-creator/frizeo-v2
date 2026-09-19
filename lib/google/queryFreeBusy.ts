@@ -5,6 +5,7 @@ export type GoogleBusyBlock = {
 
 type FreeBusyCalendar = {
   busy?: GoogleBusyBlock[] | null;
+  errors?: unknown[] | null;
 };
 
 export function busyIntervalsFromFreeBusyResponse(
@@ -12,11 +13,26 @@ export function busyIntervalsFromFreeBusyResponse(
   calendarId: string,
 ): GoogleBusyBlock[] {
   const calendars = data?.calendars ?? {};
+  const merged: GoogleBusyBlock[] = [];
+
+  for (const [id, entry] of Object.entries(calendars)) {
+    if (Array.isArray(entry?.busy) && entry.busy.length > 0) {
+      merged.push(...entry.busy);
+      continue;
+    }
+    if (entry?.errors?.length) {
+      console.error("GOOGLE FREEBUSY CALENDAR ERROR:", id, entry.errors);
+    }
+  }
+
+  if (merged.length > 0) return merged;
+
   const requested = calendars[calendarId];
   if (Array.isArray(requested?.busy)) return requested.busy;
 
   // Google sometimes keys the response by the real calendar email even
-  // when the request used "primary".
+  // when the request used "primary". Prefer a non-empty busy list so an
+  // empty `primary` key cannot hide the email-keyed calendar.
   for (const entry of Object.values(calendars)) {
     if (Array.isArray(entry?.busy)) return entry.busy;
   }
