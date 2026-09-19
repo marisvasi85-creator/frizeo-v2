@@ -30,8 +30,9 @@ export async function releaseGoogleEventForBarber(input: {
 /**
  * Cancelled Frizeo bookings can leave a Google event behind. Do not await
  * this from availability/slots/hold: sequential Google DELETE/PATCH of
- * leftover events times out public booking. Slot display already punches
- * cancelled intervals out of FreeBusy.
+ * leftover events times out public booking. Slot display skips leftover
+ * Frizeo events by google_event_id instead of punching their time out of
+ * personal Google events.
  */
 export async function releaseLeftoverCancelledGoogleEvents(
   supabase: SupabaseClient,

@@ -184,9 +184,10 @@ test("assistant cancel also releases the Google event before marking cancelled",
   assert.match(source, /google_event_id: googleReleased \? null/);
 });
 
-test("public Google busy reads punch cancelled leftovers out of FreeBusy without deleting them first", () => {
+test("public Google busy skips leftover Frizeo events without deleting them first", () => {
   const source = readRepo("lib/google/getGoogleBusyIntervals.ts");
   assert.doesNotMatch(source, /releaseLeftoverCancelledGoogleEvents/);
+  assert.match(source, /listBusyCalendarEvents/);
   assert.match(source, /subtractBusyIntervals/);
   assert.match(source, /GOOGLE BUSY INTERVALS ERROR/);
   assert.match(source, /cancelled.*completed.*no_show|RELEASED_BOOKING_STATUSES/);
@@ -194,8 +195,10 @@ test("public Google busy reads punch cancelled leftovers out of FreeBusy without
 
 test("Google FreeBusy and event release fetches time out instead of hanging public booking", () => {
   const freeBusy = readRepo("lib/google/queryFreeBusy.ts");
+  const eventsList = readRepo("lib/google/listCalendarEvents.ts");
   const deleteEvent = readRepo("lib/google/deleteEvent.ts");
   assert.match(freeBusy, /AbortSignal\.timeout\(4000\)/);
+  assert.match(eventsList, /AbortSignal\.timeout\(4000\)/);
   assert.match(deleteEvent, /AbortSignal\.timeout\(5000\)/);
 });
 

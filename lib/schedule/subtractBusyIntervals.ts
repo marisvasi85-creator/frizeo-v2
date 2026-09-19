@@ -20,8 +20,9 @@ function minutesToTime(m: number): string {
 
 /**
  * Punch released Frizeo intervals out of Google FreeBusy.
- * Leftover calendar events from cancelled bookings otherwise keep the
- * public slot occupied after the row is already cancelled in Postgres.
+ * Only used when events.list is unavailable. Prefer skipping leftover
+ * Frizeo events by google_event_id so a personal event on the same hour
+ * still blocks public booking.
  */
 export function subtractBusyIntervals<T extends TimeInterval>(
   busy: T[],
