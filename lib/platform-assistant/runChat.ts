@@ -238,31 +238,187 @@ type GeminiToolDecision =
       calls: Array<{ name: string; arguments: Record<string, unknown> }>;
     };
 
-async function callGeminiJson(
+/**
+ * Shown when Gemini keeps failing with a temporary status after retries
+ * and the fallback model. Programming errors must not use this message.
+ */
+export const PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE =
+  "Serviciul AI este temporar ocupat. Încearcă din nou peste câteva momente.";
+
+/**
+ * Models already called through Gemini `generateContent` in this repo
+ * (`lib/marketing-ai/providers/gemini.ts`, GEMINI_FREE_TIER_MODELS).
+ * The default fallback is the first entry different from the primary model.
+ */
+const CONFIRMED_GEMINI_MODELS = [
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-3.5-flash",
+] as const;
+
+const GEMINI_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const GEMINI_PRIMARY_BACKOFF_MS = [400, 900] as const;
+const GEMINI_PRIMARY_MAX_RETRIES = 2;
+
+type GeminiGenerateResponse = {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  error?: { message?: string };
+};
+
+class GeminiCallError extends Error {
+  readonly status: number | null;
+  readonly retryable: boolean;
+
+  constructor(status: number | null, retryable: boolean, message: string) {
+    super(message);
+    this.name = "GeminiCallError";
+    this.status = status;
+    this.retryable = retryable;
+  }
+}
+
+export function isGeminiRetryableHttpStatus(status: number): boolean {
+  return GEMINI_RETRYABLE_STATUSES.has(status);
+}
+
+/**
+ * 400/401/403 (and any other non-retryable status) stay permanent:
+ * invalid requests and auth failures will not succeed on another attempt
+ * or another model.
+ */
+export function resolvePlatformAssistantFallbackModel(
+  primaryModel: string,
+): string | null {
+  const configured = process.env.PLATFORM_ASSISTANT_FALLBACK_MODEL?.trim();
+  if (configured) {
+    return configured === primaryModel ? null : configured;
+  }
+
+  return (
+    CONFIRMED_GEMINI_MODELS.find((candidate) => candidate !== primaryModel) ??
+    null
+  );
+}
+
+export function redactPlatformAssistantSecrets(
+  value: string,
+  extraSecret?: string,
+): string {
+  const secrets = [
+    extraSecret,
+    process.env.GEMINI_API_KEY,
+    process.env.GOOGLE_API_KEY,
+    process.env.OPENAI_API_KEY,
+  ];
+  let safe = value;
+  for (const secret of secrets) {
+    const trimmed = secret?.trim();
+    if (!trimmed || trimmed.length < 8) continue;
+    safe = safe.split(trimmed).join("[redacted]");
+  }
+  return safe.replace(/([?&]key=)[^&\s"'<>]+/gi, "$1[redacted]");
+}
+
+export function toPlatformAssistantClientErrorMessage(error: unknown): string {
+  const raw =
+    error instanceof Error && error.message.trim()
+      ? error.message
+      : "Eroare la Platform Assistant";
+  return redactPlatformAssistantSecrets(raw);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function geminiStatusLabel(error: GeminiCallError): string {
+  return error.status == null ? "network" : String(error.status);
+}
+
+function logGeminiRetry(model: string, error: GeminiCallError, attempt: number) {
+  console.warn(
+    `platform-assistant Gemini retry: model=${model} status=${geminiStatusLabel(error)} attempt=${attempt}`,
+  );
+}
+
+function logGeminiFallback(primary: string, fallback: string) {
+  console.warn(
+    `platform-assistant Gemini fallback: primary=${primary} fallback=${fallback}`,
+  );
+}
+
+function logGeminiUnavailable(
+  model: string,
+  error: GeminiCallError,
+  attempt: number,
+) {
+  console.error(
+    `platform-assistant Gemini unavailable: model=${model} status=${geminiStatusLabel(error)} attempt=${attempt}`,
+  );
+}
+
+function safeProviderMessage(
+  status: number,
+  rawMessage: string | undefined,
+  apiKey: string,
+): string {
+  const fallback = `Gemini error ${status}`;
+  if (!rawMessage?.trim()) return fallback;
+  const redacted = redactPlatformAssistantSecrets(rawMessage, apiKey).slice(0, 300);
+  return redacted.trim() ? redacted : fallback;
+}
+
+function publicGeminiError(error: unknown): Error {
+  if (error instanceof GeminiCallError) {
+    return new Error(redactPlatformAssistantSecrets(error.message));
+  }
+  if (error instanceof Error) {
+    const redacted = redactPlatformAssistantSecrets(error.message);
+    if (redacted === error.message) return error;
+    return new Error(redacted);
+  }
+  return new Error("Eroare la Platform Assistant");
+}
+
+async function requestGeminiContent(
   apiKey: string,
   model: string,
   prompt: string,
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.2,
-        responseMimeType: "application/json",
-      },
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: "application/json",
+        },
+      }),
+    });
+  } catch {
+    throw new GeminiCallError(null, true, "Gemini network error");
+  }
 
-  const json = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    error?: { message?: string };
-  };
+  let json: GeminiGenerateResponse = {};
+  try {
+    json = (await res.json()) as GeminiGenerateResponse;
+  } catch {
+    json = {};
+  }
 
   if (!res.ok) {
-    throw new Error(json.error?.message || `Gemini error ${res.status}`);
+    const retryable = isGeminiRetryableHttpStatus(res.status);
+    throw new GeminiCallError(
+      res.status,
+      retryable,
+      safeProviderMessage(res.status, json.error?.message, apiKey),
+    );
   }
 
   const text = json.candidates?.[0]?.content?.parts
@@ -272,6 +428,64 @@ async function callGeminiJson(
 
   if (!text) throw new Error("Răspuns Gemini gol");
   return text;
+}
+
+async function callGeminiModelWithRetries(
+  apiKey: string,
+  model: string,
+  prompt: string,
+): Promise<string> {
+  const maxAttempts = GEMINI_PRIMARY_MAX_RETRIES + 1;
+  let lastError: GeminiCallError | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await requestGeminiContent(apiKey, model, prompt);
+    } catch (error: unknown) {
+      if (!(error instanceof GeminiCallError) || !error.retryable) {
+        throw error;
+      }
+      lastError = error;
+      if (attempt >= maxAttempts) break;
+      logGeminiRetry(model, error, attempt + 1);
+      const backoff = GEMINI_PRIMARY_BACKOFF_MS[attempt - 1] ?? 900;
+      await sleep(backoff);
+    }
+  }
+
+  throw lastError ?? new GeminiCallError(null, true, "Gemini error");
+}
+
+async function callGeminiJson(
+  apiKey: string,
+  model: string,
+  prompt: string,
+): Promise<string> {
+  try {
+    return await callGeminiModelWithRetries(apiKey, model, prompt);
+  } catch (error: unknown) {
+    if (!(error instanceof GeminiCallError) || !error.retryable) {
+      throw publicGeminiError(error);
+    }
+
+    const fallback = resolvePlatformAssistantFallbackModel(model);
+    if (!fallback) {
+      logGeminiUnavailable(model, error, GEMINI_PRIMARY_MAX_RETRIES + 1);
+      throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
+    }
+
+    logGeminiFallback(model, fallback);
+
+    try {
+      return await requestGeminiContent(apiKey, fallback, prompt);
+    } catch (fallbackError: unknown) {
+      if (fallbackError instanceof GeminiCallError && fallbackError.retryable) {
+        logGeminiUnavailable(fallback, fallbackError, 1);
+        throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
+      }
+      throw publicGeminiError(fallbackError);
+    }
+  }
 }
 
 function parseGeminiDecision(raw: string): GeminiToolDecision {

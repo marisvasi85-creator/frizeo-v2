@@ -31,7 +31,27 @@ export async function resolve(specifier, context, nextResolve) {
     if (fileExists(withTs)) {
       return { url: withTs, shortCircuit: true };
     }
+    const indexTs = new URL(`${specifier}/index.ts`, parent).href;
+    if (fileExists(indexTs)) {
+      return { url: indexTs, shortCircuit: true };
+    }
   }
 
-  return nextResolve(specifier, context);
+  try {
+    return await nextResolve(specifier, context);
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ERR_MODULE_NOT_FOUND" &&
+      !specifier.startsWith(".") &&
+      !specifier.startsWith("/") &&
+      !specifier.startsWith("node:") &&
+      !specifier.endsWith(".js")
+    ) {
+      return nextResolve(`${specifier}.js`, context);
+    }
+    throw error;
+  }
 }
