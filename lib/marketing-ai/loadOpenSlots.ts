@@ -1,4 +1,5 @@
 import { getBarberMinNoticeHours } from "@/lib/bookings/bookingLeadTime";
+import { isBookableCatalogService } from "@/lib/services/catalog";
 import {
   addDaysToDateString,
   getTodayInBookingTimezone,
@@ -8,8 +9,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { DayOverrideRow, WeeklyScheduleRow } from "@/lib/schedule/resolveDaySchedule";
 import { normalizeScheduleMode } from "@/lib/schedule/resolveDaySchedule";
 import {
+  buildOpenSlotFacts,
   scheduleDayForDate,
-  summarizeOpenDays,
   type OpenSlotBooking,
   type OpenSlotDaySource,
 } from "./openSlots";
@@ -30,7 +31,7 @@ export async function loadOpenSlotSummary(input: {
   const start = getTodayInBookingTimezone(now);
   const end = addDaysToDateString(start, HORIZON_DAYS - 1);
 
-  const [barberRes, scheduleRes, overrideRes, bookingRes, noticeHours, google] =
+  const [barberRes, scheduleRes, overrideRes, bookingRes, serviceRes, noticeHours, google] =
     await Promise.all([
       supabaseAdmin
         .from("barbers")
@@ -54,16 +55,27 @@ export async function loadOpenSlotSummary(input: {
         .gte("date", start)
         .lte("date", end)
         .in("status", ["confirmed", "pending"]),
+      supabaseAdmin
+        .from("barber_services")
+        .select("duration, active, deleted_at")
+        .eq("barber_id", input.barberId),
       getBarberMinNoticeHours(supabaseAdmin, input.barberId),
       getGoogleBusyIntervalsByDateStrict(supabaseAdmin, input.barberId, start, end),
     ]);
 
-  if (barberRes.error || scheduleRes.error || overrideRes.error || bookingRes.error) {
+  if (
+    barberRes.error ||
+    scheduleRes.error ||
+    overrideRes.error ||
+    bookingRes.error ||
+    serviceRes.error
+  ) {
     console.error("OPEN SLOTS LOAD ERROR", {
       barber: barberRes.error?.message,
       schedule: scheduleRes.error?.message,
       override: overrideRes.error?.message,
       booking: bookingRes.error?.message,
+      service: serviceRes.error?.message,
     });
     return { ok: false };
   }
@@ -78,6 +90,15 @@ export async function loadOpenSlotSummary(input: {
   const bookings = (bookingRes.data || []) as Array<
     OpenSlotBooking & { date: string }
   >;
+  const serviceDurations = (
+    (serviceRes.data || []) as Array<{
+      duration: number | null;
+      active: boolean | null;
+      deleted_at: string | null;
+    }>
+  )
+    .filter((service) => isBookableCatalogService(service))
+    .map((service) => service.duration || 0);
 
   const days: OpenSlotDaySource[] = [];
   for (let offset = 0; offset < HORIZON_DAYS; offset += 1) {
@@ -105,5 +126,8 @@ export async function loadOpenSlotSummary(input: {
     });
   }
 
-  return { ok: true, days: summarizeOpenDays(days) };
+  return {
+    ok: true,
+    days: buildOpenSlotFacts(days, serviceDurations),
+  };
 }

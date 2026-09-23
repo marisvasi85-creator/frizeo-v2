@@ -1,6 +1,6 @@
 import type { MarketingChannel } from "./channels";
 import { channelUsesFullBookingUrl } from "./channels";
-import { formatOpenSlotFacts } from "./openSlots";
+import { formatOpenSlotFacts } from "./openSlotCopy";
 import type {
   GenerateMarketingInput,
   MarketingContentType,
@@ -145,7 +145,7 @@ export function buildMarketingPrompt(
     work_promo:
       "Scrie textul pentru o lucrare pe care frizerul tocmai a terminat-o și vrea să o arate. Nu inventa tipul de tunsoare, tehnică sau rezultat vizual. Folosește doar notele frizerului. Dacă notele nu descriu tunsoarea, rămâi la „lucrare nouă” / „rezultat proaspăt” fără detalii inventate.",
     open_slots:
-      "Scrie o postare scurtă care spune că există locuri libere, doar în zilele primite. Nu spune „ultimele locuri”, nu inventa ore care nu sunt în exemple, nu inventa reduceri și nu bloca programul.",
+      "Scrie o postare scurtă despre zilele cu locuri libere. Folosește doar zilele primite. Spune numărul de locuri doar dacă textul de disponibilitate îl dă explicit și este mic. Dacă scrie „mai sunt locuri disponibile” fără cifră, nu inventa un număr: spune de exemplu „Mai sunt locuri disponibile sâmbătă”. Nu spune „ultimele locuri”, nu inventa ore, reduceri sau programări.",
   };
 
   const channel = input.channel || "instagram";

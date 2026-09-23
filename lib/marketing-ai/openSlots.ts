@@ -61,7 +61,11 @@ export function countFreeSlotsForDay(input: OpenSlotDaySource): {
     return { closed: true, freeCount: 0, sampleTimes: [] };
   }
 
-  const duration = input.durationMinutes ?? resolved.slotDuration ?? 15;
+  if (!input.durationMinutes || input.durationMinutes <= 0) {
+    return { closed: false, freeCount: 0, sampleTimes: [] };
+  }
+
+  const duration = input.durationMinutes;
   const free = generatePublicFreeSlots({
     date: input.date,
     resolved,
@@ -89,6 +93,7 @@ export function summarizeOpenDays(days: OpenSlotDaySource[]): OpenSlotDayFact[] 
       weekday: weekdayLabel(day.date),
       freeCount: counted.freeCount,
       sampleTimes: counted.sampleTimes,
+      durationMinutes: day.durationMinutes,
     });
   }
   return facts;
@@ -98,12 +103,60 @@ export function scheduleDayForDate(date: string): number {
   return jsDayToScheduleDay(date);
 }
 
-export function formatOpenSlotFacts(facts: OpenSlotDayFact[]): string {
-  if (!facts.length) return "Niciun loc liber în următoarele 7 zile.";
-  return facts
-    .map(
-      (fact) =>
-        `${fact.weekday} ${fact.date}: ${fact.freeCount} locuri libere (exemple: ${fact.sampleTimes.join(", ")})`,
-    )
-    .join("\n");
+/** One duration means every active service books the same appointment length. */
+export function appointmentDurationMinutes(
+  selectedDuration: number | null,
+  serviceDurations: number[],
+): number | null {
+  if (selectedDuration != null && selectedDuration > 0) return selectedDuration;
+  const unique = [
+    ...new Set(serviceDurations.filter((duration) => duration > 0)),
+  ];
+  return unique.length === 1 ? unique[0] : null;
+}
+
+/**
+ * Days with at least one bookable appointment.
+ * The count is included only when every considered service shares one duration,
+ * matching the public slot list for that duration.
+ */
+export function buildOpenSlotFacts(
+  days: OpenSlotDaySource[],
+  serviceDurations: number[],
+): OpenSlotDayFact[] {
+  const duration = appointmentDurationMinutes(
+    days.find((day) => day.durationMinutes && day.durationMinutes > 0)?.durationMinutes ?? null,
+    serviceDurations,
+  );
+
+  if (duration != null) {
+    return summarizeOpenDays(
+      days.map((day) => ({ ...day, durationMinutes: duration })),
+    );
+  }
+
+  const unique = [
+    ...new Set(serviceDurations.filter((value) => value > 0)),
+  ];
+  if (!unique.length) return [];
+
+  const facts: OpenSlotDayFact[] = [];
+  for (const day of days) {
+    const open = unique.some((serviceDuration) => {
+      const counted = countFreeSlotsForDay({
+        ...day,
+        durationMinutes: serviceDuration,
+      });
+      return !counted.closed && counted.freeCount > 0;
+    });
+    if (!open) continue;
+    facts.push({
+      date: day.date,
+      weekday: weekdayLabel(day.date),
+      freeCount: null,
+      sampleTimes: [],
+      durationMinutes: null,
+    });
+  }
+  return facts;
 }

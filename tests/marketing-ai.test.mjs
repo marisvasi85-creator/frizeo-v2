@@ -26,7 +26,8 @@ import {
   removePrices,
 } from "../lib/marketing-ai/textActions.ts";
 import { groupHistoryRows } from "../lib/marketing-ai/historyTypes.ts";
-import { countFreeSlotsForDay, summarizeOpenDays } from "../lib/marketing-ai/openSlots.ts";
+import { buildOpenSlotFacts, countFreeSlotsForDay, scheduleDayForDate, summarizeOpenDays } from "../lib/marketing-ai/openSlots.ts";
+import { formatOpenSlotDayHeading, formatOpenSlotFacts } from "../lib/marketing-ai/openSlotCopy.ts";
 import { getTodayInBookingTimezone } from "../lib/bookings/bookingTimezone.ts";
 import {
   publicGenerateError,
@@ -195,14 +196,30 @@ test("open slot copy uses only the aggregated days", () => {
   const variants = generateTemplateVariants(context, {
     contentType: "open_slots",
     channel: "whatsapp",
-    openSlots: [{ date: "2026-09-24", weekday: "joi", freeCount: 4, sampleTimes: ["10:00"] }],
+    openSlots: [
+      { date: "2026-09-24", weekday: "joi", freeCount: 1, sampleTimes: ["18:15"], durationMinutes: 45 },
+      { date: "2026-09-26", weekday: "sâmbătă", freeCount: 10, sampleTimes: ["10:30"], durationMinutes: 45 },
+    ],
     trackedBookingUrl: "https://frizeo.ro/booking/11111111-1111-4111-8111-111111111111?utm_source=whatsapp",
   });
   for (const variant of variants) {
-    assert.match(variant.content, /joi/);
-    assert.doesNotMatch(variant.content, /luni|ultimele locuri/i);
+    assert.match(variant.content, /joi \(1 loc\)/);
+    assert.match(variant.content, /sâmbătă/);
+    assert.doesNotMatch(variant.content, /luni|ultimele locuri|\b10\b|\b31\b/i);
   }
   assert.match(variants[0].callToAction, /https:\/\/frizeo\.ro\/booking\//);
+  const prompt = buildMarketingPrompt(context, {
+    contentType: "open_slots",
+    openSlots: variants[0] && [
+      { date: "2026-09-24", weekday: "joi", freeCount: 1, sampleTimes: ["18:15"], durationMinutes: 45 },
+      { date: "2026-09-26", weekday: "sâmbătă", freeCount: 10, sampleTimes: ["10:30"], durationMinutes: 45 },
+    ],
+  });
+  assert.match(prompt, /1 loc/);
+  assert.doesNotMatch(prompt, /10 locuri/);
+  assert.match(formatOpenSlotFacts([
+    { date: "2026-09-26", weekday: "sâmbătă", freeCount: 10, sampleTimes: ["10:30"], durationMinutes: 45 },
+  ]), /Nu menționa un număr/);
 });
 
 test("Orthodox Easter 2027 is in May and the promo window opens before it", () => {
@@ -400,6 +417,86 @@ test("availability respects schedule, closures, bookings and does not invent day
     { ...base, date: "2026-09-25", override: { is_closed: true } },
   ]);
   assert.deepEqual(summary.map((day) => day.date), ["2026-09-24"]);
+});
+
+test("open slots count bookable appointments, not 15-minute slices", () => {
+  const weekly = [
+    [1, false, null, null],
+    [2, false, null, null],
+    [3, false, null, null],
+    [4, true, "13:00", "19:00"],
+    [5, true, "13:00", "17:30"],
+    [6, true, "10:30", "19:00"],
+    [7, false, null, null],
+  ].map(([day, working, start, end]) => ({
+    day_of_week: day,
+    is_working: working,
+    work_start: start,
+    work_end: end,
+    break_enabled: false,
+    break_start: null,
+    break_end: null,
+  }));
+  const bookings = {
+    "2026-09-24": [
+      ["13:00", "13:45"],
+      ["13:45", "14:30"],
+      ["14:30", "15:15"],
+      ["15:15", "16:00"],
+      ["16:00", "16:45"],
+      ["16:45", "17:30"],
+      ["17:30", "18:15"],
+    ],
+    "2026-09-25": [
+      ["15:15", "16:00"],
+      ["16:00", "16:45"],
+      ["16:45", "17:30"],
+    ],
+    "2026-09-26": [["18:00", "18:45"]],
+  };
+  const days = ["23", "24", "25", "26", "27", "28", "29"].map((day) => {
+    const date = `2026-09-${day}`;
+    return {
+      date,
+      scheduleMode: "weekly",
+      weekly: weekly.find((row) => row.day_of_week === scheduleDayForDate(date)) ?? null,
+      override: null,
+      bookings: (bookings[date] || []).map(([start, end], index) => ({
+        id: `${date}-${index}`,
+        start_time: start,
+        end_time: end,
+        status: "confirmed",
+      })),
+      googleBusy: [],
+      durationMinutes: null,
+      minNoticeHours: 2,
+      now: new Date("2026-09-23T06:32:00Z"),
+    };
+  });
+
+  const slices = days
+    .map((day) => countFreeSlotsForDay({ ...day, durationMinutes: 15 }).freeCount)
+    .filter((count) => count > 0);
+  assert.deepEqual(slices, [3, 9, 31]);
+
+  const facts = buildOpenSlotFacts(days, [45, 45, 45]);
+  assert.deepEqual(
+    facts.map((day) => [day.date, day.freeCount, day.durationMinutes]),
+    [
+      ["2026-09-24", 1, 45],
+      ["2026-09-25", 3, 45],
+      ["2026-09-26", 10, 45],
+    ],
+  );
+  assert.deepEqual(facts.map(formatOpenSlotDayHeading), [
+    "Joi, 24 septembrie — 1 loc",
+    "Vineri, 25 septembrie — 3 locuri",
+    "Sâmbătă, 26 septembrie — 10 locuri",
+  ]);
+
+  const mixed = buildOpenSlotFacts(days, [30, 45]);
+  assert.deepEqual(mixed.map((day) => day.freeCount), [null, null, null]);
+  assert.equal(formatOpenSlotDayHeading(mixed[2]), "Sâmbătă, 26 septembrie");
 });
 
 test("provider errors stay user-facing and Gemini is not called with the key in the URL", () => {

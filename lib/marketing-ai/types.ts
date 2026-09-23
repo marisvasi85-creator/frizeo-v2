@@ -49,8 +49,15 @@ export type MarketingContext = {
 export type OpenSlotDayFact = {
   date: string;
   weekday: string;
-  freeCount: number;
+  /**
+   * Bookable appointments for `durationMinutes`.
+   * Null when the day is open but services have different durations,
+   * so one number would not be a real appointment count.
+   */
+  freeCount: number | null;
   sampleTimes: string[];
+  /** Service duration used to count appointments. Null when the count is not a single appointment unit. */
+  durationMinutes: number | null;
 };
 
 export type GenerateMarketingInput = {
