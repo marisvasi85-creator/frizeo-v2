@@ -4,7 +4,11 @@ import {
   isPlatformAssistantEnabled,
   isPlatformAssistantLlmConfigured,
 } from "@/lib/platform-assistant/config";
-import { runPlatformAssistantChat } from "@/lib/platform-assistant/runChat";
+import {
+  redactPlatformAssistantSecrets,
+  runPlatformAssistantChat,
+  toPlatformAssistantClientErrorMessage,
+} from "@/lib/platform-assistant/runChat";
 import type { PlatformChatMessage } from "@/lib/platform-assistant/types";
 
 const MAX_MESSAGES = 20;
@@ -79,9 +83,12 @@ export async function POST(req: Request) {
       toolsUsed: result.toolsUsed,
     });
   } catch (error: unknown) {
-    console.error("platform-assistant/chat:", error);
-    const message =
-      error instanceof Error ? error.message : "Eroare la Platform Assistant";
+    const message = toPlatformAssistantClientErrorMessage(error);
+    const stack =
+      error instanceof Error && error.stack
+        ? redactPlatformAssistantSecrets(error.stack)
+        : "";
+    console.error("platform-assistant/chat:", message, stack);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
