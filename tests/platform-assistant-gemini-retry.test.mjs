@@ -8,6 +8,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL ??= "https://example.supabase.co";
 process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
 
 const {
+  PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE,
   PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE,
   isGeminiRetryableHttpStatus,
   redactPlatformAssistantSecrets,
@@ -23,7 +24,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const API_KEY = "gemini-live-key-0123456789abcdef";
 const OPENAI_KEY = "sk-test-openai-key-0123456789";
 const PRIMARY = "gemini-3.1-flash-lite";
-const DEFAULT_FALLBACK = "gemini-2.5-flash";
+const DEFAULT_FALLBACK = "gemini-3.6-flash";
+const SECOND_FALLBACK = "gemini-3.5-flash";
 const messages = [{ role: "user", content: "Ce am de făcut azi?" }];
 const ctx = {
   userId: "user-secret-id",
@@ -220,6 +222,8 @@ function assertNoSecrets(run) {
     blob.includes("This model is currently experiencing high demand"),
     false,
   );
+  assert.equal(blob.includes("no longer available"), false);
+  assert.equal(blob.includes("Interactions API"), false);
 }
 
 test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
@@ -229,11 +233,11 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
       assert.equal(resolvePlatformAssistantFallbackModel(PRIMARY), DEFAULT_FALLBACK);
       assert.equal(
         resolvePlatformAssistantFallbackModel(DEFAULT_FALLBACK),
-        PRIMARY,
+        SECOND_FALLBACK,
       );
       assert.equal(
-        resolvePlatformAssistantFallbackModel("gemini-3.5-flash"),
-        PRIMARY,
+        resolvePlatformAssistantFallbackModel(SECOND_FALLBACK),
+        DEFAULT_FALLBACK,
       );
       process.env.PLATFORM_ASSISTANT_FALLBACK_MODEL = "gemini-3.5-flash";
       assert.equal(
@@ -241,7 +245,10 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
         "gemini-3.5-flash",
       );
       process.env.PLATFORM_ASSISTANT_FALLBACK_MODEL = PRIMARY;
-      assert.equal(resolvePlatformAssistantFallbackModel(PRIMARY), null);
+      assert.equal(
+        resolvePlatformAssistantFallbackModel(PRIMARY),
+        DEFAULT_FALLBACK,
+      );
       for (const status of [429, 500, 502, 503, 504]) {
         assert.equal(isGeminiRetryableHttpStatus(status), true);
       }
@@ -413,21 +420,23 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
         geminiHttpError(503, demand),
         geminiHttpError(503, demand),
         geminiHttpError(503, demand),
+        geminiHttpError(503, demand),
       ]),
     );
     assert.ok(run.error instanceof Error);
     assert.equal(run.error.message, PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
-    assert.equal(run.calls.length, 4);
+    assert.equal(run.calls.length, 5);
     assert.deepEqual(modelsOf(run), [
       PRIMARY,
       PRIMARY,
       PRIMARY,
       DEFAULT_FALLBACK,
+      SECOND_FALLBACK,
     ]);
     assert.equal(
       run.logs.some((line) =>
         line.includes(
-          `platform-assistant Gemini unavailable: model=${DEFAULT_FALLBACK} status=503 attempt=1`,
+          `platform-assistant Gemini unavailable: model=${SECOND_FALLBACK} status=503 attempt=1`,
         ),
       ),
       true,
@@ -682,9 +691,45 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
       ]),
       { PLATFORM_ASSISTANT_FALLBACK_MODEL: PRIMARY },
     );
-    assert.equal(same.error.message, PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
-    assert.equal(same.calls.length, 3);
-    assert.equal(same.logs.some((line) => line.includes("Gemini fallback")), false);
+    assert.equal(same.result.reply, "nu trebuie");
+    assert.equal(modelsOf(same)[3], DEFAULT_FALLBACK);
+    assert.equal(
+      same.logs.some((line) => line.includes(`fallback=${DEFAULT_FALLBACK}`)),
+      true,
+    );
+    assert.equal(modelsOf(same).filter((model) => model === PRIMARY).length, 3);
+  });
+
+  await t.test("retired gemini-2.5-flash switches to gemini-3.6-flash", async () => {
+    const retired =
+      "This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.6-flash for the latest features and improvements. We recommend you to use the Interactions API (https://ai.google.dev/gemini-api/docs/get-started).";
+    const run = await exercise(
+      queue([geminiHttpError(404, retired), geminiAnswer("Răspuns de pe modelul nou.")]),
+      { PLATFORM_ASSISTANT_MODEL: "gemini-2.5-flash" },
+    );
+    assert.equal(run.result.reply, "Răspuns de pe modelul nou.");
+    assert.deepEqual(modelsOf(run), ["gemini-2.5-flash", DEFAULT_FALLBACK]);
+    assert.deepEqual(run.delays, []);
+    assertNoSecrets(run);
+
+    const exhausted = await exercise(
+      queue([
+        geminiHttpError(404, retired),
+        geminiHttpError(404, retired),
+        geminiHttpError(404, retired),
+        geminiHttpError(404, retired),
+      ]),
+      { PLATFORM_ASSISTANT_MODEL: "gemini-2.5-flash" },
+    );
+    assert.equal(
+      exhausted.error.message,
+      PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE,
+    );
+    assert.equal(
+      toPlatformAssistantClientErrorMessage(new Error(retired)),
+      PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE,
+    );
+    assertNoSecrets(exhausted);
   });
 
   await t.test("GOOGLE_API_KEY still selects Gemini", async () => {

@@ -240,20 +240,27 @@ type GeminiToolDecision =
 
 /**
  * Shown when Gemini keeps failing with a temporary status after retries
- * and the fallback model. Programming errors must not use this message.
+ * and the fallback models. Programming errors must not use this message.
  */
 export const PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE =
   "Serviciul AI este temporar ocupat. Încearcă din nou peste câteva momente.";
 
+/** Shown when every candidate model is retired or missing. Not a code bug. */
+export const PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE =
+  "Modelul AI nu este disponibil momentan. Încearcă din nou peste câteva momente.";
+
 /**
- * Models already called through Gemini `generateContent` in this repo
- * (`lib/marketing-ai/providers/gemini.ts`, GEMINI_FREE_TIER_MODELS).
- * The default fallback is the first entry different from the primary model.
+ * Automatic fallbacks for generateContent.
+ * gemini-2.5-flash is omitted: this API key is a new user and Gemini
+ * rejects it with "no longer available", telling us to call gemini-3.6-flash.
+ * gemini-3.6-flash is the stable id from the Gemini API docs and from that
+ * production error. gemini-3.5-flash and gemini-3.1-flash-lite are already
+ * used in this repo.
  */
-const CONFIRMED_GEMINI_MODELS = [
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-flash",
+const AUTOMATIC_GEMINI_FALLBACKS = [
+  "gemini-3.6-flash",
   "gemini-3.5-flash",
+  "gemini-3.1-flash-lite",
 ] as const;
 
 const GEMINI_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
@@ -282,22 +289,42 @@ export function isGeminiRetryableHttpStatus(status: number): boolean {
 }
 
 /**
- * 400/401/403 (and any other non-retryable status) stay permanent:
- * invalid requests and auth failures will not succeed on another attempt
- * or another model.
+ * 401/403 and a generic 400 stay on the same model: bad credentials and
+ * invalid requests will not succeed on another model.
+ * "model no longer available" is permanent only for that model id.
  */
+export function isGeminiModelUnavailableMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("no longer available") ||
+    (lower.includes("not found") && lower.includes("model")) ||
+    lower.includes("does not exist") ||
+    lower.includes("is not supported") ||
+    lower.includes("invalid model")
+  );
+}
+
+export function platformAssistantGeminiFallbackChain(
+  primaryModel: string,
+): string[] {
+  const configured = process.env.PLATFORM_ASSISTANT_FALLBACK_MODEL?.trim();
+  const chain: string[] = [];
+  if (configured && configured !== primaryModel) {
+    chain.push(configured);
+  }
+
+  for (const candidate of AUTOMATIC_GEMINI_FALLBACKS) {
+    if (candidate === primaryModel || chain.includes(candidate)) continue;
+    chain.push(candidate);
+  }
+
+  return chain;
+}
+
 export function resolvePlatformAssistantFallbackModel(
   primaryModel: string,
 ): string | null {
-  const configured = process.env.PLATFORM_ASSISTANT_FALLBACK_MODEL?.trim();
-  if (configured) {
-    return configured === primaryModel ? null : configured;
-  }
-
-  return (
-    CONFIRMED_GEMINI_MODELS.find((candidate) => candidate !== primaryModel) ??
-    null
-  );
+  return platformAssistantGeminiFallbackChain(primaryModel)[0] ?? null;
 }
 
 export function redactPlatformAssistantSecrets(
@@ -324,7 +351,26 @@ export function toPlatformAssistantClientErrorMessage(error: unknown): string {
     error instanceof Error && error.message.trim()
       ? error.message
       : "Eroare la Platform Assistant";
-  return redactPlatformAssistantSecrets(raw);
+  const redacted = redactPlatformAssistantSecrets(raw);
+  if (
+    redacted === PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE ||
+    redacted === PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE
+  ) {
+    return redacted;
+  }
+  if (isGeminiModelUnavailableMessage(redacted)) {
+    return PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE;
+  }
+  if (redacted.toLowerCase().includes("high demand")) {
+    return PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE;
+  }
+  return redacted;
+}
+
+function shouldTryAnotherGeminiModel(error: GeminiCallError): boolean {
+  if (error.status === 401 || error.status === 403) return false;
+  if (error.retryable) return true;
+  return isGeminiModelUnavailableMessage(error.message);
 }
 
 function sleep(ms: number): Promise<void> {
@@ -461,31 +507,41 @@ async function callGeminiJson(
   model: string,
   prompt: string,
 ): Promise<string> {
-  try {
-    return await callGeminiModelWithRetries(apiKey, model, prompt);
-  } catch (error: unknown) {
-    if (!(error instanceof GeminiCallError) || !error.retryable) {
-      throw publicGeminiError(error);
-    }
+  const models = [model, ...platformAssistantGeminiFallbackChain(model)];
+  let lastSwitchable: GeminiCallError | null = null;
 
-    const fallback = resolvePlatformAssistantFallbackModel(model);
-    if (!fallback) {
-      logGeminiUnavailable(model, error, GEMINI_PRIMARY_MAX_RETRIES + 1);
-      throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
-    }
-
-    logGeminiFallback(model, fallback);
+  for (let index = 0; index < models.length; index++) {
+    const candidate = models[index] as string;
+    if (index > 0) logGeminiFallback(model, candidate);
 
     try {
-      return await requestGeminiContent(apiKey, fallback, prompt);
-    } catch (fallbackError: unknown) {
-      if (fallbackError instanceof GeminiCallError && fallbackError.retryable) {
-        logGeminiUnavailable(fallback, fallbackError, 1);
-        throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
+      if (index === 0) {
+        return await callGeminiModelWithRetries(apiKey, candidate, prompt);
       }
-      throw publicGeminiError(fallbackError);
+      return await requestGeminiContent(apiKey, candidate, prompt);
+    } catch (error: unknown) {
+      if (!(error instanceof GeminiCallError) || !shouldTryAnotherGeminiModel(error)) {
+        throw publicGeminiError(error);
+      }
+      lastSwitchable = error;
     }
   }
+
+  if (!lastSwitchable) {
+    throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
+  }
+
+  const lastModel = models[models.length - 1] ?? model;
+  logGeminiUnavailable(
+    lastModel,
+    lastSwitchable,
+    lastModel === model ? GEMINI_PRIMARY_MAX_RETRIES + 1 : 1,
+  );
+
+  if (lastSwitchable.retryable) {
+    throw new Error(PLATFORM_ASSISTANT_PROVIDER_BUSY_MESSAGE);
+  }
+  throw new Error(PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE);
 }
 
 function parseGeminiDecision(raw: string): GeminiToolDecision {
