@@ -5,6 +5,8 @@ import {
   formatMarketingAILimitMessage,
   getMarketingAILimitForPlan,
 } from "./limits";
+import { interpretQuotaReservation, type QuotaReservation } from "./quota";
+import type { GenerateMarketingResult } from "./types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 let usageTableReady: boolean | null = null;
@@ -133,7 +135,11 @@ export async function checkMarketingAILimit(tenantId: string): Promise<{
   }
 
   if (!usage.migrationReady) {
-    return { allowed: true, usage };
+    return {
+      allowed: false,
+      reason: "Marketing AI este temporar indisponibil. Încearcă din nou mai târziu.",
+      usage,
+    };
   }
 
   if (usage.remaining !== null && usage.remaining <= 0) {
@@ -237,4 +243,113 @@ export async function recordMarketingAIUsage(input: {
   }
 
   return null;
+}
+
+export async function reserveMarketingAIQuota(input: {
+  tenantId: string;
+  barberId: string;
+  contentType: string;
+  provider: string;
+  dailyLimit: number | null;
+  batchId: string;
+  tone?: string | null;
+  extraNotes?: string | null;
+  serviceId?: string | null;
+  channel?: string | null;
+}): Promise<QuotaReservation> {
+  const { data, error } = await supabaseAdmin.rpc("reserve_marketing_ai_quota", {
+    p_tenant_id: input.tenantId,
+    p_barber_id: input.barberId,
+    p_content_type: input.contentType,
+    p_provider: input.provider,
+    p_usage_date: getTodayInBookingTimezone(),
+    p_daily_limit: input.dailyLimit,
+    p_batch_id: input.batchId,
+    p_tone: input.tone ?? null,
+    p_extra_notes: input.extraNotes ?? null,
+    p_service_id: input.serviceId ?? null,
+    p_channel: input.channel ?? null,
+  });
+
+  if (error) {
+    console.error("MARKETING AI QUOTA RESERVE ERROR:", error.message);
+  }
+
+  return interpretQuotaReservation({
+    data,
+    errorMessage: error?.message ?? null,
+  });
+}
+
+export async function releaseMarketingAIQuota(
+  id: string,
+  tenantId: string,
+): Promise<void> {
+  const { error } = await supabaseAdmin.rpc("release_marketing_ai_quota", {
+    p_id: id,
+    p_tenant_id: tenantId,
+  });
+  if (error) {
+    console.error("MARKETING AI QUOTA RELEASE ERROR:", error.message);
+  }
+}
+
+export async function persistMarketingVariants(input: {
+  tenantId: string;
+  barberId: string;
+  reservationId: string | null;
+  countsTowardLimit: boolean;
+  batchId: string;
+  contentType: string;
+  provider: string;
+  tone?: string | null;
+  extraNotes?: string | null;
+  serviceId?: string | null;
+  channel?: string | null;
+  snapshot?: Record<string, unknown> | null;
+  variants: GenerateMarketingResult[];
+}): Promise<void> {
+  const today = getTodayInBookingTimezone();
+
+  for (let index = 0; index < input.variants.length; index += 1) {
+    const variant = input.variants[index];
+    const payload = {
+      title: variant.title,
+      content: variant.content,
+      hashtags: variant.hashtags,
+      call_to_action: variant.callToAction,
+      tone: input.tone ?? null,
+      extra_notes: input.extraNotes ?? null,
+      service_id: input.serviceId ?? null,
+      channel: input.channel ?? null,
+      variant_index: index,
+      generation_batch_id: input.batchId,
+      context_snapshot: input.snapshot ?? null,
+      counts_toward_limit: input.countsTowardLimit && index === 0,
+    };
+
+    if (index === 0 && input.reservationId) {
+      const { error } = await supabaseAdmin
+        .from("marketing_ai_generations")
+        .update(payload)
+        .eq("id", input.reservationId)
+        .eq("tenant_id", input.tenantId);
+      if (error) {
+        console.error("MARKETING AI VARIANT UPDATE ERROR:", error.message);
+      }
+      continue;
+    }
+
+    const { error } = await supabaseAdmin.from("marketing_ai_generations").insert({
+      ...payload,
+      tenant_id: input.tenantId,
+      barber_id: input.barberId,
+      content_type: input.contentType,
+      provider: input.provider,
+      usage_date: today,
+    });
+    if (error) {
+      console.error("MARKETING AI VARIANT INSERT ERROR:", error.message);
+    }
+  }
 }

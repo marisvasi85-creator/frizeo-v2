@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { sessionActsAsBarber } from "../components/adminNav";
-import { isMarketingAIConfigured, getMarketingAIStatus } from "@/lib/marketing-ai/generate";
+import { getMarketingAIStatus } from "@/lib/marketing-ai/generate";
 import { listMarketingAIHistory } from "@/lib/marketing-ai/history";
 import { getMarketingAIUsageStatus } from "@/lib/marketing-ai/usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -79,8 +79,7 @@ export default async function MarketingAIPage() {
       <div>
         <h1 className="text-2xl font-semibold">Marketing AI</h1>
         <p className="text-frz-ink/60 mt-1">
-          Unealtă de salon — generează conținut pentru un frizer activ (text,
-          Story/feed, WhatsApp și QR).
+          Idei și texte de postări create pentru salonul tău.
         </p>
       </div>
 
@@ -109,12 +108,7 @@ export default async function MarketingAIPage() {
             barbers={barberOptions}
             services={serviceOptions}
             defaultBarberId={defaultBarberId}
-            configured={isMarketingAIConfigured()}
-            provider={aiStatus.provider}
-            model={aiStatus.model}
-            modeLabel={aiStatus.modeLabel}
-            isFreeTier={aiStatus.isFreeTier}
-            diagnostics={aiStatus.diagnostics}
+            demoMode={aiStatus.provider === "template"}
             usage={usage}
             initialSocialLinks={initialSocialLinks}
             initialHistory={initialHistory}
