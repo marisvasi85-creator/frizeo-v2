@@ -79,10 +79,28 @@ function snapshotAvailability(snapshot: unknown): OpenSlotDayFact[] | null {
   if (!snapshot || typeof snapshot !== "object") return null;
   const value = (snapshot as Record<string, unknown>).availability;
   if (!Array.isArray(value)) return null;
-  const days = value.filter((item): item is OpenSlotDayFact => {
-    if (!item || typeof item !== "object") return false;
-    const row = item as OpenSlotDayFact;
-    return typeof row.date === "string" && typeof row.weekday === "string" && typeof row.freeCount === "number";
+  const days = value.flatMap((item): OpenSlotDayFact[] => {
+    if (!item || typeof item !== "object") return [];
+    const row = item as Record<string, unknown>;
+    if (typeof row.date !== "string" || typeof row.weekday !== "string") return [];
+    const durationMinutes =
+      typeof row.durationMinutes === "number" && row.durationMinutes > 0
+        ? row.durationMinutes
+        : null;
+    const freeCount =
+      durationMinutes != null && typeof row.freeCount === "number" ? row.freeCount : null;
+    const sampleTimes = Array.isArray(row.sampleTimes)
+      ? row.sampleTimes.filter((time): time is string => typeof time === "string")
+      : [];
+    return [
+      {
+        date: row.date,
+        weekday: row.weekday,
+        freeCount,
+        sampleTimes: freeCount == null ? [] : sampleTimes,
+        durationMinutes,
+      },
+    ];
   });
   return days.length ? days : null;
 }

@@ -12,6 +12,7 @@ import {
 } from "@/lib/marketing-ai/channels";
 import type { MarketingAIHistoryBatch } from "@/lib/marketing-ai/historyTypes";
 import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
+import { formatOpenSlotDayHeading } from "@/lib/marketing-ai/openSlotCopy";
 import { getSeasonalActions } from "@/lib/marketing-ai/seasonal";
 import { copyTextToClipboard } from "@/lib/marketing-ai/share";
 import { applyTextAction, type MarketingDraft } from "@/lib/marketing-ai/textActions";
@@ -580,12 +581,16 @@ export default function MarketingAIClient({
           </div>
 
           {availability && availability.length > 0 && (
-            <p className="text-xs text-frz-muted">
-              Zile folosite:{" "}
-              {availability
-                .map((day) => `${day.weekday} (${day.freeCount})`)
-                .join(", ")}
-            </p>
+            <div className="text-sm text-frz-muted space-y-1">
+              <p className="font-medium text-frz-ink">
+                Locuri disponibile în următoarele 7 zile
+              </p>
+              <ul className="space-y-0.5">
+                {availability.map((day) => (
+                  <li key={day.date}>{formatOpenSlotDayHeading(day)}</li>
+                ))}
+              </ul>
+            </div>
           )}
 
           <textarea

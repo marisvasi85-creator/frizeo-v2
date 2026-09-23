@@ -1,4 +1,5 @@
 import type { MarketingChannel } from "../channels";
+import { openSlotTemplateLine } from "../openSlotCopy";
 import { ctaForChannel } from "../textActions";
 import type {
   GenerateMarketingInput,
@@ -80,9 +81,7 @@ function buildByType(
   const hook = hooks[variantIndex % hooks.length];
   const cityBit = context.cityHint ? ` în ${context.cityHint}` : "";
   const action = cta(context, input);
-  const slotLine = (input.openSlots || [])
-    .map((fact) => `${fact.weekday} (${fact.freeCount})`)
-    .join(", ");
+  const slotLine = openSlotTemplateLine(input.openSlots || []);
 
   const serviceAngles = service
     ? [
@@ -193,8 +192,8 @@ function buildByType(
       title: `Locuri libere ${variantIndex + 1}`,
       content: slotLine
         ? [
-            `Mai am câteva locuri: ${slotLine}.`,
-            `În programul lui ${context.barberName} sunt locuri ${slotLine}.`,
+            `Mai sunt locuri disponibile: ${slotLine}.`,
+            `În programul lui ${context.barberName} sunt locuri: ${slotLine}.`,
             `Dacă vrei să treci pe la ${context.salonName}: ${slotLine}.`,
           ][variantIndex % 3] + extra
         : `Nu am o listă confirmată de locuri libere pentru ${context.barberName}.`,
