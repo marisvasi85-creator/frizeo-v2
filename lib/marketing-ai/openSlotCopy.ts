@@ -28,7 +28,9 @@ export function openSlotCountIsBookable(
   );
 }
 
-export function openSlotCountIsWorthQuoting(fact: OpenSlotDayFact): boolean {
+export function openSlotCountIsWorthQuoting(
+  fact: OpenSlotDayFact,
+): fact is OpenSlotDayFact & { freeCount: number; durationMinutes: number } {
   return openSlotCountIsBookable(fact) && fact.freeCount <= OPEN_SLOT_EXACT_COUNT_MAX;
 }
 
