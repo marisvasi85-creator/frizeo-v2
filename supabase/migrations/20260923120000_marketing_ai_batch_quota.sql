@@ -116,9 +116,10 @@ $$;
 
 REVOKE ALL ON FUNCTION public.reserve_marketing_ai_quota(
   uuid, uuid, text, text, date, integer, uuid, text, text, uuid, text
-) FROM PUBLIC;
+) FROM PUBLIC, anon, authenticated;
 
-REVOKE ALL ON FUNCTION public.release_marketing_ai_quota(uuid, uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.release_marketing_ai_quota(uuid, uuid)
+  FROM PUBLIC, anon, authenticated;
 
 DO $$
 BEGIN
