@@ -28,6 +28,46 @@ export function getBrandedCardFormatMeta(format: BrandedCardFormat) {
   return FORMATS[format];
 }
 
+const VERTICAL_CONTENT_TYPES = new Set(["story", "reel"]);
+const VERTICAL_CHANNELS = new Set(["story", "reel", "tiktok"]);
+
+/** Feed stays square. Story, Reel and TikTok share the vertical still. */
+export function preferredBrandedCardFormat(
+  contentType?: string | null,
+  channel?: string | null,
+): BrandedCardFormat {
+  if (contentType && VERTICAL_CONTENT_TYPES.has(contentType)) return "story";
+  if (channel && VERTICAL_CHANNELS.has(channel)) return "story";
+  return "square";
+}
+
+/**
+ * Centered cover crop. One scale for both axes, so the photo is not stretched.
+ * The returned source rect maps onto the destination with equal aspect ratios.
+ */
+export function coverCropRect(
+  srcWidth: number,
+  srcHeight: number,
+  destWidth: number,
+  destHeight: number,
+) {
+  const safeSrcW = Math.max(srcWidth, 1);
+  const safeSrcH = Math.max(srcHeight, 1);
+  const scale = Math.max(destWidth / safeSrcW, destHeight / safeSrcH);
+  const sw = destWidth / scale;
+  const sh = destHeight / scale;
+  return {
+    sx: (safeSrcW - sw) / 2,
+    sy: (safeSrcH - sh) / 2,
+    sw,
+    sh,
+  };
+}
+
+export function photoBandHeight(format: BrandedCardFormat): number {
+  return format === "story" ? 1420 : 720;
+}
+
 function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -319,55 +359,69 @@ function blobFromCanvas(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-async function renderPhotoCard(input: BrandedCardInput): Promise<Blob> {
-  const SIZE = FORMATS.square.width;
+async function renderPhotoCard(
+  input: BrandedCardInput,
+  format: BrandedCardFormat,
+): Promise<Blob> {
+  const { width, height } = FORMATS[format];
+  const photoHeight = photoBandHeight(format);
   const canvas = document.createElement("canvas");
-  canvas.width = SIZE;
-  canvas.height = SIZE;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas indisponibil");
 
   ctx.fillStyle = "#0B0B0C";
-  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.fillRect(0, 0, width, height);
 
   if (input.photoUrl) {
     const photo = await loadImage(input.photoUrl);
     if (photo) {
-      const side = Math.min(photo.width, photo.height);
-      const sx = (photo.width - side) / 2;
-      const sy = (photo.height - side) / 2;
-      ctx.drawImage(photo, sx, sy, side, side, 0, 0, SIZE, 620);
+      const crop = coverCropRect(photo.width, photo.height, width, photoHeight);
+      ctx.drawImage(
+        photo,
+        crop.sx,
+        crop.sy,
+        crop.sw,
+        crop.sh,
+        0,
+        0,
+        width,
+        photoHeight,
+      );
     }
   }
 
   ctx.fillStyle = "#0B0B0C";
-  ctx.fillRect(0, 620, SIZE, SIZE - 620);
+  ctx.fillRect(0, photoHeight, width, height - photoHeight);
 
   ctx.textAlign = "center";
   ctx.fillStyle = "#FFFFFF";
   ctx.font = "700 42px system-ui, -apple-system, Segoe UI, sans-serif";
-  const titleLines = wrapText(ctx, input.title, SIZE - 120, 2);
-  let y = 690;
+  const titleLines = wrapText(ctx, input.title, width - 120, 2);
+  let y = photoHeight + 64;
   for (const line of titleLines) {
-    ctx.fillText(line, SIZE / 2, y);
+    ctx.fillText(line, width / 2, y);
     y += 50;
   }
 
   ctx.fillStyle = "rgba(255,255,255,0.82)";
   ctx.font = "400 28px system-ui, -apple-system, Segoe UI, sans-serif";
-  const bodyLines = wrapText(ctx, input.content, SIZE - 140, 3);
+  const bodyLines = wrapText(ctx, input.content, width - 140, format === "story" ? 3 : 2);
   for (const line of bodyLines) {
-    ctx.fillText(line, SIZE / 2, y);
+    ctx.fillText(line, width / 2, y);
     y += 38;
   }
 
   const ctaText = shortenCta(input.callToAction, input.bookingUrl);
+  const ctaHeight = format === "story" ? 84 : 72;
+  const ctaY = height - ctaHeight - 36;
   ctx.fillStyle = "#FFFFFF";
-  drawRoundedRect(ctx, 140, SIZE - 130, SIZE - 280, 72, 36);
+  drawRoundedRect(ctx, 140, ctaY, width - 280, ctaHeight, 36);
   ctx.fill();
   ctx.fillStyle = "#0B0B0C";
   ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
-  ctx.fillText(ctaText, SIZE / 2, SIZE - 84);
+  ctx.fillText(ctaText, width / 2, ctaY + ctaHeight / 2 + 10);
 
   return blobFromCanvas(canvas);
 }
@@ -375,8 +429,8 @@ async function renderPhotoCard(input: BrandedCardInput): Promise<Blob> {
 export async function renderBrandedCardToBlob(
   input: BrandedCardInput,
 ): Promise<Blob> {
-  if (input.photoUrl) return renderPhotoCard(input);
   const format = input.format ?? "square";
+  if (input.photoUrl) return renderPhotoCard(input, format);
   if (format === "story") return renderStoryCard(input);
   return renderSquareCard(input);
 }
@@ -393,7 +447,7 @@ export function downloadBrandedCard(
     .slice(0, 30);
 
   const date = new Date().toISOString().slice(0, 10);
-  const suffix = format === "story" ? "story" : "post";
+  const suffix = format === "story" ? "story-reel" : "post";
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;

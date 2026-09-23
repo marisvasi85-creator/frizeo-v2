@@ -125,6 +125,7 @@ export default function MarketingAIClient({
   const [drafts, setDrafts] = useState<MarketingDraft[]>([]);
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [resultContentType, setResultContentType] = useState<string | null>(null);
+  const [exportChannel, setExportChannel] = useState<string | null>(null);
   const [history, setHistory] = useState(initialHistory);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
@@ -282,6 +283,7 @@ export default function MarketingAIClient({
       setDrafts(next);
       setActiveVariantIndex(0);
       setResultContentType(data.contentType || contentType);
+      setExportChannel(channel);
       setActiveHistoryId(data.batchId || null);
       setSavedTone(data.tone || tone);
       setSavedServiceName(data.serviceName || null);
@@ -303,6 +305,7 @@ export default function MarketingAIClient({
     setDrafts(batch.variants.map(historyItemToResult));
     setActiveVariantIndex(0);
     setResultContentType(batch.contentType);
+    setExportChannel(batch.channel);
     setActiveHistoryId(batch.id);
     setSavedTone(batch.tone);
     setSavedServiceName(batch.serviceName);
@@ -636,6 +639,7 @@ export default function MarketingAIClient({
             result={draft}
             branding={branding}
             contentType={resultContentType}
+            channel={exportChannel}
             photoUrl={goal === "work" ? photoUrl : null}
             onBrandingNeeded={async () => branding}
           />
