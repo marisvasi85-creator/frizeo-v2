@@ -1,3 +1,6 @@
+import type { MarketingChannel } from "./channels";
+import { channelUsesFullBookingUrl } from "./channels";
+import { formatOpenSlotFacts } from "./openSlots";
 import type {
   GenerateMarketingInput,
   MarketingContentType,
@@ -16,6 +19,8 @@ const CONTENT_LABELS: Record<MarketingContentType, string> = {
   easter_promo: "promoție de Paște",
   black_friday: "promoție Black Friday",
   back_to_school: "campanie back to school",
+  work_promo: "promovare a unei lucrări reale, abia făcute",
+  open_slots: "postare despre locurile libere din program",
 };
 
 const TONE_INSTRUCTIONS: Record<MarketingTone, string> = {
@@ -37,6 +42,8 @@ const LENGTH_RULES: Record<MarketingContentType, string> = {
   easter_promo: "content: 350–800 caractere.",
   black_friday: "content: 300–700 caractere, urgență clară dar fără spam.",
   back_to_school: "content: 300–700 caractere.",
+  work_promo: "content: 250–700 caractere. Nu descrie tunsoarea decât dacă notele o spun explicit.",
+  open_slots: "content: 220–600 caractere. Menționează doar zilele din lista de disponibilitate.",
 };
 
 function formatServicesList(context: MarketingContext) {
@@ -67,6 +74,28 @@ function formatSalonBlock(context: MarketingContext) {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function channelInstruction(
+  channel: MarketingChannel,
+  trackedUrl?: string | null,
+): string {
+  if (channelUsesFullBookingUrl(channel) && trackedUrl) {
+    return `Canal WhatsApp. CTA-ul trebuie să includă URL-ul clickabil exact: ${trackedUrl}. Nu spune „link în bio”.`;
+  }
+  if (channel === "story") {
+    return "Canal Story. Text foarte scurt, 2-3 slide-uri. CTA: „Link în story”, fără să pretinzi că un URL din text e clickabil.";
+  }
+  if (channel === "reel") {
+    return "Canal Reel. Script scurt, hook în primele 3 secunde. CTA: „Link în bio”, fără URL lung în voiceover.";
+  }
+  if (channel === "facebook") {
+    return "Canal Facebook. Caption clar. CTA: „Link în bio” sau „scrie-ne pe pagină”. Nu inventa butoane de platformă.";
+  }
+  if (channel === "tiktok") {
+    return "Canal TikTok. Caption scurt. CTA: „Link în bio”. Nu pretinde că URL-ul din caption e clickabil.";
+  }
+  return "Canal Instagram. CTA de tip „Link în bio”. Nu pretinde că URL-ul din caption este clickabil.";
 }
 
 function sanitizeExtraNotes(notes?: string): string | null {
@@ -106,19 +135,39 @@ export function buildMarketingPrompt(
         }). Evidențiază pentru cine e potrivit și de ce merită rezervat acum.`
       : "Promovează un serviciu principal din listă.",
     birthday_offer:
-      "Scrie o ofertă de aniversare a salonului (ex. reducere sau beneficiu extra la programare). Ton celebrativ, exclusivitate, limitare în timp.",
+      "Scrie o postare de aniversare a salonului. Ton celebrativ. Nu inventa un procent sau o reducere.",
     easter_promo:
       "Scrie o promoție de Paște: look proaspăt pentru sărbători, ton cald, fără a inventa reduceri concrete.",
     black_friday:
       "Scrie o campanie Black Friday pentru frizerie: urgență reală, beneficiu clar, fără agresivitate de discount inventat.",
     back_to_school:
       "Scrie o campanie back-to-school / început de toamnă: look fresh pentru școală/birou, ton energic și practic.",
+    work_promo:
+      "Scrie textul pentru o lucrare pe care frizerul tocmai a terminat-o și vrea să o arate. Nu inventa tipul de tunsoare, tehnică sau rezultat vizual. Folosește doar notele frizerului. Dacă notele nu descriu tunsoarea, rămâi la „lucrare nouă” / „rezultat proaspăt” fără detalii inventate.",
+    open_slots:
+      "Scrie o postare scurtă care spune că există locuri libere, doar în zilele primite. Nu spune „ultimele locuri”, nu inventa ore care nu sunt în exemple, nu inventa reduceri și nu bloca programul.",
   };
+
+  const channel = input.channel || "instagram";
+  const channelRules = channelInstruction(channel, input.trackedBookingUrl);
 
   const extra = sanitizeExtraNotes(input.extraNotes);
   const extraBlock = extra
-    ? `\nNote suplimentare de la frizer (respectă-le dacă nu contrazic regulile): ${extra}`
+    ? `\nNote suplimentare de la frizer (respectă-le dacă nu contrazic regulile de siguranță): ${extra}`
     : "";
+
+  const serviceBlock = selectedService
+    ? `\nSERVICIU ALES DE FRIZER:\n${selectedService.name} (${selectedService.duration} min${
+        selectedService.showPrice && selectedService.price != null
+          ? `, ${selectedService.price} lei`
+          : ", prețul nu se publică"
+      })`
+    : "";
+
+  const slotsBlock =
+    input.contentType === "open_slots"
+      ? `\nDISPONIBILITATE REALĂ (agregată, următoarele 7 zile):\n${formatOpenSlotFacts(input.openSlots || [])}\nNu menționa alte zile.`
+      : "";
 
   const cityHashtagRule = context.cityHint
     ? `- Include hashtag cu orașul „${context.cityHint}” (ex. #${context.cityHint.replace(/\s+/g, "")}) unde e natural`
@@ -134,6 +183,11 @@ ${TONE_INSTRUCTIONS[tone]}
 
 INSTRUCȚIUNI TIP CONȚINUT:
 ${typeInstructions[input.contentType]}
+${serviceBlock}
+${slotsBlock}
+
+CANAL:
+${channelRules}
 
 LUNGIME:
 ${LENGTH_RULES[input.contentType]}
@@ -142,7 +196,7 @@ REGULI:
 - Variantele trebuie să difere ca hook și formulare, nu doar să schimbe 2 cuvinte
 - Scrie natural, fără clișee exagerate
 - Folosește diacritice românești
-- Nu inventa prețuri sau reduceri concrete dacă nu sunt în date; poți folosi formulări gen „ofertă specială” sau „surpriză la programare”
+- Nu inventa prețuri, reduceri, recenzii, disponibilitate sau tipul de tunsoare dacă nu sunt în date
 - Dacă serviciul are preț afișat în date, poți menționa prețul; altfel nu inventa
 - Include mereu un call-to-action spre linkul de programare
 - Hashtag-urile trebuie relevante pentru România (frizerie, barbershop)

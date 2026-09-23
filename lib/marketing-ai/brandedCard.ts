@@ -12,6 +12,8 @@ export type BrandedCardInput = BrandedCardBranding & {
   content: string;
   callToAction: string;
   format?: BrandedCardFormat;
+  /** Local preview only. Not uploaded and not sent to the model. */
+  photoUrl?: string | null;
 };
 
 const FORMATS: Record<
@@ -62,7 +64,9 @@ function wrapText(
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!url.startsWith("blob:") && !url.startsWith("data:")) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
     img.src = url;
@@ -315,9 +319,63 @@ function blobFromCanvas(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
+async function renderPhotoCard(input: BrandedCardInput): Promise<Blob> {
+  const SIZE = FORMATS.square.width;
+  const canvas = document.createElement("canvas");
+  canvas.width = SIZE;
+  canvas.height = SIZE;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas indisponibil");
+
+  ctx.fillStyle = "#0B0B0C";
+  ctx.fillRect(0, 0, SIZE, SIZE);
+
+  if (input.photoUrl) {
+    const photo = await loadImage(input.photoUrl);
+    if (photo) {
+      const side = Math.min(photo.width, photo.height);
+      const sx = (photo.width - side) / 2;
+      const sy = (photo.height - side) / 2;
+      ctx.drawImage(photo, sx, sy, side, side, 0, 0, SIZE, 620);
+    }
+  }
+
+  ctx.fillStyle = "#0B0B0C";
+  ctx.fillRect(0, 620, SIZE, SIZE - 620);
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "700 42px system-ui, -apple-system, Segoe UI, sans-serif";
+  const titleLines = wrapText(ctx, input.title, SIZE - 120, 2);
+  let y = 690;
+  for (const line of titleLines) {
+    ctx.fillText(line, SIZE / 2, y);
+    y += 50;
+  }
+
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.font = "400 28px system-ui, -apple-system, Segoe UI, sans-serif";
+  const bodyLines = wrapText(ctx, input.content, SIZE - 140, 3);
+  for (const line of bodyLines) {
+    ctx.fillText(line, SIZE / 2, y);
+    y += 38;
+  }
+
+  const ctaText = shortenCta(input.callToAction, input.bookingUrl);
+  ctx.fillStyle = "#FFFFFF";
+  drawRoundedRect(ctx, 140, SIZE - 130, SIZE - 280, 72, 36);
+  ctx.fill();
+  ctx.fillStyle = "#0B0B0C";
+  ctx.font = "700 28px system-ui, -apple-system, Segoe UI, sans-serif";
+  ctx.fillText(ctaText, SIZE / 2, SIZE - 84);
+
+  return blobFromCanvas(canvas);
+}
+
 export async function renderBrandedCardToBlob(
   input: BrandedCardInput,
 ): Promise<Blob> {
+  if (input.photoUrl) return renderPhotoCard(input);
   const format = input.format ?? "square";
   if (format === "story") return renderStoryCard(input);
   return renderSquareCard(input);

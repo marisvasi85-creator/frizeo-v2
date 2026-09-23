@@ -21,6 +21,7 @@ export default function BrandedCardButton({
   result,
   branding,
   contentType,
+  photoUrl,
   onBrandingNeeded,
 }: {
   result: {
@@ -30,6 +31,7 @@ export default function BrandedCardButton({
   };
   branding: BrandedCardBranding | null;
   contentType?: MarketingContentType | string | null;
+  photoUrl?: string | null;
   onBrandingNeeded: () => Promise<BrandedCardBranding | null>;
 }) {
   const [loadingFormat, setLoadingFormat] = useState<BrandedCardFormat | null>(
@@ -57,6 +59,7 @@ export default function BrandedCardButton({
         title: result.title,
         content: result.content,
         callToAction: result.callToAction,
+        photoUrl,
         format,
       });
 
