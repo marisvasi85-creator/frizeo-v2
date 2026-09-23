@@ -3,20 +3,28 @@ import { getPlatformCreatorEmails } from "@/lib/auth/requirePlatformCreator";
 import { syncPlatformAdminMembership } from "@/lib/auth/platformAdminSync";
 import { NextResponse } from "next/server";
 
+const DEFAULT_PLATFORM_ADMIN_EMAILS = ["office@frizeo.ro"];
+
 /**
  * Global Frizeo platform admins (not tenant salon owners).
- * PLATFORM_ADMIN_EMAILS overrides; falls back to PLATFORM_CREATOR_EMAILS.
+ * PLATFORM_ADMIN_EMAILS overrides; falls back to creator emails + office@.
  */
 export function getPlatformAdminEmails(): string[] {
   const fromEnv = process.env.PLATFORM_ADMIN_EMAILS?.trim();
-  if (!fromEnv) return getPlatformCreatorEmails();
+  if (fromEnv) {
+    const parsed = fromEnv
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    if (parsed.length > 0) return parsed;
+  }
 
-  const parsed = fromEnv
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  return parsed.length > 0 ? parsed : getPlatformCreatorEmails();
+  return [
+    ...new Set([
+      ...getPlatformCreatorEmails(),
+      ...DEFAULT_PLATFORM_ADMIN_EMAILS,
+    ]),
+  ];
 }
 
 export function isPlatformAdminEmail(email: string | null | undefined): boolean {
