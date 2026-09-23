@@ -17,11 +17,12 @@ export function createOpenAIProvider(model: string): MarketingAIProvider {
         throw new Error("Providerul OpenAI nu este configurat.");
       }
 
-      const client = new OpenAI({ apiKey });
+      const client = new OpenAI({ apiKey, timeout: 12_000, maxRetries: 0 });
 
       const completion = await client.chat.completions.create({
         model,
         temperature: request.temperature ?? 0.8,
+        max_tokens: 900,
         messages: request.messages,
         response_format: request.jsonMode ? { type: "json_object" } : undefined,
       });

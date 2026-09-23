@@ -47,7 +47,7 @@ export const FRIZEO_FAQS: FaqItem[] = [
   {
     question: "Ce este Marketing AI pe Frizeo?",
     answer:
-      "Marketing AI generează conținut de promovare pentru frizeria, barbershop-ul sau salonul tău: postări Instagram, story, scripturi Reel și oferte (inclusiv pe serviciu sau sezoniere), cu pagina ta de programări. Este inclus în planuri, cu limite zilnice (Free 3, Pro 20, Pro+ 50; pe trial până la 50). Nu e un pachet separat de social media.",
+      "Marketing AI îți scrie postările pentru salon: postări, o lucrare, un serviciu, locurile libere din program și ocazii de sezon, cu linkul tău de programări. Este inclus în planuri, cu limite zilnice (Free 3, Pro 20, Pro+ 50; pe trial până la 50). Nu publică singur pe rețele și nu e un pachet separat de social media.",
   },
   {
     question: "Frizeo facturează în România?",
