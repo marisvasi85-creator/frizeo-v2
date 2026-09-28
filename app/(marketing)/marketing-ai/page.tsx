@@ -53,11 +53,11 @@ export default function MarketingAiPage() {
         <ContentSection title="Ce face, concret">
           <ContentList
             items={[
-              "Postări Instagram și story-uri pe tonul tău (relaxat, premium sau street)",
-              "Scripturi pentru Reel, gata de filmat",
-              "Oferte pe serviciu, birthday și campanii sezoniere",
-              "Card vizual descărcabil cu brandul salonului",
-              "CTA cu link-ul tău de programări Frizeo",
+              "Postări, story-uri și scripturi Reel pe tonul tău (relaxat, premium sau street)",
+              "Promovarea unui serviciu sau a unei lucrări reale",
+              "Text pentru locurile libere din program, doar când îl ceri",
+              "Campanii de sezon, inclusiv Paștele ortodox",
+              "Card vizual și link de programări, fără publicare automată",
             ]}
           />
         </ContentSection>

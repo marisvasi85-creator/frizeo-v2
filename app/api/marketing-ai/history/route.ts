@@ -23,11 +23,11 @@ export async function GET(req: Request) {
     }
   }
 
-  const items = await listMarketingAIHistory({
+  const batches = await listMarketingAIHistory({
     tenantId: auth.tenantId,
     barberId,
     limit,
   });
 
-  return NextResponse.json({ items });
+  return NextResponse.json({ batches });
 }

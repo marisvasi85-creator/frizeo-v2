@@ -8,10 +8,11 @@ import { buildMarketingPrompt } from "./prompts";
 import {
   getMarketingAIProvider,
   getMarketingAIProviderConfig,
-  isMarketingAIConfigured,
 } from "./providers";
 import { generateTemplateVariants } from "./providers/template";
-import { isGeminiRetryableError } from "./providers/gemini";
+import { publicGenerateError, shouldUseTemplateFallback } from "./providerErrors";
+
+export { publicGenerateError, shouldUseTemplateFallback } from "./providerErrors";
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
@@ -132,18 +133,19 @@ export async function generateMarketingContent(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Eroare la generare";
 
-    if (config.provider === "gemini" && isGeminiRetryableError(message)) {
+    console.error("MARKETING AI PROVIDER ERROR:", message);
+
+    if (shouldUseTemplateFallback(message)) {
       const variants = generateTemplateVariants(context, normalizedInput);
       return {
         variants,
         result: variants[0],
         usedTemplateFallback: true,
         fallbackWarning:
-          "Gemini indisponibil momentan — am folosit text demo. " +
-          "Setează MARKETING_AI_MODEL=gemini-3.1-flash-lite în Vercel.",
+          "Am folosit un text pregătit local, pentru că generatorul nu a răspuns.",
       };
     }
 
-    throw error;
+    throw new Error(publicGenerateError(message));
   }
 }

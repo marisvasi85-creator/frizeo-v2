@@ -8,6 +8,8 @@ export const MARKETING_CONTENT_TYPES = [
   "easter_promo",
   "black_friday",
   "back_to_school",
+  "work_promo",
+  "open_slots",
 ] as const;
 
 export type MarketingContentType = (typeof MARKETING_CONTENT_TYPES)[number];
@@ -44,12 +46,30 @@ export type MarketingContext = {
   }>;
 };
 
+export type OpenSlotDayFact = {
+  date: string;
+  weekday: string;
+  /**
+   * Bookable appointments for `durationMinutes`.
+   * Null when the day is open but services have different durations,
+   * so one number would not be a real appointment count.
+   */
+  freeCount: number | null;
+  sampleTimes: string[];
+  /** Service duration used to count appointments. Null when the count is not a single appointment unit. */
+  durationMinutes: number | null;
+};
+
 export type GenerateMarketingInput = {
   contentType: MarketingContentType;
   serviceId?: string;
   extraNotes?: string;
   tone?: MarketingTone;
   variantCount?: number;
+  channel?: import("./channels").MarketingChannel;
+  /** Aggregated availability. Never a raw slot dump. */
+  openSlots?: OpenSlotDayFact[];
+  trackedBookingUrl?: string | null;
 };
 
 export type GenerateMarketingResult = {

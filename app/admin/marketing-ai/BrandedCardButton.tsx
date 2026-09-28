@@ -5,22 +5,19 @@ import AdminButton from "../components/AdminButton";
 import {
   downloadBrandedCard,
   getBrandedCardFormatMeta,
+  preferredBrandedCardFormat,
   renderBrandedCardToBlob,
   type BrandedCardBranding,
   type BrandedCardFormat,
 } from "@/lib/marketing-ai/brandedCard";
 import type { MarketingContentType } from "@/lib/marketing-ai/types";
 
-function defaultFormatForType(
-  contentType?: MarketingContentType | string | null,
-): BrandedCardFormat {
-  return contentType === "story" ? "story" : "square";
-}
-
 export default function BrandedCardButton({
   result,
   branding,
   contentType,
+  channel,
+  photoUrl,
   onBrandingNeeded,
 }: {
   result: {
@@ -30,13 +27,15 @@ export default function BrandedCardButton({
   };
   branding: BrandedCardBranding | null;
   contentType?: MarketingContentType | string | null;
+  channel?: string | null;
+  photoUrl?: string | null;
   onBrandingNeeded: () => Promise<BrandedCardBranding | null>;
 }) {
   const [loadingFormat, setLoadingFormat] = useState<BrandedCardFormat | null>(
     null,
   );
   const [error, setError] = useState("");
-  const preferred = defaultFormatForType(contentType);
+  const preferred = preferredBrandedCardFormat(contentType, channel);
 
   async function handleDownload(format: BrandedCardFormat) {
     setError("");
@@ -57,6 +56,7 @@ export default function BrandedCardButton({
         title: result.title,
         content: result.content,
         callToAction: result.callToAction,
+        photoUrl,
         format,
       });
 
@@ -75,11 +75,9 @@ export default function BrandedCardButton({
     <div className="pt-2 border-t border-white/10 space-y-2">
       <p className="text-sm font-medium text-frz-ink">Imagine promo (gratuit)</p>
       <p className="text-xs text-frz-muted">
-        Card cu logo, text și link programări — {squareMeta.label} pentru feed,{" "}
-        {storyMeta.label} pentru Stories.
-        {preferred === "story" && (
-          <> Pentru tipul Story, recomandăm formatul vertical.</>
-        )}
+        Vizual static, nu un video. Post {squareMeta.label}. Story, Reel și TikTok
+        folosesc {storyMeta.label} ca imagine sau copertă. Textul și scriptul se
+        copiază separat.
       </p>
       <div className="flex flex-wrap gap-2">
         <AdminButton
@@ -89,7 +87,7 @@ export default function BrandedCardButton({
           loadingLabel="Se creează imaginea..."
           onClick={() => handleDownload("square")}
         >
-          Descarcă post ({squareMeta.label})
+          Descarcă Post ({squareMeta.label})
         </AdminButton>
         <AdminButton
           variant={preferred === "story" ? "primary" : "secondary"}
@@ -98,7 +96,7 @@ export default function BrandedCardButton({
           loadingLabel="Se creează imaginea..."
           onClick={() => handleDownload("story")}
         >
-          Descarcă Story ({storyMeta.label})
+          Descarcă Story/Reel ({storyMeta.label})
         </AdminButton>
       </div>
       {error && <p className="text-red-400 text-xs">{error}</p>}

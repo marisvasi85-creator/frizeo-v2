@@ -2,8 +2,10 @@
 
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
-import type { MarketingAIHistoryItem } from "@/lib/marketing-ai/historyTypes";
+import type { MarketingAIHistoryBatch } from "@/lib/marketing-ai/historyTypes";
+import { MARKETING_CHANNEL_LABELS, isMarketingChannel } from "@/lib/marketing-ai/channels";
 import { getMarketingContentTypeLabel } from "@/lib/marketing-ai/seasonal";
+import { MARKETING_TONE_LABELS, isMarketingTone } from "@/lib/marketing-ai/types";
 
 function formatWhen(iso: string): string {
   try {
@@ -18,26 +20,31 @@ function formatWhen(iso: string): string {
   }
 }
 
+function toneLabel(tone: string | null): string {
+  if (tone && isMarketingTone(tone)) return MARKETING_TONE_LABELS[tone];
+  return "Ton nesalvat";
+}
+
 export default function HistoryList({
-  items,
+  batches,
   loading,
   activeId,
   onSelect,
   onRefresh,
 }: {
-  items: MarketingAIHistoryItem[];
+  batches: MarketingAIHistoryBatch[];
   loading: boolean;
   activeId: string | null;
-  onSelect: (item: MarketingAIHistoryItem) => void;
+  onSelect: (batch: MarketingAIHistoryBatch) => void;
   onRefresh: () => void;
 }) {
   return (
     <AdminCard className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-frz-ink">Istoric generări</p>
+          <p className="text-sm font-medium text-frz-ink">Istoric</p>
           <p className="text-xs text-frz-muted mt-1">
-            Redeschide un text salvat — fără să consume din limita zilnică.
+            O generare, cu variantele ei. Redeschiderea nu consumă din limita zilei.
           </p>
         </div>
         <AdminButton
@@ -51,45 +58,45 @@ export default function HistoryList({
         </AdminButton>
       </div>
 
-      {items.length === 0 && !loading && (
+      {batches.length === 0 && !loading && (
         <p className="text-sm text-frz-muted">
-          Încă nu ai generări salvate. Creează prima postare mai jos.
+          Încă nu ai generări salvate.
         </p>
       )}
 
-      {items.length > 0 && (
+      {batches.length > 0 && (
         <ul className="divide-y divide-white/10 border border-white/10 rounded-xl overflow-hidden">
-          {items.map((item) => {
-            const label = getMarketingContentTypeLabel(item.contentType);
-            const active = activeId === item.id;
-
+          {batches.map((batch) => {
+            const active = activeId === batch.id;
+            const channel =
+              batch.channel && isMarketingChannel(batch.channel)
+                ? MARKETING_CHANNEL_LABELS[batch.channel]
+                : null;
             return (
-              <li key={item.id}>
+              <li key={batch.id}>
                 <button
                   type="button"
-                  onClick={() => onSelect(item)}
+                  onClick={() => onSelect(batch)}
                   className={`w-full text-left px-4 py-3 transition ${
-                    active
-                      ? "bg-frz-mist"
-                      : "bg-transparent hover:bg-frz-fog"
+                    active ? "bg-frz-mist" : "bg-transparent hover:bg-frz-fog"
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-frz-ink truncate">
-                        {item.title}
-                      </p>
-                      <p className="text-xs text-frz-muted mt-1">
-                        {label} · {formatWhen(item.createdAt)}
-                      </p>
-                      <p className="text-xs text-frz-muted mt-1 line-clamp-2">
-                        {item.content}
-                      </p>
-                    </div>
-                    <span className="text-xs text-sky-300 shrink-0 pt-0.5">
-                      Deschide
-                    </span>
-                  </div>
+                  <p className="text-sm font-medium text-frz-ink truncate">
+                    {batch.variants[0]?.title || "Conținut generat"}
+                  </p>
+                  <p className="text-xs text-frz-muted mt-1">
+                    {getMarketingContentTypeLabel(batch.contentType)}
+                    {channel ? ` · ${channel}` : ""}
+                    {" · "}
+                    {toneLabel(batch.tone)}
+                    {batch.serviceName ? ` · ${batch.serviceName}` : ""}
+                    {batch.barberName ? ` · ${batch.barberName}` : ""}
+                    {" · "}
+                    {formatWhen(batch.createdAt)}
+                    {batch.variants.length > 1
+                      ? ` · ${batch.variants.length} variante`
+                      : ""}
+                  </p>
                 </button>
               </li>
             );

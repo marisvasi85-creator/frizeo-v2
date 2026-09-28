@@ -12,6 +12,8 @@ import { downloadQrPng, renderBookingQrToBlob } from "@/lib/marketing-ai/qrCode"
 export default function ShareKit({
   result,
   bookingUrl,
+  whatsappUrl,
+  qrUrl,
   salonName,
 }: {
   result: {
@@ -20,6 +22,8 @@ export default function ShareKit({
     hashtags: string[];
   };
   bookingUrl: string | null | undefined;
+  whatsappUrl?: string | null;
+  qrUrl?: string | null;
   salonName: string;
 }) {
   const [copiedLink, setCopiedLink] = useState(false);
@@ -31,7 +35,12 @@ export default function ShareKit({
     content: result.content,
     callToAction: result.callToAction,
     hashtags: result.hashtags,
-    bookingUrl,
+  });
+  const whatsappCaption = buildShareCaption({
+    content: result.content,
+    callToAction: result.callToAction,
+    hashtags: result.hashtags,
+    bookingUrl: whatsappUrl || bookingUrl,
   });
 
   async function handleCopyLink() {
@@ -53,11 +62,11 @@ export default function ShareKit({
   }
 
   function handleWhatsApp() {
-    window.open(buildWhatsAppShareUrl(caption), "_blank", "noopener,noreferrer");
+    window.open(buildWhatsAppShareUrl(whatsappCaption), "_blank", "noopener,noreferrer");
   }
 
   async function handleQrDownload() {
-    if (!bookingUrl) {
+    if (!bookingUrl && !qrUrl) {
       setError("Link-ul de programări nu este disponibil.");
       return;
     }
@@ -65,7 +74,7 @@ export default function ShareKit({
     setError("");
     setQrLoading(true);
     try {
-      const blob = await renderBookingQrToBlob(bookingUrl);
+      const blob = await renderBookingQrToBlob(qrUrl || bookingUrl || "");
       downloadQrPng(blob, salonName);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Nu am putut genera QR-ul");

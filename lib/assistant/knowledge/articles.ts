@@ -98,7 +98,7 @@ export const ASSISTANT_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
     title: "Marketing AI",
     tags: ["marketing", "instagram", "postări", "reel", "hashtag"],
     admin_path: "/admin/marketing-ai",
-    body: `Marketing AI (/admin/marketing-ai) generează postări Instagram, story, scripturi Reel și oferte, cu link-ul tău de programare. Limite zilnice: Free 3, Pro 20, Pro+ 50 (pe trial până la 50). Nu e un pachet social media separat. Frizeo Assistant NU generează postări — te trimite la pagina Marketing AI.`,
+    body: `Marketing AI (/admin/marketing-ai) îți scrie postările pentru salon: postare, lucrare, serviciu, locuri libere și ocazii de sezon. Nu publică singur și nu promite clienți noi. Limite zilnice: Free 3, Pro 20, Pro+ 50 (pe trial până la 50). Frizeo Assistant NU generează postări — te trimite la pagina Marketing AI.`,
   },
   {
     id: "billing",

@@ -213,6 +213,34 @@ export async function getGoogleBusyIntervalsByDate(
   }
 }
 
+/**
+ * Marketing copy must not treat a Google outage as "no busy time".
+ * Not connected → empty intervals. Request failure → ok: false.
+ */
+export async function getGoogleBusyIntervalsByDateStrict(
+  supabase: SupabaseClient,
+  barberId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<
+  { ok: true; byDate: Record<string, BusyInterval[]> } | { ok: false }
+> {
+  try {
+    const auth = await getAccessTokenForBarber(supabase, barberId);
+    if (!auth) return { ok: true, byDate: {} };
+    const byDate = await loadGoogleBusyIntervalsByDate(
+      supabase,
+      barberId,
+      fromDate,
+      toDate,
+    );
+    return { ok: true, byDate };
+  } catch (err) {
+    console.error("GOOGLE BUSY INTERVALS ERROR:", err);
+    return { ok: false };
+  }
+}
+
 export function slotOverlapsBusyIntervals(
   slotStart: string,
   slotEnd: string,

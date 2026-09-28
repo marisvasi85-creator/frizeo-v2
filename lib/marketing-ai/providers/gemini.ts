@@ -66,6 +66,13 @@ export function formatGeminiError(message: string): string {
   return message;
 }
 
+export function geminiGenerateUrl(model: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+}
+
+const GEMINI_TIMEOUT_MS = 12_000;
+const GEMINI_MAX_OUTPUT_TOKENS = 900;
+
 async function callGeminiModel(
   apiKey: string,
   model: string,
@@ -78,16 +85,20 @@ async function callGeminiModel(
   }
 
   const prompt = system ? `${system}\n\n${user}` : user;
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const url = geminiGenerateUrl(model);
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: request.temperature ?? 0.8,
+        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
         responseMimeType: request.jsonMode ? "application/json" : "text/plain",
       },
     }),
@@ -120,14 +131,14 @@ export function createGeminiProvider(model: string): MarketingAIProvider {
         throw new Error("Providerul Gemini nu este configurat.");
       }
 
-      const modelsToTry = [
-        model,
-        ...GEMINI_FREE_TIER_MODELS.filter((candidate) => candidate !== model),
-      ];
+      const alternate = GEMINI_FREE_TIER_MODELS.find((candidate) => candidate !== model);
+      const modelsToTry = [model];
+      if (alternate) modelsToTry.push(alternate);
 
       let lastError = "Eroare Gemini API";
 
-      for (const candidate of modelsToTry) {
+      for (let index = 0; index < modelsToTry.length; index += 1) {
+        const candidate = modelsToTry[index];
         try {
           return await callGeminiModel(apiKey, candidate, request);
         } catch (error: unknown) {
@@ -135,7 +146,11 @@ export function createGeminiProvider(model: string): MarketingAIProvider {
             error instanceof Error ? error.message : "Eroare Gemini API";
           lastError = message;
 
-          if (!isGeminiRetryableError(message)) {
+          const canTryAlternate =
+            index === 0 &&
+            modelsToTry.length > 1 &&
+            isGeminiModelUnavailableError(message);
+          if (!canTryAlternate) {
             throw new Error(formatGeminiError(message));
           }
         }
