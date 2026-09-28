@@ -134,6 +134,49 @@ function geminiAnswer(content) {
   return geminiText({ type: "answer", content });
 }
 
+function geminiThoughtThenAnswer(content) {
+  return jsonResponse(200, {
+    candidates: [
+      {
+        content: {
+          parts: [
+            { thought: true, text: "Aleg growth_dashboard, nu daily_briefing." },
+            { text: JSON.stringify({ type: "answer", content }) },
+          ],
+        },
+      },
+    ],
+  });
+}
+
+function geminiPrefixedAnswer(content) {
+  return jsonResponse(200, {
+    candidates: [
+      {
+        content: {
+          parts: [
+            {
+              text: `Sigur, iată decizia:\n${JSON.stringify({ type: "answer", content })}`,
+            },
+          ],
+        },
+      },
+    ],
+  });
+}
+
+function geminiThoughtOnly() {
+  return jsonResponse(200, {
+    candidates: [
+      {
+        content: {
+          parts: [{ thought: true, text: "încă mă gândesc, fără JSON" }],
+        },
+      },
+    ],
+  });
+}
+
 function geminiTools(calls) {
   return geminiText({ type: "tools", calls });
 }
@@ -274,6 +317,7 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
     const body = JSON.parse(run.calls[0].init.body);
     assert.equal(body.generationConfig.temperature, 0.2);
     assert.equal(body.generationConfig.responseMimeType, "application/json");
+    assert.equal(body.generationConfig.thinkingConfig, undefined);
     assert.match(body.contents[0].parts[0].text, /set_tenant_plan/);
     assert.match(body.contents[0].parts[0].text, /delete_tenant/);
     assertNoSecrets(run);
@@ -830,6 +874,91 @@ test("platform assistant gemini resilience", { concurrency: 1 }, async (t) => {
       fetchMock.restore();
       logs.restore();
       restoreEnv();
+      restoreTool();
+    }
+  });
+
+  await t.test("thinking models ask for a minimal reply, lite models do not", async () => {
+    const run = await exercise(queue([geminiAnswer("rapid")]), {
+      PLATFORM_ASSISTANT_MODEL: "gemini-3.6-flash",
+    });
+    assert.equal(run.result.reply, "rapid");
+    const body = JSON.parse(run.calls[0].init.body);
+    assert.deepEqual(body.generationConfig.thinkingConfig, {
+      thinkingLevel: "MINIMAL",
+      includeThoughts: false,
+    });
+    assert.equal(body.generationConfig.responseMimeType, "application/json");
+  });
+
+  await t.test("thought parts are ignored and a JSON object in prose is read", async () => {
+    const thought = await exercise(
+      queue([geminiThoughtThenAnswer("Growth pe 7 zile.")]),
+    );
+    assert.equal(thought.result.reply, "Growth pe 7 zile.");
+    assert.equal(thought.calls.length, 1);
+
+    const prefixed = await exercise(
+      queue([geminiPrefixedAnswer("Din fragment.")]),
+    );
+    assert.equal(prefixed.result.reply, "Din fragment.");
+    assert.equal(prefixed.calls.length, 1);
+  });
+
+  await t.test("a thought-only reply switches model instead of retrying", async () => {
+    const run = await exercise(
+      queue([geminiThoughtOnly(), geminiAnswer("de pe modelul următor")]),
+    );
+    assert.equal(run.result.reply, "de pe modelul următor");
+    assert.deepEqual(modelsOf(run), [PRIMARY, DEFAULT_FALLBACK]);
+    assert.deepEqual(run.delays, []);
+  });
+
+  await t.test("a failed answer turn still returns the tool summary", async () => {
+    const restoreTool = stubTool("growth_dashboard", async () => ({
+      ok: true,
+      summary: "GROWTH-SUMAR-7zile",
+      data: { metrics: { new_salons: 2 } },
+    }));
+    try {
+      const run = await exercise(
+        queue([
+          geminiTools([{ name: "growth_dashboard", arguments: { days: 7 } }]),
+          geminiHttpError(503, "high demand"),
+          geminiHttpError(503, "high demand"),
+          geminiHttpError(503, "high demand"),
+          geminiHttpError(503, "high demand"),
+          geminiHttpError(503, "high demand"),
+        ]),
+      );
+      assert.equal(run.result.reply, "GROWTH-SUMAR-7zile");
+      assert.deepEqual(run.result.toolsUsed, ["growth_dashboard"]);
+      assert.equal(run.error, undefined);
+      assertNoSecrets(run);
+    } finally {
+      restoreTool();
+    }
+  });
+
+  await t.test("stringified tool arguments still reach the growth tool", async () => {
+    let seen = null;
+    const restoreTool = stubTool("growth_dashboard", async (args) => {
+      seen = args;
+      return { ok: true, summary: "ok", data: {} };
+    });
+    try {
+      const run = await exercise(
+        queue([
+          geminiText({
+            type: "tools",
+            calls: [{ name: "growth_dashboard", arguments: "{\"days\":30}" }],
+          }),
+          geminiAnswer("30 de zile."),
+        ]),
+      );
+      assert.equal(run.result.reply, "30 de zile.");
+      assert.equal(seen.days, 30);
+    } finally {
       restoreTool();
     }
   });

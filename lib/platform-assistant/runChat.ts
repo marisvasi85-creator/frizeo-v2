@@ -159,17 +159,24 @@ async function runWithOpenAI(
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const forceAnswer = round === MAX_TOOL_ROUNDS - 1 && lastToolResults.length > 0;
 
-    const completion = await client.chat.completions.create({
-      model,
-      temperature: 0.2,
-      messages: openaiMessages,
-      ...(forceAnswer
-        ? {}
-        : {
-            tools: getPlatformOpenAIToolDefinitions(),
-            tool_choice: "auto" as const,
-          }),
-    });
+    let completion: OpenAI.Chat.Completions.ChatCompletion;
+    try {
+      completion = await client.chat.completions.create({
+        model,
+        temperature: 0.2,
+        messages: openaiMessages,
+        ...(forceAnswer
+          ? {}
+          : {
+              tools: getPlatformOpenAIToolDefinitions(),
+              tool_choice: "auto" as const,
+            }),
+      });
+    } catch (error: unknown) {
+      const fallback = replyFromToolResults(lastToolResults);
+      if (fallback) return { reply: fallback, toolsUsed };
+      throw error;
+    }
 
     const choice = completion.choices[0]?.message;
     if (!choice) throw new Error("Nu am primit răspuns de la AI");
@@ -263,24 +270,49 @@ const AUTOMATIC_GEMINI_FALLBACKS = [
   "gemini-3.1-flash-lite",
 ] as const;
 
+/**
+ * These models think at medium by default. Thought tokens count against the
+ * reply, so a tool-routing turn often comes back empty or too late for the
+ * serverless limit. MINIMAL is supported on each of them.
+ * gemini-3.1-flash-lite is omitted: thinkingLevel on that model is an error.
+ */
+const MINIMAL_THINKING_MODELS = new Set<string>([
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+]);
+
 const GEMINI_RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const GEMINI_PRIMARY_BACKOFF_MS = [400, 900] as const;
 const GEMINI_PRIMARY_MAX_RETRIES = 2;
 
+type GeminiPart = { text?: string; thought?: boolean };
+
 type GeminiGenerateResponse = {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  candidates?: Array<{
+    content?: { parts?: GeminiPart[] };
+    finishReason?: string;
+  }>;
   error?: { message?: string };
 };
 
 class GeminiCallError extends Error {
   readonly status: number | null;
   readonly retryable: boolean;
+  /** Skip same-model retries and move to the next model immediately. */
+  readonly switchOnly: boolean;
 
-  constructor(status: number | null, retryable: boolean, message: string) {
+  constructor(
+    status: number | null,
+    retryable: boolean,
+    message: string,
+    switchOnly = false,
+  ) {
     super(message);
     this.name = "GeminiCallError";
     this.status = status;
     this.retryable = retryable;
+    this.switchOnly = switchOnly;
   }
 }
 
@@ -416,6 +448,36 @@ function safeProviderMessage(
   return redacted.trim() ? redacted : fallback;
 }
 
+function geminiGenerationConfig(model: string): {
+  temperature: number;
+  responseMimeType: "application/json";
+  thinkingConfig?: { thinkingLevel: "MINIMAL"; includeThoughts: false };
+} {
+  const generationConfig: {
+    temperature: number;
+    responseMimeType: "application/json";
+    thinkingConfig?: { thinkingLevel: "MINIMAL"; includeThoughts: false };
+  } = {
+    temperature: 0.2,
+    responseMimeType: "application/json",
+  };
+  if (MINIMAL_THINKING_MODELS.has(model)) {
+    generationConfig.thinkingConfig = {
+      thinkingLevel: "MINIMAL",
+      includeThoughts: false,
+    };
+  }
+  return generationConfig;
+}
+
+function visibleGeminiText(parts: GeminiPart[] | undefined): string {
+  return (parts ?? [])
+    .filter((part) => part.thought !== true)
+    .map((part) => part.text || "")
+    .join("")
+    .trim();
+}
+
 function publicGeminiError(error: unknown): Error {
   if (error instanceof GeminiCallError) {
     return new Error(redactPlatformAssistantSecrets(error.message));
@@ -441,10 +503,7 @@ async function requestGeminiContent(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.2,
-          responseMimeType: "application/json",
-        },
+        generationConfig: geminiGenerationConfig(model),
       }),
     });
   } catch {
@@ -467,12 +526,13 @@ async function requestGeminiContent(
     );
   }
 
-  const text = json.candidates?.[0]?.content?.parts
-    ?.map((p) => p.text || "")
-    .join("")
-    .trim();
+  const text = visibleGeminiText(json.candidates?.[0]?.content?.parts);
 
-  if (!text) throw new Error("Răspuns Gemini gol");
+  // An empty visible reply (thoughts only, or the token budget spent on
+  // reasoning) will not improve by retrying the same model.
+  if (!text) {
+    throw new GeminiCallError(res.status, true, "Răspuns Gemini gol", true);
+  }
   return text;
 }
 
@@ -492,7 +552,7 @@ async function callGeminiModelWithRetries(
         throw error;
       }
       lastError = error;
-      if (attempt >= maxAttempts) break;
+      if (error.switchOnly || attempt >= maxAttempts) break;
       logGeminiRetry(model, error, attempt + 1);
       const backoff = GEMINI_PRIMARY_BACKOFF_MS[attempt - 1] ?? 900;
       await sleep(backoff);
@@ -544,18 +604,67 @@ async function callGeminiJson(
   throw new Error(PLATFORM_ASSISTANT_MODEL_UNAVAILABLE_MESSAGE);
 }
 
-function parseGeminiDecision(raw: string): GeminiToolDecision {
-  const cleaned = raw
+function stripJsonFences(raw: string): string {
+  return raw
     .trim()
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/\s*```$/i, "");
-  const parsed = JSON.parse(cleaned) as {
-    type?: string;
-    content?: string;
-    calls?: Array<{ name?: string; arguments?: Record<string, unknown> }>;
-  };
+}
 
+/** First balanced `{...}` object, so a thought prefix does not break JSON.parse. */
+function extractGeminiJsonObject(raw: string): string | null {
+  const start = raw.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inString) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === "\\") {
+        escape = true;
+        continue;
+      }
+      if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function normalizeToolArguments(value: unknown): Record<string, unknown> {
+  if (typeof value === "string") {
+    try {
+      return normalizeToolArguments(JSON.parse(value) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function decisionFromParsed(parsed: {
+  type?: string;
+  content?: string;
+  calls?: Array<{ name?: string; arguments?: unknown }>;
+}): GeminiToolDecision | null {
   if (parsed.type === "tools" && Array.isArray(parsed.calls)) {
     return {
       type: "tools",
@@ -563,18 +672,47 @@ function parseGeminiDecision(raw: string): GeminiToolDecision {
         .filter((c) => typeof c.name === "string")
         .map((c) => ({
           name: c.name as string,
-          arguments: c.arguments ?? {},
+          arguments: normalizeToolArguments(c.arguments),
         })),
     };
   }
 
-  return {
-    type: "answer",
-    content:
-      typeof parsed.content === "string" && parsed.content.trim()
-        ? parsed.content.trim()
-        : "Nu am un răspuns momentan.",
-  };
+  if (typeof parsed.content === "string" && parsed.content.trim()) {
+    return { type: "answer", content: parsed.content.trim() };
+  }
+
+  if (parsed.type === "answer") {
+    return { type: "answer", content: "Nu am un răspuns momentan." };
+  }
+
+  return null;
+}
+
+function parseGeminiDecision(raw: string): GeminiToolDecision {
+  const cleaned = stripJsonFences(raw);
+  const candidates = [cleaned];
+  const extracted = extractGeminiJsonObject(cleaned);
+  if (extracted && extracted !== cleaned) candidates.push(extracted);
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as {
+        type?: string;
+        content?: string;
+        calls?: Array<{ name?: string; arguments?: unknown }>;
+      };
+      const decision = decisionFromParsed(parsed);
+      if (decision) return decision;
+    } catch {
+      // Thought text or a second JSON object often wraps the real payload.
+    }
+  }
+
+  const prose = cleaned.trim();
+  if (prose && !prose.includes("{")) {
+    return { type: "answer", content: prose.slice(0, 4000) };
+  }
+  throw new Error("Răspuns Gemini invalid");
 }
 
 async function runWithGemini(
@@ -629,8 +767,23 @@ ${
 După set_tenant_plan confirmat (fără needs_confirmation), răspunde imediat cu type=answer.`
 }`;
 
-    const raw = await callGeminiJson(apiKey, model, prompt);
-    const decision = parseGeminiDecision(raw);
+    let raw: string;
+    try {
+      raw = await callGeminiJson(apiKey, model, prompt);
+    } catch (error: unknown) {
+      const fallback = replyFromToolResults(lastToolResults);
+      if (fallback) return { reply: fallback, toolsUsed };
+      throw error;
+    }
+
+    let decision: GeminiToolDecision;
+    try {
+      decision = parseGeminiDecision(raw);
+    } catch (error: unknown) {
+      const fallback = replyFromToolResults(lastToolResults);
+      if (fallback) return { reply: fallback, toolsUsed };
+      throw error;
+    }
 
     if (decision.type === "answer") {
       return { reply: decision.content, toolsUsed };

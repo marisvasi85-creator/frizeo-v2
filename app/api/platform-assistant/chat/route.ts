@@ -14,6 +14,10 @@ import type { PlatformChatMessage } from "@/lib/platform-assistant/types";
 const MAX_MESSAGES = 20;
 const MAX_CONTENT_LENGTH = 2000;
 
+// Growth questions run a model turn, then a snapshot over every salon, then
+// a second model turn. The platform default (10–15s) cuts that off.
+export const maxDuration = 60;
+
 export async function POST(req: Request) {
   if (!isPlatformAssistantEnabled()) {
     return NextResponse.json(

@@ -50,6 +50,26 @@ function resolveConfirmPath(apiPath: string, confirmApiPath?: string) {
   return `${apiPath.replace(/\/$/, "")}/confirm`;
 }
 
+async function readAssistantResponse(res: Response): Promise<{
+  reply?: string;
+  error?: string;
+  pendingConfirmation?: PendingConfirmation | null;
+}> {
+  try {
+    return (await res.json()) as {
+      reply?: string;
+      error?: string;
+      pendingConfirmation?: PendingConfirmation | null;
+    };
+  } catch {
+    throw new Error(
+      res.ok
+        ? "Nu am putut citi răspunsul."
+        : "Nu am putut răspunde acum. Încearcă din nou.",
+    );
+  }
+}
+
 export default function AssistantChatPanel({
   configured,
   displayName,
@@ -173,11 +193,7 @@ export default function AssistantChatPanel({
         }),
       });
 
-      const data = (await res.json()) as {
-        reply?: string;
-        error?: string;
-        pendingConfirmation?: PendingConfirmation | null;
-      };
+      const data = await readAssistantResponse(res);
 
       if (!res.ok) {
         throw new Error(data.error || "Nu am putut răspunde acum.");
@@ -233,11 +249,7 @@ export default function AssistantChatPanel({
         body: JSON.stringify({ confirmationId, accept }),
       });
 
-      const data = (await res.json()) as {
-        reply?: string;
-        error?: string;
-        pendingConfirmation?: PendingConfirmation | null;
-      };
+      const data = await readAssistantResponse(res);
 
       if (!res.ok) {
         throw new Error(data.error || "Nu am putut confirma acțiunea.");
