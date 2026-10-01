@@ -14,9 +14,20 @@ export type ChargeSnapshot = {
   customer: string | { id: string } | null;
   payment_intent: string | { id: string } | null;
   refunds?: {
-    data?: Array<{ id?: string; amount: number; status: string | null }>;
+    data?: Array<{ id?: string; amount: number; status: string | null; created?: number }>;
     has_more?: boolean;
   } | null;
+};
+
+/** Refund Stripe folosit doar dacă `status === "succeeded"` și `created` cade în perioadă. */
+export type RefundSnapshot = {
+  id: string;
+  amount: number;
+  status: string | null;
+  created: number;
+  currency?: string | null;
+  chargeId: string | null;
+  paymentIntentId: string | null;
 };
 
 export type InvoicePaymentSnapshot = {
@@ -137,6 +148,7 @@ export type StripeAccountingClient = {
       created: { gte: number; lt: number };
       expand?: string[];
     }): Promise<StripeList<ChargeSnapshot>>;
+    retrieve?(id: string): Promise<ChargeSnapshot>;
   };
   invoicePayments: {
     list(params: {
@@ -164,7 +176,9 @@ export type StripeAccountingClient = {
     list(params: {
       limit: number;
       starting_after?: string;
-      charge: string;
-    }): Promise<StripeList<{ id: string; amount: number; status: string | null }>>;
+      charge?: string;
+      created?: { gte: number; lt: number };
+      expand?: string[];
+    }): Promise<StripeList<RefundSnapshot>>;
   };
 };

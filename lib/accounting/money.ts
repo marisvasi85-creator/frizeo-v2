@@ -37,10 +37,15 @@ export type RefundLike = {
   status: string | null;
 };
 
+/** Doar refund-ul deja reușit. pending, failed, canceled și requires_action nu sunt bani returnați. */
+export function isSucceededRefundStatus(status: string | null | undefined): boolean {
+  return status === "succeeded";
+}
+
 /**
- * Refund-urile reușite, agregate. Lista completă de refund-uri Stripe este
- * preferată. `amount_refunded` este fallback-ul când lista nu e prezentă sau
- * e trunchiată (poate include și refund-uri încă pending).
+ * Suma refund-urilor `succeeded` dintr-o listă deja filtrată.
+ * `amount_refunded` de pe charge este pe toată viața charge-ului și nu se folosește
+ * când lista de refund-uri este prezentă.
  */
 export function succeededRefundMinor(charge: {
   amount_refunded?: number | null;

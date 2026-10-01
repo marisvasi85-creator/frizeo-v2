@@ -162,7 +162,9 @@ export default async function AccountingPage({
         </form>
         <p className="text-xs text-frz-muted mt-3">
           Perioada este în Europe/Bucharest. Dacă completezi De la și Până la,
-          intervalul are prioritate față de lună. Maxim 366 de zile.
+          intervalul are prioritate față de lună. Maxim 366 de zile. Încasările
+          apar la data plății. Refund-urile reușite apar la data refund-ului și
+          rămân legate de plata, invoice-ul și clientul original.
         </p>
       </AdminCard>
 
@@ -244,7 +246,7 @@ export default async function AccountingPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {report.rows.map((row) => {
+                  {report.rows.map((row, rowIndex) => {
                     const cells = [
                       row.paidAt,
                       show(row.salon),
@@ -270,7 +272,7 @@ export default async function AccountingPage({
                     ];
                     return (
                       <tr
-                        key={row.paymentId ?? `${row.paidAtUnix}`}
+                        key={`${row.paidAtUnix}:${row.paymentId ?? ""}:${row.paid}:${row.refunded}:${rowIndex}`}
                         className="border-b border-frz-line/70 align-top"
                       >
                         {cells.map((cell, index) => (
@@ -299,7 +301,7 @@ export default async function AccountingPage({
           </AdminCard>
 
           <p className="text-xs text-frz-muted">
-            Sursa sumelor este Stripe (charge reușit + refund-uri reușite).{" "}
+            Sursa sumelor este Stripe: încasarea la data charge-ului reușit, refund-ul doar dacă statusul este succeeded, la data lui. pending, failed și canceled nu se scad.{" "}
             <Link href="/admin/billing" className="underline">
               Abonamentul salonului
             </Link>{" "}

@@ -130,6 +130,25 @@ const tenant = {
   country: "RO",
 };
 
+function monthPeriod(month) {
+  const parsed = periodFromMonth(month);
+  assert.equal(parsed.ok, true);
+  return parsed.period;
+}
+
+function refund(overrides = {}) {
+  return {
+    id: "re_ok",
+    amount: 2000,
+    status: "succeeded",
+    created: Date.parse("2026-10-15T12:00:00Z") / 1000,
+    currency: "ron",
+    chargeId: "ch_paid",
+    paymentIntentId: "pi_paid",
+    ...overrides,
+  };
+}
+
 function reportFor(overrides) {
   return buildAccountingReport({
     charges: [charge()],
@@ -292,13 +311,19 @@ test("6–10: fără refund, parțial, integral, mai multe refund-uri și net", 
         refunds: {
           has_more: false,
           data: [
-            { id: "re_ok", amount: 2000, status: "succeeded" },
-            { id: "re_pending", amount: 5900, status: "pending" },
+            { id: "re_embedded", amount: 7900, status: "succeeded" },
           ],
         },
       }),
     ],
+    refunds: [
+      refund({ id: "re_ok", amount: 2000, status: "succeeded" }),
+      refund({ id: "re_pending", amount: 5900, status: "pending" }),
+      refund({ id: "re_failed", amount: 1000, status: "failed" }),
+      refund({ id: "re_canceled", amount: 1000, status: "canceled" }),
+    ],
   });
+  assert.equal(partial.rows.length, 1);
   assert.equal(partial.rows[0].paid, 79);
   assert.equal(partial.rows[0].refunded, 20);
   assert.equal(partial.rows[0].net, 59);
@@ -306,15 +331,10 @@ test("6–10: fără refund, parțial, integral, mai multe refund-uri și net", 
   assert.equal(partial.rows[0].total, 79);
 
   const full = reportFor({
-    charges: [
-      charge({
-        refunds: {
-          has_more: false,
-          data: [{ id: "re_full", amount: 7900, status: "succeeded" }],
-        },
-      }),
-    ],
+    charges: [charge({ amount_refunded: 7900 })],
+    refunds: [refund({ id: "re_full", amount: 7900, status: "succeeded" })],
   });
+  assert.equal(full.rows.length, 1);
   assert.equal(full.rows[0].refunded, 79);
   assert.equal(full.rows[0].net, 0);
   assert.equal(full.rows[0].status, "REFUNDED");
@@ -333,16 +353,16 @@ test("6–10: fără refund, parțial, integral, mai multe refund-uri și net", 
   assert.equal(multiple, 4500);
   assert.equal(netMinor(7900, multiple), 3400);
   const aggregated = reportFor({
-    charges: [
-      charge({
-        refunds: {
-          has_more: false,
-          data: [
-            { amount: 3000, status: "succeeded" },
-            { amount: 1500, status: "succeeded" },
-            { amount: 400, status: "failed" },
-          ],
-        },
+    charges: [charge({ amount_refunded: 7900 })],
+    refunds: [
+      refund({ id: "re_a", amount: 3000, status: "succeeded" }),
+      refund({ id: "re_b", amount: 1500, status: "succeeded" }),
+      refund({ id: "re_c", amount: 400, status: "failed" }),
+      refund({
+        id: "re_next_month",
+        amount: 3400,
+        status: "succeeded",
+        created: Date.parse("2026-11-03T08:00:00Z") / 1000,
       }),
     ],
   });
@@ -730,8 +750,22 @@ test("17: generarea raportului nu execută niciun Stripe write", async () => {
   assert.equal(collected.charges.length, 1);
   assert.equal(collected.invoices[0].id, "in_live");
   assert.equal(collected.invoices[0].subscriptionId, "sub_live");
-  assert.equal(collected.refundedMinorByChargeId.ch_live, 2000);
-  assert.deepEqual(calls, ["charges.list", "invoicePayments.list", "invoices.list"]);
+  assert.equal(collected.refunds.length, 0);
+  assert.equal(collected.refundedMinorByChargeId, undefined);
+  const untouched = buildAccountingReport({
+    ...collected,
+    tenants: [],
+    period,
+  });
+  assert.equal(untouched.rows[0].paid, 79);
+  assert.equal(untouched.rows[0].refunded, 0);
+  assert.equal(untouched.rows[0].status, "PAID");
+  assert.deepEqual(calls, [
+    "charges.list",
+    "refunds.list",
+    "invoicePayments.list",
+    "invoices.list",
+  ]);
   assert.equal(calls.includes("refunds.create"), false);
   assert.equal(calls.includes("subscriptions.cancel"), false);
   assert.equal(calls.includes("customers.update"), false);
@@ -800,7 +834,10 @@ test("refund-urile trunchiate se adună prin refunds.list, tot read-only", async
           charge({
             created: period.startUnix + 5,
             amount_refunded: 7900,
-            refunds: { data: [{ id: "re_partial_page", amount: 1000, status: "succeeded" }], has_more: true },
+            refunds: {
+              data: [{ id: "re_embedded", amount: 7900, status: "succeeded" }],
+              has_more: true,
+            },
           }),
         ],
         has_more: false,
@@ -819,16 +856,26 @@ test("refund-urile trunchiate se adună prin refunds.list, tot read-only", async
     refunds: {
       list: async (params) => {
         calls.push(params.starting_after ?? null);
+        assert.equal(params.created.gte, period.startUnix);
+        assert.equal(params.created.lt, period.endUnix);
+        assert.equal(params.charge, undefined);
+        const created = period.startUnix + 100;
         if (!params.starting_after) {
           return {
-            data: [{ id: "re_a", amount: 2000, status: "succeeded" }],
+            data: [
+              refund({
+                id: "re_a",
+                amount: 2000,
+                created,
+              }),
+            ],
             has_more: true,
           };
         }
         return {
           data: [
-            { id: "re_b", amount: 1500, status: "succeeded" },
-            { id: "re_c", amount: 500, status: "pending" },
+            refund({ id: "re_b", amount: 1500, created: created + 1 }),
+            refund({ id: "re_c", amount: 500, status: "pending", created: created + 2 }),
           ],
           has_more: false,
         };
@@ -837,7 +884,324 @@ test("refund-urile trunchiate se adună prin refunds.list, tot read-only", async
   };
   const collected = await readStripePayments(client, period);
   assert.deepEqual(calls, [null, "re_a"]);
-  assert.equal(collected.refundedMinorByChargeId.ch_paid, 3500);
+  const report = buildAccountingReport({
+    ...collected,
+    tenants: [],
+    period,
+  });
+  assert.equal(report.rows.length, 1);
+  assert.equal(report.rows[0].paid, 79);
+  assert.equal(report.rows[0].refunded, 35);
+  assert.equal(report.rows[0].net, 44);
+  assert.equal(report.rows[0].status, "PARTIALLY_REFUNDED");
+});
+
+test("plata din septembrie rămâne în septembrie, iar refund-ul reușit apare în octombrie", async () => {
+  const september = monthPeriod("2026-09");
+  const octoberPeriod = october();
+  const paidAt = Date.parse("2026-09-15T07:00:00Z") / 1000;
+  const refundedAt = Date.parse("2026-10-05T09:00:00Z") / 1000;
+  const septCharge = charge({
+    created: paidAt,
+    amount_refunded: 7900,
+    refunds: {
+      data: [{ id: "re_oct", amount: 7900, status: "succeeded", created: refundedAt }],
+      has_more: false,
+    },
+  });
+  const octRefund = refund({
+    id: "re_oct",
+    amount: 7900,
+    created: refundedAt,
+    chargeId: "ch_paid",
+    paymentIntentId: "pi_paid",
+  });
+  const invoice = paidInvoice({
+    subtotal: 6530,
+    total: 7900,
+    total_taxes: [{ amount: 1370 }],
+  });
+  const calls = [];
+
+  function inRange(unix, range) {
+    return unix >= range.gte && unix < range.lt;
+  }
+
+  const client = {
+    charges: {
+      list: async (params) => {
+        calls.push("charges.list");
+        return {
+          data: inRange(septCharge.created, params.created) ? [septCharge] : [],
+          has_more: false,
+        };
+      },
+      retrieve: async (id) => {
+        calls.push(`charges.retrieve:${id}`);
+        assert.equal(id, "ch_paid");
+        return septCharge;
+      },
+    },
+    invoicePayments: {
+      list: async () => ({
+        data: [
+          paymentLink({
+            created: paidAt,
+            status_transitions: { paid_at: paidAt },
+          }),
+        ],
+        has_more: false,
+      }),
+    },
+    invoices: {
+      list: async () => ({ data: [], has_more: false }),
+      retrieve: async () => invoice,
+      listLineItems: async () => ({ data: [], has_more: false }),
+    },
+    refunds: {
+      list: async (params) => {
+        calls.push("refunds.list");
+        assert.equal(params.charge, undefined);
+        return {
+          data: inRange(octRefund.created, params.created) ? [octRefund] : [],
+          has_more: false,
+        };
+      },
+      create: async () => {
+        calls.push("refunds.create");
+        throw new Error("write");
+      },
+    },
+  };
+
+  const septemberCollected = await readStripePayments(client, september);
+  const septemberReport = buildAccountingReport({
+    ...septemberCollected,
+    tenants: [tenant],
+    period: september,
+  });
+  assert.equal(septemberReport.rows.length, 1);
+  assert.equal(septemberReport.paymentCount, 1);
+  assert.equal(septemberReport.rows[0].paidAt, "2026-09-15 10:00");
+  assert.equal(septemberReport.rows[0].paid, 79);
+  assert.equal(septemberReport.rows[0].refunded, 0);
+  assert.equal(septemberReport.rows[0].net, 79);
+  assert.equal(septemberReport.rows[0].status, "PAID");
+  assert.equal(septemberReport.rows[0].tax, 13.7);
+  assert.equal(septemberReport.rows[0].total, 79);
+  assert.equal(septemberReport.rows[0].salon, "Salon Nord");
+  assert.equal(septemberReport.rows[0].stripeInvoiceId, "in_paid");
+  assert.equal(septemberReport.totalsByCurrency[0].collected, 79);
+  assert.equal(septemberReport.totalsByCurrency[0].refunded, 0);
+  assert.equal(septemberReport.totalsByCurrency[0].net, 79);
+  assert.equal(calls.includes("charges.retrieve:ch_paid"), false);
+
+  const octoberCollected = await readStripePayments(client, octoberPeriod);
+  assert.deepEqual(
+    octoberCollected.contextCharges.map((item) => item.id),
+    ["ch_paid"],
+  );
+  const octoberReport = buildAccountingReport({
+    ...octoberCollected,
+    tenants: [tenant],
+    period: octoberPeriod,
+  });
+  assert.equal(octoberReport.rows.length, 1);
+  assert.equal(octoberReport.paymentCount, 0);
+  assert.equal(octoberReport.rows[0].paidAt, "2026-10-05 12:00");
+  assert.equal(octoberReport.rows[0].paid, 0);
+  assert.equal(octoberReport.rows[0].refunded, 79);
+  assert.equal(octoberReport.rows[0].net, -79);
+  assert.equal(octoberReport.rows[0].status, "REFUNDED");
+  assert.equal(octoberReport.rows[0].subtotal, null);
+  assert.equal(octoberReport.rows[0].tax, null);
+  assert.equal(octoberReport.rows[0].total, null);
+  assert.equal(octoberReport.rows[0].salon, "Salon Nord");
+  assert.equal(octoberReport.rows[0].stripeCustomerId, "cus_salon");
+  assert.equal(octoberReport.rows[0].stripeInvoiceId, "in_paid");
+  assert.equal(octoberReport.rows[0].stripeInvoiceNumber, "F-100");
+  assert.equal(octoberReport.rows[0].paymentId, "pi_paid / ch_paid");
+  assert.equal(octoberReport.rows[0].currency, "RON");
+  assert.equal(octoberReport.totalsByCurrency.length, 1);
+  assert.equal(octoberReport.totalsByCurrency[0].currency, "RON");
+  assert.equal(octoberReport.totalsByCurrency[0].collected, 0);
+  assert.equal(octoberReport.totalsByCurrency[0].refunded, 79);
+  assert.equal(octoberReport.totalsByCurrency[0].net, -79);
+  assert.equal(calls.includes("refunds.create"), false);
+
+  const septemberAgain = buildAccountingReport({
+    charges: [septCharge],
+    contextCharges: [],
+    refunds: [octRefund],
+    invoicePayments: [paymentLink()],
+    invoices: [invoice],
+    tenants: [tenant],
+    period: september,
+  });
+  assert.equal(septemberAgain.rows.length, 1);
+  assert.equal(septemberAgain.rows[0].paid, 79);
+  assert.equal(septemberAgain.rows[0].refunded, 0);
+  assert.equal(septemberAgain.rows[0].net, 79);
+  assert.equal(septemberAgain.rows[0].status, "PAID");
+  assert.equal(septemberAgain.rows[0].tax, 13.7);
+
+  const workbook = buildAccountingWorkbook(octoberReport);
+  const files = unzipStore(workbook);
+  const payments = files.get("xl/worksheets/sheet1.xml");
+  assert.match(payments, /2026-10-05 12:00/);
+  assert.match(payments, /<v>-79<\/v>/);
+  assert.match(payments, /REFUNDED/);
+  assert.match(payments, /pi_paid \/ ch_paid/);
+  assert.match(files.get("xl/workbook.xml"), /name="Plati"/);
+  assert.match(files.get("xl/workbook.xml"), /name="Sumar"/);
+});
+
+test("refund-urile parțiale din luni diferite nu se mută în luna plății", async () => {
+  const september = monthPeriod("2026-09");
+  const octoberPeriod = october();
+  const november = monthPeriod("2026-11");
+  const paidAt = Date.parse("2026-09-15T07:00:00Z") / 1000;
+  const eurPaidAt = Date.parse("2026-09-16T07:00:00Z") / 1000;
+  const octFirst = Date.parse("2026-10-05T09:00:00Z") / 1000;
+  const octSecond = Date.parse("2026-10-20T09:00:00Z") / 1000;
+  const novRefundAt = Date.parse("2026-11-03T08:00:00Z") / 1000;
+  const eurRefundAt = Date.parse("2026-10-08T09:00:00Z") / 1000;
+  const ronCharge = charge({ created: paidAt, amount_refunded: 6500 });
+  const eurCharge = charge({
+    id: "ch_eur",
+    amount: 1000,
+    currency: "eur",
+    created: eurPaidAt,
+    payment_intent: "pi_eur",
+    customer: "cus_salon",
+    amount_refunded: 400,
+  });
+  const allRefunds = [
+    refund({ id: "re_oct_20", amount: 2000, created: octFirst }),
+    refund({ id: "re_pending", amount: 900, status: "pending", created: octFirst + 10 }),
+    refund({ id: "re_failed", amount: 800, status: "failed", created: octFirst + 20 }),
+    refund({ id: "re_canceled", amount: 700, status: "canceled", created: octFirst + 30 }),
+    refund({ id: "re_oct_15", amount: 1500, created: octSecond }),
+    refund({ id: "re_nov", amount: 3000, created: novRefundAt }),
+    refund({
+      id: "re_eur",
+      amount: 400,
+      currency: "eur",
+      created: eurRefundAt,
+      chargeId: "ch_eur",
+      paymentIntentId: "pi_eur",
+    }),
+  ];
+
+  function inRange(unix, range) {
+    return unix >= range.gte && unix < range.lt;
+  }
+
+  const client = {
+    charges: {
+      list: async (params) => ({
+        data: [ronCharge, eurCharge].filter((item) => inRange(item.created, params.created)),
+        has_more: false,
+      }),
+      retrieve: async (id) => [ronCharge, eurCharge].find((item) => item.id === id),
+    },
+    invoicePayments: {
+      list: async () => ({ data: [], has_more: false }),
+    },
+    invoices: {
+      list: async () => ({ data: [], has_more: false }),
+      retrieve: async () => {
+        throw new Error("no invoice");
+      },
+      listLineItems: async () => ({ data: [], has_more: false }),
+    },
+    refunds: {
+      list: async (params) => ({
+        data: allRefunds.filter((item) => inRange(item.created, params.created)),
+        has_more: false,
+      }),
+    },
+  };
+
+  async function reportForPeriod(period) {
+    const collected = await readStripePayments(client, period);
+    return buildAccountingReport({
+      ...collected,
+      tenants: [tenant],
+      period,
+    });
+  }
+
+  const septemberReport = await reportForPeriod(september);
+  assert.equal(septemberReport.rows.length, 2);
+  assert.equal(septemberReport.rows.every((row) => row.status === "PAID"), true);
+  assert.equal(septemberReport.rows.every((row) => row.refunded === 0), true);
+  const ronSeptember = septemberReport.totalsByCurrency.find((total) => total.currency === "RON");
+  const eurSeptember = septemberReport.totalsByCurrency.find((total) => total.currency === "EUR");
+  assert.equal(ronSeptember.collected, 79);
+  assert.equal(ronSeptember.refunded, 0);
+  assert.equal(ronSeptember.net, 79);
+  assert.equal(eurSeptember.collected, 10);
+  assert.equal(eurSeptember.refunded, 0);
+  assert.equal(eurSeptember.net, 10);
+
+  const octoberReport = await reportForPeriod(octoberPeriod);
+  assert.equal(octoberReport.paymentCount, 0);
+  assert.equal(octoberReport.rows.length, 3);
+  const ronRows = octoberReport.rows.filter((row) => row.currency === "RON");
+  assert.deepEqual(
+    ronRows.map((row) => row.refunded),
+    [20, 15],
+  );
+  assert.deepEqual(
+    ronRows.map((row) => row.paidAt),
+    ["2026-10-05 12:00", "2026-10-20 12:00"],
+  );
+  assert.equal(ronRows.every((row) => row.paid === 0), true);
+  assert.equal(ronRows.every((row) => row.status === "PARTIALLY_REFUNDED"), true);
+  assert.equal(ronRows.every((row) => row.paymentId === "pi_paid / ch_paid"), true);
+  assert.equal(ronRows.every((row) => row.tax === null), true);
+  assert.deepEqual(
+    ronRows.map((row) => row.net),
+    [-20, -15],
+  );
+  const eurRow = octoberReport.rows.find((row) => row.currency === "EUR");
+  assert.equal(eurRow.refunded, 4);
+  assert.equal(eurRow.net, -4);
+  assert.equal(eurRow.paid, 0);
+  assert.equal(eurRow.paymentId, "pi_eur / ch_eur");
+  assert.equal(eurRow.status, "PARTIALLY_REFUNDED");
+  const ronOctober = octoberReport.totalsByCurrency.find((total) => total.currency === "RON");
+  const eurOctober = octoberReport.totalsByCurrency.find((total) => total.currency === "EUR");
+  assert.equal(octoberReport.totalsByCurrency.length, 2);
+  assert.equal(ronOctober.collected, 0);
+  assert.equal(ronOctober.refunded, 35);
+  assert.equal(ronOctober.net, -35);
+  assert.equal(eurOctober.collected, 0);
+  assert.equal(eurOctober.refunded, 4);
+  assert.equal(eurOctober.net, -4);
+
+  const novemberReport = await reportForPeriod(november);
+  assert.equal(novemberReport.rows.length, 1);
+  assert.equal(novemberReport.rows[0].paidAt, "2026-11-03 10:00");
+  assert.equal(novemberReport.rows[0].paid, 0);
+  assert.equal(novemberReport.rows[0].refunded, 30);
+  assert.equal(novemberReport.rows[0].net, -30);
+  assert.equal(novemberReport.rows[0].currency, "RON");
+  assert.equal(novemberReport.rows[0].status, "PARTIALLY_REFUNDED");
+  assert.equal(novemberReport.rows[0].paymentId, "pi_paid / ch_paid");
+  assert.equal(novemberReport.totalsByCurrency[0].refunded, 30);
+  assert.equal(novemberReport.totalsByCurrency[0].net, -30);
+
+  const septemberAfter = await reportForPeriod(september);
+  assert.equal(septemberAfter.rows.length, 2);
+  assert.deepEqual(
+    septemberAfter.rows.map((row) => [row.currency, row.paid, row.refunded, row.status]),
+    [
+      ["RON", 79, 0, "PAID"],
+      ["EUR", 10, 0, "PAID"],
+    ],
+  );
 });
 
 test("charge-urile duplicate nu produc două rânduri", () => {

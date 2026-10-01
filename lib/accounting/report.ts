@@ -1,9 +1,9 @@
 import { getPlanSlugFromStripePriceId } from "@/lib/billing/stripePrices";
 import {
   accountingStatus,
+  isSucceededRefundStatus,
   minorToMajor,
   netMinor,
-  succeededRefundMinor,
   taxMinorFromTotalTaxes,
 } from "@/lib/accounting/money";
 import {
@@ -20,6 +20,7 @@ import type {
   InvoiceLineSnapshot,
   InvoicePaymentSnapshot,
   InvoiceSnapshot,
+  RefundSnapshot,
   TenantMatch,
 } from "@/lib/accounting/types";
 
@@ -165,7 +166,7 @@ export function totalsByCurrency(rows: AccountingRow[]): CurrencyTotals[] {
       refunded: 0,
       net: 0,
     };
-    current.paymentCount += 1;
+    if (row.paid > 0) current.paymentCount += 1;
     current.collected = roundMajor(current.collected + row.paid);
     current.refunded = roundMajor(current.refunded + row.refunded);
     current.net = roundMajor(current.net + row.net);
@@ -176,23 +177,55 @@ export function totalsByCurrency(rows: AccountingRow[]): CurrencyTotals[] {
   );
 }
 
+function refundMatchesCharge(refund: RefundSnapshot, charge: ChargeSnapshot): boolean {
+  if (refund.chargeId && refund.chargeId === charge.id) return true;
+  const paymentIntentId = idOf(charge.payment_intent);
+  return Boolean(paymentIntentId && refund.paymentIntentId === paymentIntentId);
+}
+
+/** Refund reușit a cărui dată `created` cade în perioada contabilă. */
+export function refundsRecognizedInPeriod(
+  refunds: RefundSnapshot[],
+  period: Pick<AccountingPeriod, "startUnix" | "endUnix">,
+): RefundSnapshot[] {
+  const seen = new Set<string>();
+  const recognized: RefundSnapshot[] = [];
+  for (const refund of refunds) {
+    if (!refund.id || seen.has(refund.id)) continue;
+    if (!isSucceededRefundStatus(refund.status) || refund.amount <= 0) continue;
+    if (!isInAccountingPeriod(refund.created, period)) continue;
+    seen.add(refund.id);
+    recognized.push(refund);
+  }
+  return recognized;
+}
+
 export function buildAccountingReport(input: {
   charges: ChargeSnapshot[];
+  contextCharges?: ChargeSnapshot[];
+  refunds?: RefundSnapshot[];
   invoicePayments: InvoicePaymentSnapshot[];
   invoices: InvoiceSnapshot[];
   tenants: TenantMatch[];
   period: AccountingPeriod;
-  refundedMinorByChargeId?: Record<string, number>;
   generatedAt?: Date;
   planLabelForPriceId?: (priceId: string) => string | null;
 }): AccountingReport {
   const planLabelForPriceId = input.planLabelForPriceId ?? defaultPlanLabel;
   const invoicesById = new Map(input.invoices.map((invoice) => [invoice.id, invoice]));
   const links = indexInvoicePayments(input.invoicePayments);
+  const recognizedRefunds = refundsRecognizedInPeriod(input.refunds ?? [], input.period);
+  const chargeById = new Map<string, ChargeSnapshot>();
+  for (const charge of [...input.charges, ...(input.contextCharges ?? [])]) {
+    if (!chargeById.has(charge.id)) chargeById.set(charge.id, charge);
+  }
   const seen = new Set<string>();
   const rows: AccountingRow[] = [];
+  const consumedRefundIds = new Set<string>();
 
-  const charges = [...input.charges].sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  const charges = [...input.charges].sort(
+    (a, b) => a.created - b.created || a.id.localeCompare(b.id),
+  );
 
   for (const charge of charges) {
     if (!isCollectedCharge(charge)) continue;
@@ -200,33 +233,206 @@ export function buildAccountingReport(input: {
     if (seen.has(charge.id)) continue;
     seen.add(charge.id);
 
-    const paymentIntentId = idOf(charge.payment_intent);
-    const linked =
-      (paymentIntentId ? links.byPaymentIntent.get(paymentIntentId) : undefined) ??
-      links.byCharge.get(charge.id) ??
-      null;
-    const invoiceId = idOf(linked?.invoice);
-    const invoice = invoiceId ? (invoicesById.get(invoiceId) ?? null) : null;
-    const customerId = idOf(charge.customer) ?? idOf(invoice?.customer);
-    const subscriptionId = invoice?.subscriptionId ?? null;
-    const tenant = matchTenant(input.tenants, customerId, subscriptionId);
-    const line = pickInvoiceLine(invoice?.lines);
-    const priceLabel = line?.priceId ? planLabelForPriceId(line.priceId) : null;
-    const currency = (charge.currency || invoice?.currency || "").toUpperCase();
-    const paidMinor = charge.amount;
-    const refundedMinor =
-      input.refundedMinorByChargeId?.[charge.id] ?? succeededRefundMinor(charge);
-    const taxMinor = taxMinorFromTotalTaxes(invoice?.total_taxes);
-    const stripeTax = stripeTaxId(invoice);
-    const companyFromTenant =
-      tenant?.billingType === "company" ? blankToNull(tenant.billingName) : null;
-    const company =
-      (stripeTax ? blankToNull(invoice?.customer_name) : null) ??
-      companyFromTenant;
+    const matchedRefunds = recognizedRefunds.filter((refund) =>
+      refundMatchesCharge(refund, charge),
+    );
+    for (const refund of matchedRefunds) consumedRefundIds.add(refund.id);
+    const refundedMinor = matchedRefunds.reduce((sum, refund) => sum + refund.amount, 0);
+    rows.push(
+      collectionRow({
+        charge,
+        refundedMinor,
+        includeInvoiceAmounts: true,
+        eventUnix: charge.created,
+        links,
+        invoicesById,
+        tenants: input.tenants,
+        planLabelForPriceId,
+      }),
+    );
+  }
 
-    rows.push({
-      paidAtUnix: charge.created,
-      paidAt: formatBucharestDateTime(new Date(charge.created * 1000)),
+  const laterRefunds = recognizedRefunds
+    .filter((refund) => !consumedRefundIds.has(refund.id))
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+
+  for (const refund of laterRefunds) {
+    const charge =
+      (refund.chargeId ? chargeById.get(refund.chargeId) : undefined) ??
+      [...chargeById.values()].find((candidate) => refundMatchesCharge(refund, candidate)) ??
+      null;
+    rows.push(
+      refundOnlyRow({
+        refund,
+        charge,
+        links,
+        invoicesById,
+        tenants: input.tenants,
+        planLabelForPriceId,
+      }),
+    );
+  }
+
+  rows.sort((a, b) => a.paidAtUnix - b.paidAtUnix || (a.paymentId ?? "").localeCompare(b.paymentId ?? ""));
+
+  return {
+    period: input.period,
+    generatedAt: formatBucharestDateTime(input.generatedAt ?? new Date()),
+    rows,
+    totalsByCurrency: totalsByCurrency(rows),
+    paymentCount: rows.filter((row) => row.paid > 0).length,
+  };
+}
+
+function collectionRow(input: {
+  charge: ChargeSnapshot;
+  refundedMinor: number;
+  includeInvoiceAmounts: boolean;
+  eventUnix: number;
+  links: ReturnType<typeof indexInvoicePayments>;
+  invoicesById: Map<string, InvoiceSnapshot>;
+  tenants: TenantMatch[];
+  planLabelForPriceId: (priceId: string) => string | null;
+}): AccountingRow {
+  const identity = paymentIdentity(input.charge, input);
+  const currency = identity.currency;
+  const paidMinor = input.charge.amount;
+  const taxMinor = input.includeInvoiceAmounts
+    ? taxMinorFromTotalTaxes(identity.invoice?.total_taxes)
+    : null;
+  return {
+    ...identity.fields,
+    paidAtUnix: input.eventUnix,
+    paidAt: formatBucharestDateTime(new Date(input.eventUnix * 1000)),
+    currency,
+    subtotal:
+      !input.includeInvoiceAmounts || identity.invoice?.subtotal == null
+        ? null
+        : roundMajor(minorToMajor(identity.invoice.subtotal, currency)),
+    tax: taxMinor == null ? null : roundMajor(minorToMajor(taxMinor, currency)),
+    total:
+      !input.includeInvoiceAmounts || identity.invoice?.total == null
+        ? null
+        : roundMajor(minorToMajor(identity.invoice.total, currency)),
+    paid: roundMajor(minorToMajor(paidMinor, currency)),
+    refunded: roundMajor(minorToMajor(input.refundedMinor, currency)),
+    net: roundMajor(minorToMajor(netMinor(paidMinor, input.refundedMinor), currency)),
+    status: accountingStatus(paidMinor, input.refundedMinor),
+  };
+}
+
+function refundOnlyRow(input: {
+  refund: RefundSnapshot;
+  charge: ChargeSnapshot | null;
+  links: ReturnType<typeof indexInvoicePayments>;
+  invoicesById: Map<string, InvoiceSnapshot>;
+  tenants: TenantMatch[];
+  planLabelForPriceId: (priceId: string) => string | null;
+}): AccountingRow {
+  const charge = input.charge;
+  const identity = charge
+    ? paymentIdentity(charge, input)
+    : {
+        currency: (input.refund.currency || "ron").toUpperCase(),
+        invoice: null as InvoiceSnapshot | null,
+        fields: emptyIdentity(input.refund),
+      };
+  const currency = (charge?.currency || input.refund.currency || identity.currency).toUpperCase();
+  const originalMinor = charge?.amount ?? input.refund.amount;
+  const refundedMinor = input.refund.amount;
+  return {
+    ...identity.fields,
+    paidAtUnix: input.refund.created,
+    paidAt: formatBucharestDateTime(new Date(input.refund.created * 1000)),
+    currency,
+    subtotal: null,
+    tax: null,
+    total: null,
+    paid: 0,
+    refunded: roundMajor(minorToMajor(refundedMinor, currency)),
+    net: roundMajor(minorToMajor(-refundedMinor, currency)),
+    status: accountingStatus(originalMinor, refundedMinor),
+  };
+}
+
+function emptyIdentity(refund: RefundSnapshot): Omit<
+  AccountingRow,
+  | "paidAtUnix"
+  | "paidAt"
+  | "currency"
+  | "subtotal"
+  | "tax"
+  | "total"
+  | "paid"
+  | "refunded"
+  | "net"
+  | "status"
+> {
+  return {
+    salon: null,
+    company: null,
+    taxId: null,
+    email: null,
+    address: null,
+    country: null,
+    plan: null,
+    periodLabel: null,
+    stripeCustomerId: null,
+    stripeSubscriptionId: null,
+    stripeInvoiceId: null,
+    stripeInvoiceNumber: null,
+    paymentId: [refund.paymentIntentId, refund.chargeId].filter(Boolean).join(" / ") || null,
+  };
+}
+
+function paymentIdentity(
+  charge: ChargeSnapshot,
+  input: {
+    links: ReturnType<typeof indexInvoicePayments>;
+    invoicesById: Map<string, InvoiceSnapshot>;
+    tenants: TenantMatch[];
+    planLabelForPriceId: (priceId: string) => string | null;
+  },
+): {
+  currency: string;
+  invoice: InvoiceSnapshot | null;
+  fields: Omit<
+    AccountingRow,
+    | "paidAtUnix"
+    | "paidAt"
+    | "currency"
+    | "subtotal"
+    | "tax"
+    | "total"
+    | "paid"
+    | "refunded"
+    | "net"
+    | "status"
+  >;
+} {
+  const paymentIntentId = idOf(charge.payment_intent);
+  const linked =
+    (paymentIntentId ? input.links.byPaymentIntent.get(paymentIntentId) : undefined) ??
+    input.links.byCharge.get(charge.id) ??
+    null;
+  const invoiceId = idOf(linked?.invoice);
+  const invoice = invoiceId ? (input.invoicesById.get(invoiceId) ?? null) : null;
+  const customerId = idOf(charge.customer) ?? idOf(invoice?.customer);
+  const subscriptionId = invoice?.subscriptionId ?? null;
+  const tenant = matchTenant(input.tenants, customerId, subscriptionId);
+  const line = pickInvoiceLine(invoice?.lines);
+  const priceLabel = line?.priceId ? input.planLabelForPriceId(line.priceId) : null;
+  const currency = (charge.currency || invoice?.currency || "").toUpperCase();
+  const stripeTax = stripeTaxId(invoice);
+  const companyFromTenant =
+    tenant?.billingType === "company" ? blankToNull(tenant.billingName) : null;
+  const company =
+    (stripeTax ? blankToNull(invoice?.customer_name) : null) ?? companyFromTenant;
+
+  return {
+    currency,
+    invoice,
+    fields: {
       salon:
         blankToNull(tenant?.tenantName) ??
         blankToNull(invoice?.customer_name) ??
@@ -250,29 +456,6 @@ export function buildAccountingReport(input: {
       stripeInvoiceId: invoice?.id ?? invoiceId,
       stripeInvoiceNumber: blankToNull(invoice?.number),
       paymentId: [paymentIntentId, charge.id].filter(Boolean).join(" / ") || null,
-      currency,
-      subtotal:
-        invoice?.subtotal == null
-          ? null
-          : roundMajor(minorToMajor(invoice.subtotal, currency)),
-      tax:
-        taxMinor == null ? null : roundMajor(minorToMajor(taxMinor, currency)),
-      total:
-        invoice?.total == null
-          ? null
-          : roundMajor(minorToMajor(invoice.total, currency)),
-      paid: roundMajor(minorToMajor(paidMinor, currency)),
-      refunded: roundMajor(minorToMajor(refundedMinor, currency)),
-      net: roundMajor(minorToMajor(netMinor(paidMinor, refundedMinor), currency)),
-      status: accountingStatus(paidMinor, refundedMinor),
-    });
-  }
-
-  return {
-    period: input.period,
-    generatedAt: formatBucharestDateTime(input.generatedAt ?? new Date()),
-    rows,
-    totalsByCurrency: totalsByCurrency(rows),
-    paymentCount: rows.length,
+    },
   };
 }

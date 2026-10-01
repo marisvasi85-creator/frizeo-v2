@@ -108,7 +108,7 @@ export async function loadAccountingReport(
   const subscriptionIds = collected.invoices
     .map((invoice) => invoice.subscriptionId)
     .filter((id): id is string => Boolean(id));
-  const customerIds = collected.charges
+  const customerIds = [...collected.charges, ...collected.contextCharges]
     .map((charge) =>
       typeof charge.customer === "string" ? charge.customer : charge.customer?.id,
     )

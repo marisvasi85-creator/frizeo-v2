@@ -1,12 +1,13 @@
 import type Stripe from "stripe";
 import { INVOICE_PAYMENT_LOOKBACK_SECONDS } from "@/lib/accounting/period";
 import type { AccountingPeriod } from "@/lib/accounting/period";
-import { succeededRefundMinor } from "@/lib/accounting/money";
-import { idOf, isCollectedCharge } from "@/lib/accounting/report";
+import { isSucceededRefundStatus } from "@/lib/accounting/money";
+import { idOf, isCollectedCharge, refundsRecognizedInPeriod } from "@/lib/accounting/report";
 import type {
   ChargeSnapshot,
   InvoicePaymentSnapshot,
   InvoiceSnapshot,
+  RefundSnapshot,
   StripeAccountingClient,
   StripeList,
 } from "@/lib/accounting/types";
@@ -194,9 +195,37 @@ export function normalizeStripeInvoicePayment(
   };
 }
 
+type StripeRefundLike = {
+  id: string;
+  amount: number;
+  status: string | null;
+  created: number;
+  currency?: string | null;
+  charge?: string | Stripe.Charge | null;
+  payment_intent?: string | Stripe.PaymentIntent | null;
+};
+
+export function normalizeStripeRefund(refund: StripeRefundLike): RefundSnapshot & {
+  charge?: ChargeSnapshot | null;
+} {
+  const chargeObject =
+    refund.charge && typeof refund.charge === "object" ? refund.charge : null;
+  return {
+    id: refund.id,
+    amount: refund.amount,
+    status: refund.status,
+    created: refund.created,
+    currency: refund.currency ?? chargeObject?.currency ?? null,
+    chargeId: idOf(refund.charge as string | { id: string } | null),
+    paymentIntentId: idOf(refund.payment_intent as string | { id: string } | null),
+    charge: chargeObject ? normalizeStripeCharge(chargeObject) : null,
+  };
+}
+
 type StripeReadApi = {
   charges: {
     list: Stripe["charges"]["list"];
+    retrieve: Stripe["charges"]["retrieve"];
   };
   invoicePayments: {
     list: Stripe["invoicePayments"]["list"];
@@ -222,6 +251,7 @@ export function stripeAccountingClient(stripe: StripeReadApi): StripeAccountingC
           data: page.data.map((charge) => normalizeStripeCharge(charge)),
         };
       },
+      retrieve: async (id) => normalizeStripeCharge(await stripe.charges.retrieve(id)),
     },
     invoicePayments: {
       list: async (params) => {
@@ -260,37 +290,11 @@ export function stripeAccountingClient(stripe: StripeReadApi): StripeAccountingC
         const page = await stripe.refunds.list(params);
         return {
           has_more: page.has_more,
-          data: page.data.map((refund) => ({
-            id: refund.id,
-            amount: refund.amount,
-            status: refund.status,
-          })),
+          data: page.data.map((refund) => normalizeStripeRefund(refund)),
         };
       },
     },
   };
-}
-
-async function refundedMinorForCharge(
-  client: StripeAccountingClient,
-  charge: ChargeSnapshot,
-): Promise<number> {
-  if (charge.refunds?.has_more === true) {
-    const refunds = await paginate(
-      (startingAfter) =>
-        client.refunds.list({
-          charge: charge.id,
-          limit: PAGE_SIZE,
-          ...(startingAfter ? { starting_after: startingAfter } : {}),
-        }),
-      `refunds ${charge.id}`,
-    );
-    return succeededRefundMinor({
-      amount_refunded: charge.amount_refunded,
-      refunds: { data: refunds, has_more: false },
-    });
-  }
-  return succeededRefundMinor(charge);
 }
 
 async function hydrateLines(
@@ -323,9 +327,10 @@ export async function readStripePayments(
   period: AccountingPeriod,
 ): Promise<{
   charges: ChargeSnapshot[];
+  contextCharges: ChargeSnapshot[];
+  refunds: RefundSnapshot[];
   invoicePayments: InvoicePaymentSnapshot[];
   invoices: InvoiceSnapshot[];
-  refundedMinorByChargeId: Record<string, number>;
 }> {
   const created = { gte: period.startUnix, lt: period.endUnix };
   const charges = await paginate(
@@ -333,7 +338,6 @@ export async function readStripePayments(
       client.charges.list({
         limit: PAGE_SIZE,
         created,
-        expand: ["data.refunds"],
         ...(startingAfter ? { starting_after: startingAfter } : {}),
       }),
     "charges",
@@ -353,14 +357,34 @@ export async function readStripePayments(
     uniqueCharges.push(charge);
   }
 
-  if (uniqueCharges.length === 0) {
+  const listedRefunds = await paginate(
+    (startingAfter) =>
+      client.refunds.list({
+        limit: PAGE_SIZE,
+        created,
+        expand: ["data.charge"],
+        ...(startingAfter ? { starting_after: startingAfter } : {}),
+      }),
+    "refunds",
+  );
+  const refunds = refundsRecognizedInPeriod(listedRefunds, period);
+  const contextCharges = await contextChargesForRefunds(
+    client,
+    uniqueCharges,
+    listedRefunds,
+  );
+
+  if (uniqueCharges.length === 0 && refunds.length === 0) {
     return {
       charges: [],
+      contextCharges: [],
+      refunds: [],
       invoicePayments: [],
       invoices: [],
-      refundedMinorByChargeId: {},
     };
   }
+
+  const linkCharges = [...uniqueCharges, ...contextCharges];
 
   const invoicePayments = await paginate(
     (startingAfter) =>
@@ -387,7 +411,7 @@ export async function readStripePayments(
       .filter((id): id is string => Boolean(id)),
   );
 
-  const unmatched = uniqueCharges.filter((charge) => {
+  const unmatched = linkCharges.filter((charge) => {
     const paymentIntentId = idOf(charge.payment_intent);
     if (paymentIntentId && knownPaymentIntents.has(paymentIntentId)) return false;
     return !knownCharges.has(charge.id);
@@ -407,7 +431,7 @@ export async function readStripePayments(
 
   const payments = [...invoicePayments, ...fallbackPayments];
   const invoiceIds = new Set<string>();
-  for (const charge of uniqueCharges) {
+  for (const charge of linkCharges) {
     const paymentIntentId = idOf(charge.payment_intent);
     const linked = payments.find((payment) => {
       const paymentIntent = idOf(payment.payment.payment_intent);
@@ -462,16 +486,55 @@ export async function readStripePayments(
     hydrateLines(client, invoice),
   );
 
-  const refundedEntries = await mapLimited(
-    uniqueCharges,
-    RETRIEVE_CONCURRENCY,
-    async (charge) => [charge.id, await refundedMinorForCharge(client, charge)] as const,
-  );
-
   return {
     charges: uniqueCharges,
+    contextCharges,
+    refunds,
     invoicePayments: payments,
     invoices,
-    refundedMinorByChargeId: Object.fromEntries(refundedEntries),
   };
+}
+
+async function contextChargesForRefunds(
+  client: StripeAccountingClient,
+  periodCharges: ChargeSnapshot[],
+  listedRefunds: Array<RefundSnapshot & { charge?: ChargeSnapshot | null }>,
+): Promise<ChargeSnapshot[]> {
+  const known = new Set(periodCharges.map((charge) => charge.id));
+  const context = new Map<string, ChargeSnapshot>();
+  for (const refund of listedRefunds) {
+    if (!isSucceededRefundStatus(refund.status)) continue;
+    const embedded = refund.charge;
+    if (embedded && !known.has(embedded.id) && !context.has(embedded.id)) {
+      context.set(embedded.id, embedded);
+      known.add(embedded.id);
+    }
+  }
+
+  const missingIds = [
+    ...new Set(
+      listedRefunds
+        .filter((refund) => isSucceededRefundStatus(refund.status))
+        .map((refund) => refund.chargeId)
+        .filter((id): id is string => Boolean(id && !known.has(id))),
+    ),
+  ];
+  if (missingIds.length === 0 || !client.charges.retrieve) return [...context.values()];
+
+  const retrieved = await mapLimited(missingIds, RETRIEVE_CONCURRENCY, async (id) => {
+    try {
+      return await client.charges.retrieve!(id);
+    } catch (err) {
+      console.error(
+        "accounting charge retrieve",
+        id,
+        err instanceof Error ? err.message : "error",
+      );
+      return null;
+    }
+  });
+  for (const charge of retrieved) {
+    if (charge && !context.has(charge.id)) context.set(charge.id, charge);
+  }
+  return [...context.values()];
 }
