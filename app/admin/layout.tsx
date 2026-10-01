@@ -59,6 +59,7 @@ export default async function AdminLayout({
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
   const accountDeletionsEnabled = isPlatformCreatorEmail(session.user.email);
   const accountingEnabled = isPlatformCreatorEmail(session.user.email);
+  const billingRefundsEnabled = accountDeletionsEnabled;
 
   return (
     <div className="frz-admin flex min-h-screen min-w-0 max-w-[100vw] overflow-x-clip bg-frz-fog text-frz-ink">
@@ -71,6 +72,7 @@ export default async function AdminLayout({
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
         accountingEnabled={accountingEnabled}
+        billingRefundsEnabled={billingRefundsEnabled}
       />
 
       <main className="flex-1 min-w-0 p-6 md:p-10 pb-20 md:pb-10 bg-frz-fog">
@@ -86,6 +88,7 @@ export default async function AdminLayout({
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
         accountingEnabled={accountingEnabled}
+        billingRefundsEnabled={billingRefundsEnabled}
       />
       {assistantEnabled && (
         <FloatingAssistant

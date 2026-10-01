@@ -13,6 +13,7 @@ export default function Sidebar({
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
   accountingEnabled = false,
+  billingRefundsEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
@@ -22,6 +23,7 @@ export default function Sidebar({
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
+  billingRefundsEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const navItems = buildAdminNavItems({
@@ -33,6 +35,7 @@ export default function Sidebar({
     frizeoEmailEnabled,
     accountDeletionsEnabled,
     accountingEnabled,
+    billingRefundsEnabled,
   });
 
   return (

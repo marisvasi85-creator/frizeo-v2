@@ -14,6 +14,7 @@ export default function MobileNav({
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
   accountingEnabled = false,
+  billingRefundsEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
@@ -23,6 +24,7 @@ export default function MobileNav({
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
+  billingRefundsEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -37,6 +39,7 @@ export default function MobileNav({
     frizeoEmailEnabled,
     accountDeletionsEnabled,
     accountingEnabled,
+    billingRefundsEnabled,
   });
 
   return (
