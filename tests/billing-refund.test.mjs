@@ -87,6 +87,7 @@ function createHarness(options = {}) {
     cancelError: options.cancelError ?? null,
     downgradeError: options.downgradeError ?? null,
     createError: options.createError ?? null,
+    refundStatus: options.refundStatus ?? "succeeded",
     now: options.now ?? 10_000_000,
     bookings,
     downgraded: false,
@@ -156,18 +157,20 @@ function createHarness(options = {}) {
       if (state.createError) throw state.createError;
       const created = {
         id: `re_${state.created.length + 1}`,
-        status: "succeeded",
+        status: state.refundStatus,
         amount: input.amount,
         currency: input.currency,
         idempotencyKey: input.idempotencyKey,
         metadata: input.metadata,
       };
       state.created.push(created);
-      state.payment = {
-        ...state.payment,
-        amountRefunded: input.amount,
-        fullyRefunded: true,
-      };
+      if (state.refundStatus === "succeeded") {
+        state.payment = {
+          ...state.payment,
+          amountRefunded: input.amount,
+          fullyRefunded: true,
+        };
+      }
       return created;
     },
     listRefunds: async () =>
@@ -527,7 +530,9 @@ test("webhook events are observed without creating refunds, and checkout sync st
   assert.match(webhook, /invoice\.paid/);
   assert.match(webhook, /refund\.created/);
   assert.match(webhook, /refund\.updated/);
+  assert.match(webhook, /refund\.failed/);
   assert.match(webhook, /charge\.refunded/);
+  assert.match(readRepo("lib/billing/refundWebhook.ts"), /refund\.failed/);
   const observer = readRepo("lib/billing/refundWebhook.ts");
   assert.doesNotMatch(observer, /refunds\.create/);
   assert.doesNotMatch(observer, /createFullRefund/);
@@ -536,6 +541,97 @@ test("webhook events are observed without creating refunds, and checkout sync st
   assert.doesNotMatch(orchestrator, /deleteTenant/);
   const checkout = readRepo("app/api/billing/checkout/route.ts");
   assert.match(checkout, /createSubscriptionCheckout/);
+});
+
+const actor = {
+  tenantId: tenantA,
+  actorUserId: "user-admin",
+  actorEmail: "owner@example.com",
+};
+
+test("pending refund does not cancel or downgrade, and retry does not refund again", async () => {
+  const harness = createHarness({ refundStatus: "pending" });
+  const first = await executeAdminRefund(harness.deps, actor);
+  const retry = await executeAdminRefund(harness.deps, actor);
+  const duplicatePending = await applyObservedRefund(
+    harness.observedDeps,
+    observedInput({
+      refundId: harness.state.created[0].id,
+      refundStatus: "pending",
+      metadata: harness.state.created[0].metadata,
+    }),
+  );
+  assert.equal(first.ok, false);
+  assert.equal(first.code, "refund_pending");
+  assert.equal(retry.code, "refund_pending");
+  assert.equal(duplicatePending.action, "refund_pending");
+  assert.equal(harness.state.created.length, 1);
+  assert.equal(harness.state.cancelCalls, 0);
+  assert.equal(harness.state.downgradeCalls, 0);
+  assert.equal(harness.state.local.planSlug, "pro");
+  assert.equal(harness.state.audits[0].status, "pending");
+});
+
+test("pending refund that succeeds via webhook cancels and downgrades once", async () => {
+  const harness = createHarness({ refundStatus: "pending" });
+  const started = await executeAdminRefund(harness.deps, actor);
+  assert.equal(started.code, "refund_pending");
+  assert.equal(harness.state.cancelCalls, 0);
+
+  const succeeded = await applyObservedRefund(
+    harness.observedDeps,
+    observedInput({
+      refundId: harness.state.created[0].id,
+      refundStatus: "succeeded",
+      metadata: harness.state.created[0].metadata,
+      payment: payment({ amountRefunded: 9900, fullyRefunded: true }),
+    }),
+  );
+  const duplicate = await applyObservedRefund(
+    harness.observedDeps,
+    observedInput({
+      refundId: harness.state.created[0].id,
+      refundStatus: "succeeded",
+      metadata: harness.state.created[0].metadata,
+      payment: payment({ amountRefunded: 9900, fullyRefunded: true }),
+    }),
+  );
+  assert.equal(succeeded.action, "reconciled");
+  assert.equal(duplicate.action, "idempotent");
+  assert.equal(harness.state.created.length, 1);
+  assert.equal(harness.state.cancelCalls, 1);
+  assert.equal(harness.state.downgradeCalls, 1);
+  assert.equal(harness.state.local.planSlug, "free");
+});
+
+test("pending refund that fails does not cancel or downgrade", async () => {
+  const harness = createHarness({ refundStatus: "pending" });
+  await executeAdminRefund(harness.deps, actor);
+  const failed = await applyObservedRefund(
+    harness.observedDeps,
+    observedInput({
+      refundId: harness.state.created[0].id,
+      refundStatus: "failed",
+      metadata: harness.state.created[0].metadata,
+    }),
+  );
+  const duplicate = await applyObservedRefund(
+    harness.observedDeps,
+    observedInput({
+      refundId: harness.state.created[0].id,
+      refundStatus: "failed",
+      metadata: harness.state.created[0].metadata,
+    }),
+  );
+  assert.equal(failed.action, "ignored");
+  assert.equal(failed.reason, "refund_not_successful");
+  assert.equal(duplicate.action, "ignored");
+  assert.equal(harness.state.created.length, 1);
+  assert.equal(harness.state.cancelCalls, 0);
+  assert.equal(harness.state.downgradeCalls, 0);
+  assert.equal(harness.state.syncCalls, 0);
+  assert.equal(harness.state.local.planSlug, "pro");
+  assert.equal(harness.state.audits[0].status, "failed");
 });
 
 test("planner refuses a second full refund when one is already reconciled", () => {

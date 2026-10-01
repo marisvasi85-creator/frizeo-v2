@@ -133,6 +133,7 @@ export type RefundInspection = {
 
 const RETRYABLE = new Set([
   "in_progress",
+  "refund_pending",
   "cancel_failed",
   "downgrade_failed",
   "stripe_error",
@@ -427,7 +428,7 @@ async function continueFromInspection(
         (refund) =>
           refund.status === "succeeded" || refund.status === "pending",
       );
-      if (prior) {
+      if (prior?.status === "succeeded") {
         await deps.updateAudit(auditId, {
           status: "refunded",
           stripeRefundId: prior.id,
@@ -444,6 +445,19 @@ async function continueFromInspection(
           invoiceId: invoice.id,
           amount: prior.amount,
           currency: invoice.currency,
+        });
+      }
+      if (prior?.status === "pending") {
+        await deps.updateAudit(auditId, {
+          status: "pending",
+          stripeRefundId: prior.id,
+          amount: prior.amount,
+          reconciliationStatus: "refund_processing",
+          errorMessage: null,
+        });
+        return stop("refund_pending", {
+          refundId: prior.id,
+          invoiceId: invoice.id,
         });
       }
     }
@@ -478,6 +492,20 @@ async function continueFromInspection(
       errorMessage: null,
     });
     return stop("action_required", {
+      refundId: created.id,
+      invoiceId: invoice.id,
+    });
+  }
+
+  if (created.status !== "succeeded") {
+    await deps.updateAudit(auditId, {
+      status: "pending",
+      stripeRefundId: created.id,
+      amount: created.amount,
+      reconciliationStatus: "refund_processing",
+      errorMessage: null,
+    });
+    return stop("refund_pending", {
       refundId: created.id,
       invoiceId: invoice.id,
     });
@@ -539,6 +567,7 @@ export type ObservedRefundOutcome = {
     | "synced_dashboard_refund"
     | "reconciled"
     | "idempotent"
+    | "refund_pending"
     | "flagged_failure_after_accept"
     | "cancel_failed"
     | "downgrade_failed";
@@ -606,6 +635,49 @@ export async function applyObservedRefund(
     return { action: "ignored", reason: "refund_not_successful" };
   }
 
+  if (input.refundStatus === "pending") {
+    if (
+      existing &&
+      ["refunded", "cancel_failed", "downgrade_failed", "reconciled"].includes(
+        existing.status,
+      )
+    ) {
+      return { action: "idempotent" };
+    }
+    if (existing) {
+      await deps.updateAudit(existing.id, {
+        status: "pending",
+        stripeRefundId: input.refundId,
+        amount: input.refundAmount,
+        currency: input.currency,
+        reconciliationStatus: "refund_processing",
+        errorMessage: null,
+      });
+      return { action: "refund_pending" };
+    }
+    const inserted = await deps.insertAudit({
+      tenantId: local.tenantId,
+      initiatedByUserId: null,
+      initiatedByEmail: null,
+      source: "stripe_webhook",
+      stripeCustomerId: invoice.customerId,
+      stripeSubscriptionId: invoice.subscriptionId,
+      stripeInvoiceId: invoice.id,
+      stripePaymentIntentId: input.paymentIntentId,
+      stripeChargeId: input.chargeId,
+      stripeRefundId: input.refundId,
+      amount: input.refundAmount,
+      currency: input.currency,
+      refundKind: "full",
+      status: "pending",
+      reconciliationStatus: "refund_processing",
+      errorMessage: null,
+      idempotencyKey: refundIdempotencyKey(invoice.id),
+    });
+    if (!inserted.ok) return { action: "idempotent" };
+    return { action: "refund_pending" };
+  }
+
   const classification = classifyObservedRefund({
     refundStatus: input.refundStatus,
     refundAmount: input.refundAmount,
@@ -651,7 +723,6 @@ export async function applyObservedRefund(
     const adminOwns =
       existing != null &&
       [
-        "pending",
         "refunded",
         "cancel_failed",
         "downgrade_failed",

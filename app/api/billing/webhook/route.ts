@@ -128,6 +128,7 @@ export async function POST(req: Request) {
 
       case "refund.created":
       case "refund.updated":
+      case "refund.failed":
       case "charge.refunded": {
         await handleStripeRefundWebhookEvent(event);
         break;

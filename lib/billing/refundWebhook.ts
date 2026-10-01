@@ -103,7 +103,11 @@ function assertReconciled(outcome: ObservedRefundOutcome) {
 export async function handleStripeRefundWebhookEvent(
   event: Stripe.Event,
 ): Promise<void> {
-  if (event.type === "refund.created" || event.type === "refund.updated") {
+  if (
+    event.type === "refund.created" ||
+    event.type === "refund.updated" ||
+    event.type === "refund.failed"
+  ) {
     assertReconciled(await observeStripeRefund(event.data.object as Stripe.Refund));
     return;
   }

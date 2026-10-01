@@ -65,6 +65,7 @@ export type AdminRefundPlan =
         | "action_required"
         | "already_refunded"
         | "in_progress"
+        | "refund_pending"
         | "reconciled";
     }
   | { type: "create_refund"; amount: number; auditId: string | null }
@@ -213,6 +214,7 @@ export function classifyObservedRefund(input: {
 } {
   const status = input.refundStatus;
   if (
+    status === "pending" ||
     status === "failed" ||
     status === "canceled" ||
     status === "requires_action"
@@ -263,14 +265,15 @@ export function planAdminRefund(input: {
   if (audit?.status === "action_required") {
     return { type: "stop", code: "action_required" };
   }
+  if (audit?.status === "pending" && audit.stripeRefundId) {
+    return { type: "stop", code: "refund_pending" };
+  }
   if (audit?.status === "downgrade_failed") {
     return { type: "resume", auditId: audit.id, phase: "downgrade_only" };
   }
   if (
     audit &&
-    (audit.status === "refunded" ||
-      audit.status === "cancel_failed" ||
-      Boolean(audit.stripeRefundId))
+    (audit.status === "refunded" || audit.status === "cancel_failed")
   ) {
     return {
       type: "resume",
@@ -332,6 +335,8 @@ export const REFUND_MESSAGES: Record<string, string> = {
     "Există un refund care așteaptă o acțiune în Stripe. Nu am emis alt refund.",
   already_refunded: "Plata este deja returnată integral. Nu am mai emis un refund.",
   in_progress: "Un refund pentru această factură este deja în curs.",
+  refund_pending:
+    "Refund-ul este în procesare la Stripe. Abonamentul rămâne neschimbat până când refund-ul este confirmat.",
   reconciled: "Refund-ul acestui salon este deja finalizat.",
   cancel_failed:
     "Banii au fost returnați în Stripe, dar anularea abonamentului a eșuat. Poți reîncerca; nu se va emite un al doilea refund.",
