@@ -23,6 +23,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
+  { href: "/admin/accounting", label: "Contabilitate", icon: "📒" },
   { href: "/admin/account", label: "Cont", icon: "🛡️" },
   { href: "/admin/account-deletions", label: "Ștergeri cont", icon: "🗑️" },
   { href: "/admin/billing-refunds", label: "Refund Stripe", icon: "↩️" },
@@ -74,6 +75,7 @@ export function buildAdminNavItems(options: {
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
 }): AdminNavItem[] {
   const {
@@ -84,6 +86,7 @@ export function buildAdminNavItems(options: {
     platformTestimonialsEnabled = false,
     frizeoEmailEnabled = false,
     accountDeletionsEnabled = false,
+    accountingEnabled = false,
     billingRefundsEnabled = false,
   } = options;
 
@@ -107,6 +110,7 @@ export function buildAdminNavItems(options: {
     }
     if (item.href === "/api/email/sso") return frizeoEmailEnabled;
     if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;
+    if (item.href === "/admin/accounting") return accountingEnabled;
     if (item.href === "/admin/billing-refunds") return billingRefundsEnabled;
     if (item.requiresBarber && !actsAsBarber) return false;
     return true;
@@ -165,6 +169,7 @@ export function buildMobileMoreItems(options: {
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
 }): AdminNavItem[] {
   const mainHrefs = new Set(

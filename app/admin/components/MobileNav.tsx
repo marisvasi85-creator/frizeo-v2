@@ -13,6 +13,7 @@ export default function MobileNav({
   platformTestimonialsEnabled = false,
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
+  accountingEnabled = false,
   billingRefundsEnabled = false,
 }: {
   role: string | null;
@@ -22,6 +23,7 @@ export default function MobileNav({
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
 }) {
   const pathname = usePathname();
@@ -36,6 +38,7 @@ export default function MobileNav({
     platformTestimonialsEnabled,
     frizeoEmailEnabled,
     accountDeletionsEnabled,
+    accountingEnabled,
     billingRefundsEnabled,
   });
 

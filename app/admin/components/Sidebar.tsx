@@ -12,6 +12,7 @@ export default function Sidebar({
   platformTestimonialsEnabled = false,
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
+  accountingEnabled = false,
   billingRefundsEnabled = false,
 }: {
   role: string | null;
@@ -21,6 +22,7 @@ export default function Sidebar({
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
 }) {
   const pathname = usePathname();
@@ -32,6 +34,7 @@ export default function Sidebar({
     platformTestimonialsEnabled,
     frizeoEmailEnabled,
     accountDeletionsEnabled,
+    accountingEnabled,
     billingRefundsEnabled,
   });
 

@@ -58,6 +58,7 @@ export default async function AdminLayout({
     isPlatformCreatorEmail(session.user.email);
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
   const accountDeletionsEnabled = isPlatformCreatorEmail(session.user.email);
+  const accountingEnabled = isPlatformCreatorEmail(session.user.email);
   const billingRefundsEnabled = accountDeletionsEnabled;
 
   return (
@@ -70,6 +71,7 @@ export default async function AdminLayout({
         platformTestimonialsEnabled={platformTestimonialsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
+        accountingEnabled={accountingEnabled}
         billingRefundsEnabled={billingRefundsEnabled}
       />
 
@@ -85,6 +87,7 @@ export default async function AdminLayout({
         platformTestimonialsEnabled={platformTestimonialsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
+        accountingEnabled={accountingEnabled}
         billingRefundsEnabled={billingRefundsEnabled}
       />
       {assistantEnabled && (
