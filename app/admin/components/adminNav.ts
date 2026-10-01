@@ -25,6 +25,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
   { href: "/admin/account", label: "Cont", icon: "🛡️" },
   { href: "/admin/account-deletions", label: "Ștergeri cont", icon: "🗑️" },
+  { href: "/admin/billing-refunds", label: "Refund Stripe", icon: "↩️" },
 ];
 
 /** Personal barber tools — only when the user takes bookings. */
@@ -73,6 +74,7 @@ export function buildAdminNavItems(options: {
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  billingRefundsEnabled?: boolean;
 }): AdminNavItem[] {
   const {
     role,
@@ -82,6 +84,7 @@ export function buildAdminNavItems(options: {
     platformTestimonialsEnabled = false,
     frizeoEmailEnabled = false,
     accountDeletionsEnabled = false,
+    billingRefundsEnabled = false,
   } = options;
 
   let items: AdminNavItem[];
@@ -104,6 +107,7 @@ export function buildAdminNavItems(options: {
     }
     if (item.href === "/api/email/sso") return frizeoEmailEnabled;
     if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;
+    if (item.href === "/admin/billing-refunds") return billingRefundsEnabled;
     if (item.requiresBarber && !actsAsBarber) return false;
     return true;
   });
@@ -161,6 +165,7 @@ export function buildMobileMoreItems(options: {
   platformTestimonialsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
+  billingRefundsEnabled?: boolean;
 }): AdminNavItem[] {
   const mainHrefs = new Set(
     buildMobileMainItems(options).map((i) => i.href),

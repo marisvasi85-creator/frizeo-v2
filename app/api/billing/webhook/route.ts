@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
+import { handleStripeRefundWebhookEvent } from "@/lib/billing/refundWebhook";
 import { syncStripeSubscription } from "@/lib/billing/syncStripeSubscription";
 import { syncTenantBillingFromStripeCustomer } from "@/lib/billing/syncTenantBillingFromStripeCustomer";
 import { emitStripeSubscriptionInvoice } from "@/lib/fgo/emitStripeSubscriptionInvoice";
@@ -122,6 +123,13 @@ export async function POST(req: Request) {
             await emitStripeSubscriptionInvoice(invoice, tenantId);
           }
         }
+        break;
+      }
+
+      case "refund.created":
+      case "refund.updated":
+      case "charge.refunded": {
+        await handleStripeRefundWebhookEvent(event);
         break;
       }
 
