@@ -1,7 +1,7 @@
-import { accountingHttpResponse, accountingMaxDuration } from "@/lib/accounting/http";
+import { accountingHttpResponse } from "@/lib/accounting/http";
 
 export const runtime = "nodejs";
-export const maxDuration = accountingMaxDuration;
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {

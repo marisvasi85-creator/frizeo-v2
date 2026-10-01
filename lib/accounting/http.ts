@@ -5,8 +5,6 @@ import { loadAccountingReport } from "@/lib/accounting/loadReport";
 import { stripeErrorMessage } from "@/lib/stripe";
 
 export const accountingRuntime = "nodejs" as const;
-export const accountingMaxDuration = 60;
-
 export async function accountingHttpResponse(
   req: Request,
   format: "json" | "xlsx",
