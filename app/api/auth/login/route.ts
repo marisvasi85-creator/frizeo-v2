@@ -3,6 +3,7 @@ import { createSupabaseRouteHandlerClient } from "@/lib/supabase/route-handler";
 import {
   isValidEmail,
   mapAuthError,
+  NO_SALON_ACCESS_MESSAGE,
   normalizeEmail,
 } from "@/lib/auth/credentials";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
@@ -52,30 +53,38 @@ export async function POST(req: Request) {
 
     const ownerTenant = memberships?.find((m) => m.role === "owner");
     const managerTenant = memberships?.find((m) => m.role === "manager");
-    const preferredTenantId =
+    let preferredTenantId =
       ownerTenant?.tenant_id ??
       managerTenant?.tenant_id ??
-      memberships?.[0]?.tenant_id;
+      memberships?.[0]?.tenant_id ??
+      null;
 
-    if (preferredTenantId) {
-      await supabase.from("user_active_tenant").upsert({
-        user_id: data.user.id,
-        tenant_id: preferredTenantId,
-      });
-    } else {
-      const { data: barber } = await supabase
+    if (!preferredTenantId) {
+      const { data: barber } = await supabaseAdmin
         .from("barbers")
         .select("tenant_id")
         .eq("user_id", data.user.id)
         .maybeSingle();
-
-      if (barber?.tenant_id) {
-        await supabase.from("user_active_tenant").upsert({
-          user_id: data.user.id,
-          tenant_id: barber.tenant_id,
-        });
-      }
+      preferredTenantId = barber?.tenant_id ?? null;
     }
+
+    if (!preferredTenantId) {
+      await supabase.auth.signOut();
+      const denied = NextResponse.json(
+        { error: NO_SALON_ACCESS_MESSAGE },
+        { status: 403 },
+      );
+      const signed = getResponse();
+      for (const cookie of signed.cookies.getAll()) {
+        denied.cookies.set(cookie);
+      }
+      return denied;
+    }
+
+    await supabase.from("user_active_tenant").upsert({
+      user_id: data.user.id,
+      tenant_id: preferredTenantId,
+    });
 
     return getResponse();
   } catch {
