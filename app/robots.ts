@@ -1,11 +1,17 @@
 import type { MetadataRoute } from "next";
-import { shouldIndexForSearchEngines } from "@/lib/app/environment";
+import { headers } from "next/headers";
+import {
+  hostnameFromHeaderStore,
+  shouldIndexForSearchEngines,
+} from "@/lib/app/environment";
 import { getPublicBaseUrl } from "@/lib/seo/getPublicBaseUrl";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
+  const headerStore = await headers();
+  const host = hostnameFromHeaderStore(headerStore);
   const base = await getPublicBaseUrl();
 
-  if (!shouldIndexForSearchEngines()) {
+  if (!shouldIndexForSearchEngines(host)) {
     return {
       rules: {
         userAgent: "*",

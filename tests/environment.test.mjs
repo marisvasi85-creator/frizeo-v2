@@ -15,6 +15,7 @@ const PRODUCTION_HOSTS = new Set([
   "frizeo.ro",
   "email.frizeo.ro",
 ]);
+const SEARCH_INDEXABLE_HOSTS = new Set(["www.frizeo.ro", "frizeo.ro"]);
 const STAGING_HOSTS = new Set(["staging.frizeo.ro"]);
 const LOCAL_HOSTS = new Set([
   "localhost",
@@ -84,6 +85,17 @@ function isProduction(env) {
   if (isStaging(env) || isPreview(env) || isDevelopment(env)) return false;
   if (vercelEnv(env) === "production") return true;
   return !vercelEnv(env) && env.NODE_ENV === "production";
+}
+
+function isSearchIndexableHostname(hostname) {
+  return SEARCH_INDEXABLE_HOSTS.has(normalizeHostname(hostname));
+}
+
+function shouldIndexForSearchEngines(env, hostname) {
+  if (!isProduction(env)) return false;
+  const host = normalizeHostname(hostname);
+  if (!host) return true;
+  return isSearchIndexableHostname(host);
 }
 
 function shouldSkipBackgroundJobs(env, hostname) {
@@ -211,6 +223,41 @@ test("local development still runs jobs so QA can hit cron endpoints", () => {
     shouldSkipBackgroundJobs(stagingPreviewEnv, "localhost"),
     false,
   );
+});
+
+test("search indexing is production www/apex only, never email.frizeo.ro", () => {
+  assert.equal(shouldIndexForSearchEngines(productionEnv), true);
+  assert.equal(shouldIndexForSearchEngines(productionEnv, "www.frizeo.ro"), true);
+  assert.equal(shouldIndexForSearchEngines(productionEnv, "frizeo.ro"), true);
+  assert.equal(
+    shouldIndexForSearchEngines(productionEnv, "email.frizeo.ro"),
+    false,
+  );
+  assert.equal(
+    shouldIndexForSearchEngines(stagingPreviewEnv, "staging.frizeo.ro"),
+    false,
+  );
+  assert.equal(
+    shouldIndexForSearchEngines(stagingAsVercelProductionEnv, "www.frizeo.ro"),
+    false,
+  );
+  assert.equal(
+    shouldIndexForSearchEngines(otherPreviewEnv, "frizeo-git-feat-p1.vercel.app"),
+    false,
+  );
+
+  const envSource = readRepo("lib/app/environment.ts");
+  assert.match(envSource, /SEARCH_INDEXABLE_HOSTS/);
+  assert.match(envSource, /shouldIndexForSearchEngines\(/);
+  assert.match(envSource, /isSearchIndexableHostname\(/);
+
+  const robots = readRepo("app/robots.ts");
+  assert.match(robots, /hostnameFromHeaderStore/);
+  assert.match(robots, /shouldIndexForSearchEngines\(host\)/);
+
+  const sitemap = readRepo("app/sitemap.ts");
+  assert.match(sitemap, /hostnameFromHeaderStore/);
+  assert.match(sitemap, /shouldIndexForSearchEngines\(host\)/);
 });
 
 test("production analytics stay on; staging/preview stay off unless override", () => {
