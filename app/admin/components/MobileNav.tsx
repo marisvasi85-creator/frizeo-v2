@@ -15,6 +15,7 @@ export default function MobileNav({
   accountDeletionsEnabled = false,
   accountingEnabled = false,
   billingRefundsEnabled = false,
+  integrationLabEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
@@ -25,6 +26,7 @@ export default function MobileNav({
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
+  integrationLabEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -40,6 +42,7 @@ export default function MobileNav({
     accountDeletionsEnabled,
     accountingEnabled,
     billingRefundsEnabled,
+    integrationLabEnabled,
   });
 
   return (

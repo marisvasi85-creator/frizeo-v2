@@ -14,6 +14,7 @@ export default function Sidebar({
   accountDeletionsEnabled = false,
   accountingEnabled = false,
   billingRefundsEnabled = false,
+  integrationLabEnabled = false,
 }: {
   role: string | null;
   actsAsBarber?: boolean;
@@ -24,6 +25,7 @@ export default function Sidebar({
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
+  integrationLabEnabled?: boolean;
 }) {
   const pathname = usePathname();
   const navItems = buildAdminNavItems({
@@ -36,6 +38,7 @@ export default function Sidebar({
     accountDeletionsEnabled,
     accountingEnabled,
     billingRefundsEnabled,
+    integrationLabEnabled,
   });
 
   return (

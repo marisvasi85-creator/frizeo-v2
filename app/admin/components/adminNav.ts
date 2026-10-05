@@ -17,6 +17,8 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
   { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
   { href: "/admin/salon", label: "Salon", icon: "🏪" },
+  { href: "/admin/settings/integrations", label: "Integrări", icon: "🔌" },
+  { href: "/admin/integrations", label: "Integration Lab", icon: "🧪" },
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
   { href: "/admin/platform-assistant", label: "Growth AI", icon: "🛠️" },
@@ -77,6 +79,7 @@ export function buildAdminNavItems(options: {
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
+  integrationLabEnabled?: boolean;
 }): AdminNavItem[] {
   const {
     role,
@@ -88,6 +91,7 @@ export function buildAdminNavItems(options: {
     accountDeletionsEnabled = false,
     accountingEnabled = false,
     billingRefundsEnabled = false,
+    integrationLabEnabled = false,
   } = options;
 
   let items: AdminNavItem[];
@@ -96,6 +100,11 @@ export function buildAdminNavItems(options: {
     items = actsAsBarber
       ? interleaveOwnerWithBarberTools()
       : [...OWNER_ADMIN_ITEMS];
+  } else if (role === "manager") {
+    items = [
+      ...INVITED_BARBER_ITEMS,
+      { href: "/admin/settings/integrations", label: "Integrări", icon: "🔌" },
+    ];
   } else {
     items = [...INVITED_BARBER_ITEMS];
   }
@@ -112,6 +121,7 @@ export function buildAdminNavItems(options: {
     if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;
     if (item.href === "/admin/accounting") return accountingEnabled;
     if (item.href === "/admin/billing-refunds") return billingRefundsEnabled;
+    if (item.href === "/admin/integrations") return integrationLabEnabled;
     if (item.requiresBarber && !actsAsBarber) return false;
     return true;
   });
@@ -171,6 +181,7 @@ export function buildMobileMoreItems(options: {
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
   billingRefundsEnabled?: boolean;
+  integrationLabEnabled?: boolean;
 }): AdminNavItem[] {
   const mainHrefs = new Set(
     buildMobileMainItems(options).map((i) => i.href),
