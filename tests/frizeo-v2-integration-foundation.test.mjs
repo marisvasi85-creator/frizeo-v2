@@ -237,6 +237,72 @@ test("usage and credits stay inside the tenant", () => {
   assert.match(migration, /insufficient_credits/);
 });
 
+test("an expired grant does not let its debit reduce a later grant", () => {
+  const spent = [
+    creditRow({
+      idempotencyKey: "g1",
+      amount: 10,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: "2026-02-01T00:00:00.000Z",
+    }),
+    creditRow({
+      entryType: "debit",
+      idempotencyKey: "d1",
+      amount: -4,
+      createdAt: "2026-01-15T00:00:00.000Z",
+      expiresAt: null,
+    }),
+  ];
+  assert.equal(
+    creditBalance(spent, "tenant-a", new Date("2026-01-20T00:00:00.000Z")),
+    6,
+  );
+  assert.equal(
+    creditBalance(spent, "tenant-a", new Date("2026-03-01T00:00:00.000Z")),
+    0,
+  );
+  const renewed = [
+    ...spent,
+    creditRow({
+      idempotencyKey: "g2",
+      amount: 10,
+      createdAt: "2026-03-02T00:00:00.000Z",
+      expiresAt: null,
+    }),
+  ];
+  assert.equal(
+    creditBalance(renewed, "tenant-a", new Date("2026-03-03T00:00:00.000Z")),
+    10,
+  );
+  assert.equal(
+    planCreditDebit({
+      entries: spent,
+      tenantId: "tenant-a",
+      amount: 1,
+      idempotencyKey: "too-late",
+      now: new Date("2026-03-01T00:00:00.000Z"),
+    }).ok,
+    false,
+  );
+});
+
+test("integrity migration guards tenants, campaign assets, and nested secrets", () => {
+  const integrity = readFileSync(
+    join(root, "supabase/migrations/20261005085530_frizeo_v2_integration_integrity.sql"),
+    "utf8",
+  );
+  assert.match(integrity, /connection secret tenant mismatch/);
+  assert.match(integrity, /campaign barber tenant mismatch/);
+  assert.match(integrity, /if new\.barber_id is null/);
+  assert.match(integrity, /publish job asset campaign mismatch/);
+  assert.match(integrity, /publish job tenant mismatch/);
+  assert.match(integrity, /json_contains_secret_key/);
+  assert.match(integrity, /'access_token'/);
+  assert.match(integrity, /'pkce_verifier'/);
+  assert.doesNotMatch(integrity, /raise exception '%'/);
+  assert.match(integrity, /private\.credit_balance/);
+});
+
 test("OAuth callback rejects a different tenant", () => {
   process.env.INTEGRATION_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
   const issued = createOAuthState({
@@ -324,6 +390,23 @@ test("foundation does not import booking, billing, calendar, or Marketing AI", (
   assert.match(readFileSync(join(root, "lib/marketing-ai/access.ts"), "utf8"), /resolveMarketingBarberId/);
   assert.match(readFileSync(join(root, "lib/google/createEvent.ts"), "utf8"), /calendar/);
 });
+
+function creditRow({
+  entryType = "included_grant",
+  idempotencyKey,
+  amount,
+  createdAt,
+  expiresAt,
+}) {
+  return {
+    tenantId: "tenant-a",
+    entryType,
+    amount,
+    idempotencyKey,
+    expiresAt,
+    createdAt,
+  };
+}
 
 function entry(tenantId, createdAt, estimatedCostMinor) {
   return {

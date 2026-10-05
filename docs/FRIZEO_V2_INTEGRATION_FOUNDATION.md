@@ -32,7 +32,7 @@ Provider adapters return `not_implemented`. Mock jobs stay `draft` and do not se
 
 ## Credits
 
-`credit_ledger` is append-only. Balance is the sum of unexpired rows. `private.apply_credit_debit` takes a per-tenant advisory lock, ignores a duplicate idempotency key, and refuses a debit above the balance. There is no Stripe checkout and no credit sale. Expired grants drop out of the sum; a later milestone can add a stricter consumption order.
+`credit_ledger` is append-only. A debit consumes the soonest-expiring grant that was still valid at the debit time. When that grant expires, its unused remainder leaves the balance with it, so the debit does not reduce a later grant. `private.apply_credit_debit` takes a per-tenant advisory lock, ignores a duplicate idempotency key, and refuses a debit above that balance. There is no Stripe checkout and no credit sale.
 
 ## Account deletion
 
