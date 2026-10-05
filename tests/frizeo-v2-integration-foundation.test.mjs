@@ -286,6 +286,62 @@ test("an expired grant does not let its debit reduce a later grant", () => {
   );
 });
 
+test("an uncovered debit is not ignored before a later grant", () => {
+  for (const entryType of ["debit", "adjustment"]) {
+    const entries = [
+      creditRow({
+        idempotencyKey: "g1",
+        amount: 5,
+        createdAt: "2026-01-01T00:00:00.000Z",
+        expiresAt: null,
+      }),
+      creditRow({
+        entryType,
+        idempotencyKey: "spend",
+        amount: -10,
+        createdAt: "2026-01-02T00:00:00.000Z",
+        expiresAt: null,
+      }),
+      creditRow({
+        idempotencyKey: "g2",
+        amount: 10,
+        createdAt: "2026-01-03T00:00:00.000Z",
+        expiresAt: null,
+      }),
+    ];
+    assert.throws(
+      () => creditBalance(entries, "tenant-a", new Date("2026-01-04T00:00:00.000Z")),
+      /inconsistent_credit_ledger/,
+    );
+  }
+
+  const covered = [
+    creditRow({
+      idempotencyKey: "g1",
+      amount: 5,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      expiresAt: null,
+    }),
+    creditRow({
+      entryType: "debit",
+      idempotencyKey: "d1",
+      amount: -5,
+      createdAt: "2026-01-02T00:00:00.000Z",
+      expiresAt: null,
+    }),
+    creditRow({
+      idempotencyKey: "g2",
+      amount: 10,
+      createdAt: "2026-01-03T00:00:00.000Z",
+      expiresAt: null,
+    }),
+  ];
+  assert.equal(
+    creditBalance(covered, "tenant-a", new Date("2026-01-04T00:00:00.000Z")),
+    10,
+  );
+});
+
 test("integrity migration guards tenants, campaign assets, and nested secrets", () => {
   const integrity = readFileSync(
     join(root, "supabase/migrations/20261005085530_frizeo_v2_integration_integrity.sql"),
@@ -301,6 +357,12 @@ test("integrity migration guards tenants, campaign assets, and nested secrets", 
   assert.match(integrity, /'pkce_verifier'/);
   assert.doesNotMatch(integrity, /raise exception '%'/);
   assert.match(integrity, /private\.credit_balance/);
+  const failClosed = readFileSync(
+    join(root, "supabase/migrations/20261005115158_frizeo_v2_credit_balance_fail_closed.sql"),
+    "utf8",
+  );
+  assert.match(failClosed, /raise exception 'inconsistent_credit_ledger'/);
+  assert.doesNotMatch(failClosed, /if v_best is null then\s+exit;/);
 });
 
 test("OAuth callback rejects a different tenant", () => {

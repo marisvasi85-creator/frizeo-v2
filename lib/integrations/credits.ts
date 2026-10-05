@@ -78,7 +78,9 @@ function pickOpenLot(lots: readonly CreditLot[], at: number): number {
 /**
  * A debit consumes the soonest-expiring grant that was still valid when the
  * debit was written. When that grant expires, its remainder and the debit
- * both leave the balance, so a later grant is not reduced.
+ * both leave the balance, so the debit does not reduce a later grant.
+ * A spend that cannot be covered in full is an inconsistent ledger and is
+ * rejected instead of dropping the uncovered amount.
  */
 export function creditBalance(
   entries: readonly CreditLedgerEntry[],
@@ -107,7 +109,9 @@ export function creditBalance(
     let need = -entry.amount;
     while (need > 0) {
       const index = pickOpenLot(lots, createdAt);
-      if (index < 0) break;
+      if (index < 0) {
+        throw new Error("inconsistent_credit_ledger");
+      }
       const take = Math.min(need, lots[index].remaining);
       lots[index].remaining -= take;
       need -= take;
