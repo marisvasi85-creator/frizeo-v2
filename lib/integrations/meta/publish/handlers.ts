@@ -30,6 +30,7 @@ import {
   publicJobResponse,
   readPublishJob,
   readPublishMediaCandidate,
+  releaseAmbiguousPublishJob,
   settlePublishJob,
   type PublicPublishJob,
 } from "@/lib/integrations/meta/publish/store";
@@ -365,6 +366,26 @@ export async function cleanupPublishMedia(request: Request) {
   const cleared = await clearPublishMedia(gate.actor.tenantId, assetId);
   if (!cleared) return json("cleanup_failed", 500);
   return NextResponse.json({ ok: true, externalCall: false });
+}
+
+export async function releaseAmbiguousPublish(request: Request) {
+  const gate = await authorize(request, "release");
+  if ("response" in gate) return gate.response;
+  const body = await readBody(request);
+  const jobId = typeof body?.jobId === "string" ? body.jobId.toLowerCase() : "";
+  if (!UUID_RE.test(jobId)) return json("invalid", 400);
+  const released = await releaseAmbiguousPublishJob(gate.actor.tenantId, jobId);
+  if (released.outcome === "not_found") return json("not_found", 404);
+  if (released.outcome === "rejected" || !released.job) return json("release_rejected", 409);
+  return NextResponse.json({
+    ok: true,
+    externalCall: false,
+    priorContainer: released.priorContainer,
+    warning: released.priorContainer
+      ? "Istoricul ambiguu a fost păstrat. Jobul are un container salvat, iar o încercare nouă poate crea o postare în plus."
+      : "Istoricul ambiguu a fost păstrat. Nu există un container salvat, dar Meta poate avea unul creat anterior. O încercare nouă poate crea o postare în plus.",
+    jobs: [publicJobResponse(released.job, false)],
+  });
 }
 
 async function readConnection(tenantId: string): Promise<

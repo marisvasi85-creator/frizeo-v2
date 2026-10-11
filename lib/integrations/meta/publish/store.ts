@@ -168,6 +168,31 @@ export async function readPublishMediaCandidate(
   return { eligible: true, path: row.media_object_path };
 }
 
+export async function releaseAmbiguousPublishJob(
+  tenantId: string,
+  jobId: string,
+): Promise<
+  | { outcome: "released"; priorContainer: boolean; job: PublicPublishJob }
+  | { outcome: "rejected"; job: PublicPublishJob | null }
+  | { outcome: "not_found" }
+> {
+  const { data, error } = await supabaseAdmin.rpc("meta_publish_release_ambiguous", {
+    p_tenant_id: tenantId,
+    p_job_id: jobId,
+  });
+  if (error) {
+    console.error("meta_publish_release_failed");
+    return { outcome: "not_found" };
+  }
+  const row = asRecord(data);
+  const job = presentPublishJob(row?.job);
+  if (row?.outcome === "released" && job) {
+    return { outcome: "released", priorContainer: row.prior_container === true, job };
+  }
+  if (row?.outcome === "rejected") return { outcome: "rejected", job };
+  return { outcome: "not_found" };
+}
+
 export async function clearPublishMedia(tenantId: string, assetId: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin.rpc("meta_publish_media_clear", {
     p_tenant_id: tenantId,

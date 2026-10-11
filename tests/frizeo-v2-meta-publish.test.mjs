@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { buildAdminNavItems } from "../app/admin/components/adminNav.ts";
 import { FRIZEO_V2_CAPABILITIES, resolveCapabilities } from "../lib/integrations/capabilities.ts";
-import { createGraphBudget } from "../lib/integrations/meta/graph.ts";
+import { createGraphBudget, GRAPH_BUDGET_MS, GRAPH_CALL_MAX_MS } from "../lib/integrations/meta/graph.ts";
 import { publishFacebookPhoto } from "../lib/integrations/meta/publish/facebook.ts";
 import { publishRequestDecision } from "../lib/integrations/meta/publish/flags.ts";
 import { buildGraphUrl, createMetaPublishHttp } from "../lib/integrations/meta/publish/graphHttp.ts";
@@ -19,6 +19,7 @@ import {
 } from "../lib/integrations/meta/publish/image.ts";
 import {
   createInstagramContainer,
+  INSTAGRAM_CONTAINER_TIMEOUT_MS,
   publishInstagramContainer,
   readInstagramStatus,
 } from "../lib/integrations/meta/publish/instagram.ts";
@@ -197,6 +198,15 @@ test("publish gates fail closed", () => {
     publishRequestDecision({ ...ready, action: "verify", envLiveEnabled: false }).error,
     "live_off",
   );
+  assert.deepEqual(
+    publishRequestDecision({ ...ready, action: "release", liveCapabilityEnabled: false, envLiveEnabled: false, configured: false }),
+    { ok: true },
+  );
+  assert.equal(INSTAGRAM_CONTAINER_TIMEOUT_MS, 5000);
+  assert.equal(GRAPH_CALL_MAX_MS, 1500);
+  assert.equal(GRAPH_BUDGET_MS, 8000);
+  assert.ok(INSTAGRAM_CONTAINER_TIMEOUT_MS + (GRAPH_CALL_MAX_MS * 2) <= GRAPH_BUDGET_MS);
+  assert.ok(GRAPH_BUDGET_MS < 10_000);
 });
 
 test("graph urls never carry the access token", () => {
@@ -631,6 +641,7 @@ test("instagram helpers cover the container lifecycle", async () => {
     appSecret: "app-secret-not-a-token",
     budget: createGraphBudget(),
     http: async (call) => {
+      assert.equal(call.timeoutMs, INSTAGRAM_CONTAINER_TIMEOUT_MS);
       assert.equal(call.token, USER);
       assert.equal(call.form.access_token, undefined);
       return { ok: true, status: 200, body: { id: "555" } };
@@ -774,6 +785,23 @@ test("publish migration and routes stay fail closed", () => {
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
   assert.match(composer, /disabled=\{!liveAvailable/);
   assert.match(composer, /destinationBusy/);
+  assert.match(composer, /Deblochează pentru o încercare nouă/);
+  assert.match(composer, /container Instagram anterior/);
+  const releaseMigration = readFileSync(
+    join(root, "supabase/migrations/20261011143000_frizeo_v2_meta_publish_release_ambiguous.sql"),
+    "utf8",
+  );
+  assert.match(releaseMigration, /status = 'released'/);
+  assert.match(releaseMigration, /safe_error = 'ambiguous'/);
+  assert.match(releaseMigration, /grant execute on function public\.meta_publish_release_ambiguous/);
+  assert.doesNotMatch(releaseMigration, /status = 'failed'/);
+  assert.doesNotMatch(releaseMigration, /insert into public\.tenant_capabilities/i);
+  const releaseStart = handlers.indexOf("export async function releaseAmbiguousPublish");
+  const releaseBody = handlers.slice(releaseStart, handlers.indexOf("async function readConnection"));
+  assert.ok(releaseStart > 0);
+  assert.doesNotMatch(releaseBody, /readMetaAccessToken/);
+  assert.doesNotMatch(releaseBody, /createMetaPublishHttp/);
+  assert.doesNotMatch(releaseBody, /graph\.facebook\.com/);
   assert.match(composer, /if \(!payload\.jobs\.some\(openLive\)\) keyRef\.current = null/);
   assert.match(composer, /Publicarea reală este oprită/);
   assert.match(composer, /Rulează testul mock/);

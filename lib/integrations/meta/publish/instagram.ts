@@ -7,6 +7,9 @@ import {
 
 const NUMERIC_ID = /^[0-9]{1,32}$/;
 
+/** Meta downloads the image while creating the container. Status and publish stay at GRAPH_CALL_MAX_MS, so 5000 + 1500 + 1500 stays inside the 8000 ms budget and the 10s Hobby limit. */
+export const INSTAGRAM_CONTAINER_TIMEOUT_MS = 5000;
+
 export type InstagramStatus =
   | { kind: "no_budget" }
   | { kind: "timeout" }
@@ -53,7 +56,7 @@ export async function createInstagramContainer(input: {
   if (missingScopes(input.scopes)) return failed("missing_permission");
   if (!NUMERIC_ID.test(input.igUserId)) return failed("invalid_parameter");
   if (!input.imageUrl.startsWith("https://")) return failed("invalid_image");
-  const timeoutMs = reserveGraphCall(input.budget);
+  const timeoutMs = reserveGraphCall(input.budget, INSTAGRAM_CONTAINER_TIMEOUT_MS);
   if (timeoutMs == null) return failed("timeout");
   const created = await input.http({
     method: "POST",

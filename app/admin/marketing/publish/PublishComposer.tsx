@@ -49,7 +49,10 @@ const ERRORS: Record<string, string> = {
   not_eligible: "Imaginea nu poate fi ștearsă cât timp publicarea este în curs sau are rezultat necunoscut.",
   cleanup_failed: "Imaginea nu a putut fi ștearsă.",
   not_found: "Publicarea nu a fost găsită.",
+  release_rejected: "Acest rezultat nu poate fi deblocat.",
 };
+
+const AMBIGUOUS_WARNING = "Rezultatul rămâne necunoscut, nu este un eșec confirmat. Este posibil să existe un container Instagram anterior, iar o încercare nouă poate crea o postare în plus.";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Schiță mock",
@@ -59,6 +62,7 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Eșuat",
   cancelled: "Anulat",
   unknown: "Rezultat necunoscut",
+  released: "Deblocat, rezultat necunoscut",
 };
 
 function labelFor(type: string, name: string | null): string {
@@ -228,6 +232,40 @@ export default function PublishComposer({
     router.refresh();
   }
 
+  async function release(jobId: string) {
+    if (busy) return;
+    if (!window.confirm(AMBIGUOUS_WARNING)) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/integrations/meta/publish/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        externalCall?: boolean;
+        warning?: string;
+        jobs?: HistoryJob[];
+      } | null;
+      if (!response.ok || !payload?.jobs?.[0]) {
+        setMessage(ERRORS[payload?.error ?? ""] ?? "Destinația nu a putut fi deblocată.");
+        return;
+      }
+      if (payload.externalCall) {
+        setMessage("Deblocarea a fost oprită: nu trebuia să existe un apel extern.");
+        return;
+      }
+      const next = payload.jobs[0];
+      setJobs((current) => current.map((job) => job.id === next.id ? { ...job, ...next } : job));
+      setMessage(payload.warning ?? AMBIGUOUS_WARNING);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="grid gap-4">
       <label className="grid gap-2 text-sm text-frz-ink">
@@ -291,15 +329,24 @@ export default function PublishComposer({
         <h2 className="text-lg font-semibold text-frz-ink">Istoric</h2>
         {jobs.length === 0 && <p className="text-sm text-frz-muted">Nu există publicări salvate.</p>}
         {jobs.map((job) => {
-          const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled";
+          const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled" || job.status === "released";
+          const canRelease = job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
           return (
             <div key={job.id} className="rounded-xl border border-frz-line p-3">
               <p className="text-sm font-medium text-frz-ink">
                 {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
               </p>
               {job.caption && <p className="mt-1 text-sm text-frz-muted">{job.caption}</p>}
-              {job.safeError && (
-                <p className="mt-1 text-sm text-frz-ink">{ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."}</p>
+              {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
+              {job.safeError && !canRelease && (
+                <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată.")}</p>
+              )}
+              {canRelease && (
+                <div className="mt-2">
+                  <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => release(job.id)}>
+                    Deblochează pentru o încercare nouă
+                  </AdminButton>
+                </div>
               )}
               {terminal && job.assetId && (
                 <div className="mt-2">

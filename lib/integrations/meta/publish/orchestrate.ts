@@ -20,7 +20,8 @@ export type PublishStatus =
   | "published"
   | "failed"
   | "cancelled"
-  | "unknown";
+  | "unknown"
+  | "released";
 
 export type PublishJobState = {
   id: string;

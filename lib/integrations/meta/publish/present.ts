@@ -42,7 +42,8 @@ export function presentPublishJob(value: unknown): PublicPublishJob | null {
     status !== "published" &&
     status !== "failed" &&
     status !== "cancelled" &&
-    status !== "unknown"
+    status !== "unknown" &&
+    status !== "released"
   ) {
     return null;
   }

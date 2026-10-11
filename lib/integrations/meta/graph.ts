@@ -23,9 +23,9 @@ export function createGraphBudget(totalMs = GRAPH_BUDGET_MS): GraphBudget {
   return { remainingMs: totalMs };
 }
 
-export function reserveGraphCall(budget: GraphBudget): number | null {
+export function reserveGraphCall(budget: GraphBudget, capMs = GRAPH_CALL_MAX_MS): number | null {
   if (budget.remainingMs < GRAPH_CALL_MIN_MS) return null;
-  const timeoutMs = Math.min(GRAPH_CALL_MAX_MS, budget.remainingMs);
+  const timeoutMs = Math.min(capMs, budget.remainingMs);
   budget.remainingMs -= timeoutMs;
   return timeoutMs;
 }

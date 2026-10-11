@@ -7,7 +7,7 @@ export const STAGING_PUBLISH_HOST = "staging.frizeo.ro";
 export const STAGING_SUPABASE_HOST = "fanxxytfuhnakfdzwssd.supabase.co";
 export const MARKETING_PUBLISH_BUCKET = "marketing-publish";
 
-export type PublishAction = "media" | "mock" | "live" | "verify" | "cleanup";
+export type PublishAction = "media" | "mock" | "live" | "verify" | "cleanup" | "release";
 
 export type PublishDecision =
   | { ok: true }
@@ -31,8 +31,8 @@ export function publishHostAllowed(request: Request): boolean {
 }
 
 /**
- * Fail closed. Live Graph calls need every gate. Mock, upload, and cleanup
- * do not call Graph and do not require the live capability or the kill switch.
+ * Fail closed. Live Graph calls need every gate. Mock, upload, cleanup, and
+ * ambiguous release do not call Graph and do not require the live kill switch.
  */
 export function publishRequestDecision(input: {
   production: boolean;
