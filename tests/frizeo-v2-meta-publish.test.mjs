@@ -392,6 +392,72 @@ test("instagram in-progress waits for a separate verify and does not publish twi
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
 });
 
+test("instagram does not publish again when saving the provider result fails", async () => {
+  const http = recorder(async (call) => {
+    if (call.method === "POST" && call.path.endsWith("/media")) {
+      return { ok: true, status: 200, body: { id: "555" } };
+    }
+    if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    if (call.path.endsWith("/media_publish")) return { ok: true, status: 200, body: { id: "888" } };
+    return { ok: false, status: 500, body: null };
+  });
+  const pending = job({
+    id: "88888888-8888-4888-8888-888888888888",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+  });
+  const store = memoryStore([pending]);
+  const settle = store.settle;
+  store.settle = (id, patch) => (
+    patch.status === "published"
+      ? Promise.resolve({ outcome: "rejected", job: { ...store.jobs.get(id) } })
+      : settle(id, patch)
+  );
+  const started = await advancePublishJobs({
+    jobs: [pending],
+    ...baseInput(store, http.http),
+  });
+  assert.equal(started[0].status, "unknown");
+  assert.equal(started[0].safeError, "awaiting_publish_confirmation");
+  assert.equal(started[0].providerPostId, null);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
+  const after = http.calls.length;
+  const verified = await advancePublishJobs({
+    jobs: [store.jobs.get(pending.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(verified[0].status, "unknown");
+  assert.equal(http.calls.length, after + 1);
+  assert.equal(http.calls.filter((call) => call.method === "POST").length, 2);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
+});
+
+test("two verify requests publish one finished instagram container", async () => {
+  const http = recorder(async (call) => {
+    if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    if (call.path.endsWith("/media_publish")) return { ok: true, status: 200, body: { id: "888" } };
+    return { ok: false, status: 500, body: null };
+  });
+  const current = job({
+    id: "99999999-9999-4999-8999-999999999999",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+  });
+  const store = memoryStore([current]);
+  const input = baseInput(store, http.http, { mode: "verify" });
+  await Promise.all([
+    advancePublishJobs({ jobs: [current], ...input }),
+    advancePublishJobs({ jobs: [{ ...current }], ...input }),
+  ]);
+  assert.equal(store.jobs.get(current.id).status, "published");
+  assert.equal(store.jobs.get(current.id).providerPostId, "888");
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media")).length, 0);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
+});
+
 test("instagram unknown result is not published again", async () => {
   const http = recorder(async (call) => {
     if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
