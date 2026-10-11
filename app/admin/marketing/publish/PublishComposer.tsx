@@ -13,6 +13,7 @@ type DestinationOption = {
 type HistoryJob = {
   id: string;
   assetId: string;
+  destinationId: string;
   destinationType: string;
   displayName: string | null;
   status: string;
@@ -20,6 +21,12 @@ type HistoryJob = {
   safeError: string | null;
   caption: string | null;
 };
+
+function openLive(job: { executionMode: string; status: string }): boolean {
+  return job.executionMode === "live" && (
+    job.status === "pending" || job.status === "publishing" || job.status === "unknown"
+  );
+}
 
 const ERRORS: Record<string, string> = {
   not_configured: "Publicarea Meta nu este disponibilă.",
@@ -35,6 +42,7 @@ const ERRORS: Record<string, string> = {
   invalid: "Datele trimise nu sunt valide.",
   destination_mismatch: "Destinația nu aparține acestui salon.",
   idempotency_conflict: "Aceeași acțiune a fost trimisă cu date diferite.",
+  destination_busy: "Această destinație are deja o publicare în curs sau cu rezultat necunoscut. Nu se trimite o a doua postare.",
   needs_reconnect: "Conexiunea Meta trebuie refăcută manual.",
   save_failed: "Publicarea nu a putut fi salvată.",
   upload_failed: "Imaginea nu a putut fi salvată.",
@@ -88,6 +96,9 @@ export default function PublishComposer({
   const [mediaPath, setMediaPath] = useState<string | null>(null);
 
   const previewName = useMemo(() => file?.name ?? "", [file]);
+  const destinationBusy = jobs.some(
+    (job) => openLive(job) && selected.includes(job.destinationId),
+  );
 
   function chooseFile(next: File | null) {
     setFile(next);
@@ -154,7 +165,7 @@ export default function PublishComposer({
       }
       setJobs((current) => [...payload.jobs!, ...current]);
       setMessage("Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos.");
-      keyRef.current = null;
+      if (!payload.jobs.some(openLive)) keyRef.current = null;
       router.refresh();
     } finally {
       setBusy(false);
@@ -256,7 +267,7 @@ export default function PublishComposer({
       <div className="flex flex-wrap gap-2">
         <AdminButton
           type="button"
-          disabled={!liveAvailable || busy || selected.length === 0}
+          disabled={!liveAvailable || busy || selected.length === 0 || destinationBusy}
           onClick={liveAvailable ? runLive : undefined}
         >
           Publică
@@ -266,9 +277,11 @@ export default function PublishComposer({
         </AdminButton>
       </div>
       <p className="text-sm text-frz-muted">
-        {liveAvailable
-          ? "Publicarea reală este pornită pentru acest salon. Butonul Publică trimite imaginea către destinațiile bifate."
-          : "Publicarea reală este oprită. Butonul Publică este dezactivat și nu trimite conținut către Facebook sau Instagram."}
+        {destinationBusy
+          ? "O destinație bifată are o publicare în curs sau cu rezultat necunoscut. Butonul Publică rămâne dezactivat și nu trimite o a doua postare."
+          : liveAvailable
+            ? "Publicarea reală este pornită pentru acest salon. Butonul Publică trimite imaginea către destinațiile bifate."
+            : "Publicarea reală este oprită. Butonul Publică este dezactivat și nu trimite conținut către Facebook sau Instagram."}
       </p>
       <p className="text-sm text-frz-muted">
         Testul mock salvează o schiță locală pentru destinațiile alese. Nu se face niciun apel către Meta.

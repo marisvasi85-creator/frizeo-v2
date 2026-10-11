@@ -13,7 +13,7 @@ export { presentPublishJob, publicJobResponse, toJobState } from "@/lib/integrat
 
 export type PrepareResult =
   | { outcome: "created" | "replay"; jobs: PublicPublishJob[] }
-  | { outcome: "idempotency_conflict" | "destination_mismatch" | "invalid" | "failed" };
+  | { outcome: "idempotency_conflict" | "destination_mismatch" | "destination_busy" | "invalid" | "failed" };
 
 function parseJobs(value: unknown): PublicPublishJob[] {
   if (!Array.isArray(value)) return [];
@@ -53,6 +53,7 @@ export async function preparePublishJobs(input: {
   if (
     outcome === "idempotency_conflict" ||
     outcome === "destination_mismatch" ||
+    outcome === "destination_busy" ||
     outcome === "invalid"
   ) {
     return { outcome };

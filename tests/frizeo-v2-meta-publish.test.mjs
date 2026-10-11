@@ -749,7 +749,23 @@ test("publish migration and routes stay fail closed", () => {
   const verifyStart = handlers.indexOf("export async function verifyPublish");
   const liveBody = handlers.slice(liveStart, verifyStart);
   assert.ok(liveBody.indexOf("liveCapabilityEnabled") < liveBody.indexOf("readMetaAccessToken"));
+  assert.ok(liveBody.indexOf("preparePublishJobs") < liveBody.indexOf("readMetaAccessToken"));
   assert.ok(liveBody.indexOf("readMetaAccessToken") < liveBody.indexOf("createMetaPublishHttp"));
+  const store = readFileSync(join(root, "lib/integrations/meta/publish/store.ts"), "utf8");
+  assert.match(store, /destination_busy/);
+
+  const guard = readFileSync(
+    join(root, "supabase/migrations/20261011104534_frizeo_v2_meta_publish_destination_busy.sql"),
+    "utf8",
+  );
+  const replayAt = guard.indexOf("'replay'");
+  const busyAt = guard.indexOf("'destination_busy'");
+  const insertAt = guard.lastIndexOf("insert into public.integration_publish_jobs");
+  assert.ok(replayAt > 0 && busyAt > replayAt && insertAt > busyAt);
+  assert.match(guard, /integration_publish_jobs_live_open_destination_uidx/);
+  assert.match(guard, /status in \('pending', 'publishing', 'unknown'\)/);
+  assert.match(guard, /:publish-destination:/);
+  assert.doesNotMatch(guard, /insert into public\.tenant_capabilities/i);
   assert.doesNotMatch(handlers, /console\.log/);
   const page = readFileSync(join(root, "app/admin/marketing/publish/page.tsx"), "utf8");
   assert.match(page, /canAdministerIntegrations/);
@@ -757,6 +773,8 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(page, /isProduction\(\)/);
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
   assert.match(composer, /disabled=\{!liveAvailable/);
+  assert.match(composer, /destinationBusy/);
+  assert.match(composer, /if \(!payload\.jobs\.some\(openLive\)\) keyRef\.current = null/);
   assert.match(composer, /Publicarea reală este oprită/);
   assert.match(composer, /Rulează testul mock/);
   const example = readFileSync(join(root, ".env.example"), "utf8");

@@ -225,8 +225,6 @@ export async function publishLive(request: Request) {
   if (!connection) return json("needs_reconnect", 409);
   const expiry = assessStoredTokenExpiry(connection.expiresAt);
   if (connection.status !== "connected" || !expiry.ok) return json("needs_reconnect", 409);
-  const secret = await readMetaAccessToken(prepared.gate.actor.tenantId);
-  if (!secret.ok) return json("needs_reconnect", 409);
 
   const result = await preparePublishJobs({
     tenantId: prepared.gate.actor.tenantId,
@@ -241,6 +239,20 @@ export async function publishLive(request: Request) {
   if (result.outcome !== "created" && result.outcome !== "replay") {
     return json(result.outcome, result.outcome === "destination_mismatch" ? 404 : 409);
   }
+  const needsGraph = result.jobs.some(
+    (job) => job.executionMode === "live" && job.status === "pending",
+  );
+  if (!needsGraph) {
+    return NextResponse.json({
+      ok: true,
+      mock: false,
+      live: true,
+      externalCall: false,
+      jobs: result.jobs.map((job) => publicJobResponse(job, false)),
+    });
+  }
+  const secret = await readMetaAccessToken(prepared.gate.actor.tenantId);
+  if (!secret.ok) return json("needs_reconnect", 409);
 
   let calls = 0;
   const http = createMetaPublishHttp();

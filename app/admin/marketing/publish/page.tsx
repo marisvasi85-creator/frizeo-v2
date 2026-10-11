@@ -42,7 +42,7 @@ export default async function MarketingPublishPage() {
       .eq("status", "active"),
     supabase
       .from("integration_publish_jobs")
-      .select("id, asset_id, status, execution_mode, safe_error, marketing_destinations(display_name, destination_type), integration_assets(body)")
+      .select("id, asset_id, destination_id, status, execution_mode, safe_error, marketing_destinations(display_name, destination_type), integration_assets(body)")
       .eq("tenant_id", session.tenantId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -73,9 +73,11 @@ export default async function MarketingPublishPage() {
       ? row.integration_assets[0]
       : row.integration_assets;
     if (!destination || !row.asset_id) return [];
+    if (!row.destination_id) return [];
     return [{
       id: row.id,
       assetId: row.asset_id,
+      destinationId: row.destination_id,
       destinationType: destination.destination_type,
       displayName: destination.display_name,
       status: row.status,
