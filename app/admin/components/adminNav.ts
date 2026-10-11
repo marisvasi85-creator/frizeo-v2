@@ -18,6 +18,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/barbers", label: "Frizeri", icon: "👥" },
   { href: "/admin/salon", label: "Salon", icon: "🏪" },
   { href: "/admin/settings/integrations", label: "Integrări", icon: "🔌" },
+  { href: "/admin/marketing/publish", label: "Publicare", icon: "📣" },
   { href: "/admin/integrations", label: "Integration Lab", icon: "🧪" },
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
@@ -104,6 +105,7 @@ export function buildAdminNavItems(options: {
     items = [
       ...INVITED_BARBER_ITEMS,
       { href: "/admin/settings/integrations", label: "Integrări", icon: "🔌" },
+      { href: "/admin/marketing/publish", label: "Publicare", icon: "📣" },
     ];
   } else {
     items = [...INVITED_BARBER_ITEMS];
