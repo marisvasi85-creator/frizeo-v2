@@ -52,6 +52,8 @@ const NOTICES: Record<MetaNotice, string> = {
   saved: "Destinațiile Meta au fost salvate.",
   no_pages: "Nu există pagini Facebook disponibile pentru acest cont.",
   invalid: "Conectarea Meta nu a putut fi finalizată.",
+  unknown_expiry: "Meta nu a comunicat o dată de expirare a tokenului. Conexiunea nu a fost salvată. Reconectarea se face manual.",
+  token_expired: "Tokenul Meta este expirat. Reconectează manual.",
 };
 
 const STATUS_LABEL: Record<string, string> = {

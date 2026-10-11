@@ -28,11 +28,17 @@ The callback `GET /api/integrations/meta/callback` checks the HMAC state, expiry
 
 Missing permissions are stored as status `error`, not `connected`. A failed exchange writes no connection. The user token is AES-256-GCM ciphertext in `private.marketing_connection_secrets`.
 
-User tokens are refreshed only by reconnect. There is no cron. A stored `token_expires_at` in the past is shown as needs reconnect without calling Graph on page load. Long-lived user tokens from the exchange last about 60 days when Meta returns `expires_in`.
+User tokens are refreshed only by reconnect. There is no cron. A usable token needs a finite future expiry from at least one of `expires_in`, `debug_token.data.expires_at` greater than 0, or `debug_token.data.data_access_expires_at` greater than 0. The earliest of those bounds is stored. `expires_at` of 0, or a missing expiry with no other finite bound, is unknown and the callback does not save the connection. An already-expired bound is not saved either. A stored `token_expires_at` that is missing, unparseable, or in the past is shown as needs reconnect, and page discovery refuses it, without calling Graph on page load.
 
 ## Discovery
 
-`POST /api/integrations/meta/destinations` calls `GET /v26.0/me/accounts?fields=id,name,tasks,instagram_business_account{id,username}`. Meta documents `instagram_business_account` as the Instagram professional account (Business or Creator) linked to the Page. The call does not request a separate account-type field, because that field is not part of this documented Page response. A page may have no Instagram account. Nothing is selected automatically. Page access tokens returned by Graph are dropped before the response and before save.
+`POST /api/integrations/meta/destinations` calls `GET /v26.0/me/accounts?fields=id,name,tasks,instagram_business_account{id,username}`. Meta documents `instagram_business_account` as the Instagram professional account (Business or Creator) linked to the Page. The call does not request a separate account-type field, because that field is not part of this documented Page response. A page may have no Instagram account. Nothing is selected automatically.
+
+Graph can return `paging.next`. The server accepts that URL only when it is `https://graph.facebook.com/v26.0/me/accounts` or `https://graph.facebook.com/v26.0/<page id>/accounts`, then rebuilds the next request to `me/accounts` with the `after` cursor and the Authorization header. It does not request the raw `next` URL. An unexpected host, path, or cursor fails the whole discovery. At most 4 pages and 100 results are accepted; another `next` after that is a limit, not a partial success.
+
+Page `access_token` values returned by Graph are not stored, not returned to the browser, not written into destination metadata, and not logged. Facebook Page publishing is a later milestone. That work must obtain a page access token on demand from the stored user token, encrypt it separately, and keep it out of `metadata`, API responses, the UI, and logs. This milestone does not store page tokens and does not publish.
+
+Each Graph request reserves at most 1.5 seconds from an 8 second budget, which stays under the Hobby `maxDuration` of 10 seconds. A timed-out call is not retried. The optional profile name is skipped when the budget is gone; token exchange, `debug_token`, and page listing fail closed instead.
 
 `POST /api/integrations/meta/destinations/select` reads Graph again and only then writes `marketing_destinations` and sets the connection to `connected`.
 

@@ -9,9 +9,11 @@ import {
   META_APP_ID,
   META_LOGIN_CONFIGURATION_ID,
   META_OAUTH_REDIRECT_URI,
+  META_REQUIRED_SCOPES,
   assertMetaConfig,
 } from "../lib/integrations/meta/config.ts";
 import {
+  assessStoredTokenExpiry,
   buildMetaAuthorizeUrl,
   containsSecretMaterial,
   decideMetaConnect,
@@ -26,8 +28,20 @@ import {
   planMetaDestinationSave,
   planMetaUpsert,
   presentMetaDestination,
+  readAccountsCursor,
+  resolveUserTokenExpiry,
   stagingSettingsUrl,
 } from "../lib/integrations/meta/flow.ts";
+import {
+  GRAPH_BUDGET_MS,
+  GRAPH_CALL_MAX_MS,
+  MAX_ACCOUNT_PAGES,
+  createGraphBudget,
+  createMetaHttp,
+  exchangeMetaAuthorization,
+  fetchMetaPages,
+  reserveGraphCall,
+} from "../lib/integrations/meta/graph.ts";
 import { createMockPublishJob } from "../lib/integrations/publish/mockJob.ts";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -178,7 +192,7 @@ test("denied, failed exchange, and missing permissions do not become connected",
     exchangeCode: async () => ({
       ok: true,
       accessToken: token,
-      expiresAt: null,
+      expiresAt: "2026-12-11T00:00:00.000Z",
       scopes: ["pages_show_list"],
       userId: "100",
       displayName: "Salon",
@@ -287,6 +301,18 @@ test("reconnect updates one connection and disconnect does not claim an unconfir
     effectiveMetaStatus("connected", "2026-10-01T00:00:00.000Z", new Date("2026-10-11T00:00:00.000Z")),
     "needs_reconnect",
   );
+  assert.equal(
+    effectiveMetaStatus("connected", null, new Date("2026-10-11T00:00:00.000Z")),
+    "needs_reconnect",
+  );
+  assert.equal(
+    effectiveMetaStatus("setup_required", "not-a-date", new Date("2026-10-11T00:00:00.000Z")),
+    "needs_reconnect",
+  );
+  assert.equal(
+    effectiveMetaStatus("connected", "2026-12-01T00:00:00.000Z", new Date("2026-10-11T00:00:00.000Z")),
+    "connected",
+  );
 });
 
 test("debug token from another app is rejected and required scopes are explicit", () => {
@@ -309,7 +335,326 @@ test("debug token from another app is rejected and required scopes are explicit"
   }, META_APP_ID);
   assert.equal(parsed.ok, true);
   if (!parsed.ok) return;
+  assert.equal(parsed.expiresAt, null);
+  assert.equal(parsed.dataAccessExpiresAt, null);
   assert.deepEqual(missingRequiredScopes(parsed.scopes), []);
+});
+
+const expiryNow = new Date("2026-10-11T00:00:00.000Z");
+
+function debugPayload(overrides = {}) {
+  return {
+    data: {
+      app_id: META_APP_ID,
+      is_valid: true,
+      type: "USER",
+      user_id: "42",
+      scopes: [...META_REQUIRED_SCOPES],
+      expires_at: Math.floor(expiryNow.getTime() / 1000) + 60 * 24 * 3600,
+      data_access_expires_at: Math.floor(expiryNow.getTime() / 1000) + 10 * 24 * 3600,
+      ...overrides,
+    },
+  };
+}
+
+function scriptedGraph(steps) {
+  let index = 0;
+  return async (url, init) => {
+    const step = steps[index];
+    index += 1;
+    if (!step) throw new Error(`unexpected Graph call ${url}`);
+    return step(url, init);
+  };
+}
+
+test("a user token is usable only with a finite future expiry", async () => {
+  const dataAccess = new Date(expiryNow.getTime() + 10 * 24 * 3600 * 1000).toISOString();
+  const exchanged = await exchangeMetaAuthorization({
+    config,
+    code: "auth-code",
+    codeVerifier: "verifier",
+    now: expiryNow,
+    http: scriptedGraph([
+      async () => ({ ok: true, status: 200, body: { access_token: "short-lived-token", expires_in: 3600 } }),
+      async () => ({ ok: true, status: 200, body: { access_token: "long-lived-token", expires_in: 5184000 } }),
+      async () => ({ ok: true, status: 200, body: debugPayload() }),
+      async () => ({ ok: true, status: 200, body: { id: "42", name: "Salon" } }),
+    ]),
+  });
+  assert.equal(exchanged.ok, true);
+  if (!exchanged.ok) return;
+  assert.equal(exchanged.expiresAt, dataAccess);
+  assert.equal(exchanged.accessToken, "long-lived-token");
+
+  const fromDataAccessOnly = resolveUserTokenExpiry({
+    expiresInSeconds: null,
+    debugExpiresAt: null,
+    dataAccessExpiresAt: dataAccess,
+    now: expiryNow,
+  });
+  assert.equal(fromDataAccessOnly.ok, true);
+  if (!fromDataAccessOnly.ok) return;
+  assert.equal(fromDataAccessOnly.expiresAt, dataAccess);
+  assert.equal(assessStoredTokenExpiry(dataAccess, expiryNow).ok, true);
+});
+
+test("an expired user token is not stored", async () => {
+  let persisted = false;
+  const past = Math.floor(expiryNow.getTime() / 1000) - 3600;
+  const exchanged = await exchangeMetaAuthorization({
+    config,
+    code: "auth-code",
+    codeVerifier: "verifier",
+    now: expiryNow,
+    http: scriptedGraph([
+      async () => ({ ok: true, status: 200, body: { access_token: "short-lived-token", expires_in: 5184000 } }),
+      async () => ({ ok: true, status: 200, body: { access_token: "long-lived-token", expires_in: 5184000 } }),
+      async () => ({
+        ok: true,
+        status: 200,
+        body: debugPayload({ expires_at: past, data_access_expires_at: past }),
+      }),
+    ]),
+  });
+  assert.deepEqual(exchanged, { ok: false, reason: "token_expired" });
+  const callback = await runMetaCallback({
+    query: new URLSearchParams("code=auth-code&state=abc"),
+    session: { userId: "user-a", tenantId: "tenant-a", role: "owner" },
+    capabilityEnabled: true,
+    configured: true,
+    production: false,
+    config,
+    consumeState: async () => ({ outcome: "ok", tenantId: "tenant-a", userId: "user-a", pkceCiphertext: "aa", pkceNonce: "bb" }),
+    decryptPkce: () => "verifier",
+    exchangeCode: async () => exchanged,
+    persist: async () => {
+      persisted = true;
+      return true;
+    },
+  });
+  assert.deepEqual(callback, { notice: "token_expired" });
+  assert.equal(persisted, false);
+  assert.equal(assessStoredTokenExpiry("2026-10-01T00:00:00.000Z", expiryNow).reason, "token_expired");
+});
+
+test("unknown token expiry fails closed and is not stored", async () => {
+  let persisted = false;
+  const exchanged = await exchangeMetaAuthorization({
+    config,
+    code: "auth-code",
+    codeVerifier: "verifier",
+    now: expiryNow,
+    http: scriptedGraph([
+      async () => ({ ok: true, status: 200, body: { access_token: "short-lived-token" } }),
+      async () => ({ ok: false, status: 400, body: {} }),
+      async () => ({
+        ok: true,
+        status: 200,
+        body: debugPayload({ expires_at: 0, data_access_expires_at: 0 }),
+      }),
+    ]),
+  });
+  assert.deepEqual(exchanged, { ok: false, reason: "unknown_expiry" });
+  assert.equal(
+    resolveUserTokenExpiry({
+      expiresInSeconds: null,
+      debugExpiresAt: null,
+      dataAccessExpiresAt: null,
+      now: expiryNow,
+    }).reason,
+    "unknown_expiry",
+  );
+  const callback = await runMetaCallback({
+    query: new URLSearchParams("code=auth-code&state=abc"),
+    session: { userId: "user-a", tenantId: "tenant-a", role: "owner" },
+    capabilityEnabled: true,
+    configured: true,
+    production: false,
+    config,
+    consumeState: async () => ({ outcome: "ok", tenantId: "tenant-a", userId: "user-a", pkceCiphertext: "aa", pkceNonce: "bb" }),
+    decryptPkce: () => "verifier",
+    exchangeCode: async () => ({
+      ok: true,
+      accessToken: "EAA-unknown",
+      expiresAt: null,
+      scopes: [...META_REQUIRED_SCOPES],
+      userId: "42",
+      displayName: "Salon",
+      permissionsOk: true,
+    }),
+    persist: async () => {
+      persisted = true;
+      return true;
+    },
+  });
+  assert.deepEqual(callback, { notice: "unknown_expiry" });
+  assert.equal(persisted, false);
+  assert.equal(assessStoredTokenExpiry(null, expiryNow).reason, "unknown_expiry");
+});
+
+test("me/accounts pagination stays on Graph, caps pages, and drops page tokens", async () => {
+  assert.equal(readAccountsCursor(null).after, null);
+  assert.equal(
+    readAccountsCursor("https://evil.example/v26.0/me/accounts?after=abc").ok,
+    false,
+  );
+  assert.equal(
+    readAccountsCursor("https://graph.facebook.com/v26.0/me/permissions?after=abc").ok,
+    false,
+  );
+  assert.equal(
+    readAccountsCursor("https://graph.facebook.com/v26.0/me/accounts").ok,
+    false,
+  );
+  assert.equal(
+    readAccountsCursor("http://graph.facebook.com/v26.0/me/accounts?after=abc").ok,
+    false,
+  );
+
+  const calls = [];
+  const listed = await fetchMetaPages({
+    config,
+    accessToken: "user-token-value",
+    http: async (url, init) => {
+      calls.push({ url, init });
+      const after = new URL(url).searchParams.get("after");
+      if (!after) {
+        return {
+          ok: true,
+          status: 200,
+          body: {
+            data: [{ id: "10", name: "Page A", tasks: [], access_token: "EAA-page-token" }],
+            paging: {
+              next: "https://graph.facebook.com/v26.0/123/accounts?access_token=EAA-next-secret&after=CURSOR_ONE",
+            },
+          },
+        };
+      }
+      assert.equal(after, "CURSOR_ONE");
+      return {
+        ok: true,
+        status: 200,
+        body: { data: [{ id: "20", name: "Page B", tasks: ["ANALYZE"] }] },
+      };
+    },
+  });
+  assert.equal(listed.ok, true);
+  if (!listed.ok) return;
+  assert.deepEqual(listed.pages.map((page) => page.id), ["10", "20"]);
+  assert.equal(containsSecretMaterial(listed.pages), false);
+  assert.equal(JSON.stringify(listed).includes("EAA-page-token"), false);
+  assert.equal(JSON.stringify(listed).includes("EAA-next-secret"), false);
+  assert.equal(calls.length, 2);
+  assert.equal(new URL(calls[1].url).origin, "https://graph.facebook.com");
+  assert.equal(new URL(calls[1].url).pathname, "/v26.0/me/accounts");
+  assert.equal(new URL(calls[1].url).searchParams.has("access_token"), false);
+  assert.equal(calls[1].url.includes("EAA-next-secret"), false);
+  assert.equal(calls[1].init.headers.Authorization, "Bearer user-token-value");
+  assert.ok(calls.every((call) => call.init.timeoutMs <= GRAPH_CALL_MAX_MS));
+
+  const invalid = await fetchMetaPages({
+    config,
+    accessToken: "user-token-value",
+    http: async () => ({
+      ok: true,
+      status: 200,
+      body: {
+        data: [{ id: "10", name: "Page A", tasks: [], access_token: "EAA-page-token" }],
+        paging: { next: "https://evil.example/steal?after=abc" },
+      },
+    }),
+  });
+  assert.deepEqual(invalid, { ok: false, reason: "invalid_paging" });
+
+  let limitedCalls = 0;
+  const limited = await fetchMetaPages({
+    config,
+    accessToken: "user-token-value",
+    http: async () => {
+      limitedCalls += 1;
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          data: [{ id: String(limitedCalls), name: `Page ${limitedCalls}`, tasks: [] }],
+          paging: { next: `https://graph.facebook.com/v26.0/me/accounts?after=CURSOR_${limitedCalls}` },
+        },
+      };
+    },
+  });
+  assert.deepEqual(limited, { ok: false, reason: "page_limit" });
+  assert.equal(limitedCalls, MAX_ACCOUNT_PAGES);
+});
+
+test("Graph calls use one bounded attempt and do not retry a timeout", async () => {
+  assert.equal(GRAPH_BUDGET_MS, 8000);
+  assert.ok(GRAPH_BUDGET_MS < 10_000);
+  const budget = createGraphBudget();
+  const reserved = [];
+  for (;;) {
+    const timeoutMs = reserveGraphCall(budget);
+    if (timeoutMs == null) break;
+    reserved.push(timeoutMs);
+  }
+  assert.ok(reserved.every((timeoutMs) => timeoutMs <= GRAPH_CALL_MAX_MS && timeoutMs >= 500));
+  assert.ok(reserved.reduce((sum, timeoutMs) => sum + timeoutMs, 0) <= GRAPH_BUDGET_MS);
+
+  let fetches = 0;
+  const http = createMetaHttp(async () => {
+    fetches += 1;
+    throw new Error("abort");
+  });
+  assert.deepEqual(await http("https://graph.facebook.com/v26.0/me", { timeoutMs: 20 }), {
+    ok: false,
+    timeout: true,
+  });
+  assert.equal(fetches, 1);
+
+  let exchangeCalls = 0;
+  const timedOut = await exchangeMetaAuthorization({
+    config,
+    code: "auth-code",
+    codeVerifier: "verifier",
+    now: expiryNow,
+    http: async () => {
+      exchangeCalls += 1;
+      return { ok: false, timeout: true };
+    },
+  });
+  assert.deepEqual(timedOut, { ok: false, reason: "timeout" });
+  assert.equal(exchangeCalls, 1);
+
+  const exhausted = await exchangeMetaAuthorization({
+    config,
+    code: "auth-code",
+    codeVerifier: "verifier",
+    now: expiryNow,
+    budget: createGraphBudget(100),
+    http: async () => {
+      throw new Error("budget must stop before the call");
+    },
+  });
+  assert.deepEqual(exhausted, { ok: false, reason: "timeout" });
+
+  let pageCalls = 0;
+  const pagedTimeout = await fetchMetaPages({
+    config,
+    accessToken: "user-token-value",
+    budget: createGraphBudget(1999),
+    http: async () => {
+      pageCalls += 1;
+      return {
+        ok: true,
+        status: 200,
+        body: {
+          data: [{ id: "10", name: "Page A", tasks: [] }],
+          paging: { next: "https://graph.facebook.com/v26.0/me/accounts?after=MORE" },
+        },
+      };
+    },
+  });
+  assert.deepEqual(pagedTimeout, { ok: false, reason: "timeout" });
+  assert.equal(pageCalls, 1);
 });
 
 test("Meta routes do not publish and do not touch booking or Marketing AI", () => {

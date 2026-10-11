@@ -92,7 +92,9 @@ export type MetaNotice =
   | "disconnected_local_only"
   | "saved"
   | "no_pages"
-  | "invalid";
+  | "invalid"
+  | "unknown_expiry"
+  | "token_expired";
 
 export function metaCallbackError(params: URLSearchParams): "denied" | "meta_error" | null {
   const error = params.get("error");
@@ -111,8 +113,14 @@ export type DebugTokenResult =
       userId: string;
       scopes: string[];
       expiresAt: string | null;
+      dataAccessExpiresAt: string | null;
     }
   | { ok: false; reason: "invalid_token" | "wrong_app" };
+
+function finiteUnixExpiry(value: unknown): string | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+  return new Date(value * 1000).toISOString();
+}
 
 export function parseDebugToken(body: unknown, expectedAppId: string): DebugTokenResult {
   if (!body || typeof body !== "object") return { ok: false, reason: "invalid_token" };
@@ -125,6 +133,7 @@ export function parseDebugToken(body: unknown, expectedAppId: string): DebugToke
     scopes?: unknown;
     granular_scopes?: unknown;
     expires_at?: unknown;
+    data_access_expires_at?: unknown;
     type?: unknown;
   };
   if (String(record.app_id ?? "") !== expectedAppId) return { ok: false, reason: "wrong_app" };
@@ -145,11 +154,53 @@ export function parseDebugToken(body: unknown, expectedAppId: string): DebugToke
       })
     : [];
   const scopes = [...new Set([...directScopes, ...granular])];
-  let expiresAt: string | null = null;
-  if (typeof record.expires_at === "number" && record.expires_at > 0) {
-    expiresAt = new Date(record.expires_at * 1000).toISOString();
+  return {
+    ok: true,
+    userId,
+    scopes,
+    expiresAt: finiteUnixExpiry(record.expires_at),
+    dataAccessExpiresAt: finiteUnixExpiry(record.data_access_expires_at),
+  };
+}
+
+export type TokenExpiryDecision =
+  | { ok: true; expiresAt: string }
+  | { ok: false; reason: "unknown_expiry" | "token_expired" };
+
+export function resolveUserTokenExpiry(input: {
+  expiresInSeconds: number | null;
+  debugExpiresAt: string | null;
+  dataAccessExpiresAt: string | null;
+  now: Date;
+}): TokenExpiryDecision {
+  const candidates: number[] = [];
+  if (
+    typeof input.expiresInSeconds === "number" &&
+    Number.isFinite(input.expiresInSeconds) &&
+    input.expiresInSeconds > 0
+  ) {
+    candidates.push(input.now.getTime() + input.expiresInSeconds * 1000);
   }
-  return { ok: true, userId, scopes, expiresAt };
+  for (const value of [input.debugExpiresAt, input.dataAccessExpiresAt]) {
+    if (!value) continue;
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) candidates.push(parsed);
+  }
+  if (candidates.length === 0) return { ok: false, reason: "unknown_expiry" };
+  const earliest = Math.min(...candidates);
+  if (earliest <= input.now.getTime()) return { ok: false, reason: "token_expired" };
+  return { ok: true, expiresAt: new Date(earliest).toISOString() };
+}
+
+export function assessStoredTokenExpiry(
+  expiresAt: string | null,
+  now = new Date(),
+): TokenExpiryDecision {
+  if (!expiresAt) return { ok: false, reason: "unknown_expiry" };
+  const parsed = Date.parse(expiresAt);
+  if (!Number.isFinite(parsed)) return { ok: false, reason: "unknown_expiry" };
+  if (parsed <= now.getTime()) return { ok: false, reason: "token_expired" };
+  return { ok: true, expiresAt };
 }
 
 export function parseAccessTokenBody(body: unknown):
@@ -166,17 +217,40 @@ export function parseAccessTokenBody(body: unknown):
   };
 }
 
-export function expiryFromSeconds(seconds: number | null, now: Date): string | null {
-  if (!seconds) return null;
-  return new Date(now.getTime() + seconds * 1000).toISOString();
-}
-
 export type MetaPage = {
   id: string;
   name: string;
   tasks: string[];
   instagram: { id: string; username: string | null } | null;
 };
+
+const ACCOUNTS_CURSOR = /^[A-Za-z0-9+/=_-]{1,512}$/;
+
+export function readAccountsCursor(next: unknown):
+  | { ok: true; after: string | null }
+  | { ok: false; reason: "invalid_paging" } {
+  if (next == null) return { ok: true, after: null };
+  if (typeof next !== "string" || next.length === 0 || next.length > 2000) {
+    return { ok: false, reason: "invalid_paging" };
+  }
+  let url: URL;
+  try {
+    url = new URL(next);
+  } catch {
+    return { ok: false, reason: "invalid_paging" };
+  }
+  if (url.protocol !== "https:" || url.username || url.password) {
+    return { ok: false, reason: "invalid_paging" };
+  }
+  if (url.hostname !== "graph.facebook.com") return { ok: false, reason: "invalid_paging" };
+  if (url.port && url.port !== "443") return { ok: false, reason: "invalid_paging" };
+  if (!new RegExp(`^/${META_GRAPH_VERSION}/(?:me|[0-9]+)/accounts$`).test(url.pathname)) {
+    return { ok: false, reason: "invalid_paging" };
+  }
+  const after = url.searchParams.get("after");
+  if (!after || !ACCOUNTS_CURSOR.test(after)) return { ok: false, reason: "invalid_paging" };
+  return { ok: true, after };
+}
 
 export function parseMetaPages(body: unknown): MetaPage[] {
   if (!body || typeof body !== "object") return [];
@@ -301,12 +375,9 @@ export function effectiveMetaStatus(
   now = new Date(),
 ): ConnectionStatus | "not_connected" {
   if (!status) return "not_connected";
-  if (
-    (status === "connected" || status === "setup_required") &&
-    tokenExpiresAt &&
-    Date.parse(tokenExpiresAt) <= now.getTime()
-  ) {
-    return "needs_reconnect";
+  if (status === "connected" || status === "setup_required") {
+    const decision = assessStoredTokenExpiry(tokenExpiresAt, now);
+    if (!decision.ok) return "needs_reconnect";
   }
   return status;
 }

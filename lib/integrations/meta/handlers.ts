@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createOAuthState, hashOAuthState } from "@/lib/integrations/oauth/state";
 import { runMetaCallback } from "@/lib/integrations/meta/callback";
 import {
+  assessStoredTokenExpiry,
   buildMetaAuthorizeUrl,
   decideMetaConnect,
   isBrowserSafeMetaRedirect,
@@ -171,7 +172,7 @@ export async function discoverDestinations(request: Request) {
   }
   const stored = await readMetaAccessToken(context.session.tenantId);
   if (!stored.ok) return NextResponse.json({ error: "missing" }, { status: 409 });
-  if (stored.expiresAt && Date.parse(stored.expiresAt) <= Date.now()) {
+  if (!assessStoredTokenExpiry(stored.expiresAt).ok) {
     return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
   }
   const discovered = await fetchMetaPages({
@@ -216,6 +217,9 @@ export async function selectDestinations(request: Request) {
 
   const stored = await readMetaAccessToken(context.session.tenantId);
   if (!stored.ok) return NextResponse.json({ error: "missing" }, { status: 409 });
+  if (!assessStoredTokenExpiry(stored.expiresAt).ok) {
+    return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
+  }
   const discovered = await fetchMetaPages({
     config: context.config,
     accessToken: stored.accessToken,

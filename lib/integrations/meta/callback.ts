@@ -1,5 +1,6 @@
 import type { MetaReadyConfig } from "@/lib/integrations/meta/config";
 import {
+  assessStoredTokenExpiry,
   decideMetaConnect,
   metaCallbackError,
   planCallbackPersistence,
@@ -30,7 +31,10 @@ export async function runMetaCallback(input: {
         displayName: string | null;
         permissionsOk: boolean;
       }
-    | { ok: false; reason: "timeout" | "exchange_failed" | "invalid_token" }
+    | {
+        ok: false;
+        reason: "timeout" | "exchange_failed" | "invalid_token" | "unknown_expiry" | "token_expired";
+      }
   >;
   persist: (row: {
     status: "setup_required" | "error";
@@ -78,8 +82,13 @@ export async function runMetaCallback(input: {
 
   const exchanged = await input.exchangeCode(code, verifier);
   if (!exchanged.ok) {
-    return { notice: exchanged.reason === "timeout" ? "timeout" : "exchange_failed" };
+    if (exchanged.reason === "timeout" || exchanged.reason === "unknown_expiry" || exchanged.reason === "token_expired") {
+      return { notice: exchanged.reason };
+    }
+    return { notice: "exchange_failed" };
   }
+  const usable = assessStoredTokenExpiry(exchanged.expiresAt);
+  if (!usable.ok) return { notice: usable.reason };
 
   const plan = planCallbackPersistence({
     exchangeOk: true,

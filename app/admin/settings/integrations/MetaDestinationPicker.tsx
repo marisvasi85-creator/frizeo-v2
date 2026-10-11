@@ -14,6 +14,8 @@ type FacebookPage = {
 const ERRORS: Record<string, string> = {
   timeout: "Meta nu a răspuns la timp.",
   graph_error: "Meta nu a putut lista paginile.",
+  invalid_paging: "Răspunsul Meta conține o paginare nevalidă. Paginile nu au fost folosite.",
+  page_limit: "Sunt prea multe pagini pentru o singură conectare.",
   needs_reconnect: "Conexiunea trebuie refăcută înainte de a lista paginile.",
   missing: "Nu există o autorizare Meta salvată.",
   empty: "Alege cel puțin o pagină.",
