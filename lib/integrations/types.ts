@@ -46,7 +46,8 @@ export type PublishJobStatus =
   | "publishing"
   | "published"
   | "failed"
-  | "cancelled";
+  | "cancelled"
+  | "unknown";
 
 export function isIntegrationProvider(
   value: string,

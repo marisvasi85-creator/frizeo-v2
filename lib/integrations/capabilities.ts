@@ -10,6 +10,7 @@ export const FRIZEO_V2_CAPABILITIES = [
   "growth.analytics",
   "marketing.generate",
   "marketing.publish.meta",
+  "marketing.publish.meta.live",
   "marketing.publish.google_business",
   "marketing.publish.tiktok",
   "marketing.publish.whatsapp",

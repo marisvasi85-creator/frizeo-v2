@@ -36,7 +36,7 @@ User tokens are refreshed only by reconnect. There is no cron. A usable token ne
 
 Graph can return `paging.next`. The server accepts that URL only when it is `https://graph.facebook.com/v26.0/me/accounts` or `https://graph.facebook.com/v26.0/<page id>/accounts`, then rebuilds the next request to `me/accounts` with the `after` cursor and the Authorization header. It does not request the raw `next` URL. An unexpected host, path, or cursor fails the whole discovery. At most 4 pages and 100 results are accepted; another `next` after that is a limit, not a partial success.
 
-Page `access_token` values returned by Graph are not stored, not returned to the browser, not written into destination metadata, and not logged. Facebook Page publishing is a later milestone. That work must obtain a page access token on demand from the stored user token, encrypt it separately, and keep it out of `metadata`, API responses, the UI, and logs. This milestone does not store page tokens and does not publish.
+Page `access_token` values returned by Graph are not stored, not returned to the browser, not written into destination metadata, and not logged. A later publish path may read a page token into server memory for a single request, then discard it. It must not be written to the database, logs, Sentry, or API responses.
 
 Each Graph request reserves at most 1.5 seconds from an 8 second budget, which stays under the Hobby `maxDuration` of 10 seconds. A timed-out call is not retried. The optional profile name is skipped when the budget is gone; token exchange, `debug_token`, and page listing fail closed instead.
 
@@ -46,9 +46,15 @@ Each Graph request reserves at most 1.5 seconds from an 8 second budget, which s
 
 Local rows and secrets for that tenant's Meta connection are deleted. `DELETE /v26.0/me/permissions` runs only when a token can be decrypted. The UI says Meta confirmed revocation only when that call returns `success: true`.
 
+## Publishing controls
+
+Real publishing stays off unless every server check passes: the host is staging, the request is not production, the caller is an owner or manager, `marketing.publish.meta` is on, `marketing.publish.meta.live` is on for that tenant, and `META_PUBLISH_LIVE` is exactly `true`. A missing capability row is off. The environment kill switch is off when it is unset. Neither control is enabled for this change. With them off, the server does not decrypt a token for publishing and does not call Graph to create media or posts. Mock runs write a local draft only.
+
+There is no worker, cron, or automatic retry. An ambiguous result stays `unknown`. A refresh, timeout, or second click must not create another Instagram container or another post.
+
 ## Not in this milestone
 
-Publishing, scheduling, Reels, Stories, comments, insights, ads, webhooks, crons, and polling are not implemented. Account deletion is unchanged.
+Scheduling, Reels, Stories, comments, insights, ads, webhooks, crons, and polling are not implemented. Account deletion is unchanged. Marketing AI is not connected to publishing.
 
 Meta App Review later needs two separate endpoints, not the current account-deletion flow:
 
