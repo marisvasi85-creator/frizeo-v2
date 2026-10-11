@@ -24,7 +24,7 @@ Server-only. 32 bytes, base64. Used for AES-256-GCM token ciphertext and for the
 
 ## OAuth
 
-State is random, stored as an HMAC, and bound to `tenant_id` plus `user_id`. The callback helper rejects a session whose active tenant or user differs from the stored row. PKCE S256 material can be encrypted with the same key. No provider authorize URL is called.
+State is random, stored as an HMAC, and bound to `tenant_id` plus `user_id`. The callback helper rejects a session whose active tenant or user differs from the stored row. PKCE S256 material can be encrypted with the same key. Meta OAuth is documented in `docs/FRIZEO_V2_META_OAUTH.md`. The other providers still do not call an authorize URL.
 
 ## Publish and webhooks
 

@@ -9,6 +9,7 @@ export type LabOAuthState =
   | "not_implemented"
   | "not_configured"
   | "configured"
+  | "unavailable"
   | "error";
 
 export type LabPublishState = "not_implemented" | "mock" | "available";
@@ -35,12 +36,13 @@ export function buildLabProviderStatus(input: {
   destinationsCount: number;
   lastValidation: string | null;
   lastError: string | null;
+  oauth?: LabOAuthState;
 }): LabProviderStatus {
   const capability: FrizeoV2Capability = PUBLISH_CAPABILITY[input.provider];
   return {
     provider: input.provider,
     feature: input.explicitEnables.includes(capability) ? "enabled" : "disabled",
-    oauth: "not_implemented",
+    oauth: input.oauth ?? "not_implemented",
     connectionsCount: input.connectionsCount,
     destinationsCount: input.destinationsCount,
     publish: "not_implemented",

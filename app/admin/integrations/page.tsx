@@ -3,6 +3,8 @@ import AdminButton from "@/app/admin/components/AdminButton";
 import AdminCard from "@/app/admin/components/AdminCard";
 import AdminPageHeader from "@/app/admin/components/AdminPageHeader";
 import { getAuthUser } from "@/lib/auth/getAuthUser";
+import { isProduction } from "@/lib/app/environment";
+import { assertMetaConfig } from "@/lib/integrations/meta/config";
 import { buildLabProviderStatus, validationPlan } from "@/lib/integrations/labStatus";
 import { canAccessIntegrationLab } from "@/lib/integrations/permissions";
 import {
@@ -21,12 +23,14 @@ export default async function IntegrationLabPage() {
 
   const snapshot = await loadLabSnapshot();
   const validation = validationPlan();
+  const production = isProduction();
+  const metaConfigured = assertMetaConfig(process.env, { production: false }).ok && !production;
 
   return (
     <div className="space-y-6">
       <AdminPageHeader
         title="Integration Lab"
-        subtitle="Doar Platform Creator. Nu se apelează provideri externi."
+        subtitle="Doar Platform Creator. Meta OAuth este on-demand. Nu se publică postări."
       />
 
       <div className="grid gap-4">
@@ -40,7 +44,8 @@ export default async function IntegrationLabPage() {
               <dl className="mt-4 grid gap-2 text-sm md:grid-cols-2">
                 <div>Provider: {provider}</div>
                 <div>Feature: {status.feature}</div>
-                <div>OAuth: {status.oauth}</div>
+                <div>OAuth: {provider === "meta" ? (metaConfigured ? "available" : "unavailable") : status.oauth}</div>
+                <div>Configurare: {provider === "meta" ? (metaConfigured ? "configured" : "not configured") : "—"}</div>
                 <div>Publish: {status.publish}</div>
                 <div>Connections count: {status.connectionsCount}</div>
                 <div>Destinations count: {status.destinationsCount}</div>

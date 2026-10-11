@@ -18,6 +18,7 @@ const SENSITIVE_QUERY_KEYS = [
   "api_key",
   "apikey",
   "authorization",
+  "state",
 ] as const;
 
 const SENSITIVE_QUERY_KEY_SET = new Set<string>(SENSITIVE_QUERY_KEYS);
