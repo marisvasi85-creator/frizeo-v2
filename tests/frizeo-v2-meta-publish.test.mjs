@@ -782,11 +782,16 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(page, /canAdministerIntegrations/);
   assert.match(page, /redirect\("\/admin\/dashboard"\)/);
   assert.match(page, /isProduction\(\)/);
+  assert.match(page, /provider_container_id/);
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
   assert.match(composer, /disabled=\{!liveAvailable/);
   assert.match(composer, /destinationBusy/);
   assert.match(composer, /Deblochează pentru o încercare nouă/);
   assert.match(composer, /container Instagram anterior/);
+  assert.match(composer, /Verifică statusul/);
+  assert.match(composer, /\/api\/integrations\/meta\/publish\/verify/);
+  assert.match(composer, /window\.confirm\(VERIFY_CONFIRM\)/);
+  assert.ok(composer.indexOf("window.confirm(VERIFY_CONFIRM)") < composer.indexOf("/api/integrations/meta/publish/verify"));
   const releaseMigration = readFileSync(
     join(root, "supabase/migrations/20261011143000_frizeo_v2_meta_publish_release_ambiguous.sql"),
     "utf8",

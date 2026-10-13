@@ -42,7 +42,7 @@ export default async function MarketingPublishPage() {
       .eq("status", "active"),
     supabase
       .from("integration_publish_jobs")
-      .select("id, asset_id, destination_id, status, execution_mode, safe_error, marketing_destinations(display_name, destination_type), integration_assets(body)")
+      .select("id, asset_id, destination_id, status, execution_mode, safe_error, provider_container_id, marketing_destinations(display_name, destination_type), integration_assets(body)")
       .eq("tenant_id", session.tenantId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -83,6 +83,7 @@ export default async function MarketingPublishPage() {
       status: row.status,
       executionMode: row.execution_mode,
       safeError: row.safe_error,
+      providerContainerId: row.provider_container_id,
       caption: asset?.body ?? null,
     }];
   });

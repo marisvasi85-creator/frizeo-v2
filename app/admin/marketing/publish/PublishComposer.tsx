@@ -19,6 +19,7 @@ type HistoryJob = {
   status: string;
   executionMode: string;
   safeError: string | null;
+  providerContainerId: string | null;
   caption: string | null;
 };
 
@@ -53,6 +54,8 @@ const ERRORS: Record<string, string> = {
 };
 
 const AMBIGUOUS_WARNING = "Rezultatul rămâne necunoscut, nu este un eșec confirmat. Este posibil să existe un container Instagram anterior, iar o încercare nouă poate crea o postare în plus.";
+
+const VERIFY_CONFIRM = "Se face un singur control al containerului existent. Dacă Meta îl marchează gata, publicarea continuă o singură dată. Dacă este încă în procesare, jobul rămâne în curs.";
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Schiță mock",
@@ -266,6 +269,40 @@ export default function PublishComposer({
     }
   }
 
+  async function verify(jobId: string) {
+    if (busy) return;
+    if (!window.confirm(VERIFY_CONFIRM)) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/integrations/meta/publish/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        jobs?: HistoryJob[];
+      } | null;
+      if (!response.ok || !payload?.jobs?.[0]) {
+        setMessage(ERRORS[payload?.error ?? ""] ?? "Statusul nu a putut fi verificat.");
+        return;
+      }
+      const next = payload.jobs[0];
+      setJobs((current) => current.map((job) => job.id === next.id ? { ...job, ...next } : job));
+      if (next.status === "publishing") {
+        setMessage("Containerul este încă în procesare. Jobul rămâne în curs.");
+      } else if (next.status === "published") {
+        setMessage("Containerul era gata și a fost publicat o singură dată.");
+      } else {
+        setMessage(`Statusul este acum ${STATUS_LABEL[next.status] ?? next.status}.`);
+      }
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="grid gap-4">
       <label className="grid gap-2 text-sm text-frz-ink">
@@ -331,6 +368,7 @@ export default function PublishComposer({
         {jobs.map((job) => {
           const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled" || job.status === "released";
           const canRelease = job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
+          const canVerify = job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId);
           return (
             <div key={job.id} className="rounded-xl border border-frz-line p-3">
               <p className="text-sm font-medium text-frz-ink">
@@ -340,6 +378,13 @@ export default function PublishComposer({
               {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
               {job.safeError && !canRelease && (
                 <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată.")}</p>
+              )}
+              {canVerify && (
+                <div className="mt-2">
+                  <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => verify(job.id)}>
+                    Verifică statusul
+                  </AdminButton>
+                </div>
               )}
               {canRelease && (
                 <div className="mt-2">
