@@ -24,6 +24,7 @@ import {
 } from "@/lib/integrations/meta/publish/image";
 import { advancePublishJobs } from "@/lib/integrations/meta/publish/orchestrate";
 import {
+  claimFinishedPublish,
   claimPublishJob,
   clearPublishMedia,
   preparePublishJobs,
@@ -282,6 +283,9 @@ export async function publishLive(request: Request) {
       return http(call);
     },
     claim: (jobId) => claimPublishJob(prepared.gate.actor.tenantId, jobId),
+    claimFinished: (jobId, containerId) => (
+      claimFinishedPublish(prepared.gate.actor.tenantId, jobId, containerId)
+    ),
     settle: (jobId, patch) => settlePublishJob(prepared.gate.actor.tenantId, jobId, patch),
     signImage: () => signMarketingImage(prepared.mediaObjectPath),
   });
@@ -334,6 +338,7 @@ export async function verifyPublish(request: Request) {
       return http(call);
     },
     claim: (id) => claimPublishJob(gate.actor.tenantId, id),
+    claimFinished: (id, containerId) => claimFinishedPublish(gate.actor.tenantId, id, containerId),
     settle: (id, patch) => settlePublishJob(gate.actor.tenantId, id, patch),
     signImage: async () => null,
   });

@@ -72,10 +72,17 @@ async function settleOutcome(
   return settled.job;
 }
 
+const LOCKED_PUBLISH = new Set([
+  "publish_in_flight",
+  "ambiguous",
+  "awaiting_publish_confirmation",
+]);
+
 /**
  * Live work runs only when liveAllowed is true.
  * Start mode calls Graph only for a job claimed from pending in this request.
- * Verify never creates a container and never publishes an unknown job.
+ * A finished container is claimed once, then media_publish runs once.
+ * Ambiguous, unconfirmed, and in-flight results are not sent again.
  */
 export async function advancePublishJobs(input: {
   jobs: PublishJobState[];
@@ -89,6 +96,7 @@ export async function advancePublishJobs(input: {
   budget?: GraphBudget;
   http: (call: GraphCall) => Promise<GraphResult>;
   claim: (jobId: string) => Promise<ClaimResult>;
+  claimFinished: (jobId: string, containerId: string) => Promise<ClaimResult>;
   settle: (jobId: string, patch: SettlePatch) => Promise<SettleResult>;
   signImage: () => Promise<string | null>;
   now?: Date;
@@ -262,6 +270,7 @@ export async function advancePublishJobs(input: {
   ): Promise<PublishJobState> {
     const containerId = job.providerContainerId;
     if (!containerId) return job;
+    if (job.safeError && LOCKED_PUBLISH.has(job.safeError)) return job;
     const status = await readInstagramStatus({
       containerId,
       userToken: input.userToken,
@@ -314,12 +323,8 @@ export async function advancePublishJobs(input: {
       }
       return job;
     }
-    const marked = await input.settle(job.id, {
-      status: "unknown",
-      providerContainerId: containerId,
-      safeError: "awaiting_publish_confirmation",
-    });
-    if (marked.outcome !== "updated") return marked.outcome === "rejected" ? marked.job : job;
+    const claimed = await input.claimFinished(job.id, containerId);
+    if (claimed.outcome !== "claimed") return claimed.outcome === "held" ? claimed.job : job;
     const published = await publishInstagramContainer({
       igUserId: job.providerDestinationId,
       containerId,
@@ -328,6 +333,6 @@ export async function advancePublishJobs(input: {
       budget,
       http: input.http,
     });
-    return settleOutcome(job.id, published, input.settle, marked.job);
+    return settleOutcome(job.id, published, input.settle, claimed.job);
   }
 }

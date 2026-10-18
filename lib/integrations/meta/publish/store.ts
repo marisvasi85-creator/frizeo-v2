@@ -77,6 +77,27 @@ export async function claimPublishJob(tenantId: string, jobId: string): Promise<
   return { outcome: "not_found" };
 }
 
+export async function claimFinishedPublish(
+  tenantId: string,
+  jobId: string,
+  containerId: string,
+): Promise<ClaimResult> {
+  const { data, error } = await supabaseAdmin.rpc("meta_publish_claim_finished", {
+    p_tenant_id: tenantId,
+    p_job_id: jobId,
+    p_provider_container_id: containerId,
+  });
+  if (error) {
+    console.error("meta_publish_claim_finished_failed");
+    return { outcome: "not_found" };
+  }
+  const row = asRecord(data);
+  const job = presentPublishJob(row?.job);
+  if (row?.outcome === "claimed" && job) return { outcome: "claimed", job: toJobState(job) };
+  if (row?.outcome === "held" && job) return { outcome: "held", job: toJobState(job) };
+  return { outcome: "not_found" };
+}
+
 export async function settlePublishJob(
   tenantId: string,
   jobId: string,

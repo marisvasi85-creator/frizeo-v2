@@ -51,6 +51,8 @@ const ERRORS: Record<string, string> = {
   cleanup_failed: "Imaginea nu a putut fi ștearsă.",
   not_found: "Publicarea nu a fost găsită.",
   release_rejected: "Acest rezultat nu poate fi deblocat.",
+  awaiting_publish_confirmation: "Rezultatul publicării rămâne neconfirmat. Destinația rămâne blocată și nu se retrimite.",
+  publish_in_flight: "Publicarea a fost rezervată o singură dată. Rezultatul nu este confirmat, destinația rămâne blocată și nu se retrimite.",
 };
 
 const AMBIGUOUS_WARNING = "Rezultatul rămâne necunoscut, nu este un eșec confirmat. Este posibil să existe un container Instagram anterior, iar o încercare nouă poate crea o postare în plus.";
@@ -368,7 +370,7 @@ export default function PublishComposer({
         {jobs.map((job) => {
           const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled" || job.status === "released";
           const canRelease = job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
-          const canVerify = job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId);
+          const canVerify = job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId) && job.safeError !== "publish_in_flight";
           return (
             <div key={job.id} className="rounded-xl border border-frz-line p-3">
               <p className="text-sm font-medium text-frz-ink">

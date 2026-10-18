@@ -106,6 +106,22 @@ function memoryStore(initial) {
       current.safeError = patch.status === "published" ? null : patch.safeError ?? null;
       return { outcome: "updated", job: { ...current } };
     }),
+    claimFinished: (id, containerId) => lock(async () => {
+      const current = jobs.get(id);
+      if (!current) return { outcome: "not_found" };
+      if (
+        current.executionMode !== "live" ||
+        current.status !== "publishing" ||
+        current.providerPostId ||
+        current.safeError ||
+        current.providerContainerId !== containerId ||
+        !/^[0-9]{1,32}$/.test(containerId)
+      ) {
+        return { outcome: "held", job: { ...current } };
+      }
+      current.safeError = "publish_in_flight";
+      return { outcome: "claimed", job: { ...current } };
+    }),
   };
 }
 
@@ -132,6 +148,7 @@ function baseInput(store, http, overrides = {}) {
     tokenExpiresAt: "2099-01-01T00:00:00.000Z",
     http,
     claim: store.claim,
+    claimFinished: store.claimFinished,
     settle: store.settle,
     signImage: async () => IMAGE,
     ...overrides,
@@ -427,8 +444,8 @@ test("instagram does not publish again when saving the provider result fails", a
     jobs: [pending],
     ...baseInput(store, http.http),
   });
-  assert.equal(started[0].status, "unknown");
-  assert.equal(started[0].safeError, "awaiting_publish_confirmation");
+  assert.equal(started[0].status, "publishing");
+  assert.equal(started[0].safeError, "publish_in_flight");
   assert.equal(started[0].providerPostId, null);
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
   const after = http.calls.length;
@@ -436,8 +453,9 @@ test("instagram does not publish again when saving the provider result fails", a
     jobs: [store.jobs.get(pending.id)],
     ...baseInput(store, http.http, { mode: "verify" }),
   });
-  assert.equal(verified[0].status, "unknown");
-  assert.equal(http.calls.length, after + 1);
+  assert.equal(verified[0].status, "publishing");
+  assert.equal(verified[0].safeError, "publish_in_flight");
+  assert.equal(http.calls.length, after);
   assert.equal(http.calls.filter((call) => call.method === "POST").length, 2);
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
 });
@@ -487,8 +505,155 @@ test("instagram unknown result is not published again", async () => {
     ...baseInput(store, http.http, { mode: "verify" }),
   });
   assert.equal(result[0].status, "unknown");
+  assert.equal(result[0].safeError, "ambiguous");
   assert.equal(http.calls.some((call) => call.method === "POST"), false);
-  assert.equal(http.calls.length, 1);
+  assert.equal(http.calls.length, 0);
+});
+
+test("an unconfirmed instagram publish is not sent again", async () => {
+  const http = recorder(async () => {
+    throw new Error("graph should not be called");
+  });
+  const locked = job({
+    id: "abd75bb4-9cc3-4b8c-a969-bee4189887d8",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "unknown",
+    attempts: 1,
+    providerContainerId: "18124570501779553",
+    safeError: "awaiting_publish_confirmation",
+  });
+  const store = memoryStore([locked]);
+  const before = { ...store.jobs.get(locked.id) };
+  const result = await advancePublishJobs({
+    jobs: [locked],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(result[0].status, "unknown");
+  assert.equal(result[0].safeError, "awaiting_publish_confirmation");
+  assert.equal(result[0].providerPostId, null);
+  assert.deepEqual(store.jobs.get(locked.id), before);
+  assert.equal(http.calls.length, 0);
+});
+
+test("an in-flight instagram publish is not sent again", async () => {
+  const http = recorder(async () => {
+    throw new Error("graph should not be called");
+  });
+  const current = job({
+    id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+    safeError: "publish_in_flight",
+  });
+  const result = await advancePublishJobs({
+    jobs: [current],
+    ...baseInput(memoryStore([current]), http.http, { mode: "verify" }),
+  });
+  assert.equal(result[0].status, "publishing");
+  assert.equal(result[0].safeError, "publish_in_flight");
+  assert.equal(http.calls.length, 0);
+});
+
+test("instagram publish timeout stays unknown and is not retried", async () => {
+  const http = recorder(async (call) => {
+    if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    return { ok: false, timeout: true };
+  });
+  const current = job({
+    id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+  });
+  const store = memoryStore([current]);
+  const first = await advancePublishJobs({
+    jobs: [current],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(first[0].status, "unknown");
+  assert.equal(first[0].safeError, "ambiguous");
+  assert.equal(first[0].providerPostId, null);
+  assert.equal(first[0].providerContainerId, "555");
+  const after = http.calls.length;
+  const second = await advancePublishJobs({
+    jobs: [store.jobs.get(current.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(second[0].status, "unknown");
+  assert.equal(second[0].safeError, "ambiguous");
+  assert.equal(http.calls.length, after);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
+});
+
+test("instagram publish provider error is saved once", async () => {
+  const http = recorder(async (call) => {
+    if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    return { ok: false, status: 400, body: { error: { code: 100 } } };
+  });
+  const current = job({
+    id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+  });
+  const store = memoryStore([current]);
+  const failed = await advancePublishJobs({
+    jobs: [current],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(failed[0].status, "failed");
+  assert.equal(failed[0].safeError, "provider_error");
+  assert.equal(failed[0].providerPostId, null);
+  assert.equal(failed[0].providerContainerId, "555");
+  const after = http.calls.length;
+  const again = await advancePublishJobs({
+    jobs: [store.jobs.get(current.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(again[0].status, "failed");
+  assert.equal(http.calls.length, after);
+});
+
+test("instagram publish waits when the graph budget is already spent", async () => {
+  const http = recorder(async (call) => {
+    if (call.method === "GET") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    if (call.path.endsWith("/media_publish")) {
+      return { ok: true, status: 200, body: { id: "18124570501779553" } };
+    }
+    return { ok: false, status: 500, body: null };
+  });
+  const current = job({
+    id: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+  });
+  const store = memoryStore([current]);
+  const deferred = await advancePublishJobs({
+    jobs: [current],
+    ...baseInput(store, http.http, { mode: "verify", budget: createGraphBudget(500) }),
+  });
+  assert.equal(deferred[0].status, "publishing");
+  assert.equal(deferred[0].safeError, null);
+  assert.equal(deferred[0].providerPostId, null);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 0);
+  const published = await advancePublishJobs({
+    jobs: [store.jobs.get(current.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(published[0].status, "published");
+  assert.equal(published[0].providerPostId, "18124570501779553");
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
 });
 
 test("instagram error, expired, and published statuses do not create another container", async () => {
@@ -668,6 +833,54 @@ test("instagram helpers cover the container lifecycle", async () => {
     },
   });
   assert.equal(published.status, "unknown");
+  assert.equal(published.safeError, "ambiguous");
+  assert.equal(published.providerPostId, null);
+  const numeric = await publishInstagramContainer({
+    igUserId: "67890",
+    containerId: "555",
+    userToken: USER,
+    appSecret: "app-secret-not-a-token",
+    budget: createGraphBudget(),
+    http: async () => ({ ok: true, status: 200, body: { id: 888 } }),
+  });
+  assert.equal(numeric.status, "published");
+  assert.equal(numeric.providerPostId, "888");
+  const textId = await publishInstagramContainer({
+    igUserId: "67890",
+    containerId: "555",
+    userToken: USER,
+    appSecret: "app-secret-not-a-token",
+    budget: createGraphBudget(),
+    http: async () => ({ ok: true, status: 200, body: { id: "18124570501779553" } }),
+  });
+  assert.equal(textId.providerPostId, "18124570501779553");
+  const unsafe = 18124570501779553;
+  assert.equal(Number.isSafeInteger(unsafe), false);
+  const rounded = await publishInstagramContainer({
+    igUserId: "67890",
+    containerId: "555",
+    userToken: USER,
+    appSecret: "app-secret-not-a-token",
+    budget: createGraphBudget(),
+    http: async () => ({ ok: true, status: 200, body: { id: unsafe } }),
+  });
+  assert.equal(rounded.status, "unknown");
+  assert.equal(rounded.safeError, "ambiguous");
+  assert.equal(rounded.providerPostId, null);
+  assert.equal(JSON.stringify(rounded).includes(String(unsafe)), false);
+  const unsent = await publishInstagramContainer({
+    igUserId: "67890",
+    containerId: "555",
+    userToken: USER,
+    appSecret: "app-secret-not-a-token",
+    budget: createGraphBudget(0),
+    http: async () => {
+      throw new Error("graph should not be called");
+    },
+  });
+  assert.equal(unsent.status, "publishing");
+  assert.equal(unsent.safeError, null);
+  assert.equal(unsent.providerContainerId, "555");
   assertNoSecrets(published);
 });
 
@@ -788,6 +1001,9 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(composer, /destinationBusy/);
   assert.match(composer, /Deblochează pentru o încercare nouă/);
   assert.match(composer, /container Instagram anterior/);
+  assert.match(composer, /publish_in_flight/);
+  assert.match(composer, /awaiting_publish_confirmation/);
+  assert.match(composer, /safeError !== "publish_in_flight"/);
   assert.match(composer, /Verifică statusul/);
   assert.match(composer, /\/api\/integrations\/meta\/publish\/verify/);
   assert.match(composer, /window\.confirm\(VERIFY_CONFIRM\)/);
@@ -801,6 +1017,18 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(releaseMigration, /grant execute on function public\.meta_publish_release_ambiguous/);
   assert.doesNotMatch(releaseMigration, /status = 'failed'/);
   assert.doesNotMatch(releaseMigration, /insert into public\.tenant_capabilities/i);
+  const claimFinished = readFileSync(
+    join(root, "supabase/migrations/20261018065000_frizeo_v2_meta_publish_claim_finished.sql"),
+    "utf8",
+  );
+  assert.match(claimFinished, /safe_error = 'publish_in_flight'/);
+  assert.match(claimFinished, /status = 'publishing'/);
+  assert.match(claimFinished, /for update/);
+  assert.match(claimFinished, /grant execute on function public\.meta_publish_claim_finished/);
+  assert.match(claimFinished, /revoke all on function public\.meta_publish_claim_finished\(uuid, uuid, text\) from public, anon, authenticated/);
+  assert.doesNotMatch(claimFinished, /media_publish/);
+  assert.doesNotMatch(claimFinished, /status = 'unknown'/);
+  assert.doesNotMatch(claimFinished, /insert into public\.tenant_capabilities/i);
   const releaseStart = handlers.indexOf("export async function releaseAmbiguousPublish");
   const releaseBody = handlers.slice(releaseStart, handlers.indexOf("async function readConnection"));
   assert.ok(releaseStart > 0);

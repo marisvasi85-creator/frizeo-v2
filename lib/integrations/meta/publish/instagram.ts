@@ -29,6 +29,25 @@ function failed(safeError: ProviderOutcome["safeError"]): ProviderOutcome {
   };
 }
 
+function ambiguousPublish(containerId: string): ProviderOutcome {
+  return {
+    status: "unknown",
+    providerPostId: null,
+    providerContainerId: containerId,
+    safeError: "ambiguous",
+  };
+}
+
+/** A safe integer survives JSON numbers. A larger Graph id must stay a string; rounding it would store the wrong post. */
+function postId(value: unknown): string | null {
+  if (typeof value === "string" && NUMERIC_ID.test(value)) return value;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) {
+    const text = String(value);
+    return NUMERIC_ID.test(text) ? text : null;
+  }
+  return null;
+}
+
 function missingScopes(scopes: readonly string[]): boolean {
   return INSTAGRAM_PUBLISH_SCOPES.some((scope) => !scopes.includes(scope));
 }
@@ -144,10 +163,10 @@ export async function publishInstagramContainer(input: {
   const timeoutMs = reserveGraphCall(input.budget);
   if (timeoutMs == null) {
     return {
-      status: "unknown",
+      status: "publishing",
       providerPostId: null,
       providerContainerId: input.containerId,
-      safeError: "awaiting_publish_confirmation",
+      safeError: null,
     };
   }
   const published = await input.http({
@@ -158,35 +177,16 @@ export async function publishInstagramContainer(input: {
     timeoutMs,
     appSecret: input.appSecret,
   });
-  if ("timeout" in published) {
-    return {
-      status: "unknown",
-      providerPostId: null,
-      providerContainerId: input.containerId,
-      safeError: "ambiguous",
-    };
-  }
+  if ("timeout" in published) return ambiguousPublish(input.containerId);
   const failure = definite(published);
   if (failure) {
     return { ...failure, providerContainerId: input.containerId };
   }
   if (!published.ok || !published.body || typeof published.body !== "object") {
-    return {
-      status: "unknown",
-      providerPostId: null,
-      providerContainerId: input.containerId,
-      safeError: "ambiguous",
-    };
+    return ambiguousPublish(input.containerId);
   }
-  const id = (published.body as { id?: unknown }).id;
-  if (typeof id !== "string" || !NUMERIC_ID.test(id)) {
-    return {
-      status: "unknown",
-      providerPostId: null,
-      providerContainerId: input.containerId,
-      safeError: "ambiguous",
-    };
-  }
+  const id = postId((published.body as { id?: unknown }).id);
+  if (!id) return ambiguousPublish(input.containerId);
   return {
     status: "published",
     providerPostId: id,
