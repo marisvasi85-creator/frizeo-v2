@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
 import { AdminSelect } from "../components/AdminInput";
-import type { BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
+import { renderBrandedCardToBlob, type BrandedCardBranding } from "@/lib/marketing-ai/brandedCard";
 import {
   MARKETING_CHANNEL_LABELS,
   MARKETING_CHANNELS,
@@ -14,7 +15,8 @@ import type { MarketingAIHistoryBatch } from "@/lib/marketing-ai/historyTypes";
 import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
 import { formatOpenSlotDayHeading } from "@/lib/marketing-ai/openSlotCopy";
 import { getSeasonalActions } from "@/lib/marketing-ai/seasonal";
-import { copyTextToClipboard } from "@/lib/marketing-ai/share";
+import { saveMarketingPublishHandoff } from "@/lib/marketing-ai/publishHandoff";
+import { buildShareCaption, copyTextToClipboard } from "@/lib/marketing-ai/share";
 import { applyTextAction, type MarketingDraft } from "@/lib/marketing-ai/textActions";
 import { withMarketingTracking } from "@/lib/marketing-ai/tracking";
 import {
@@ -107,6 +109,7 @@ export default function MarketingAIClient({
   initialSocialLinks: SocialLinks;
   initialHistory: MarketingAIHistoryBatch[];
 }) {
+  const router = useRouter();
   const seasonal = useMemo(() => getSeasonalActions(), []);
   const [usage, setUsage] = useState(initialUsage);
   const [goal, setGoal] = useState<Goal>("post");
@@ -137,9 +140,11 @@ export default function MarketingAIClient({
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(initialSocialLinks);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [preparingPublish, setPreparingPublish] = useState(false);
 
   const canPickBarber =
     (role === "owner" || role === "manager") && barbers.length > 1;
+  const canPreparePublish = role === "owner" || role === "manager";
   const draft = drafts[activeVariantIndex] || null;
   const quotaBlocked =
     !usage.unlimited && usage.remaining !== null && usage.remaining <= 0;
@@ -329,6 +334,86 @@ export default function MarketingAIClient({
     await copyTextToClipboard(fullText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function ensureBranding(): Promise<BrandedCardBranding | null> {
+    if (branding?.salonName) return branding;
+    try {
+      const res = await fetch(`/api/marketing-ai/branding?barberId=${selectedBarberId}`);
+      const data = await res.json();
+      if (!data?.salonName) return null;
+      const next: BrandedCardBranding = {
+        salonName: data.salonName,
+        barberName: data.barberName,
+        logoUrl: data.logoUrl,
+        bookingUrl: data.bookingUrl,
+      };
+      setBranding(next);
+      return next;
+    } catch {
+      return null;
+    }
+  }
+
+  async function jpegBlob(blob: Blob): Promise<Blob | null> {
+    try {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d");
+      if (!context) return null;
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return await new Promise((resolve) => {
+        canvas.toBlob((next) => resolve(next), "image/jpeg", 0.85);
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  async function preparePublish() {
+    if (!draft || preparingPublish || !canPreparePublish) return;
+    setError("");
+    setPreparingPublish(true);
+    try {
+      const cardBranding = await ensureBranding();
+      if (!cardBranding) {
+        setError("Nu am putut pregăti imaginea pentru publicare.");
+        return;
+      }
+      const card = await renderBrandedCardToBlob({
+        ...cardBranding,
+        title: draft.title,
+        content: draft.content,
+        callToAction: draft.callToAction,
+        photoUrl: goal === "work" ? photoUrl : null,
+        format: "square",
+      });
+      const jpeg = await jpegBlob(card);
+      const image = jpeg ?? card;
+      const mimeType = jpeg ? "image/jpeg" : "image/png";
+      const saved = saveMarketingPublishHandoff({
+        caption: buildShareCaption({
+          content: draft.content,
+          callToAction: draft.callToAction,
+          hashtags: draft.hashtags,
+          bookingUrl: trackedLinks.instagram || cardBranding.bookingUrl,
+        }),
+        bytes: new Uint8Array(await image.arrayBuffer()),
+        mimeType,
+      });
+      if (!saved) {
+        setError("Imaginea nu a putut fi transferată. Publicarea nu a pornit.");
+        return;
+      }
+      router.push("/admin/marketing/publish");
+    } catch {
+      setError("Nu am putut pregăti imaginea pentru publicare.");
+    } finally {
+      setPreparingPublish(false);
+    }
   }
 
   const occasions: { type: MarketingContentType; label: string }[] = [
@@ -643,6 +728,22 @@ export default function MarketingAIClient({
             photoUrl={goal === "work" ? photoUrl : null}
             onBrandingNeeded={async () => branding}
           />
+          {canPreparePublish && (
+            <div className="space-y-2">
+              <AdminButton
+                type="button"
+                variant="secondary"
+                loading={preparingPublish}
+                loadingLabel="Se pregătește..."
+                onClick={preparePublish}
+              >
+                Pregătește pentru publicare
+              </AdminButton>
+              <p className="text-xs text-frz-muted">
+                Transferă imaginea pătrată și textul în Publicare. Nu se publică automat.
+              </p>
+            </div>
+          )}
         </AdminCard>
       )}
     </div>

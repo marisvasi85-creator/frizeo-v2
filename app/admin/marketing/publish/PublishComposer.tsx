@@ -4,6 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminButton from "@/app/admin/components/AdminButton";
 import { INSTAGRAM_NOT_FOUND } from "@/lib/integrations/meta/publish/instagramMatch";
+import {
+  base64ToBytes,
+  readMarketingPublishHandoff,
+} from "@/lib/marketing-ai/publishHandoff";
 
 type DestinationOption = {
   id: string;
@@ -133,6 +137,22 @@ export default function PublishComposer({
       return next ? URL.createObjectURL(next) : null;
     });
   }
+
+  useEffect(() => {
+    const handoff = readMarketingPublishHandoff();
+    if (!handoff) return;
+    const bytes = base64ToBytes(handoff.imageBase64);
+    if (!bytes) return;
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    chooseFile(new File([buffer], handoff.fileName, { type: handoff.mimeType }));
+    setCaption(handoff.caption);
+    const instagramIds = destinations
+      .filter((destination) => destination.destinationType === "instagram_business")
+      .map((destination) => destination.id);
+    if (instagramIds.length > 0) setSelected(instagramIds);
+    setMessage("Imaginea și textul au venit din Marketing AI. Editează textul, alege destinația și confirmă publicarea manual.");
+  }, [destinations]);
 
   function toggle(id: string) {
     setSelected((current) => (
