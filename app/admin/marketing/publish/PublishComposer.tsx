@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminButton from "@/app/admin/components/AdminButton";
+import { INSTAGRAM_NOT_FOUND } from "@/lib/integrations/meta/publish/instagramMatch";
 
 type DestinationOption = {
   id: string;
@@ -51,6 +52,11 @@ const ERRORS: Record<string, string> = {
   cleanup_failed: "Imaginea nu a putut fi ștearsă.",
   not_found: "Publicarea nu a fost găsită.",
   release_rejected: "Acest rezultat nu poate fi deblocat.",
+  lookup_rejected: "Acest job nu poate fi verificat pe Instagram.",
+  lookup_unavailable: "Verificarea pe Instagram nu a putut fi făcută. Jobul rămâne cu rezultat necunoscut.",
+  reconcile_rejected: "Reconcilierea nu a fost salvată. Jobul rămâne neschimbat.",
+  token_expired: "Conexiunea Meta trebuie refăcută manual.",
+  missing_permission: "Conexiunea Meta nu poate citi postările Instagram.",
   awaiting_publish_confirmation: "Rezultatul publicării rămâne neconfirmat. Destinația rămâne blocată și nu se retrimite.",
   publish_in_flight: "Publicarea a fost rezervată o singură dată. Rezultatul nu este confirmat, destinația rămâne blocată și nu se retrimite.",
 };
@@ -58,6 +64,10 @@ const ERRORS: Record<string, string> = {
 const AMBIGUOUS_WARNING = "Rezultatul rămâne necunoscut, nu este un eșec confirmat. Este posibil să existe un container Instagram anterior, iar o încercare nouă poate crea o postare în plus.";
 
 const VERIFY_CONFIRM = "Se face un singur control al containerului existent. Dacă Meta îl marchează gata, publicarea continuă o singură dată. Dacă este încă în procesare, jobul rămâne în curs.";
+
+const SEVERAL_POSTS = "Au fost găsite mai multe postări. Jobul rămâne neschimbat.";
+
+const POST_ID_RE = /^[0-9]{1,32}$/;
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Schiță mock",
@@ -103,6 +113,12 @@ export default function PublishComposer({
   }, []);
   const [busy, setBusy] = useState(false);
   const [mediaPath, setMediaPath] = useState<string | null>(null);
+  const [instagramLookup, setInstagramLookup] = useState<{
+    jobId: string;
+    found: boolean;
+    providerPostId: string | null;
+    message: string;
+  } | null>(null);
 
   const previewName = useMemo(() => file?.name ?? "", [file]);
   const destinationBusy = jobs.some(
@@ -271,6 +287,89 @@ export default function PublishComposer({
     }
   }
 
+  async function checkInstagram(jobId: string) {
+    if (busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/integrations/meta/publish/lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        checked?: boolean;
+        found?: boolean;
+        reason?: string;
+        providerPostId?: string;
+      } | null;
+      if (!response.ok || !payload?.checked) {
+        setInstagramLookup(null);
+        setMessage(ERRORS[payload?.error ?? ""] ?? ERRORS.lookup_unavailable);
+        return;
+      }
+      if (!payload.found || !payload.providerPostId || !POST_ID_RE.test(payload.providerPostId)) {
+        setInstagramLookup({
+          jobId,
+          found: false,
+          providerPostId: null,
+          message: payload.reason === "several" ? SEVERAL_POSTS : INSTAGRAM_NOT_FOUND,
+        });
+        return;
+      }
+      setInstagramLookup({
+        jobId,
+        found: true,
+        providerPostId: payload.providerPostId,
+        message: `Postarea găsită are ID-ul ${payload.providerPostId}.`,
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reconcileInstagram(jobId: string, providerPostId: string) {
+    if (busy || !POST_ID_RE.test(providerPostId)) return;
+    if (!window.confirm(`Postarea găsită are ID-ul ${providerPostId}. Confirmi reconcilierea? Nu se trimite o publicare nouă.`)) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/integrations/meta/publish/reconcile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId, providerPostId }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        checked?: boolean;
+        found?: boolean;
+        reconciled?: boolean;
+        jobs?: HistoryJob[];
+      } | null;
+      if (!response.ok || !payload?.reconciled || !payload.jobs?.[0]) {
+        if (payload?.checked && payload.found === false) {
+          setInstagramLookup({
+            jobId,
+            found: false,
+            providerPostId: null,
+            message: INSTAGRAM_NOT_FOUND,
+          });
+          return;
+        }
+        setMessage(ERRORS[payload?.error ?? ""] ?? ERRORS.reconcile_rejected);
+        return;
+      }
+      const next = payload.jobs[0];
+      setJobs((current) => current.map((job) => job.id === next.id ? { ...job, ...next } : job));
+      setInstagramLookup(null);
+      setMessage(`Jobul a fost reconciliat cu postarea ${providerPostId}.`);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function verify(jobId: string) {
     if (busy) return;
     if (!window.confirm(VERIFY_CONFIRM)) return;
@@ -371,6 +470,8 @@ export default function PublishComposer({
           const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled" || job.status === "released";
           const canRelease = job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
           const canVerify = job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId) && job.safeError !== "publish_in_flight";
+          const canCheckInstagram = job.executionMode === "live" && job.status === "unknown" && job.destinationType === "instagram_business";
+          const instagramHit = instagramLookup?.jobId === job.id ? instagramLookup : null;
           return (
             <div key={job.id} className="rounded-xl border border-frz-line p-3">
               <p className="text-sm font-medium text-frz-ink">
@@ -388,6 +489,24 @@ export default function PublishComposer({
                   </AdminButton>
                 </div>
               )}
+              {canCheckInstagram && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => checkInstagram(job.id)}>
+                    Verifică pe Instagram
+                  </AdminButton>
+                  {instagramHit?.found && instagramHit.providerPostId && (
+                    <AdminButton
+                      type="button"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => reconcileInstagram(job.id, instagramHit.providerPostId ?? "")}
+                    >
+                      Confirmă reconcilierea
+                    </AdminButton>
+                  )}
+                </div>
+              )}
+              {instagramHit && <p className="mt-1 text-sm text-frz-ink">{instagramHit.message}</p>}
               {canRelease && (
                 <div className="mt-2">
                   <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => release(job.id)}>

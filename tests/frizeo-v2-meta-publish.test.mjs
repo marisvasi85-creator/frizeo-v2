@@ -20,9 +20,12 @@ import {
 import {
   createInstagramContainer,
   INSTAGRAM_CONTAINER_TIMEOUT_MS,
+  listInstagramMedia,
   publishInstagramContainer,
   readInstagramStatus,
 } from "../lib/integrations/meta/publish/instagram.ts";
+import { averageHash, hashDistance, isInstagramCdnUrl, rankInstagramPosts } from "../lib/integrations/meta/publish/instagramLookup.ts";
+import { INSTAGRAM_NOT_FOUND, matchInstagramPosts } from "../lib/integrations/meta/publish/instagramMatch.ts";
 import { advancePublishJobs } from "../lib/integrations/meta/publish/orchestrate.ts";
 import { publicJobResponse } from "../lib/integrations/meta/publish/present.ts";
 
@@ -214,6 +217,14 @@ test("publish gates fail closed", () => {
   assert.equal(
     publishRequestDecision({ ...ready, action: "verify", envLiveEnabled: false }).error,
     "live_off",
+  );
+  assert.equal(
+    publishRequestDecision({ ...ready, action: "lookup", envLiveEnabled: false }).error,
+    "live_off",
+  );
+  assert.equal(
+    publishRequestDecision({ ...ready, action: "reconcile", production: true }).status,
+    404,
   );
   assert.deepEqual(
     publishRequestDecision({ ...ready, action: "release", liveCapabilityEnabled: false, envLiveEnabled: false, configured: false }),
@@ -940,6 +951,195 @@ test("public job responses omit secrets", () => {
   assert.equal(JSON.stringify(response).includes("access_token"), false);
 });
 
+test("instagram lookup matches one post and does not publish", async () => {
+  const createdAt = "2026-10-13T07:25:21.000Z";
+  const updatedAt = "2026-10-13T07:50:38.000Z";
+  const caption = "✂️ Tu te ocupi de tuns. Frizeo se ocupă de programări!";
+  const base = {
+    caption,
+    createdAt,
+    updatedAt,
+  };
+  const hit = matchInstagramPosts({
+    ...base,
+    posts: [{
+      id: "18124570501779554",
+      caption: "✂️ Tu te ocupi de tuns.  Frizeo se ocupă de programări!",
+      timestamp: "2026-10-13T07:51:00.000Z",
+      mediaType: "IMAGE",
+      imageDistance: null,
+    }],
+  });
+  assert.equal(hit.found, true);
+  if (hit.found) assert.equal(hit.providerPostId, "18124570501779554");
+
+  const late = matchInstagramPosts({
+    ...base,
+    posts: [{
+      id: "18124570501779555",
+      caption,
+      timestamp: "2026-10-13T12:00:00.000Z",
+      mediaType: "IMAGE",
+      imageDistance: null,
+    }],
+  });
+  assert.deepEqual(late, { found: false, reason: "none" });
+  assert.equal(JSON.stringify(late).includes("failed"), false);
+  assert.equal(INSTAGRAM_NOT_FOUND, "Nu a fost găsită");
+
+  const differentImage = matchInstagramPosts({
+    ...base,
+    posts: [{
+      id: "18124570501779556",
+      caption,
+      timestamp: "2026-10-13T07:51:00.000Z",
+      mediaType: "IMAGE",
+      imageDistance: 24,
+    }],
+  });
+  assert.equal(differentImage.found, false);
+
+  const imageOnly = matchInstagramPosts({
+    ...base,
+    posts: [{
+      id: "18124570501779557",
+      caption: "alt text",
+      timestamp: "2026-10-13T07:40:00.000Z",
+      mediaType: "IMAGE",
+      imageDistance: 4,
+    }],
+  });
+  assert.equal(imageOnly.found, true);
+
+  const several = matchInstagramPosts({
+    ...base,
+    posts: [
+      { id: "18124570501779558", caption, timestamp: "2026-10-13T07:40:00.000Z", mediaType: "IMAGE", imageDistance: null },
+      { id: "18124570501779559", caption, timestamp: "2026-10-13T07:42:00.000Z", mediaType: "IMAGE", imageDistance: null },
+    ],
+  });
+  assert.deepEqual(several, { found: false, reason: "several" });
+
+  const video = matchInstagramPosts({
+    ...base,
+    posts: [{
+      id: "18124570501779560",
+      caption,
+      timestamp: "2026-10-13T07:40:00.000Z",
+      mediaType: "VIDEO",
+      imageDistance: null,
+    }],
+  });
+  assert.equal(video.found, false);
+
+  const block = await sharp({
+    create: { width: 180, height: 320, channels: 3, background: { r: 250, g: 250, b: 250 } },
+  }).png().toBuffer();
+  const red = await sharp({
+    create: { width: 640, height: 800, channels: 3, background: { r: 180, g: 30, b: 40 } },
+  }).composite([{ input: block, left: 40, top: 40 }]).jpeg({ quality: 90 }).toBuffer();
+  const redAgain = await sharp(red).jpeg({ quality: 40 }).toBuffer();
+  const blue = await sharp({
+    create: { width: 640, height: 800, channels: 3, background: { r: 20, g: 40, b: 180 } },
+  }).composite([{ input: block, left: 400, top: 420 }]).jpeg().toBuffer();
+  const redHash = await averageHash(red);
+  const redAgainHash = await averageHash(redAgain);
+  const blueHash = await averageHash(blue);
+  assert.ok(redHash != null && redAgainHash != null && blueHash != null);
+  assert.ok(hashDistance(redHash, redAgainHash) <= 10);
+  assert.ok(hashDistance(redHash, blueHash) >= 18);
+
+  const calls = [];
+  const http = async (call) => {
+    calls.push(call);
+    assert.equal(call.method, "GET");
+    assert.equal(call.path, "17841400000000000/media");
+    assert.equal(call.path.includes("media_publish"), false);
+    return {
+      ok: true,
+      status: 200,
+      body: {
+        data: [{
+          id: "18124570501779554",
+          caption,
+          timestamp: "2026-10-13T07:51:00.000Z",
+          media_type: "IMAGE",
+          media_url: "https://scontent.cdninstagram.com/v/post.jpg",
+        }],
+      },
+    };
+  };
+  const listed = await listInstagramMedia({
+    igUserId: "17841400000000000",
+    userToken: USER,
+    scopes: SCOPES,
+    appSecret: "app-secret",
+    budget: createGraphBudget(),
+    http,
+  });
+  assert.equal(listed.kind, "ok");
+  assert.equal(calls.length, 1);
+  assert.equal(JSON.stringify(listed).includes(USER), false);
+
+  let imageFetches = 0;
+  const ranked = await rankInstagramPosts({
+    caption,
+    createdAt,
+    updatedAt,
+    localImage: red,
+    posts: listed.kind === "ok" ? listed.posts : [],
+    fetchImage: async (url) => {
+      imageFetches += 1;
+      assert.equal(isInstagramCdnUrl(url), true);
+      return redAgain;
+    },
+  });
+  assert.equal(imageFetches, 1);
+  assert.equal(ranked.found, true);
+
+  const outside = await rankInstagramPosts({
+    caption,
+    createdAt,
+    updatedAt,
+    localImage: red,
+    posts: [{
+      id: "18124570501779561",
+      caption,
+      timestamp: "2026-10-18T07:51:00.000Z",
+      mediaType: "IMAGE",
+      mediaUrl: "https://scontent.cdninstagram.com/v/later.jpg",
+    }],
+    fetchImage: async () => {
+      throw new Error("image outside the window");
+    },
+  });
+  assert.deepEqual(outside, { found: false, reason: "none" });
+
+  const missingScope = await listInstagramMedia({
+    igUserId: "17841400000000000",
+    userToken: USER,
+    scopes: [],
+    appSecret: "app-secret",
+    budget: createGraphBudget(),
+    http: async () => {
+      throw new Error("graph");
+    },
+  });
+  assert.equal(missingScope.kind, "missing_permission");
+
+  const unsafe = await listInstagramMedia({
+    igUserId: "17841400000000000",
+    userToken: USER,
+    scopes: SCOPES,
+    appSecret: "app-secret",
+    budget: createGraphBudget(),
+    http: async () => ({ ok: true, status: 200, body: { data: [{ id: 18124570501779553 }] } }),
+  });
+  assert.equal(unsafe.kind, "unknown");
+  assert.equal(isInstagramCdnUrl("https://evil.example/image.jpg"), false);
+  assert.equal(isInstagramCdnUrl("http://scontent.cdninstagram.com/a.jpg"), false);
+});
+
 test("publish migration and routes stay fail closed", () => {
   const migration = readFileSync(
     join(root, "supabase/migrations/20261011092649_frizeo_v2_meta_publish.sql"),
@@ -1005,6 +1205,25 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(composer, /awaiting_publish_confirmation/);
   assert.match(composer, /safeError !== "publish_in_flight"/);
   assert.match(composer, /Verifică statusul/);
+  assert.match(composer, /Verifică pe Instagram/);
+  assert.match(composer, /INSTAGRAM_NOT_FOUND/);
+  assert.match(composer, /Confirmă reconcilierea/);
+  assert.match(composer, /destinationType === "instagram_business"/);
+  assert.match(composer, /\/api\/integrations\/meta\/publish\/lookup/);
+  assert.match(composer, /\/api\/integrations\/meta\/publish\/reconcile/);
+  assert.ok(composer.indexOf("Confirmi reconcilierea?") < composer.indexOf("/api/integrations/meta/publish/reconcile"));
+  const lookupStart = handlers.indexOf("export async function lookupInstagramPublish");
+  const reconcileStart = handlers.indexOf("export async function reconcileInstagramPublish");
+  const cleanupStart = handlers.indexOf("export async function cleanupPublishMedia");
+  const lookupBody = handlers.slice(lookupStart, reconcileStart);
+  const reconcileBody = handlers.slice(reconcileStart, cleanupStart);
+  assert.ok(lookupStart > 0 && reconcileStart > lookupStart);
+  assert.doesNotMatch(lookupBody, /settlePublishJob/);
+  assert.doesNotMatch(lookupBody, /media_publish/);
+  assert.match(reconcileBody, /settlePublishJob/);
+  assert.match(reconcileBody, /status: "published"/);
+  assert.doesNotMatch(reconcileBody, /media_publish/);
+  assert.match(handlers, /call\.method !== "GET"/);
   assert.match(composer, /\/api\/integrations\/meta\/publish\/verify/);
   assert.match(composer, /window\.confirm\(VERIFY_CONFIRM\)/);
   assert.ok(composer.indexOf("window.confirm(VERIFY_CONFIRM)") < composer.indexOf("/api/integrations/meta/publish/verify"));

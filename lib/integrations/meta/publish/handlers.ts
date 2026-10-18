@@ -3,7 +3,7 @@ import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isProduction } from "@/lib/app/environment";
 import { assertMetaConfig } from "@/lib/integrations/meta/config";
 import { assessStoredTokenExpiry } from "@/lib/integrations/meta/flow";
-import { createGraphBudget } from "@/lib/integrations/meta/graph";
+import { createGraphBudget, GRAPH_CALL_MAX_MS } from "@/lib/integrations/meta/graph";
 import { metaRateLimit } from "@/lib/integrations/meta/http";
 import { readMetaAccessToken } from "@/lib/integrations/meta/store";
 import {
@@ -15,6 +15,8 @@ import {
   type PublishAction,
 } from "@/lib/integrations/meta/publish/flags";
 import { createMetaPublishHttp } from "@/lib/integrations/meta/publish/graphHttp";
+import { listInstagramMedia } from "@/lib/integrations/meta/publish/instagram";
+import { fetchInstagramCdnImage, rankInstagramPosts } from "@/lib/integrations/meta/publish/instagramLookup";
 import {
   isMetaFetchableImageUrl,
   marketingImagePath,
@@ -29,10 +31,12 @@ import {
   clearPublishMedia,
   preparePublishJobs,
   publicJobResponse,
+  readInstagramLookupJob,
   readPublishJob,
   readPublishMediaCandidate,
   releaseAmbiguousPublishJob,
   settlePublishJob,
+  type InstagramLookupJob,
   type PublicPublishJob,
 } from "@/lib/integrations/meta/publish/store";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -348,6 +352,157 @@ export async function verifyPublish(request: Request) {
     live: true,
     externalCall: calls > 0,
     jobs: [publicJobResponse(state ? mergeJob(job, state) : job, calls > 0)],
+  });
+}
+
+const POST_ID_RE = /^[0-9]{1,32}$/;
+
+async function readStoredJpeg(tenantId: string, path: string | null): Promise<Buffer | null> {
+  if (!path || !pathBelongsToTenant(path, tenantId)) return null;
+  const { data, error } = await supabaseAdmin.storage.from(MARKETING_PUBLISH_BUCKET).download(path);
+  if (error || !data) return null;
+  const bytes = Buffer.from(await data.arrayBuffer());
+  if (bytes.length === 0 || bytes.length > 2_000_000) return null;
+  return bytes;
+}
+
+type InstagramLookupContext = {
+  gate: { actor: { tenantId: string } };
+  body: Record<string, unknown> | null;
+  job: InstagramLookupJob;
+  connection: { scopes: string[] };
+  secret: { accessToken: string };
+  appSecret: string;
+};
+
+async function authorizeInstagramLookup(
+  request: Request,
+  action: "lookup" | "reconcile",
+): Promise<{ response: NextResponse } | InstagramLookupContext> {
+  const gate = await authorize(request, action);
+  if ("response" in gate) {
+    return { response: gate.response ?? json("unauthenticated", 401) };
+  }
+  if (!gate.flags.liveCapabilityEnabled || !gate.flags.envLiveEnabled) {
+    return { response: json("live_off", 403) };
+  }
+  const body = await readBody(request);
+  const jobId = typeof body?.jobId === "string" ? body.jobId.toLowerCase() : "";
+  if (!UUID_RE.test(jobId)) return { response: json("invalid", 400) };
+  const configResult = assertMetaConfig(process.env, { production: false });
+  if (!configResult.ok) return { response: json("unconfigured", 403) };
+  const job = await readInstagramLookupJob(gate.actor.tenantId, jobId);
+  if (!job) return { response: json("not_found", 404) };
+  if (
+    job.executionMode !== "live" ||
+    job.status !== "unknown" ||
+    job.destinationType !== "instagram_business"
+  ) {
+    return { response: json("lookup_rejected", 409) };
+  }
+  if (!job.createdAt) return { response: json("lookup_unavailable", 409) };
+  const connection = await readConnection(gate.actor.tenantId);
+  if (!connection) return { response: json("needs_reconnect", 409) };
+  const expiry = assessStoredTokenExpiry(connection.expiresAt);
+  if (connection.status !== "connected" || !expiry.ok) return { response: json("needs_reconnect", 409) };
+  const secret = await readMetaAccessToken(gate.actor.tenantId);
+  if (!secret.ok) return { response: json("needs_reconnect", 409) };
+  return {
+    gate,
+    body,
+    job,
+    connection,
+    secret,
+    appSecret: configResult.config.appSecret,
+  };
+}
+
+async function matchUnknownInstagram(loaded: InstagramLookupContext) {
+  let calls = 0;
+  const http = createMetaPublishHttp();
+  const listed = await listInstagramMedia({
+    igUserId: loaded.job.providerDestinationId,
+    userToken: loaded.secret.accessToken,
+    scopes: loaded.connection.scopes,
+    appSecret: loaded.appSecret,
+    budget: createGraphBudget(),
+    http: async (call) => {
+      calls += 1;
+      if (call.method !== "GET" || call.path.endsWith("/media_publish") || !call.path.endsWith("/media")) {
+        return { ok: false, status: 0, body: null };
+      }
+      return http(call);
+    },
+  });
+  if (listed.kind === "token_expired") return { response: json("token_expired", 409) };
+  if (listed.kind === "missing_permission") return { response: json("missing_permission", 403) };
+  if (listed.kind !== "ok") return { response: json("lookup_unavailable", 409) };
+  const localImage = await readStoredJpeg(loaded.gate.actor.tenantId, loaded.job.mediaObjectPath);
+  const match = await rankInstagramPosts({
+    caption: loaded.job.caption ?? "",
+    createdAt: loaded.job.createdAt ?? "",
+    updatedAt: loaded.job.updatedAt ?? loaded.job.createdAt ?? "",
+    localImage,
+    posts: listed.posts,
+    fetchImage: (url) => fetchInstagramCdnImage(url, GRAPH_CALL_MAX_MS),
+  });
+  return { match, calls, job: loaded.job, tenantId: loaded.gate.actor.tenantId };
+}
+
+export async function lookupInstagramPublish(request: Request) {
+  const loaded = await authorizeInstagramLookup(request, "lookup");
+  if ("response" in loaded) return loaded.response;
+  const compared = await matchUnknownInstagram(loaded);
+  if ("response" in compared) return compared.response;
+  if (!compared.match.found) {
+    return NextResponse.json({
+      ok: true,
+      checked: true,
+      found: false,
+      reason: compared.match.reason,
+      externalCall: compared.calls > 0,
+    });
+  }
+  return NextResponse.json({
+    ok: true,
+    checked: true,
+    found: true,
+    providerPostId: compared.match.providerPostId,
+    externalCall: compared.calls > 0,
+  });
+}
+
+export async function reconcileInstagramPublish(request: Request) {
+  const loaded = await authorizeInstagramLookup(request, "reconcile");
+  if ("response" in loaded) return loaded.response;
+  const requested = typeof loaded.body?.providerPostId === "string" ? loaded.body.providerPostId : "";
+  if (!POST_ID_RE.test(requested)) return json("invalid", 400);
+  const compared = await matchUnknownInstagram(loaded);
+  if ("response" in compared) return compared.response;
+  if (!compared.match.found || compared.match.providerPostId !== requested) {
+    return NextResponse.json({
+      ok: true,
+      checked: true,
+      found: false,
+      reconciled: false,
+      reason: "none",
+      externalCall: compared.calls > 0,
+    });
+  }
+  const settled = await settlePublishJob(loaded.gate.actor.tenantId, loaded.job.id, {
+    status: "published",
+    providerPostId: compared.match.providerPostId,
+    providerContainerId: loaded.job.providerContainerId,
+    safeError: null,
+  });
+  if (settled.outcome !== "updated") return json("reconcile_rejected", 409);
+  return NextResponse.json({
+    ok: true,
+    checked: true,
+    found: true,
+    reconciled: true,
+    externalCall: compared.calls > 0,
+    jobs: [publicJobResponse(mergeJob(loaded.job, settled.job), compared.calls > 0)],
   });
 }
 

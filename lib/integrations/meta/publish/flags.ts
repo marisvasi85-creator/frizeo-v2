@@ -7,7 +7,7 @@ export const STAGING_PUBLISH_HOST = "staging.frizeo.ro";
 export const STAGING_SUPABASE_HOST = "fanxxytfuhnakfdzwssd.supabase.co";
 export const MARKETING_PUBLISH_BUCKET = "marketing-publish";
 
-export type PublishAction = "media" | "mock" | "live" | "verify" | "cleanup" | "release";
+export type PublishAction = "media" | "mock" | "live" | "verify" | "lookup" | "reconcile" | "cleanup" | "release";
 
 export type PublishDecision =
   | { ok: true }
@@ -57,7 +57,12 @@ export function publishRequestDecision(input: {
   if (!input.integrationEnabled) {
     return { ok: false, status: 403, error: "capability_off" };
   }
-  if (input.action === "live" || input.action === "verify") {
+  if (
+    input.action === "live" ||
+    input.action === "verify" ||
+    input.action === "lookup" ||
+    input.action === "reconcile"
+  ) {
     if (!input.liveCapabilityEnabled || !input.envLiveEnabled) {
       return { ok: false, status: 403, error: "live_off" };
     }

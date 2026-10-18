@@ -120,6 +120,85 @@ export async function createInstagramContainer(input: {
   };
 }
 
+export type InstagramListedPost = {
+  id: string;
+  caption: string;
+  timestamp: string | null;
+  mediaType: string | null;
+  mediaUrl: string | null;
+};
+
+export type InstagramMediaList =
+  | { kind: "ok"; posts: InstagramListedPost[] }
+  | { kind: "no_budget" | "timeout" | "unknown" | "missing_permission" | "token_expired" | "provider_error" | "invalid" };
+
+function listedId(value: unknown): string | "invalid" | "skip" {
+  const id = postId(value);
+  if (id) return id;
+  if (typeof value === "number") return "invalid";
+  if (typeof value === "string" && value.trim() !== "") return "invalid";
+  return "skip";
+}
+
+/** One authorized read of the newest media. This does not create a container and does not publish. */
+export async function listInstagramMedia(input: {
+  igUserId: string;
+  userToken: string;
+  scopes: readonly string[];
+  appSecret: string;
+  budget: GraphBudget;
+  http: (call: GraphCall) => Promise<GraphResult>;
+}): Promise<InstagramMediaList> {
+  if (missingScopes(input.scopes)) return { kind: "missing_permission" };
+  if (!NUMERIC_ID.test(input.igUserId)) return { kind: "invalid" };
+  const timeoutMs = reserveGraphCall(input.budget);
+  if (timeoutMs == null) return { kind: "no_budget" };
+  const listed = await input.http({
+    method: "GET",
+    path: `${input.igUserId}/media`,
+    query: {
+      fields: "id,caption,timestamp,media_type,media_url",
+      limit: "25",
+    },
+    token: input.userToken,
+    timeoutMs,
+    appSecret: input.appSecret,
+  });
+  if ("timeout" in listed) return { kind: "timeout" };
+  const failure = definite(listed);
+  if (failure?.safeError === "token_expired") return { kind: "token_expired" };
+  if (failure?.safeError === "missing_permission") return { kind: "missing_permission" };
+  if (failure) return { kind: "provider_error" };
+  if (!listed.ok || !listed.body || typeof listed.body !== "object") return { kind: "unknown" };
+  const data = (listed.body as { data?: unknown }).data;
+  if (!Array.isArray(data)) return { kind: "unknown" };
+  const posts: InstagramListedPost[] = [];
+  for (const item of data) {
+    if (!item || typeof item !== "object") continue;
+    const row = item as {
+      id?: unknown;
+      caption?: unknown;
+      timestamp?: unknown;
+      media_type?: unknown;
+      media_url?: unknown;
+    };
+    const id = listedId(row.id);
+    if (id === "invalid") return { kind: "unknown" };
+    if (id === "skip") continue;
+    const mediaUrl = typeof row.media_url === "string" && row.media_url.startsWith("https://")
+      ? row.media_url
+      : null;
+    posts.push({
+      id,
+      caption: typeof row.caption === "string" ? row.caption : "",
+      timestamp: typeof row.timestamp === "string" ? row.timestamp : null,
+      mediaType: typeof row.media_type === "string" ? row.media_type : null,
+      mediaUrl,
+    });
+  }
+  return { kind: "ok", posts };
+}
+
 export async function readInstagramStatus(input: {
   containerId: string;
   userToken: string;

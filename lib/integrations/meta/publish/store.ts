@@ -170,6 +170,70 @@ export async function readPublishJob(
   });
 }
 
+export type InstagramLookupJob = PublicPublishJob & {
+  createdAt: string | null;
+  updatedAt: string | null;
+  mediaObjectPath: string | null;
+};
+
+function asIso(value: unknown): string | null {
+  return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+export async function readInstagramLookupJob(
+  tenantId: string,
+  jobId: string,
+): Promise<InstagramLookupJob | null> {
+  const { data, error } = await supabaseAdmin
+    .from("integration_publish_jobs")
+    .select(
+      "id, campaign_id, asset_id, destination_id, status, execution_mode, attempts, provider_post_id, provider_container_id, safe_error, idempotency_key, created_at, updated_at, marketing_destinations!inner(destination_type, display_name, provider_destination_id, tenant_id), integration_assets!inner(body, media_object_path, tenant_id)",
+    )
+    .eq("tenant_id", tenantId)
+    .eq("id", jobId)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) console.error("meta_publish_job_read_failed");
+    return null;
+  }
+  const destination = asRecord(
+    Array.isArray(data.marketing_destinations)
+      ? data.marketing_destinations[0]
+      : data.marketing_destinations,
+  );
+  const asset = asRecord(
+    Array.isArray(data.integration_assets)
+      ? data.integration_assets[0]
+      : data.integration_assets,
+  );
+  if (destination?.tenant_id !== tenantId || asset?.tenant_id !== tenantId) return null;
+  const job = presentPublishJob({
+    id: data.id,
+    campaign_id: data.campaign_id,
+    asset_id: data.asset_id,
+    destination_id: data.destination_id,
+    destination_type: destination?.destination_type,
+    display_name: destination?.display_name,
+    provider_destination_id: destination?.provider_destination_id,
+    status: data.status,
+    execution_mode: data.execution_mode,
+    attempts: data.attempts,
+    provider_post_id: data.provider_post_id,
+    provider_container_id: data.provider_container_id,
+    safe_error: data.safe_error,
+    idempotency_key: data.idempotency_key,
+    caption: asset?.body,
+  });
+  if (!job) return null;
+  const mediaObjectPath = typeof asset?.media_object_path === "string" ? asset.media_object_path : null;
+  return {
+    ...job,
+    createdAt: asIso(data.created_at),
+    updatedAt: asIso(data.updated_at),
+    mediaObjectPath,
+  };
+}
+
 export async function readPublishMediaCandidate(
   tenantId: string,
   assetId: string,
