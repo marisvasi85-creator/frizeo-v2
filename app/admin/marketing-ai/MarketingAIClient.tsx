@@ -15,8 +15,9 @@ import type { MarketingAIHistoryBatch } from "@/lib/marketing-ai/historyTypes";
 import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
 import { formatOpenSlotDayHeading } from "@/lib/marketing-ai/openSlotCopy";
 import { getSeasonalActions } from "@/lib/marketing-ai/seasonal";
+import { publishCaption, publishImageCopy } from "@/lib/marketing-ai/publishCardCopy";
 import { saveMarketingPublishHandoff } from "@/lib/marketing-ai/publishHandoff";
-import { buildShareCaption, copyTextToClipboard } from "@/lib/marketing-ai/share";
+import { copyTextToClipboard } from "@/lib/marketing-ai/share";
 import { applyTextAction, type MarketingDraft } from "@/lib/marketing-ai/textActions";
 import { withMarketingTracking } from "@/lib/marketing-ai/tracking";
 import {
@@ -383,11 +384,21 @@ export default function MarketingAIClient({
         setError("Nu am putut pregăti imaginea pentru publicare.");
         return;
       }
-      const card = await renderBrandedCardToBlob({
-        ...cardBranding,
+      const bookingUrl = trackedLinks.instagram || cardBranding.bookingUrl;
+      const copy = publishImageCopy({
         title: draft.title,
         content: draft.content,
         callToAction: draft.callToAction,
+        bookingUrl,
+      });
+      const card = await renderBrandedCardToBlob({
+        salonName: cardBranding.salonName,
+        barberName: cardBranding.barberName,
+        logoUrl: cardBranding.logoUrl,
+        title: copy.title,
+        content: copy.content,
+        callToAction: copy.callToAction,
+        bookingUrl: copy.bookingUrl,
         photoUrl: goal === "work" ? photoUrl : null,
         format: "square",
       });
@@ -395,11 +406,11 @@ export default function MarketingAIClient({
       const image = jpeg ?? card;
       const mimeType = jpeg ? "image/jpeg" : "image/png";
       const saved = saveMarketingPublishHandoff({
-        caption: buildShareCaption({
+        caption: publishCaption({
           content: draft.content,
           callToAction: draft.callToAction,
           hashtags: draft.hashtags,
-          bookingUrl: trackedLinks.instagram || cardBranding.bookingUrl,
+          bookingUrl,
         }),
         bytes: new Uint8Array(await image.arrayBuffer()),
         mimeType,
