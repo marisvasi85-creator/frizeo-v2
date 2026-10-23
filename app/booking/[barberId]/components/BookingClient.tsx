@@ -21,16 +21,17 @@ import type {
   PublicAccessStatus,
 } from "@/lib/barber-access/types";
 import { isValidRomanianPhone } from "@/lib/phone/normalizeRomanianPhone";
+import {
+  PublicBookingSelectionSummary,
+  PublicServiceChoices,
+  type PublicBookingService,
+} from "./PublicServiceChoices";
 
 function isValidPhone(phone: string) {
   return isValidRomanianPhone(phone);
 }
 
-type BookingService = {
-  id: string;
-  display_name: string;
-  duration: number;
-};
+type BookingService = PublicBookingService;
 
 type WeeklyScheduleRow = {
   day_of_week: number;
@@ -374,6 +375,9 @@ export default function BookingClient({
     }
   };
 
+  const selectedService =
+    services.find((service) => service.id === serviceId) ?? null;
+
   return (
     <div className="max-w-xl mx-auto p-6 space-y-6 text-frz-ink">
       <div className="text-center">
@@ -387,44 +391,11 @@ export default function BookingClient({
         <p className="text-frz-danger text-sm text-center">{servicesError}</p>
       )}
 
-      {services.length > 0 && (
-        <div
-          className={`space-y-3 rounded-2xl p-1 ${
-            !serviceId ? "ring-2 ring-frz-accent/35 ring-offset-2 ring-offset-frz-bg" : ""
-          }`}
-        >
-          <p
-            className={`text-base font-bold text-frz-ink ${
-              !serviceId ? "animate-frz-attention" : ""
-            }`}
-          >
-            1. Alege serviciul
-          </p>
-          {!serviceId && (
-            <p className="text-sm font-medium text-frz-accent animate-frz-attention">
-              Începe de aici — selectează serviciul dorit
-            </p>
-          )}
-          {services.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => handleServiceSelect(s.id)}
-              className={`w-full p-4 rounded-xl border border-frz-line transition ${
-                serviceId === s.id
-                  ? "bg-frz-ink text-frz-ink-contrast border-frz-ink"
-                  : !serviceId
-                    ? "bg-frz-card hover:bg-frz-fog text-frz-ink shadow-sm"
-                    : "bg-frz-card hover:bg-frz-fog text-frz-ink"
-              }`}
-            >
-              <span className={!serviceId ? "font-semibold" : undefined}>
-                {s.display_name} ({s.duration} min)
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
+      <PublicServiceChoices
+        services={services}
+        serviceId={serviceId}
+        onSelect={handleServiceSelect}
+      />
 
       {services.length > 0 && (
         <div ref={calendarRef} className="space-y-3">
@@ -564,6 +535,10 @@ export default function BookingClient({
       {selectedSlot && (
         <div ref={formRef} className="space-y-3">
           <p className="text-sm text-frz-muted font-medium">4. Datele tale</p>
+
+          {selectedService && (
+            <PublicBookingSelectionSummary service={selectedService} />
+          )}
 
           <input
             placeholder="Nume complet"
