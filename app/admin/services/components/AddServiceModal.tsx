@@ -42,6 +42,7 @@ export default function AddServiceModal({
         name: name.toLowerCase().replace(/\s+/g, "_"),
         display_name: name,
         price: price ? Number(price) : null,
+        show_price: Boolean(String(price).trim()),
         duration: Number(duration),
       }),
     });
