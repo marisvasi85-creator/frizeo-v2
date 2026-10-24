@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 import { hasSalonReviewsTable } from "@/lib/reviews/salonReviews";
+import { canClientLeaveReview } from "@/lib/reviews/eligibility";
 import ReviewForm from "./ReviewForm";
 
 type Props = { params: Promise<{ token: string }> };
@@ -29,7 +30,7 @@ export default async function ReviewPage({ params }: Props) {
 
   const { data: booking } = await supabaseAdmin
     .from("bookings")
-    .select("id, client_name, status, tenant_id, tenants(name, slug)")
+    .select("id, client_name, status, date, end_time, tenant_id, tenants(name, slug)")
     .eq("cancel_token", token)
     .maybeSingle();
 
@@ -59,6 +60,23 @@ export default async function ReviewPage({ params }: Props) {
     return (
       <main className="max-w-md mx-auto px-6 py-16 text-center space-y-4">
         <p className="text-gray-700">Ai lăsat deja o recenzie. Mulțumim!</p>
+        <a href={salonPath} className="text-black underline text-sm">
+          Vezi salonul
+        </a>
+      </main>
+    );
+  }
+
+  const decision = canClientLeaveReview({
+    status: booking.status,
+    date: booking.date,
+    end_time: booking.end_time,
+  });
+
+  if (!decision.ok) {
+    return (
+      <main className="max-w-md mx-auto px-6 py-16 text-center space-y-4">
+        <p className="text-gray-700">{decision.message}</p>
         <a href={salonPath} className="text-black underline text-sm">
           Vezi salonul
         </a>

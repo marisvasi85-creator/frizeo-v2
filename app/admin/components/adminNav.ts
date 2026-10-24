@@ -12,6 +12,7 @@ export type AdminNavItem = {
 export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
+  { href: "/admin/reviews", label: "Recenzii salon", icon: "⭐" },
   { href: "/admin/client-access", label: "Acces clienți", icon: "🔐" },
   { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
@@ -62,6 +63,7 @@ export const BARBER_WORKSTATION_ITEMS: AdminNavItem[] = [
 export const INVITED_BARBER_ITEMS: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
+  { href: "/admin/reviews", label: "Recenzii salon", icon: "⭐" },
   { href: "/admin/client-access", label: "Acces clienți", icon: "🔐" },
   { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   ...BARBER_WORKSTATION_ITEMS,
@@ -118,6 +120,9 @@ export function buildAdminNavItems(options: {
     }
     if (item.href === "/admin/testimonials") {
       return platformTestimonialsEnabled;
+    }
+    if (item.href === "/admin/reviews") {
+      return role === "owner" || role === "manager";
     }
     if (item.href === "/api/email/sso") return frizeoEmailEnabled;
     if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;

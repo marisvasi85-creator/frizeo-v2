@@ -22,6 +22,9 @@ import {
 import { getSalonReviewSummary } from "@/lib/reviews/salonReviews";
 import { getBarberAccessModes } from "@/lib/barber-access/server";
 import PublicBarberCard from "@/app/booking/_components/PublicBarberCard";
+import SalonReviewsPublic, {
+  SalonReviewScore,
+} from "@/app/booking/_components/SalonReviewsPublic";
 
 export async function generateMetadata({
   params,
@@ -194,12 +197,7 @@ export default async function SalonPage({
               </p>
             )}
 
-          {reviewSummary.count > 0 && reviewSummary.average != null && (
-            <p className="text-amber-600 mt-2 font-medium">
-              ★ {reviewSummary.average.toFixed(1)} · {reviewSummary.count}{" "}
-              {reviewSummary.count === 1 ? "recenzie" : "recenzii"}
-            </p>
-          )}
+          <SalonReviewScore summary={reviewSummary} />
 
           {typeof salon.phone === "string" && salon.phone && (
             <p className="text-frz-muted mt-3">📞 {salon.phone}</p>
@@ -260,30 +258,7 @@ export default async function SalonPage({
           </div>
         )}
 
-        {reviewSummary.reviews.length > 0 && (
-          <div className="bg-frz-card rounded-2xl border border-frz-line p-6 space-y-4">
-            <h2 className="text-2xl font-semibold">Recenzii</h2>
-            <ul className="space-y-4">
-              {reviewSummary.reviews.map((r) => (
-                <li
-                  key={r.id}
-                  className="border-t border-frz-line/50 pt-4 first:border-0 first:pt-0"
-                >
-                  <p className="font-medium">
-                    {"★".repeat(r.rating)}
-                    <span className="text-frz-muted">
-                      {"★".repeat(Math.max(0, 5 - r.rating))}
-                    </span>
-                    <span className="ml-2 text-frz-ink">{r.author_name}</span>
-                  </p>
-                  {r.comment && (
-                    <p className="text-frz-muted mt-1 text-sm">{r.comment}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <SalonReviewsPublic summary={reviewSummary} />
       </div>
       <InstallAppPrompt
         variant="booking"
