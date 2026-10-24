@@ -3,6 +3,7 @@ import { permanentRedirect } from "next/navigation";
 import BarberBookingView from "@/app/booking/_components/BarberBookingView";
 import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getSalonReviewSummary } from "@/lib/reviews/salonReviews";
 import { publicBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
 import {
@@ -114,7 +115,7 @@ export default async function Page({
     return <div>Salon inexistent</div>;
   }
 
-  const [resolvedBarber, inactiveRes] = await Promise.all([
+  const [resolvedBarber, inactiveRes, reviewSummary] = await Promise.all([
     resolveBarberBySlug(resolvedTenant.tenant.id, barberSlug),
     supabaseAdmin
       .from("barbers")
@@ -123,6 +124,7 @@ export default async function Page({
       .eq("slug", barberSlug)
       .eq("active", false)
       .maybeSingle(),
+    getSalonReviewSummary(resolvedTenant.tenant.id, 8),
   ]);
 
   if (!resolvedBarber) {
@@ -159,6 +161,7 @@ export default async function Page({
         salon={resolvedTenant.tenant}
         barber={resolvedBarber.barber}
         barberSlug={resolvedBarber.canonicalSlug}
+        reviewSummary={reviewSummary}
       />
       <InstallAppPrompt
         variant="booking"

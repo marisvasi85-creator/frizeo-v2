@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasSalonReviewsTable } from "@/lib/reviews/salonReviews";
+import { canClientLeaveReview } from "@/lib/reviews/eligibility";
 
 export async function POST(req: Request) {
   try {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
 
     const { data: booking, error: bookingError } = await supabaseAdmin
       .from("bookings")
-      .select("id, tenant_id, client_name, status")
+      .select("id, tenant_id, client_name, status, date, end_time")
       .eq("cancel_token", token)
       .maybeSingle();
 
@@ -41,11 +42,13 @@ export async function POST(req: Request) {
       );
     }
 
-    if (booking.status === "cancelled") {
-      return NextResponse.json(
-        { error: "Nu poți lăsa recenzie pentru o programare anulată." },
-        { status: 400 }
-      );
+    const decision = canClientLeaveReview({
+      status: booking.status,
+      date: booking.date,
+      end_time: booking.end_time,
+    });
+    if (!decision.ok) {
+      return NextResponse.json({ error: decision.message }, { status: 400 });
     }
 
     const { data: existing } = await supabaseAdmin

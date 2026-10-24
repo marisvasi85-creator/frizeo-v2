@@ -6,6 +6,7 @@ import InstallAppPrompt from "@/app/components/pwa/InstallAppPrompt";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { stableBookingPath } from "@/lib/booking/publicBookingPath";
 import { createPageMetadata } from "@/lib/site/pageMetadata";
+import { getSalonReviewSummary } from "@/lib/reviews/salonReviews";
 
 const getBarberWithSalon = cache(async (barberId: string) => {
   const { data: barber, error } = await supabaseAdmin
@@ -95,6 +96,10 @@ export default async function BarberIdBookingPage({
 
   const barberSlug = result.barber.slug || barberId;
   const barberName = result.barber.display_name || "Frizer";
+  const salonId = typeof result.salon.id === "string" ? result.salon.id : "";
+  const reviewSummary = salonId
+    ? await getSalonReviewSummary(salonId, 8)
+    : { count: 0, average: null, reviews: [] };
   const logo =
     typeof result.barber.avatar_url === "string"
       ? result.barber.avatar_url
@@ -108,6 +113,7 @@ export default async function BarberIdBookingPage({
         salon={result.salon}
         barber={result.barber}
         barberSlug={barberSlug}
+        reviewSummary={reviewSummary}
       />
       <InstallAppPrompt
         variant="booking"

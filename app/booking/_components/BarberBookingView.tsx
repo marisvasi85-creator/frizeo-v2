@@ -9,6 +9,8 @@ import {
 } from "@/lib/location/resolveLocation";
 import type { BarberLocationFields } from "@/lib/location/types";
 import type { BookingAccessMode } from "@/lib/barber-access/types";
+import type { SalonReviewSummary } from "@/lib/reviews/salonReviews";
+import SalonReviewsPublic, { SalonReviewScore } from "./SalonReviewsPublic";
 
 type Salon = {
   name?: string | null;
@@ -36,10 +38,12 @@ export default function BarberBookingView({
   salon,
   barber,
   barberSlug,
+  reviewSummary = { count: 0, average: null, reviews: [] },
 }: {
   salon: Salon;
   barber: Barber;
   barberSlug: string;
+  reviewSummary?: SalonReviewSummary;
 }) {
   const barberName = barber.display_name || "Frizer";
   const bookingLocation = resolveBarberLocation(salon, barber);
@@ -56,6 +60,19 @@ export default function BarberBookingView({
           salon: {
             name: String(salon.name || "Salon"),
             slug: salon.slug,
+            aggregateRating:
+              reviewSummary.count > 0 && reviewSummary.average != null
+                ? {
+                    ratingValue: reviewSummary.average,
+                    reviewCount: reviewSummary.count,
+                  }
+                : null,
+            reviews: reviewSummary.reviews.map((review) => ({
+              author: review.author_name,
+              reviewBody: review.comment,
+              ratingValue: review.rating,
+              datePublished: review.created_at,
+            })),
             phone: salon.phone,
             address: formatLocationAddress(salon) || salon.address,
             streetAddress,
@@ -98,6 +115,7 @@ export default function BarberBookingView({
 
               <div>
                 <h1 className="text-3xl font-bold">{String(salon.name || "Salon")}</h1>
+                <SalonReviewScore summary={reviewSummary} salonWide />
 
                 {salon.phone && (
                   <p className="text-frz-muted mt-2">📞 {salon.phone}</p>
@@ -172,6 +190,12 @@ export default function BarberBookingView({
           {bookingLocation && (
             <div className="mt-8 max-w-xl mx-auto">
               <PublicLocationCard location={bookingLocation} />
+            </div>
+          )}
+
+          {reviewSummary.reviews.length > 0 && (
+            <div className="mt-8">
+              <SalonReviewsPublic summary={reviewSummary} />
             </div>
           )}
         </div>

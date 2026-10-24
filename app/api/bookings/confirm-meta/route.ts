@@ -5,6 +5,7 @@ import { bookingClientUrls } from "@/lib/bookings/bookingClientUrls";
 import { buildClientCalendarLinks } from "@/lib/calendar/buildClientCalendarLinks";
 import { fetchResolvedBarberLocation } from "@/lib/location/fetchResolvedBarberLocation";
 import { hasSalonReviewsTable } from "@/lib/reviews/salonReviews";
+import { canClientLeaveReview } from "@/lib/reviews/eligibility";
 
 /**
  * Meta for confirmed page: review link + add-to-calendar links.
@@ -25,17 +26,6 @@ export async function GET(req: Request) {
   }
 
   let reviewUrl: string | null = null;
-  if (await hasSalonReviewsTable()) {
-    const { data: existing } = await supabaseAdmin
-      .from("salon_reviews")
-      .select("id")
-      .eq("booking_id", id)
-      .maybeSingle();
-
-    if (!existing) {
-      reviewUrl = `/review/${tokens.cancel_token}`;
-    }
-  }
 
   let googleCalendarUrl: string | null = null;
   let icsUrl: string | null = null;
@@ -47,6 +37,25 @@ export async function GET(req: Request) {
     )
     .eq("id", id)
     .maybeSingle();
+
+  if (booking && (await hasSalonReviewsTable())) {
+    const decision = canClientLeaveReview({
+      status: booking.status,
+      date: booking.date,
+      end_time: booking.end_time,
+    });
+    if (decision.ok) {
+      const { data: existing } = await supabaseAdmin
+        .from("salon_reviews")
+        .select("id")
+        .eq("booking_id", booking.id)
+        .maybeSingle();
+
+      if (!existing) {
+        reviewUrl = `/review/${tokens.cancel_token}`;
+      }
+    }
+  }
 
   if (
     booking &&
