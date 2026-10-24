@@ -42,6 +42,7 @@ import {
   fetchMetaPages,
   reserveGraphCall,
 } from "../lib/integrations/meta/graph.ts";
+import { INSTAGRAM_PUBLISH_SCOPES } from "../lib/integrations/meta/publish/outcome.ts";
 import { createMockPublishJob } from "../lib/integrations/publish/mockJob.ts";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -104,6 +105,15 @@ test("authorize URL is Facebook Login for Business and carries no secret", () =>
   assert.equal(parsed.searchParams.get("response_type"), "code");
   assert.equal(parsed.searchParams.get("code_challenge_method"), "S256");
   assert.equal(parsed.searchParams.has("scope"), false);
+  assert.equal(META_REQUIRED_SCOPES.includes("pages_manage_posts"), true);
+  assert.deepEqual([...INSTAGRAM_PUBLISH_SCOPES], [
+    "instagram_basic",
+    "instagram_content_publish",
+    "pages_read_engagement",
+  ]);
+  for (const scope of INSTAGRAM_PUBLISH_SCOPES) {
+    assert.equal(META_REQUIRED_SCOPES.includes(scope), true);
+  }
   assert.equal(url.includes(config.appSecret), false);
   assert.equal(url.includes(issued.pkceVerifier), false);
   assert.equal(stagingSettingsUrl({ meta_error: "https://evil.example" }).includes("evil"), false);
@@ -330,6 +340,7 @@ test("debug token from another app is rejected and required scopes are explicit"
         { scope: "instagram_content_publish" },
         { scope: "pages_read_engagement" },
         { scope: "pages_show_list" },
+        { scope: "pages_manage_posts" },
       ],
     },
   }, META_APP_ID);
@@ -338,6 +349,16 @@ test("debug token from another app is rejected and required scopes are explicit"
   assert.equal(parsed.expiresAt, null);
   assert.equal(parsed.dataAccessExpiresAt, null);
   assert.deepEqual(missingRequiredScopes(parsed.scopes), []);
+  assert.deepEqual(
+    missingRequiredScopes([
+      "business_management",
+      "instagram_basic",
+      "instagram_content_publish",
+      "pages_read_engagement",
+      "pages_show_list",
+    ]),
+    ["pages_manage_posts"],
+  );
 });
 
 const expiryNow = new Date("2026-10-11T00:00:00.000Z");

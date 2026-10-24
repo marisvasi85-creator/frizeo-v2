@@ -16,7 +16,7 @@ If any value is missing or the process is production, connect returns no Meta re
 
 ## OAuth
 
-The dialog is `https://www.facebook.com/v26.0/dialog/oauth` with `config_id`, `response_type=code`, `override_default_response_type=true`, `state`, and PKCE S256. Scopes come from the Meta configuration, not from a `scope` query parameter. The browser redirect never includes the app secret, the code verifier, or an access token.
+The dialog is `https://www.facebook.com/v26.0/dialog/oauth` with `config_id`, `response_type=code`, `override_default_response_type=true`, `state`, and PKCE S256. Scopes come from the Meta configuration, not from a `scope` query parameter. Facebook Login for Business uses `config_id` in place of `scope`. The browser redirect never includes the app secret, the code verifier, or an access token.
 
 The callback `GET /api/integrations/meta/callback` checks the HMAC state, expiry, single use, user, tenant, and provider before the server exchanges the code. The exchange is `GET graph.facebook.com/v26.0/oauth/access_token` with the app secret and the code verifier. A short-lived token is exchanged with `grant_type=fb_exchange_token`. `debug_token` must belong to this app id and include:
 
@@ -25,6 +25,9 @@ The callback `GET /api/integrations/meta/callback` checks the HMAC state, expiry
 - `instagram_content_publish`
 - `pages_read_engagement`
 - `pages_show_list`
+- `pages_manage_posts`
+
+`pages_manage_posts` is the Facebook Page publish permission. It depends on `pages_show_list` and `pages_read_engagement`, which stay required. Instagram publishing still checks only `instagram_basic`, `instagram_content_publish`, and `pages_read_engagement`. Reconnect grants `pages_manage_posts` only when configuration `2325264384883936` (`Frizeo Meta Connect`) includes it together with the Instagram permissions. Enabling the permission on the Meta app does not add it to that configuration by itself. If the granted token omits it, the callback stores status `error` and notice `permissions`, not `connected`.
 
 Missing permissions are stored as status `error`, not `connected`. A failed exchange writes no connection. The user token is AES-256-GCM ciphertext in `private.marketing_connection_secrets`.
 

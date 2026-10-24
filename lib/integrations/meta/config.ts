@@ -10,6 +10,7 @@ export const META_REQUIRED_SCOPES = [
   "instagram_content_publish",
   "pages_read_engagement",
   "pages_show_list",
+  "pages_manage_posts",
 ] as const;
 
 export type MetaReadyConfig = {
