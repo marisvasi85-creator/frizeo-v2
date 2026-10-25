@@ -26,10 +26,11 @@ export type SalonReviewAdminItem = {
   comment: string | null;
   createdAt: string;
   barberName: string | null;
-  hiddenReason: "cancelled" | "unapproved" | null;
+  hiddenReason: "cancelled" | "unapproved" | "unlinked" | null;
 };
 
 export type SalonReviewAdminList = {
+  ok: boolean;
   summary: SalonReviewSummary;
   visible: SalonReviewAdminItem[];
   hidden: SalonReviewAdminItem[];
@@ -183,6 +184,7 @@ function toRecord(
     comment: row.comment,
     createdAt: row.created_at,
     approved: row.approved,
+    bookingId: row.booking_id,
     bookingStatus: row.bookingStatus,
     barberName: row.barberId
       ? (barberNames.get(row.barberId) ?? null)
@@ -252,7 +254,9 @@ export async function listSalonReviewsForAdmin(
   tenantId: string,
 ): Promise<SalonReviewAdminList> {
   const rows = await loadTenantReviewRows(tenantId);
-  if (!rows) return { summary: emptySummary(), visible: [], hidden: [] };
+  if (!rows) {
+    return { ok: false, summary: emptySummary(), visible: [], hidden: [] };
+  }
 
   const barberIds = rows.flatMap((row) =>
     row.barberId ? [row.barberId] : [],
@@ -276,12 +280,15 @@ export async function listSalonReviewsForAdmin(
     barberName: review.barberName,
     hiddenReason: publicIds.has(review.id)
       ? null
-      : review.approved
-        ? "cancelled"
-        : "unapproved",
+      : !review.approved
+        ? "unapproved"
+        : review.bookingId && !review.bookingStatus
+          ? "unlinked"
+          : "cancelled",
   });
 
   return {
+    ok: true,
     summary,
     visible: records.filter((review) => publicIds.has(review.id)).map(toItem),
     hidden: records.filter((review) => !publicIds.has(review.id)).map(toItem),

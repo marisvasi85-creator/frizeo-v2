@@ -15,7 +15,7 @@ export default async function SalonReviewsPage() {
     redirect("/admin/dashboard");
   }
 
-  const { summary, visible, hidden } = await listSalonReviewsForAdmin(
+  const { ok, summary, visible, hidden } = await listSalonReviewsForAdmin(
     session.tenantId,
   );
 
@@ -29,11 +29,17 @@ export default async function SalonReviewsPage() {
             : "Recenziile clienților pentru salonul tău."
         }
       />
-      <SalonReviewsDashboard
-        summary={summary}
-        visible={visible}
-        hidden={hidden}
-      />
+      {ok ? (
+        <SalonReviewsDashboard
+          summary={summary}
+          visible={visible}
+          hidden={hidden}
+        />
+      ) : (
+        <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Recenziile nu au putut fi încărcate. Reîncearcă în câteva momente.
+        </p>
+      )}
     </div>
   );
 }
