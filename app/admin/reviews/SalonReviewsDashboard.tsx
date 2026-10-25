@@ -5,6 +5,7 @@ import type {
   SalonReviewAdminItem,
   SalonReviewSummary,
 } from "@/lib/reviews/salonReviews";
+import ReviewModerationForms from "./ReviewModerationForms";
 
 function Stars({ rating }: { rating: number }) {
   const filled = Math.max(0, Math.min(5, Math.round(rating)));
@@ -20,14 +21,7 @@ function ReviewCard({
   review,
   note,
 }: {
-  review: {
-    id: string;
-    rating: number;
-    authorName: string;
-    comment: string | null;
-    createdAt: string;
-    barberName: string | null;
-  };
+  review: SalonReviewAdminItem;
   note?: string;
 }) {
   return (
@@ -55,15 +49,23 @@ function ReviewCard({
         <p className="text-sm text-frz-muted mt-3">Fără comentariu</p>
       )}
       {note ? <p className="text-xs text-amber-800 mt-3">{note}</p> : null}
+      <ReviewModerationForms
+        reviewId={review.id}
+        reply={review.ownerReply}
+        reportStatus={review.reportStatus}
+      />
     </article>
   );
 }
 
-function hiddenNote(reason: SalonReviewAdminItem["hiddenReason"]): string {
-  if (reason === "cancelled") {
+function hiddenNote(review: SalonReviewAdminItem): string {
+  if (review.reportStatus === "hidden") {
+    return "Nu apare pe pagina publică: a fost ascunsă după raportare. Recenzia rămâne salvată.";
+  }
+  if (review.hiddenReason === "cancelled") {
     return "Nu apare pe pagina publică: programarea a fost anulată.";
   }
-  if (reason === "unlinked") {
+  if (review.hiddenReason === "unlinked") {
     return "Nu apare pe pagina publică: programarea nu aparține acestui salon.";
   }
   return "Nu apare pe pagina publică: recenzia nu este aprobată.";
@@ -115,7 +117,7 @@ export default function SalonReviewsDashboard({
             <ReviewCard
               key={review.id}
               review={review}
-              note={hiddenNote(review.hiddenReason)}
+              note={hiddenNote(review)}
             />
           ))}
         </section>

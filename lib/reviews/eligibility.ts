@@ -11,6 +11,8 @@ export type ReviewRecord = {
   bookingId: string | null;
   bookingStatus: string | null;
   barberName: string | null;
+  /** Display only. Never included in the public average. */
+  ownerReply?: string | null;
 };
 
 export type PublicReviewSummary = {

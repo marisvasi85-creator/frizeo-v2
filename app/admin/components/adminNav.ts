@@ -1,3 +1,5 @@
+import { canManageSalonReviews } from "@/lib/reviews/moderation";
+
 /** Shared admin navigation — owner admin vs owner+barber vs invited barber. */
 
 export type AdminNavItem = {
@@ -22,6 +24,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/platform-assistant", label: "Growth AI", icon: "🛠️" },
   { href: "/admin/reviews", label: "Recenzii salon", icon: "⭐" },
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
+  { href: "/admin/review-reports", label: "Raportări recenzii", icon: "🚩" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
   { href: "/admin/accounting", label: "Contabilitate", icon: "📒" },
@@ -71,7 +74,7 @@ export const INVITED_BARBER_ITEMS: AdminNavItem[] = [
 
 /** Client reviews of this salon. Creators see them only as owner or manager. */
 export function canViewSalonReviews(role: string | null): boolean {
-  return role === "owner" || role === "manager";
+  return canManageSalonReviews(role);
 }
 
 export function buildAdminNavItems(options: {
@@ -80,6 +83,7 @@ export function buildAdminNavItems(options: {
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
@@ -91,6 +95,7 @@ export function buildAdminNavItems(options: {
     assistantEnabled = false,
     platformAssistantEnabled = false,
     platformTestimonialsEnabled = false,
+    platformReviewReportsEnabled = false,
     frizeoEmailEnabled = false,
     accountDeletionsEnabled = false,
     accountingEnabled = false,
@@ -114,6 +119,9 @@ export function buildAdminNavItems(options: {
     }
     if (item.href === "/admin/testimonials") {
       return platformTestimonialsEnabled;
+    }
+    if (item.href === "/admin/review-reports") {
+      return platformReviewReportsEnabled;
     }
     if (item.href === "/admin/reviews") {
       return canViewSalonReviews(role);
@@ -177,6 +185,7 @@ export function buildMobileMoreItems(options: {
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
