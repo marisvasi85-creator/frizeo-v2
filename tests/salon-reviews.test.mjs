@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { buildAdminNavItems } from "../app/admin/components/adminNav.ts";
+import {
+  buildAdminNavItems,
+  buildMobileMoreItems,
+} from "../app/admin/components/adminNav.ts";
 import {
   canClientLeaveReview,
   summarizePublicReviews,
@@ -305,4 +308,21 @@ test("doar owner și manager răspund sau raportează, iar ascunderea cere o rap
   assert.doesNotMatch(creatorPage, /searchParams/);
   assert.match(publicView, /Răspunsul salonului/);
   assert.match(publicView, /owner_reply/);
+});
+
+test("meniul mobil de owner ține Recenzii salon în lista care se poate derula", () => {
+  const more = buildMobileMoreItems({
+    role: "owner",
+    actsAsBarber: true,
+    assistantEnabled: true,
+  });
+  const labels = more.map((item) => item.label);
+
+  assert.ok(labels.indexOf("Recenzii salon") >= 0);
+  assert.ok(labels.indexOf("Recenzii salon") < labels.indexOf("Acces clienți"));
+  assert.equal(labels.includes("Recenzii"), false);
+
+  const mobile = readRepo("app/admin/components/MobileNav.tsx");
+  assert.match(mobile, /max-h-\[85vh\]/);
+  assert.match(mobile, /overflow-y-auto/);
 });

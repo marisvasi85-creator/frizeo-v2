@@ -58,7 +58,7 @@ export default function MobileNav({
       )}
 
       <div
-        className={`fixed left-0 right-0 bottom-0 bg-frz-card border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
+        className={`fixed left-0 right-0 bottom-0 max-h-[85vh] overflow-y-auto bg-frz-card border-t border-frz-line rounded-t-3xl z-[60] md:hidden transition-transform duration-300 ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
