@@ -25,6 +25,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
   { href: "/admin/platform-assistant", label: "Growth AI", icon: "🛠️" },
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
+  { href: "/admin/review-reports", label: "Raportări recenzii", icon: "🚩" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
   { href: "/admin/accounting", label: "Contabilitate", icon: "📒" },
@@ -78,6 +79,7 @@ export function buildAdminNavItems(options: {
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
@@ -90,6 +92,7 @@ export function buildAdminNavItems(options: {
     assistantEnabled = false,
     platformAssistantEnabled = false,
     platformTestimonialsEnabled = false,
+    platformReviewReportsEnabled = false,
     frizeoEmailEnabled = false,
     accountDeletionsEnabled = false,
     accountingEnabled = false,
@@ -120,6 +123,9 @@ export function buildAdminNavItems(options: {
     }
     if (item.href === "/admin/testimonials") {
       return platformTestimonialsEnabled;
+    }
+    if (item.href === "/admin/review-reports") {
+      return platformReviewReportsEnabled;
     }
     if (item.href === "/admin/reviews") {
       return role === "owner" || role === "manager";
@@ -184,6 +190,7 @@ export function buildMobileMoreItems(options: {
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;

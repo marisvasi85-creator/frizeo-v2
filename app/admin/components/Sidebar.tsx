@@ -10,6 +10,7 @@ export default function Sidebar({
   assistantEnabled = false,
   platformAssistantEnabled = false,
   platformTestimonialsEnabled = false,
+  platformReviewReportsEnabled = false,
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
   accountingEnabled = false,
@@ -21,6 +22,7 @@ export default function Sidebar({
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
@@ -34,6 +36,7 @@ export default function Sidebar({
     assistantEnabled,
     platformAssistantEnabled,
     platformTestimonialsEnabled,
+    platformReviewReportsEnabled,
     frizeoEmailEnabled,
     accountDeletionsEnabled,
     accountingEnabled,

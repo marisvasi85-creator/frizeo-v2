@@ -11,6 +11,7 @@ export type SalonReview = {
   author_name: string;
   comment: string | null;
   created_at: string;
+  owner_reply: string | null;
 };
 
 export type SalonReviewSummary = {
@@ -26,6 +27,8 @@ export type SalonReviewAdminItem = {
   comment: string | null;
   createdAt: string;
   barberName: string | null;
+  ownerReply: string | null;
+  reportStatus: "open" | "hidden" | "reactivated" | null;
   hiddenReason: "cancelled" | "unapproved" | "unlinked" | null;
 };
 
@@ -82,6 +85,7 @@ type ReviewRow = {
   approved: boolean;
   created_at: string;
   booking_id: string | null;
+  owner_reply: string | null;
   bookingStatus: string | null;
   barberId: string | null;
 };
@@ -131,7 +135,7 @@ async function loadTenantReviewRows(
     const { data, error } = await supabaseAdmin
       .from("salon_reviews")
       .select(
-        "id, tenant_id, rating, author_name, comment, approved, created_at, booking_id",
+        "id, tenant_id, rating, author_name, comment, approved, created_at, booking_id, owner_reply",
       )
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
@@ -161,6 +165,7 @@ async function loadTenantReviewRows(
           approved: Boolean(row.approved),
           created_at: row.created_at as string,
           booking_id: (row.booking_id as string | null) ?? null,
+          owner_reply: (row.owner_reply as string | null) ?? null,
           bookingStatus: booking?.status ?? null,
           barberId: booking?.barberId ?? null,
         };
@@ -189,6 +194,7 @@ function toRecord(
     barberName: row.barberId
       ? (barberNames.get(row.barberId) ?? null)
       : null,
+    ownerReply: row.owner_reply,
   };
 }
 
@@ -219,6 +225,38 @@ async function barberNamesForTenant(
   );
 }
 
+async function reportStatusForTenant(
+  tenantId: string,
+): Promise<Map<string, "open" | "hidden" | "reactivated">> {
+  const { data, error } = await supabaseAdmin
+    .from("salon_review_reports")
+    .select("review_id, tenant_id, status, created_at")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(PAGE_SIZE);
+
+  if (error) {
+    if (isMissingReviewsTableError(error)) return new Map();
+    console.error("reportStatusForTenant:", error);
+    return new Map();
+  }
+
+  const statuses = new Map<string, "open" | "hidden" | "reactivated">();
+  for (const report of data ?? []) {
+    if (report.tenant_id !== tenantId || statuses.has(report.review_id as string)) {
+      continue;
+    }
+    if (
+      report.status === "open" ||
+      report.status === "hidden" ||
+      report.status === "reactivated"
+    ) {
+      statuses.set(report.review_id as string, report.status);
+    }
+  }
+  return statuses;
+}
+
 function toPublicSummary(summary: PublicReviewSummary): SalonReviewSummary {
   return {
     count: summary.count,
@@ -229,6 +267,7 @@ function toPublicSummary(summary: PublicReviewSummary): SalonReviewSummary {
       author_name: review.authorName,
       comment: review.comment,
       created_at: review.createdAt,
+      owner_reply: review.ownerReply ?? null,
     })),
   };
 }
@@ -262,6 +301,7 @@ export async function listSalonReviewsForAdmin(
     row.barberId ? [row.barberId] : [],
   );
   const names = await barberNamesForTenant(tenantId, barberIds);
+  const reports = await reportStatusForTenant(tenantId);
   const records = rows
     .map((row) => toRecord(row, names))
     .filter((review) => review.tenantId === tenantId)
@@ -278,6 +318,8 @@ export async function listSalonReviewsForAdmin(
     comment: review.comment,
     createdAt: review.createdAt,
     barberName: review.barberName,
+    ownerReply: review.ownerReply ?? null,
+    reportStatus: reports.get(review.id) ?? null,
     hiddenReason: publicIds.has(review.id)
       ? null
       : !review.approved

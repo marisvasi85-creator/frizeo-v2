@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AdminPageHeader from "@/app/admin/components/AdminPageHeader";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { canManageSalonReviews } from "@/lib/reviews/moderation";
 import { listSalonReviewsForAdmin } from "@/lib/reviews/salonReviews";
 import SalonReviewsDashboard from "./SalonReviewsDashboard";
 
@@ -11,7 +12,7 @@ export default async function SalonReviewsPage() {
     redirect("/login");
   }
 
-  if (session.role !== "owner" && session.role !== "manager") {
+  if (!canManageSalonReviews(session.role)) {
     redirect("/admin/dashboard");
   }
 
