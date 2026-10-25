@@ -180,19 +180,49 @@ test("confirmarea primită înainte rămâne valabilă după încheierea program
 
 test("meniul Recenzii salon este pentru owner și manager, separat de testimonialele Frizeo", () => {
   const owner = buildAdminNavItems({ role: "owner", actsAsBarber: false });
-  const manager = buildAdminNavItems({ role: "manager", actsAsBarber: false });
-  const barber = buildAdminNavItems({ role: "barber", actsAsBarber: true });
+  const manager = buildAdminNavItems({
+    role: "manager",
+    actsAsBarber: false,
+    platformTestimonialsEnabled: true,
+  });
+  const barber = buildAdminNavItems({
+    role: "barber",
+    actsAsBarber: true,
+    platformTestimonialsEnabled: true,
+  });
+  const creator = buildAdminNavItems({
+    role: "owner",
+    actsAsBarber: true,
+    assistantEnabled: true,
+    platformAssistantEnabled: true,
+    platformTestimonialsEnabled: true,
+    frizeoEmailEnabled: true,
+    accountDeletionsEnabled: true,
+    accountingEnabled: true,
+    billingRefundsEnabled: true,
+  });
 
   assert.equal(owner.some((item) => item.href === "/admin/reviews"), true);
   assert.equal(manager.some((item) => item.href === "/admin/reviews"), true);
+  assert.equal(manager.some((item) => item.href === "/admin/testimonials"), false);
   assert.equal(barber.some((item) => item.href === "/admin/reviews"), false);
+  assert.equal(barber.some((item) => item.href === "/admin/testimonials"), false);
   assert.equal(
     owner.some((item) => item.href === "/admin/testimonials"),
     false,
   );
 
+  const salonReviews = creator.findIndex((item) => item.href === "/admin/reviews");
+  const testimonials = creator.findIndex(
+    (item) => item.href === "/admin/testimonials",
+  );
+  assert.equal(creator[salonReviews]?.label, "Recenzii salon");
+  assert.equal(creator[testimonials]?.label, "Recenzii");
+  assert.equal(testimonials, salonReviews + 1);
+
   const page = readRepo("app/admin/reviews/page.tsx");
-  assert.match(page, /session\.tenantId/);
+  assert.match(page, /canViewSalonReviews\(session\.role\)/);
+  assert.match(page, /listSalonReviewsForAdmin\(\s*session\.tenantId/);
   assert.doesNotMatch(page, /searchParams/);
   assert.doesNotMatch(page, /marketing-testimonials/);
   assert.doesNotMatch(readRepo("lib/reviews/salonReviews.ts"), /Math\.max\(limit,\s*50\)/);
