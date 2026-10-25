@@ -24,6 +24,7 @@ function review(overrides) {
     comment: "Foarte bine",
     createdAt: "2026-10-01T10:00:00.000Z",
     approved: true,
+    bookingId: "booking-1",
     bookingStatus: "confirmed",
     barberName: "Mihai",
     ...overrides,
@@ -98,6 +99,38 @@ test("un salon nu vede recenziile altui salon", () => {
   assert.equal(summarizePublicReviews([], "salon-a", 8).average, null);
 });
 
+test("o notă în afara intervalului 1-5 nu intră în medie", () => {
+  const summary = summarizePublicReviews(
+    [
+      review({ id: "ok", rating: 5 }),
+      review({ id: "bad", rating: 9, bookingId: "booking-2" }),
+    ],
+    "salon-a",
+    8,
+  );
+  assert.equal(summary.count, 1);
+  assert.equal(summary.average, 5);
+});
+
+test("o programare din alt salon nu intră în rating chiar dacă id-ul este prezent", () => {
+  const summary = summarizePublicReviews(
+    [
+      review({ id: "linked", bookingId: "booking-1", bookingStatus: "confirmed" }),
+      review({
+        id: "foreign",
+        bookingId: "booking-other",
+        bookingStatus: null,
+        rating: 1,
+      }),
+    ],
+    "salon-a",
+    8,
+  );
+
+  assert.equal(summary.count, 1);
+  assert.equal(summary.reviews[0].id, "linked");
+});
+
 test("recenzia se poate trimite doar după ora de încheiere, în Europe/Bucharest", () => {
   const booking = {
     status: "confirmed",
@@ -119,6 +152,29 @@ test("recenzia se poate trimite doar după ora de încheiere, în Europe/Buchare
       new Date("2026-10-24T16:00:00.000Z"),
     ).message,
     /anulată/,
+  );
+});
+
+test("confirmarea primită înainte rămâne valabilă după încheierea programării", () => {
+  const confirmedEarlier = {
+    status: "confirmed",
+    date: "2026-09-02T00:00:00.000Z",
+    end_time: "11:30:00",
+  };
+
+  assert.equal(
+    canClientLeaveReview(
+      confirmedEarlier,
+      new Date("2026-10-25T05:00:00.000Z"),
+    ).ok,
+    true,
+  );
+  assert.equal(
+    canClientLeaveReview(
+      confirmedEarlier,
+      new Date("2026-09-02T08:29:00.000Z"),
+    ).ok,
+    false,
   );
 });
 

@@ -63,6 +63,9 @@ function hiddenNote(reason: SalonReviewAdminItem["hiddenReason"]): string {
   if (reason === "cancelled") {
     return "Nu apare pe pagina publică: programarea a fost anulată.";
   }
+  if (reason === "unlinked") {
+    return "Nu apare pe pagina publică: programarea nu aparține acestui salon.";
+  }
   return "Nu apare pe pagina publică: recenzia nu este aprobată.";
 }
 

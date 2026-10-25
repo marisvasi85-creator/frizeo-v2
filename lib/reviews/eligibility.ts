@@ -8,6 +8,7 @@ export type ReviewRecord = {
   comment: string | null;
   createdAt: string;
   approved: boolean;
+  bookingId: string | null;
   bookingStatus: string | null;
   barberName: string | null;
 };
@@ -24,16 +25,24 @@ export function isCancelledBookingStatus(
   return status === "cancelled";
 }
 
-/** A review is public only for its own salon, when approved, and when the visit was not cancelled. */
+export function isValidPublicRating(rating: number): boolean {
+  return Number.isInteger(rating) && rating >= 1 && rating <= 5;
+}
+
+/**
+ * Public only for this salon, with a valid approved rating.
+ * A cancelled visit stays stored but is excluded.
+ * A booking id that cannot be confirmed inside this salon is excluded too.
+ */
 export function isPublicSalonReview(
   review: ReviewRecord,
   tenantId: string,
 ): boolean {
-  return (
-    review.tenantId === tenantId &&
-    review.approved &&
-    !isCancelledBookingStatus(review.bookingStatus)
-  );
+  if (review.tenantId !== tenantId || !review.approved) return false;
+  if (!isValidPublicRating(review.rating)) return false;
+  if (isCancelledBookingStatus(review.bookingStatus)) return false;
+  if (review.bookingId && !review.bookingStatus) return false;
+  return true;
 }
 
 export function hasBookingEnded(
@@ -41,7 +50,9 @@ export function hasBookingEnded(
   endTime: string,
   now: Date = new Date(),
 ): boolean {
-  return now.getTime() >= zonedDateTimeToUtcMs(date, endTime);
+  const day = date.trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return false;
+  return now.getTime() >= zonedDateTimeToUtcMs(day, endTime);
 }
 
 export function canClientLeaveReview(
