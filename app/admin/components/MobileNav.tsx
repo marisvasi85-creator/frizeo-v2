@@ -11,6 +11,7 @@ export default function MobileNav({
   assistantEnabled = false,
   platformAssistantEnabled = false,
   platformTestimonialsEnabled = false,
+  platformReviewReportsEnabled = false,
   frizeoEmailEnabled = false,
   accountDeletionsEnabled = false,
   accountingEnabled = false,
@@ -22,6 +23,7 @@ export default function MobileNav({
   assistantEnabled?: boolean;
   platformAssistantEnabled?: boolean;
   platformTestimonialsEnabled?: boolean;
+  platformReviewReportsEnabled?: boolean;
   frizeoEmailEnabled?: boolean;
   accountDeletionsEnabled?: boolean;
   accountingEnabled?: boolean;
@@ -38,6 +40,7 @@ export default function MobileNav({
     assistantEnabled,
     platformAssistantEnabled,
     platformTestimonialsEnabled,
+    platformReviewReportsEnabled,
     frizeoEmailEnabled,
     accountDeletionsEnabled,
     accountingEnabled,

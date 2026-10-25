@@ -54,6 +54,14 @@ export default function SalonReviewsPublic({
             {review.comment ? (
               <p className="text-frz-muted mt-1 text-sm">{review.comment}</p>
             ) : null}
+            {review.owner_reply ? (
+              <div className="mt-3 rounded-xl bg-frz-fog px-3 py-2">
+                <p className="text-xs font-semibold text-frz-ink">Răspunsul salonului</p>
+                <p className="text-sm text-frz-muted mt-1 whitespace-pre-wrap break-words">
+                  {review.owner_reply}
+                </p>
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>

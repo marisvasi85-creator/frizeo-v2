@@ -56,6 +56,7 @@ export default async function AdminLayout({
   const platformTestimonialsEnabled =
     isMarketingTestimonialsEnabled() &&
     isPlatformCreatorEmail(session.user.email);
+  const platformReviewReportsEnabled = isPlatformCreatorEmail(session.user.email);
   const frizeoEmailEnabled = isPlatformAdminEmail(session.user.email);
   const accountDeletionsEnabled = isPlatformCreatorEmail(session.user.email);
   const accountingEnabled = isPlatformCreatorEmail(session.user.email);
@@ -70,6 +71,7 @@ export default async function AdminLayout({
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
         platformTestimonialsEnabled={platformTestimonialsEnabled}
+        platformReviewReportsEnabled={platformReviewReportsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
         accountingEnabled={accountingEnabled}
@@ -87,6 +89,7 @@ export default async function AdminLayout({
         assistantEnabled={assistantEnabled}
         platformAssistantEnabled={platformAssistantEnabled}
         platformTestimonialsEnabled={platformTestimonialsEnabled}
+        platformReviewReportsEnabled={platformReviewReportsEnabled}
         frizeoEmailEnabled={frizeoEmailEnabled}
         accountDeletionsEnabled={accountDeletionsEnabled}
         accountingEnabled={accountingEnabled}
