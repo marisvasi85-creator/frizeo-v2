@@ -12,7 +12,6 @@ export type AdminNavItem = {
 export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/dashboard", label: "Dashboard", icon: "🏠" },
   { href: "/admin/bookings", label: "Programări", icon: "📋" },
-  { href: "/admin/reviews", label: "Recenzii salon", icon: "⭐" },
   { href: "/admin/client-access", label: "Acces clienți", icon: "🔐" },
   { href: "/admin/reports", label: "Rapoarte", icon: "📊" },
   { href: "/admin/notifications", label: "Notificări", icon: "🔔" },
@@ -21,6 +20,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/admin/marketing-ai", label: "Marketing AI", icon: "✨" },
   { href: "/admin/assistant", label: "Assistant", icon: "🤖" },
   { href: "/admin/platform-assistant", label: "Growth AI", icon: "🛠️" },
+  { href: "/admin/reviews", label: "Recenzii salon", icon: "⭐" },
   { href: "/admin/testimonials", label: "Recenzii", icon: "⭐" },
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
@@ -69,6 +69,11 @@ export const INVITED_BARBER_ITEMS: AdminNavItem[] = [
   { href: "/admin/account", label: "Cont", icon: "🛡️" },
 ];
 
+/** Client reviews of this salon. Creators see them only as owner or manager. */
+export function canViewSalonReviews(role: string | null): boolean {
+  return role === "owner" || role === "manager";
+}
+
 export function buildAdminNavItems(options: {
   role: string | null;
   actsAsBarber: boolean;
@@ -111,7 +116,7 @@ export function buildAdminNavItems(options: {
       return platformTestimonialsEnabled;
     }
     if (item.href === "/admin/reviews") {
-      return role === "owner" || role === "manager";
+      return canViewSalonReviews(role);
     }
     if (item.href === "/api/email/sso") return frizeoEmailEnabled;
     if (item.href === "/admin/account-deletions") return accountDeletionsEnabled;
