@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { noIndexMetadata } from "@/lib/site/pageMetadata";
 
 export const metadata = {
@@ -10,5 +11,5 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <Suspense fallback={null}>{children}</Suspense>;
 }
