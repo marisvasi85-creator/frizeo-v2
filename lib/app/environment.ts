@@ -17,6 +17,9 @@ const PRODUCTION_HOSTS = new Set([
   "email.frizeo.ro",
 ]);
 
+/** Public marketing/booking hosts Google should index. Not email.frizeo.ro. */
+const SEARCH_INDEXABLE_HOSTS = new Set(["www.frizeo.ro", "frizeo.ro"]);
+
 const STAGING_HOSTS = new Set(["staging.frizeo.ro"]);
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "email.localhost", "email.local"]);
@@ -117,9 +120,24 @@ export function isProduction(): boolean {
   return !vercelEnv() && process.env.NODE_ENV === "production";
 }
 
-/** Search-indexable public site: www / production only. */
-export function shouldIndexForSearchEngines(): boolean {
-  return isProduction();
+export function isSearchIndexableHostname(
+  hostname: string | null | undefined,
+): boolean {
+  return SEARCH_INDEXABLE_HOSTS.has(normalizeHostname(hostname));
+}
+
+/**
+ * Search-indexable public site: production www / apex only.
+ * Pass the request host so email.frizeo.ro does not advertise a sitemap.
+ * Callers without a host (build-time metadata) follow the environment flag.
+ */
+export function shouldIndexForSearchEngines(
+  hostname?: string | null,
+): boolean {
+  if (!isProduction()) return false;
+  const host = normalizeHostname(hostname);
+  if (!host) return true;
+  return isSearchIndexableHostname(host);
 }
 
 /**
