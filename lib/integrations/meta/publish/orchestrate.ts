@@ -33,6 +33,7 @@ export type PublishJobState = {
   providerPostId: string | null;
   providerContainerId: string | null;
   safeError: string | null;
+  pageTasks?: readonly string[];
 };
 
 export type SettlePatch = {
@@ -172,6 +173,7 @@ export async function advancePublishJobs(input: {
       pageId: job.providerDestinationId,
       userToken: input.userToken,
       scopes: input.scopes,
+      tasks: job.pageTasks ?? [],
       imageUrl,
       caption: input.caption,
       appSecret: input.appSecret,

@@ -29,13 +29,11 @@ function unknown(): ProviderOutcome {
   };
 }
 
-function readPageGrant(body: unknown): { pageToken: string; tasks: string[] } | null {
+function readPageToken(body: unknown): string | null {
   if (!body || typeof body !== "object") return null;
   const token = (body as { access_token?: unknown }).access_token;
-  const tasks = (body as { tasks?: unknown }).tasks;
   if (typeof token !== "string" || token.length < 8) return null;
-  if (!Array.isArray(tasks) || tasks.some((task) => typeof task !== "string")) return null;
-  return { pageToken: token, tasks: tasks as string[] };
+  return token;
 }
 
 function readPostId(body: unknown): string | null {
@@ -61,11 +59,14 @@ function definiteFailure(result: GraphResult): ProviderOutcome | null {
 /**
  * Page token stays in this function. Callers receive only the post outcome.
  * A missing pages_manage_posts scope returns before any Graph call.
+ * tasks is a field of /me/accounts, not of the Page node. Requesting it here
+ * makes Graph reject the whole read with code 100 before any photo is sent.
  */
 export async function publishFacebookPhoto(input: {
   pageId: string;
   userToken: string;
   scopes: readonly string[];
+  tasks: readonly string[];
   imageUrl: string;
   caption: string;
   appSecret: string;
@@ -73,6 +74,7 @@ export async function publishFacebookPhoto(input: {
   http: (call: GraphCall) => Promise<GraphResult>;
 }): Promise<ProviderOutcome> {
   if (!input.scopes.includes(FACEBOOK_PUBLISH_SCOPE)) return failed("missing_permission");
+  if (!input.tasks.includes(FACEBOOK_PUBLISH_TASK)) return failed("missing_task");
   if (!NUMERIC_ID.test(input.pageId)) return failed("invalid_parameter");
   if (!input.imageUrl.startsWith("https://")) return failed("invalid_image");
 
@@ -81,7 +83,7 @@ export async function publishFacebookPhoto(input: {
   const page = await input.http({
     method: "GET",
     path: input.pageId,
-    query: { fields: "access_token,tasks" },
+    query: { fields: "access_token" },
     token: input.userToken,
     timeoutMs: pageTimeout,
     appSecret: input.appSecret,
@@ -91,9 +93,8 @@ export async function publishFacebookPhoto(input: {
   if (pageFailure) return pageFailure;
   if (!page.ok) return failed("provider_error");
 
-  const grant = readPageGrant(page.body);
-  if (!grant) return failed("missing_task");
-  if (!grant.tasks.includes(FACEBOOK_PUBLISH_TASK)) return failed("missing_task");
+  const pageToken = readPageToken(page.body);
+  if (!pageToken) return failed("missing_task");
 
   const postTimeout = reserveGraphCall(input.budget, FACEBOOK_PHOTO_TIMEOUT_MS);
   if (postTimeout == null) return failed("timeout");
@@ -101,7 +102,7 @@ export async function publishFacebookPhoto(input: {
     method: "POST",
     path: `${input.pageId}/photos`,
     form: { url: input.imageUrl, caption: input.caption },
-    token: grant.pageToken,
+    token: pageToken,
     timeoutMs: postTimeout,
     appSecret: input.appSecret,
   });

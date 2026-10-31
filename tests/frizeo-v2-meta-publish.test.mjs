@@ -53,6 +53,7 @@ function job(overrides = {}) {
     providerPostId: null,
     providerContainerId: null,
     safeError: null,
+    pageTasks: ["CREATE_CONTENT"],
     ...overrides,
   };
 }
@@ -252,7 +253,8 @@ test("facebook success uses an in-memory page token and returns the post id", as
   const seen = recorder(async (call) => {
     if (call.method === "GET") {
       assert.equal(call.timeoutMs, GRAPH_CALL_MAX_MS);
-      return { ok: true, status: 200, body: { access_token: PAGE, tasks: ["CREATE_CONTENT"] } };
+      assert.equal(call.query.fields, "access_token");
+      return { ok: true, status: 200, body: { access_token: PAGE } };
     }
     assert.equal(call.timeoutMs, FACEBOOK_PHOTO_TIMEOUT_MS);
     assert.equal(call.token, PAGE);
@@ -288,17 +290,19 @@ test("facebook permission, task, and provider failures do not publish", async ()
   assert.equal(missingPermission[0].safeError, "missing_permission");
   assert.equal(noScope.calls.length, 0);
 
-  const missingTask = recorder(async (call) => {
-    assert.equal(call.method, "GET");
-    return { ok: true, status: 200, body: { access_token: PAGE, tasks: ["ANALYZE"] } };
+  const missingTask = recorder(async () => {
+    throw new Error("graph should not be called");
   });
-  const taskJob = job({ id: "22222222-2222-4222-8222-222222222222" });
+  const taskJob = job({
+    id: "22222222-2222-4222-8222-222222222222",
+    pageTasks: ["ANALYZE"],
+  });
   const taskResult = await advancePublishJobs({
     jobs: [taskJob],
     ...baseInput(memoryStore([taskJob]), missingTask.http),
   });
   assert.equal(taskResult[0].safeError, "missing_task");
-  assert.equal(missingTask.calls.some((call) => call.method === "POST"), false);
+  assert.equal(missingTask.calls.length, 0);
 
   const invalidImage = recorder(async (call) => {
     if (call.method === "GET") {
@@ -801,6 +805,7 @@ test("publish http client keeps the token in the header", async () => {
     scopes: SCOPES,
     imageUrl: IMAGE,
     caption: "Salut",
+    tasks: ["CREATE_CONTENT"],
     appSecret: "app-secret-not-a-token",
     budget: createGraphBudget(),
     http,
@@ -1267,6 +1272,7 @@ test("publish migration and routes stay fail closed", () => {
   assert.doesNotMatch(releaseBody, /graph\.facebook\.com/);
   assert.match(composer, /if \(!payload\.jobs\.some\(openLive\)\) keyRef\.current = null/);
   assert.match(composer, /Publicarea reală este oprită/);
+  assert.match(composer, /invalid_parameter:/);
   assert.match(composer, /Rulează testul mock/);
   const example = readFileSync(join(root, ".env.example"), "utf8");
   assert.match(example, /# META_PUBLISH_LIVE=/);

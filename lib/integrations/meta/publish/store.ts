@@ -23,6 +23,29 @@ function parseJobs(value: unknown): PublicPublishJob[] {
   });
 }
 
+export async function readDestinationTasks(
+  tenantId: string,
+  destinationIds: readonly string[],
+): Promise<Map<string, string[]>> {
+  const tasks = new Map<string, string[]>();
+  if (destinationIds.length === 0) return tasks;
+  const { data, error } = await supabaseAdmin
+    .from("marketing_destinations")
+    .select("id, metadata")
+    .eq("tenant_id", tenantId)
+    .in("id", [...destinationIds]);
+  if (error || !data) return tasks;
+  for (const row of data) {
+    const metadata = asRecord(row.metadata);
+    const values = Array.isArray(metadata?.tasks) ? metadata.tasks : [];
+    tasks.set(
+      row.id,
+      values.filter((task): task is string => typeof task === "string"),
+    );
+  }
+  return tasks;
+}
+
 export async function preparePublishJobs(input: {
   tenantId: string;
   createdBy: string;

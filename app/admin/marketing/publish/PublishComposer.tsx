@@ -59,6 +59,7 @@ const ERRORS: Record<string, string> = {
   lookup_rejected: "Acest job nu poate fi verificat pe Instagram.",
   lookup_unavailable: "Verificarea pe Instagram nu a putut fi făcută. Jobul rămâne cu rezultat necunoscut.",
   reconcile_rejected: "Reconcilierea nu a fost salvată. Jobul rămâne neschimbat.",
+  invalid_parameter: "Meta a respins parametrul cererii. Postarea nu a fost creată.",
   token_expired: "Conexiunea Meta trebuie refăcută manual.",
   missing_permission: "Conexiunea Meta nu poate citi postările Instagram.",
   awaiting_publish_confirmation: "Rezultatul publicării rămâne neconfirmat. Destinația rămâne blocată și nu se retrimite.",

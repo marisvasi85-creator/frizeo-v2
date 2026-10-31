@@ -31,6 +31,7 @@ import {
   clearPublishMedia,
   preparePublishJobs,
   publicJobResponse,
+  readDestinationTasks,
   readInstagramLookupJob,
   readPublishJob,
   readPublishMediaCandidate,
@@ -259,6 +260,10 @@ export async function publishLive(request: Request) {
   }
   const secret = await readMetaAccessToken(prepared.gate.actor.tenantId);
   if (!secret.ok) return json("needs_reconnect", 409);
+  const destinationTasks = await readDestinationTasks(
+    prepared.gate.actor.tenantId,
+    result.jobs.map((job) => job.destinationId),
+  );
 
   let calls = 0;
   const http = createMetaPublishHttp();
@@ -273,6 +278,7 @@ export async function publishLive(request: Request) {
       providerPostId: job.providerPostId,
       providerContainerId: job.providerContainerId,
       safeError: job.safeError,
+      pageTasks: destinationTasks.get(job.destinationId) ?? [],
     })),
     mode: "start",
     liveAllowed: true,
