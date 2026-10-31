@@ -8,6 +8,9 @@ const POST_ID = /^[0-9]{1,32}(?:_[0-9]{1,32})?$/;
 export const FACEBOOK_PUBLISH_SCOPE = "pages_manage_posts";
 export const FACEBOOK_PUBLISH_TASK = "CREATE_CONTENT";
 
+/** Meta downloads the image during POST /photos. The page-token GET stays at GRAPH_CALL_MAX_MS, so 1500 + 5000 stays inside the 8000 ms budget. */
+export const FACEBOOK_PHOTO_TIMEOUT_MS = 5000;
+
 function failed(safeError: ProviderOutcome["safeError"]): ProviderOutcome {
   return {
     status: "failed",
@@ -92,7 +95,7 @@ export async function publishFacebookPhoto(input: {
   if (!grant) return failed("missing_task");
   if (!grant.tasks.includes(FACEBOOK_PUBLISH_TASK)) return failed("missing_task");
 
-  const postTimeout = reserveGraphCall(input.budget);
+  const postTimeout = reserveGraphCall(input.budget, FACEBOOK_PHOTO_TIMEOUT_MS);
   if (postTimeout == null) return failed("timeout");
   const posted = await input.http({
     method: "POST",

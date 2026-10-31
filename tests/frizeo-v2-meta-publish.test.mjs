@@ -7,7 +7,7 @@ import sharp from "sharp";
 import { buildAdminNavItems } from "../app/admin/components/adminNav.ts";
 import { FRIZEO_V2_CAPABILITIES, resolveCapabilities } from "../lib/integrations/capabilities.ts";
 import { createGraphBudget, GRAPH_BUDGET_MS, GRAPH_CALL_MAX_MS } from "../lib/integrations/meta/graph.ts";
-import { publishFacebookPhoto } from "../lib/integrations/meta/publish/facebook.ts";
+import { FACEBOOK_PHOTO_TIMEOUT_MS, publishFacebookPhoto } from "../lib/integrations/meta/publish/facebook.ts";
 import { publishRequestDecision } from "../lib/integrations/meta/publish/flags.ts";
 import { buildGraphUrl, createMetaPublishHttp } from "../lib/integrations/meta/publish/graphHttp.ts";
 import {
@@ -231,9 +231,11 @@ test("publish gates fail closed", () => {
     { ok: true },
   );
   assert.equal(INSTAGRAM_CONTAINER_TIMEOUT_MS, 5000);
+  assert.equal(FACEBOOK_PHOTO_TIMEOUT_MS, 5000);
   assert.equal(GRAPH_CALL_MAX_MS, 1500);
   assert.equal(GRAPH_BUDGET_MS, 8000);
   assert.ok(INSTAGRAM_CONTAINER_TIMEOUT_MS + (GRAPH_CALL_MAX_MS * 2) <= GRAPH_BUDGET_MS);
+  assert.ok(GRAPH_CALL_MAX_MS + FACEBOOK_PHOTO_TIMEOUT_MS <= GRAPH_BUDGET_MS);
   assert.ok(GRAPH_BUDGET_MS < 10_000);
 });
 
@@ -249,10 +251,13 @@ test("graph urls never carry the access token", () => {
 test("facebook success uses an in-memory page token and returns the post id", async () => {
   const seen = recorder(async (call) => {
     if (call.method === "GET") {
+      assert.equal(call.timeoutMs, GRAPH_CALL_MAX_MS);
       return { ok: true, status: 200, body: { access_token: PAGE, tasks: ["CREATE_CONTENT"] } };
     }
+    assert.equal(call.timeoutMs, FACEBOOK_PHOTO_TIMEOUT_MS);
     assert.equal(call.token, PAGE);
     assert.equal(call.form.url, IMAGE);
+    assert.equal(call.form.caption, "Programări deschise");
     assert.equal(call.path, "12345/photos");
     return { ok: true, status: 200, body: { id: "999", post_id: "12345_777" } };
   });
@@ -1169,9 +1174,15 @@ test("publish migration and routes stay fail closed", () => {
   }
 
   const handlers = readFileSync(join(root, "lib/integrations/meta/publish/handlers.ts"), "utf8");
+  const mockStart = handlers.indexOf("export async function publishMock");
   const liveStart = handlers.indexOf("export async function publishLive");
   const verifyStart = handlers.indexOf("export async function verifyPublish");
+  const mockBody = handlers.slice(mockStart, liveStart);
   const liveBody = handlers.slice(liveStart, verifyStart);
+  assert.ok(mockStart > 0 && liveStart > mockStart);
+  assert.match(mockBody, /executionMode: "mock"/);
+  assert.doesNotMatch(mockBody, /advancePublishJobs/);
+  assert.doesNotMatch(mockBody, /createMetaPublishHttp/);
   assert.ok(liveBody.indexOf("liveCapabilityEnabled") < liveBody.indexOf("readMetaAccessToken"));
   assert.ok(liveBody.indexOf("preparePublishJobs") < liveBody.indexOf("readMetaAccessToken"));
   assert.ok(liveBody.indexOf("readMetaAccessToken") < liveBody.indexOf("createMetaPublishHttp"));
