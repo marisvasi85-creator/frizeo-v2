@@ -715,3 +715,16 @@ test("Meta routes do not publish and do not touch booking or Marketing AI", () =
   assert.match(migration, /grant execute on function public.meta_upsert_connection/);
   assert.doesNotMatch(migration, /access_token text/);
 });
+
+test("secret-key helper execute is granted only to service_role", () => {
+  const source = readFileSync(
+    join(parent, "supabase/migrations/20261011085308_grant_service_role_json_contains_secret_key.sql"),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /grant execute on function public\.json_contains_secret_key\(jsonb, text\[\]\) to service_role;/i,
+  );
+  assert.doesNotMatch(source, /\bto\s+(anon|authenticated|public)\b/i);
+  assert.doesNotMatch(source, /create\s+(or\s+replace\s+)?function|create\s+trigger|revoke/i);
+});
