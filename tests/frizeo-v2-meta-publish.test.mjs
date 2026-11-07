@@ -276,6 +276,34 @@ test("facebook success uses an in-memory page token and returns the post id", as
   assert.equal(JSON.stringify(seen.calls.map((call) => call.path)).includes(PAGE), false);
 });
 
+test("facebook keeps saved page tasks after claim drops them", async () => {
+  const seen = recorder(async (call) => {
+    if (call.method === "GET") {
+      assert.equal(call.query.fields, "access_token");
+      return { ok: true, status: 200, body: { access_token: PAGE } };
+    }
+    assert.equal(call.path, "12345/photos");
+    return { ok: true, status: 200, body: { id: "999", post_id: "12345_777" } };
+  });
+  const pending = job();
+  const store = memoryStore([pending]);
+  const result = await advancePublishJobs({
+    jobs: [pending],
+    ...baseInput(store, seen.http, {
+      claim: async (id) => {
+        const claimed = await store.claim(id);
+        if (claimed.outcome !== "claimed") return claimed;
+        const returned = { ...claimed.job };
+        delete returned.pageTasks;
+        return { outcome: "claimed", job: returned };
+      },
+    }),
+  });
+  assert.equal(result[0].status, "published");
+  assert.equal(result[0].providerPostId, "12345_777");
+  assert.equal(seen.calls.filter((call) => call.method === "POST").length, 1);
+});
+
 test("facebook permission, task, and provider failures do not publish", async () => {
   const noScope = recorder(async () => {
     throw new Error("graph should not be called");

@@ -137,7 +137,9 @@ export async function advancePublishJobs(input: {
         claimed.job,
       );
     }
-    if (job.destinationType === "facebook_page") return runFacebook(claimed.job);
+    if (job.destinationType === "facebook_page") {
+      return runFacebook({ ...claimed.job, pageTasks: job.pageTasks });
+    }
     return runInstagram(claimed.job);
   }
 
