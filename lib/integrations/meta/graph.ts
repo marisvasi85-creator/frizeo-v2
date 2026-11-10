@@ -196,7 +196,7 @@ export async function fetchMetaPages(input: {
     const timeoutMs = reserveGraphCall(budget);
     if (timeoutMs == null) return { ok: false, reason: "timeout" };
     const params: Record<string, string> = {
-      fields: "id,name,tasks,instagram_business_account{id,username}",
+      fields: "id,name,tasks,instagram_business_account{id,username},connected_instagram_account{id,username}",
       appsecret_proof: proof,
       limit: "50",
     };

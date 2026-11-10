@@ -252,6 +252,16 @@ export function readAccountsCursor(next: unknown):
   return { ok: true, after };
 }
 
+function readInstagramAccount(value: unknown): MetaPage["instagram"] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const account = value as { id?: unknown; username?: unknown };
+  if (typeof account.id !== "string" || !/^[0-9]+$/.test(account.id)) return null;
+  return {
+    id: account.id,
+    username: typeof account.username === "string" ? account.username.slice(0, 80) : null,
+  };
+}
+
 export function parseMetaPages(body: unknown): MetaPage[] {
   if (!body || typeof body !== "object") return [];
   const data = (body as { data?: unknown }).data;
@@ -264,23 +274,15 @@ export function parseMetaPages(body: unknown): MetaPage[] {
       name?: unknown;
       tasks?: unknown;
       instagram_business_account?: unknown;
+      connected_instagram_account?: unknown;
     };
     if (typeof page.id !== "string" || !/^[0-9]+$/.test(page.id)) continue;
     if (typeof page.name !== "string" || page.name.trim().length === 0) continue;
     const tasks = Array.isArray(page.tasks)
       ? page.tasks.filter((task): task is string => typeof task === "string").slice(0, 20)
       : [];
-    let instagram: MetaPage["instagram"] = null;
-    const ig = page.instagram_business_account;
-    if (ig && typeof ig === "object") {
-      const account = ig as { id?: unknown; username?: unknown };
-      if (typeof account.id === "string" && /^[0-9]+$/.test(account.id)) {
-        instagram = {
-          id: account.id,
-          username: typeof account.username === "string" ? account.username.slice(0, 80) : null,
-        };
-      }
-    }
+    const instagram = readInstagramAccount(page.instagram_business_account)
+      ?? readInstagramAccount(page.connected_instagram_account);
     pages.push({ id: page.id, name: page.name.slice(0, 200), tasks, instagram });
   }
   return pages;
@@ -292,6 +294,18 @@ export type DestinationDraft = {
   display_name: string;
   metadata: Record<string, unknown>;
 };
+
+function instagramDraft(page: MetaPage & { instagram: NonNullable<MetaPage["instagram"]> }): DestinationDraft {
+  return {
+    destination_type: "instagram_business",
+    provider_destination_id: page.instagram.id,
+    display_name: page.instagram.username ? `@${page.instagram.username}` : `Instagram ${page.instagram.id}`,
+    metadata: {
+      username: page.instagram.username,
+      facebook_page_id: page.id,
+    },
+  };
+}
 
 export function planMetaDestinationSave(
   pages: readonly MetaPage[],
@@ -320,22 +334,16 @@ export function planMetaDestinationSave(
         display_name: page.name,
         metadata: { tasks: page.tasks },
       });
+      if (page.instagram && !seen.has(`instagram_business:${page.instagram.id}`)) {
+        seen.add(`instagram_business:${page.instagram.id}`);
+        rows.push(instagramDraft({ ...page, instagram: page.instagram }));
+      }
       continue;
     }
     const owner = pages.find((page) => page.instagram?.id === item.id);
     if (!owner?.instagram) return { ok: false, reason: "unknown_destination" };
     if (!selectedPages.has(owner.id)) return { ok: false, reason: "instagram_without_page" };
-    rows.push({
-      destination_type: "instagram_business",
-      provider_destination_id: owner.instagram.id,
-      display_name: owner.instagram.username
-        ? `@${owner.instagram.username}`
-        : `Instagram ${owner.instagram.id}`,
-      metadata: {
-        username: owner.instagram.username,
-        facebook_page_id: owner.id,
-      },
-    });
+    rows.push(instagramDraft({ ...owner, instagram: owner.instagram }));
   }
 
   if (rows.length === 0) return { ok: false, reason: "empty" };

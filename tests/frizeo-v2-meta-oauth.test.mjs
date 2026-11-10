@@ -291,7 +291,32 @@ test("pages with and without Instagram are selectable and tokens are stripped", 
     "facebook_page",
     "instagram_business",
   ]);
+  const pageKeepsInstagram = planMetaDestinationSave(pages, [{ type: "facebook_page", id: "20" }]);
+  assert.equal(pageKeepsInstagram.ok, true);
+  if (!pageKeepsInstagram.ok) return;
+  assert.deepEqual(pageKeepsInstagram.rows.map((row) => row.destination_type), [
+    "facebook_page",
+    "instagram_business",
+  ]);
+  assert.equal(pageKeepsInstagram.rows[1].display_name, "@salon.b");
+  assert.equal(pageKeepsInstagram.rows[1].provider_destination_id, "300");
   assert.equal(planMetaDestinationSave(pages, [{ type: "instagram_business", id: "300" }]).reason, "instagram_without_page");
+
+  const linked = parseMetaPages({
+    data: [{
+      id: "20",
+      name: "Frizeo",
+      tasks: ["CREATE_CONTENT"],
+      instagram_business_account: null,
+      connected_instagram_account: { id: "400", username: "frizeo.ro" },
+    }],
+  });
+  assert.equal(linked[0].instagram.username, "frizeo.ro");
+  const savedLink = planMetaDestinationSave(linked, [{ type: "facebook_page", id: "20" }]);
+  assert.equal(savedLink.ok, true);
+  if (!savedLink.ok) return;
+  assert.equal(savedLink.rows[1].display_name, "@frizeo.ro");
+  assert.equal(containsSecretMaterial(savedLink.rows), false);
   const view = presentMetaDestination({
     destinationType: "instagram_business",
     displayName: "@salon.b",

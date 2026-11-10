@@ -44,8 +44,13 @@ export default function MetaDestinationPicker() {
         setMessage(ERRORS[body.error ?? ""] ?? "Paginile nu au putut fi încărcate.");
         return;
       }
-      setPages(body.pages ?? []);
-      setSelected({});
+      const loaded = body.pages ?? [];
+      setPages(loaded);
+      setSelected(Object.fromEntries(loaded.flatMap((page) => {
+        const entries: [string, boolean][] = [[`facebook_page:${page.id}`, true]];
+        if (page.instagram) entries.push([`instagram_business:${page.instagram.id}`, true]);
+        return entries;
+      })));
       if ((body.pages ?? []).length === 0) {
         setMessage("Nu există pagini Facebook disponibile pentru acest cont.");
       }
@@ -58,9 +63,16 @@ export default function MetaDestinationPicker() {
 
   function toggle(key: string, checked: boolean, pageId?: string) {
     setSelected((current) => {
+      if (key.startsWith("instagram_business:") && !checked && pageId && current[`facebook_page:${pageId}`]) {
+        return current;
+      }
       const next = { ...current, [key]: checked };
       if (key.startsWith("instagram_business:") && checked && pageId) {
         next[`facebook_page:${pageId}`] = true;
+      }
+      if (key.startsWith("facebook_page:") && checked) {
+        const page = pages?.find((item) => `facebook_page:${item.id}` === key);
+        if (page?.instagram) next[`instagram_business:${page.instagram.id}`] = true;
       }
       if (key.startsWith("facebook_page:") && !checked) {
         const page = pages?.find((item) => `facebook_page:${item.id}` === key);
@@ -142,7 +154,7 @@ export default function MetaDestinationPicker() {
                       {page.instagram.username ? `@${page.instagram.username}` : "Instagram profesional"}
                     </span>
                     <span className="mt-1 block text-frz-muted">
-                      Cont Instagram legat de această pagină · {page.instagram.id}
+                      Cont Instagram legat de această pagină. Salvarea paginii îl păstrează, iar la publicare poți alege Facebook, Instagram sau ambele.
                     </span>
                   </span>
                 </label>
