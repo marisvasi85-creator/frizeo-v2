@@ -7,6 +7,7 @@ import {
   bookingLinkForRealPublish,
   publishCaption,
   publishImageCopy,
+  withoutMarkdownBold,
 } from "../lib/marketing-ai/publishCardCopy.ts";
 import {
   base64ToBytes,
@@ -104,6 +105,29 @@ test("publish image stays short and does not carry a staging booking link", () =
   assert.equal(caption.includes("#frizerie"), true);
 });
 
+test("publish caption and card drop markdown bold before Meta sees them", () => {
+  const caption = publishCaption({
+    content: "✂️ **Mai puțin timp pierdut.** Cu **Frizeo**, lucrurile devin simple.",
+    callToAction: "Alege **ora**.",
+    hashtags: ["frizerie"],
+  });
+  assert.equal(caption.includes("**"), false);
+  assert.equal(caption.includes("Mai puțin timp pierdut."), true);
+  assert.equal(caption.includes("Frizeo"), true);
+  assert.equal(caption.includes("#frizerie"), true);
+  const copy = publishImageCopy({
+    title: "**Programare online**",
+    content: "**Clienții rezervă singuri.**",
+    callToAction: "**Programează-te**",
+  });
+  assert.equal(copy.title.includes("**"), false);
+  assert.equal(copy.title.includes("Programare online"), true);
+  assert.equal(copy.content.includes("**"), false);
+  assert.equal(copy.content.includes("Clienții rezervă singuri"), true);
+  assert.equal(copy.callToAction.includes("**"), false);
+  assert.equal(withoutMarkdownBold("**Frizeo**"), "Frizeo");
+});
+
 test("publish page receives the handoff and does not publish it", () => {
   const client = readFileSync(join(root, "app/admin/marketing-ai/MarketingAIClient.tsx"), "utf8");
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
@@ -122,7 +146,13 @@ test("publish page receives the handoff and does not publish it", () => {
   assert.doesNotMatch(client, /media_publish/);
   assert.match(composer, /readMarketingPublishHandoff/);
   assert.match(composer, /instagram_business/);
+  assert.match(composer, /facebook_page/);
   assert.match(composer, /confirmă publicarea manual/);
+  assert.match(composer, /Facebook, Instagram sau ambele/);
+  assert.doesNotMatch(composer, /setSelected\(instagramIds\)/);
+  assert.match(composer, /withoutMarkdownBold\(caption\)/);
+  assert.match(composer, /aria-label="Rezultat pe destinație"/);
+  assert.match(composer, /whitespace-pre-wrap/);
   assert.match(composer, /readMarketingPublishHandoff\(\)[\s\S]{0,80}if \(!handoff\) return;/);
   const handoffAt = composer.indexOf("readMarketingPublishHandoff");
   const toggleAt = composer.indexOf("function toggle", handoffAt);

@@ -8,6 +8,7 @@ import {
   base64ToBytes,
   readMarketingPublishHandoff,
 } from "@/lib/marketing-ai/publishHandoff";
+import { withoutMarkdownBold } from "@/lib/marketing-ai/publishCardCopy";
 
 type DestinationOption = {
   id: string;
@@ -106,6 +107,7 @@ export default function PublishComposer({
   const [caption, setCaption] = useState("");
   const [selected, setSelected] = useState<string[]>(destinations.map((item) => item.id));
   const [message, setMessage] = useState<string | null>(null);
+  const [outcomes, setOutcomes] = useState<HistoryJob[]>([]);
   const [jobs, setJobs] = useState<HistoryJob[]>(history);
   const historyKey = history.map((job) => job.id).join(",");
   useEffect(() => {
@@ -147,12 +149,9 @@ export default function PublishComposer({
     const buffer = new ArrayBuffer(bytes.byteLength);
     new Uint8Array(buffer).set(bytes);
     chooseFile(new File([buffer], handoff.fileName, { type: handoff.mimeType }));
-    setCaption(handoff.caption);
-    const instagramIds = destinations
-      .filter((destination) => destination.destinationType === "instagram_business")
-      .map((destination) => destination.id);
-    if (instagramIds.length > 0) setSelected(instagramIds);
-    setMessage("Imaginea și textul au venit din Marketing AI. Editează textul, alege destinația și confirmă publicarea manual.");
+    setCaption(withoutMarkdownBold(handoff.caption));
+    setSelected(destinations.map((destination) => destination.id));
+    setMessage("Imaginea și textul au venit din Marketing AI. Poți bifa Facebook, Instagram sau ambele, apoi confirmă publicarea manual.");
   }, [destinations]);
 
   function toggle(id: string) {
@@ -196,7 +195,7 @@ export default function PublishComposer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idempotencyKey,
-          caption,
+          caption: withoutMarkdownBold(caption),
           destinationIds: selected,
           mediaObjectPath: path,
         }),
@@ -210,6 +209,7 @@ export default function PublishComposer({
         return;
       }
       setJobs((current) => [...payload.jobs!, ...current]);
+      setOutcomes(payload.jobs!);
       setMessage("Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos.");
       if (!payload.jobs.some(openLive)) keyRef.current = null;
       router.refresh();
@@ -232,7 +232,7 @@ export default function PublishComposer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           idempotencyKey,
-          caption,
+          caption: withoutMarkdownBold(caption),
           destinationIds: selected,
           mediaObjectPath: path,
         }),
@@ -251,6 +251,7 @@ export default function PublishComposer({
         return;
       }
       setJobs((current) => [...payload.jobs!, ...current]);
+      setOutcomes(payload.jobs!);
       setMessage("Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
       keyRef.current = null;
       router.refresh();
@@ -436,7 +437,14 @@ export default function PublishComposer({
         />
       </label>
       {previewUrl && (
-        <img src={previewUrl} alt={previewName || "Previzualizare"} className="max-h-80 rounded-xl border border-frz-line object-contain" />
+        <figure className="grid gap-2">
+          <img src={previewUrl} alt={previewName || "Previzualizare"} className="max-h-80 rounded-xl border border-frz-line object-contain" />
+          {caption && (
+            <figcaption className="whitespace-pre-wrap text-sm text-frz-ink">
+              {withoutMarkdownBold(caption)}
+            </figcaption>
+          )}
+        </figure>
       )}
       <label className="grid gap-2 text-sm text-frz-ink">
         Text
@@ -484,6 +492,16 @@ export default function PublishComposer({
         Testul mock salvează o schiță locală pentru destinațiile alese. Nu se face niciun apel către Meta.
       </p>
       {message && <p className="text-sm text-frz-ink">{message}</p>}
+      {outcomes.length > 0 && (
+        <ul className="grid gap-2" aria-label="Rezultat pe destinație">
+          {outcomes.map((job) => (
+            <li key={job.id} className="rounded-xl border border-frz-line p-3 text-sm text-frz-ink">
+              {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
+              {job.safeError ? ` · ${ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."}` : ""}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="grid gap-3">
         <h2 className="text-lg font-semibold text-frz-ink">Istoric</h2>
         {jobs.length === 0 && <p className="text-sm text-frz-muted">Nu există publicări salvate.</p>}

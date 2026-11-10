@@ -21,6 +21,11 @@ function withoutUrls(value: string): string {
   return value.replace(/https?:\/\/\S+/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Meta shows asterisks as text. Bold markers never belong in the published caption. */
+export function withoutMarkdownBold(value: string): string {
+  return value.replace(/\*\*/g, "");
+}
+
 /** A public booking URL already stored for this salon. Staging and other hosts are omitted, not rewritten. */
 export function bookingLinkForRealPublish(value: string | null | undefined): string | null {
   if (!value) return null;
@@ -44,7 +49,10 @@ export function publishImageCopy(input: {
   callToAction: string;
   bookingUrl?: string | null;
 }): PublishImageCopy {
-  const benefits = input.content
+  const title = withoutMarkdownBold(input.title);
+  const content = withoutMarkdownBold(input.content);
+  const action = withoutMarkdownBold(input.callToAction);
+  const benefits = content
     .replace(/https?:\/\/\S+/g, " ")
     .split(/\n+|•|(?<=[.!?])\s+/)
     .map((part) => part.replace(/^[-*–]+\s*/, "").replace(/[.!?]+$/, "").replace(/\s+/g, " ").trim())
@@ -53,10 +61,10 @@ export function publishImageCopy(input: {
       return part.length >= 3 && part.length <= 72 && words.length <= 12;
     })
     .slice(0, 3);
-  const callToAction = clip(withoutUrls(input.callToAction), 42) || "Programează-te";
+  const callToAction = clip(withoutUrls(action), 42) || "Programează-te";
   const bookingUrl = bookingLinkForRealPublish(input.bookingUrl);
   return {
-    title: clip(withoutUrls(input.title), 48) || "Programare",
+    title: clip(withoutUrls(title), 48) || "Programare",
     content: benefits.join(" · "),
     callToAction,
     ...(bookingUrl ? { bookingUrl } : {}),
@@ -69,12 +77,12 @@ export function publishCaption(input: {
   hashtags?: string[];
   bookingUrl?: string | null;
 }): string {
-  return buildShareCaption({
-    content: input.content,
-    callToAction: input.callToAction,
+  return withoutMarkdownBold(buildShareCaption({
+    content: withoutMarkdownBold(input.content),
+    callToAction: withoutMarkdownBold(input.callToAction),
     hashtags: input.hashtags,
     bookingUrl: bookingLinkForRealPublish(input.bookingUrl),
-  })
+  }))
     .replace(/https?:\/\/staging\.frizeo\.ro\S*/gi, "")
     .replace(/https?:\/\/[^\s/]+\.vercel\.app\S*/gi, "")
     .replace(/[ \t]{2,}/g, " ")
