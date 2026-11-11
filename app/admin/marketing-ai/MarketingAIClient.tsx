@@ -414,6 +414,7 @@ export default function MarketingAIClient({
         }),
         bytes: new Uint8Array(await image.arrayBuffer()),
         mimeType,
+        bookingUrl,
       });
       if (!saved) {
         setError("Imaginea nu a putut fi transferată. Publicarea nu a pornit.");

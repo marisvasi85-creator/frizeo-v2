@@ -1,3 +1,5 @@
+import { bookingLinkForRealPublish } from "@/lib/marketing-ai/publishCardCopy";
+
 const HANDOFF_KEY = "frizeo.marketing.publish.handoff.v1";
 const MAX_IMAGE_BYTES = 1_500_000;
 
@@ -6,6 +8,7 @@ export type MarketingPublishHandoff = {
   fileName: string;
   mimeType: "image/png" | "image/jpeg";
   imageBase64: string;
+  bookingUrl?: string | null;
 };
 
 type StorageLike = {
@@ -46,15 +49,18 @@ export function writeMarketingPublishHandoff(
     caption: string;
     bytes: Uint8Array;
     mimeType: MarketingPublishHandoff["mimeType"];
+    bookingUrl?: string | null;
   },
 ): boolean {
   if (input.bytes.length === 0 || input.bytes.length > MAX_IMAGE_BYTES) return false;
   if (input.caption.length > 2200) return false;
+  const bookingUrl = bookingLinkForRealPublish(input.bookingUrl);
   const payload: MarketingPublishHandoff = {
     caption: input.caption,
     fileName: fileNameFor(input.mimeType),
     mimeType: input.mimeType,
     imageBase64: bytesToBase64(input.bytes),
+    ...(bookingUrl ? { bookingUrl } : {}),
   };
   try {
     storage.setItem(HANDOFF_KEY, JSON.stringify(payload));
@@ -74,11 +80,13 @@ export function takeMarketingPublishHandoff(storage: StorageLike): MarketingPubl
     if (typeof parsed.caption !== "string" || typeof parsed.imageBase64 !== "string") return null;
     const bytes = base64ToBytes(parsed.imageBase64);
     if (!bytes || bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) return null;
+    const bookingUrl = bookingLinkForRealPublish(typeof parsed.bookingUrl === "string" ? parsed.bookingUrl : null);
     return {
       caption: parsed.caption,
       fileName: fileNameFor(parsed.mimeType),
       mimeType: parsed.mimeType,
       imageBase64: parsed.imageBase64,
+      ...(bookingUrl ? { bookingUrl } : {}),
     };
   } catch {
     return null;
@@ -89,6 +97,7 @@ export function saveMarketingPublishHandoff(input: {
   caption: string;
   bytes: Uint8Array;
   mimeType: MarketingPublishHandoff["mimeType"];
+  bookingUrl?: string | null;
 }): boolean {
   if (typeof sessionStorage === "undefined") return false;
   return writeMarketingPublishHandoff(sessionStorage, input);

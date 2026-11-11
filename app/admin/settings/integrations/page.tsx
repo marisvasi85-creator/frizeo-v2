@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import AdminButton from "@/app/admin/components/AdminButton";
 import AdminCard from "@/app/admin/components/AdminCard";
 import AdminPageHeader from "@/app/admin/components/AdminPageHeader";
+import GoogleDestinationPicker from "@/app/admin/settings/integrations/GoogleDestinationPicker";
 import MetaDestinationPicker from "@/app/admin/settings/integrations/MetaDestinationPicker";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isProduction } from "@/lib/app/environment";
@@ -9,6 +10,11 @@ import {
   resolveCapabilities,
   type CapabilityMap,
 } from "@/lib/integrations/capabilities";
+import { assertGoogleBusinessConfig } from "@/lib/integrations/google-business/config";
+import {
+  decideGoogleConnect,
+  type GoogleNotice,
+} from "@/lib/integrations/google-business/flow";
 import { assertMetaConfig } from "@/lib/integrations/meta/config";
 import {
   decideMetaConnect,
@@ -56,6 +62,27 @@ const NOTICES: Record<MetaNotice, string> = {
   token_expired: "Tokenul Meta este expirat. Reconectează manual.",
 };
 
+const GOOGLE_NOTICES: Record<GoogleNotice, string> = {
+  select: "Autorizarea Google a reușit. Alege locațiile Business Profile înainte ca integrarea să fie marcată conectată.",
+  denied: "Autorizarea Google a fost refuzată. Nu s-a creat o conexiune.",
+  expired: "Sesiunea de conectare a expirat.",
+  consumed: "Sesiunea de conectare a fost deja folosită.",
+  mismatch: "Conectarea nu corespunde utilizatorului sau salonului curent.",
+  exchange_failed: "Google nu a confirmat tokenul. Conexiunea nu a fost salvată.",
+  permissions: "Lipsește scope-ul business.manage. Conexiunea nu a fost salvată.",
+  unconfigured: "Google Business nu este configurat pe server.",
+  timeout: "Google nu a răspuns la timp. Nu s-a salvat nicio locație.",
+  capability: "Integrarea Google Business este oprită pentru acest salon.",
+  production: "Integrarea Google Business nu este activă în producție.",
+  forbidden: "Doar owner sau manager pot administra conexiunea.",
+  disconnected: "Accesul local Google Business a fost eliminat.",
+  saved: "Locațiile Google Business au fost salvate.",
+  no_locations: "Google nu a întors niciun cont Business Profile. Nu s-a inventat o locație.",
+  invalid: "Conectarea Google Business nu a putut fi finalizată.",
+  unknown_expiry: "Google nu a comunicat expirarea tokenului. Conexiunea nu a fost salvată.",
+  calendar_scope: "Tokenul include Google Calendar. Conexiunea Business Profile nu a fost salvată.",
+};
+
 const STATUS_LABEL: Record<string, string> = {
   not_connected: "Neconectat",
   connected: "Conectat",
@@ -67,7 +94,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function IntegrationSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ meta?: string; meta_error?: string }>;
+  searchParams: Promise<{ meta?: string; meta_error?: string; google?: string; google_error?: string }>;
 }) {
   const session = await getAdminSession();
   if (!session?.user) redirect("/login");
@@ -77,10 +104,12 @@ export default async function IntegrationSettingsPage({
 
   const params = await searchParams;
   const notice = noticeFrom(params.meta) ?? noticeFrom(params.meta_error);
-  const [connections, capabilities, destinations] = await Promise.all([
+  const googleNotice = googleNoticeFrom(params.google) ?? googleNoticeFrom(params.google_error);
+  const [connections, capabilities, destinations, googleDestinations] = await Promise.all([
     loadConnections(session.tenantId),
     loadCapabilities(session.tenantId),
     loadDestinations(session.tenantId),
+    loadGoogleDestinations(session.tenantId),
   ]);
   const production = isProduction();
   const configured = assertMetaConfig(process.env, { production }).ok;
@@ -96,6 +125,16 @@ export default async function IntegrationSettingsPage({
     configured,
     production,
   });
+  const googleConnection = connections.find((row) => row.provider === "google_business") ?? null;
+  const googleConfigured = assertGoogleBusinessConfig(process.env, { production }).ok;
+  const googleGate = decideGoogleConnect({
+    authenticated: true,
+    role: session.role,
+    capabilityEnabled: capabilities["marketing.publish.google_business"],
+    configured: googleConfigured,
+    production,
+  });
+  const googleStatus = googleConnection?.status ?? "not_connected";
 
   return (
     <div className="space-y-6">
@@ -106,6 +145,11 @@ export default async function IntegrationSettingsPage({
       {notice && (
         <p className="rounded-xl border border-frz-line bg-frz-card px-4 py-3 text-sm text-frz-ink">
           {NOTICES[notice]}
+        </p>
+      )}
+      {googleNotice && (
+        <p className="rounded-xl border border-frz-line bg-frz-card px-4 py-3 text-sm text-frz-ink">
+          {GOOGLE_NOTICES[googleNotice]}
         </p>
       )}
 
@@ -170,8 +214,65 @@ export default async function IntegrationSettingsPage({
         </div>
       </AdminCard>
 
+      <AdminCard>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-frz-ink">Google Business Profile</h2>
+            <p className="mt-1 text-sm text-frz-muted">Status: {STATUS_LABEL[googleStatus] ?? googleStatus}</p>
+            <p className="mt-1 text-sm text-frz-muted">
+              Publicare: {capabilities["marketing.publish.google_business"] ? "activă" : "oprită"}
+            </p>
+            {googleConnection?.displayName && (
+              <p className="mt-2 text-sm text-frz-ink">Cont conectat: {googleConnection.displayName}</p>
+            )}
+            {googleConnection && googleConnection.scopes.length > 0 && (
+              <p className="mt-1 text-sm text-frz-muted">
+                Permisiuni acordate: {googleConnection.scopes.join(", ")}
+              </p>
+            )}
+          </div>
+          {googleDestinations.length > 0 && (
+            <ul className="space-y-2 text-sm">
+              {googleDestinations.map((destination) => (
+                <li key={destination.id} className="text-frz-ink">{destination.displayName}</li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap gap-2">
+            {googleGate.ok && (
+              <form action="/api/integrations/google-business/connect" method="post">
+                <AdminButton type="submit" variant={googleConnection ? "secondary" : "primary"}>
+                  {googleConnection ? "Reconectează" : "Conectează Google Business"}
+                </AdminButton>
+              </form>
+            )}
+            {googleConnection && (
+              <form action="/api/integrations/google-business/disconnect" method="post">
+                <AdminButton type="submit" variant="ghost">Deconectează</AdminButton>
+              </form>
+            )}
+            {!googleGate.ok && !googleConnection && (
+              <>
+                <AdminButton type="button" variant="secondary" disabled>Conectează</AdminButton>
+                <AdminButton type="button" variant="ghost" disabled>Reconectează</AdminButton>
+                <AdminButton type="button" variant="ghost" disabled>Deconectează</AdminButton>
+              </>
+            )}
+          </div>
+          {!googleGate.ok && (
+            <p className="text-sm text-frz-muted">
+              {GOOGLE_NOTICES[googleGate.reason === "capability_off" ? "capability" : googleGate.reason === "production" ? "production" : googleGate.reason === "forbidden" ? "forbidden" : "unconfigured"]}
+              {" "}Publicarea reală rămâne oprită.
+            </p>
+          )}
+          {googleGate.ok && (googleStatus === "setup_required" || googleStatus === "connected") && (
+            <GoogleDestinationPicker />
+          )}
+        </div>
+      </AdminCard>
+
       <div className="grid gap-4">
-        {INTEGRATION_PROVIDERS.filter((provider) => provider !== "meta").map((provider) => {
+        {INTEGRATION_PROVIDERS.filter((provider) => provider !== "meta" && provider !== "google_business").map((provider) => {
           const connection = connections.find((row) => row.provider === provider) ?? null;
           const view = presentConnection(connection?.status ?? null);
           const publishCapability = publishFlag(provider, capabilities);
@@ -214,6 +315,11 @@ function noticeFrom(value: string | undefined): MetaNotice | null {
   return value as MetaNotice;
 }
 
+function googleNoticeFrom(value: string | undefined): GoogleNotice | null {
+  if (!value || !(value in GOOGLE_NOTICES)) return null;
+  return value as GoogleNotice;
+}
+
 function publishFlag(provider: IntegrationProvider, capabilities: CapabilityMap): boolean {
   if (provider === "google_business") return capabilities["marketing.publish.google_business"];
   if (provider === "tiktok") return capabilities["marketing.publish.tiktok"];
@@ -253,6 +359,22 @@ async function loadConnections(tenantId: string): Promise<PublicConnection[]> {
     };
     return [connection];
   });
+}
+
+async function loadGoogleDestinations(tenantId: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("marketing_destinations")
+    .select("provider_destination_id, display_name")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "google_business")
+    .eq("destination_type", "google_business_location")
+    .eq("status", "active");
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.provider_destination_id,
+    displayName: row.display_name,
+  }));
 }
 
 async function loadDestinations(tenantId: string) {

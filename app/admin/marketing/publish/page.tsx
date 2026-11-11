@@ -38,7 +38,7 @@ export default async function MarketingPublishPage() {
       .from("marketing_destinations")
       .select("id, destination_type, display_name, status")
       .eq("tenant_id", session.tenantId)
-      .eq("provider", "meta")
+      .in("provider", ["meta", "google_business"])
       .eq("status", "active"),
     supabase
       .from("integration_publish_jobs")
@@ -56,7 +56,11 @@ export default async function MarketingPublishPage() {
   );
   const liveAvailable = integrationEnabled && liveCapability && metaPublishLiveEnvEnabled();
   const options = (destinations ?? []).flatMap((row) => {
-    if (row.destination_type !== "facebook_page" && row.destination_type !== "instagram_business") {
+    if (
+      row.destination_type !== "facebook_page"
+      && row.destination_type !== "instagram_business"
+      && row.destination_type !== "google_business_location"
+    ) {
       return [];
     }
     return [{

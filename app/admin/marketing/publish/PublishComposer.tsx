@@ -8,11 +8,11 @@ import {
   base64ToBytes,
   readMarketingPublishHandoff,
 } from "@/lib/marketing-ai/publishHandoff";
-import { withoutMarkdownBold } from "@/lib/marketing-ai/publishCardCopy";
+import { bookingLinkForRealPublish, withoutMarkdownBold } from "@/lib/marketing-ai/publishCardCopy";
 
 type DestinationOption = {
   id: string;
-  destinationType: "facebook_page" | "instagram_business";
+  destinationType: "facebook_page" | "instagram_business" | "google_business_location";
   displayName: string | null;
 };
 
@@ -44,6 +44,8 @@ const ERRORS: Record<string, string> = {
   invalid_image: "Imaginea trebuie să fie JPEG, PNG sau WEBP, cu raport între 4:5 și 1.91:1 și lățime de cel puțin 320 px.",
   unsupported_type: "Formatul imaginii nu este acceptat. Folosește JPEG, PNG sau WEBP.",
   caption_too_long: "Textul poate avea cel mult 2200 de caractere.",
+  summary_too_long: "Descrierea Google poate avea cel mult 1500 de caractere.",
+  booking_link_missing: "Lipsește linkul public de programare. Butonul Rezervă nu poate fi pregătit.",
   too_many_hashtags: "Textul poate avea cel mult 30 de hashtag-uri.",
   too_many_mentions: "Textul poate avea cel mult 20 de mențiuni.",
   invalid: "Datele trimise nu sunt valide.",
@@ -87,7 +89,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 function labelFor(type: string, name: string | null): string {
-  const channel = type === "instagram_business" ? "Instagram" : "Facebook";
+  const channel = type === "instagram_business"
+    ? "Instagram"
+    : type === "google_business_location"
+      ? "Google Business"
+      : "Facebook";
   return name ? `${channel} · ${name}` : channel;
 }
 
@@ -105,6 +111,7 @@ export default function PublishComposer({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
+  const [bookingUrl, setBookingUrl] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>(destinations.map((item) => item.id));
   const [message, setMessage] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<HistoryJob[]>([]);
@@ -128,6 +135,12 @@ export default function PublishComposer({
   } | null>(null);
 
   const previewName = useMemo(() => file?.name ?? "", [file]);
+  const selectedMeta = destinations.filter((destination) => (
+    selected.includes(destination.id) && destination.destinationType !== "google_business_location"
+  ));
+  const selectedGoogle = destinations.filter((destination) => (
+    selected.includes(destination.id) && destination.destinationType === "google_business_location"
+  ));
   const destinationBusy = jobs.some(
     (job) => openLive(job) && selected.includes(job.destinationId),
   );
@@ -150,6 +163,7 @@ export default function PublishComposer({
     new Uint8Array(buffer).set(bytes);
     chooseFile(new File([buffer], handoff.fileName, { type: handoff.mimeType }));
     setCaption(withoutMarkdownBold(handoff.caption));
+    setBookingUrl(bookingLinkForRealPublish(handoff.bookingUrl));
     setSelected(destinations.map((destination) => destination.id));
     setMessage("Imaginea și textul au venit din Marketing AI. Poți bifa Facebook, Instagram sau ambele, apoi confirmă publicarea manual.");
   }, [destinations]);
@@ -182,7 +196,7 @@ export default function PublishComposer({
   }
 
   async function runLive() {
-    if (!liveAvailable || busy) return;
+    if (!liveAvailable || busy || selectedMeta.length === 0) return;
     if (!keyRef.current) keyRef.current = crypto.randomUUID();
     const idempotencyKey = keyRef.current;
     setBusy(true);
@@ -196,7 +210,7 @@ export default function PublishComposer({
         body: JSON.stringify({
           idempotencyKey,
           caption: withoutMarkdownBold(caption),
-          destinationIds: selected,
+          destinationIds: selectedMeta.map((destination) => destination.id),
           mediaObjectPath: path,
         }),
       });
@@ -210,7 +224,9 @@ export default function PublishComposer({
       }
       setJobs((current) => [...payload.jobs!, ...current]);
       setOutcomes(payload.jobs!);
-      setMessage("Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos.");
+      setMessage(selectedGoogle.length > 0
+        ? "Cererea Meta a fost înregistrată. Google Business nu a fost trimis: publicarea reală este oprită."
+        : "Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos.");
       if (!payload.jobs.some(openLive)) keyRef.current = null;
       router.refresh();
     } finally {
@@ -220,6 +236,15 @@ export default function PublishComposer({
 
   async function runMock() {
     if (busy) return;
+    const plainCaption = withoutMarkdownBold(caption);
+    if (selectedGoogle.length > 0 && plainCaption.trim().length > 1500) {
+      setMessage(ERRORS.summary_too_long);
+      return;
+    }
+    if (selectedGoogle.length > 0 && !bookingUrl) {
+      setMessage(ERRORS.booking_link_missing);
+      return;
+    }
     if (!keyRef.current) keyRef.current = crypto.randomUUID();
     const idempotencyKey = keyRef.current;
     setBusy(true);
@@ -227,32 +252,65 @@ export default function PublishComposer({
     try {
       const path = await upload();
       if (!path) return;
-      const response = await fetch("/api/integrations/meta/publish/mock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idempotencyKey,
-          caption: withoutMarkdownBold(caption),
-          destinationIds: selected,
-          mediaObjectPath: path,
-        }),
-      });
-      const payload = await response.json().catch(() => null) as {
-        error?: string;
-        externalCall?: boolean;
-        jobs?: HistoryJob[];
-      } | null;
-      if (!response.ok || !payload?.jobs) {
-        setMessage(ERRORS[payload?.error ?? ""] ?? "Testul mock nu a putut fi salvat.");
-        return;
+      const collected: HistoryJob[] = [];
+      if (selectedMeta.length > 0) {
+        const response = await fetch("/api/integrations/meta/publish/mock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idempotencyKey,
+            caption: plainCaption,
+            destinationIds: selectedMeta.map((destination) => destination.id),
+            mediaObjectPath: path,
+          }),
+        });
+        const payload = await response.json().catch(() => null) as {
+          error?: string;
+          externalCall?: boolean;
+          jobs?: HistoryJob[];
+        } | null;
+        if (!response.ok || !payload?.jobs) {
+          setMessage(ERRORS[payload?.error ?? ""] ?? "Testul mock nu a putut fi salvat.");
+          return;
+        }
+        if (payload.externalCall) {
+          setMessage("Testul a fost oprit: nu trebuia să existe un apel extern.");
+          return;
+        }
+        collected.push(...payload.jobs);
       }
-      if (payload.externalCall) {
-        setMessage("Testul a fost oprit: nu trebuia să existe un apel extern.");
-        return;
+      if (selectedGoogle.length > 0) {
+        const response = await fetch("/api/integrations/google-business/publish/mock", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idempotencyKey,
+            caption: plainCaption.trim(),
+            destinationIds: selectedGoogle.map((destination) => destination.id),
+            mediaObjectPath: path,
+            bookingUrl,
+          }),
+        });
+        const payload = await response.json().catch(() => null) as {
+          error?: string;
+          externalCall?: boolean;
+          jobs?: HistoryJob[];
+        } | null;
+        if (!response.ok || !payload?.jobs) {
+          setMessage(ERRORS[payload?.error ?? ""] ?? "Testul mock nu a putut fi salvat.");
+          return;
+        }
+        if (payload.externalCall) {
+          setMessage("Testul a fost oprit: nu trebuia să existe un apel extern.");
+          return;
+        }
+        collected.push(...payload.jobs);
       }
-      setJobs((current) => [...payload.jobs!, ...current]);
-      setOutcomes(payload.jobs!);
-      setMessage("Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
+      setJobs((current) => [...collected, ...current]);
+      setOutcomes(collected);
+      setMessage(selectedGoogle.length > 0 && selectedMeta.length === 0
+        ? "Testul mock a fost salvat local. Nu s-a trimis nimic către Google."
+        : "Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
       keyRef.current = null;
       router.refresh();
     } finally {
@@ -451,11 +509,17 @@ export default function PublishComposer({
         <textarea
           value={caption}
           onChange={(event) => setCaption(event.target.value)}
-          maxLength={2200}
+          maxLength={selectedGoogle.length > 0 ? 1500 : 2200}
           rows={5}
           className="rounded-xl border border-frz-line bg-frz-card p-3"
         />
       </label>
+      {selectedGoogle.length > 0 && (
+        <p className="text-sm text-frz-ink">
+          Buton Google: Rezervă
+          {bookingUrl ? ` · ${bookingUrl}` : " · lipsește linkul public de programare"}
+        </p>
+      )}
       <fieldset className="grid gap-2">
         <legend className="text-sm text-frz-ink">Destinații</legend>
         {destinations.map((destination) => (
@@ -472,7 +536,7 @@ export default function PublishComposer({
       <div className="flex flex-wrap gap-2">
         <AdminButton
           type="button"
-          disabled={!liveAvailable || busy || selected.length === 0 || destinationBusy}
+          disabled={!liveAvailable || busy || selectedMeta.length === 0 || destinationBusy}
           onClick={liveAvailable ? runLive : undefined}
         >
           Publică

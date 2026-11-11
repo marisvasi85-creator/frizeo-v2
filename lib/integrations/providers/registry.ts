@@ -6,6 +6,8 @@ import {
 
 const ADAPTERS: Record<IntegrationProvider, ProviderAdapter> = {
   meta: createSkeletonAdapter("meta"),
+  // The Business Profile adapter lives in lib/integrations/google-business.
+  // This entry stays closed so Integration Lab cannot publish.
   google_business: createSkeletonAdapter("google_business"),
   tiktok: createSkeletonAdapter("tiktok"),
   whatsapp: createSkeletonAdapter("whatsapp"),
