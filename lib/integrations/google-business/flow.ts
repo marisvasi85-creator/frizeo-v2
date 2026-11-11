@@ -27,6 +27,12 @@ export type GoogleNotice =
   | "disconnected"
   | "saved"
   | "no_locations"
+  | "accounts_forbidden"
+  | "rate_limited"
+  | "api_disabled"
+  | "access_not_approved"
+  | "accounts_network"
+  | "accounts_unavailable"
   | "invalid"
   | "unknown_expiry"
   | "calendar_scope";
@@ -103,6 +109,154 @@ export function parseGoogleAccounts(body: unknown): GoogleBusinessAccount[] {
     rows.push({ name, accountName });
   }
   return rows;
+}
+
+export type GoogleAccountsFailureReason =
+  | "forbidden"
+  | "rate_limited"
+  | "api_disabled"
+  | "access_not_approved"
+  | "network"
+  | "unavailable";
+
+export type GoogleAccountsResult =
+  | { ok: true; accounts: GoogleBusinessAccount[] }
+  | {
+      ok: false;
+      reason: GoogleAccountsFailureReason;
+      httpStatus: number | null;
+      googleCode: number | null;
+      googleStatus: string | null;
+      googleReason: string | null;
+      googleMessage: string | null;
+    };
+
+const API_DISABLED_REASONS = new Set([
+  "SERVICE_DISABLED",
+  "ACCESS_NOT_CONFIGURED",
+  "accessNotConfigured",
+]);
+
+export function googleAccountsFailureNotice(reason: GoogleAccountsFailureReason): GoogleNotice {
+  if (reason === "forbidden") return "accounts_forbidden";
+  if (reason === "rate_limited") return "rate_limited";
+  if (reason === "api_disabled") return "api_disabled";
+  if (reason === "access_not_approved") return "access_not_approved";
+  if (reason === "network") return "accounts_network";
+  return "accounts_unavailable";
+}
+
+export function redactGoogleErrorMessage(value: string | null, secret = ""): string | null {
+  if (!value) return null;
+  let cleaned = value;
+  if (secret) cleaned = cleaned.split(secret).join("[redacted]");
+  cleaned = cleaned
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted-email]")
+    .replace(/ya29\.[A-Za-z0-9_\-]+/g, "[redacted]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [redacted]")
+    .replace(/https?:\/\/\S+/g, "[redacted-url]");
+  return cleaned.slice(0, 300);
+}
+
+function googleErrorParts(body: unknown): {
+  code: number | null;
+  status: string | null;
+  message: string | null;
+  reasons: string[];
+  quotaZero: boolean;
+} {
+  const empty = { code: null, status: null, message: null, reasons: [] as string[], quotaZero: false };
+  if (!body || typeof body !== "object") return empty;
+  const error = (body as { error?: unknown }).error;
+  if (!error || typeof error !== "object") return empty;
+  const record = error as {
+    code?: unknown;
+    status?: unknown;
+    message?: unknown;
+    details?: unknown;
+    errors?: unknown;
+  };
+  const reasons: string[] = [];
+  let quotaZero = false;
+  if (Array.isArray(record.details)) {
+    for (const detail of record.details) {
+      if (!detail || typeof detail !== "object") continue;
+      const reason = text((detail as { reason?: unknown }).reason);
+      if (reason) reasons.push(reason);
+      const metadata = (detail as { metadata?: unknown }).metadata;
+      if (metadata && typeof metadata === "object") {
+        const limit = (metadata as { quota_limit_value?: unknown }).quota_limit_value;
+        if (limit === 0 || limit === "0") quotaZero = true;
+      }
+    }
+  }
+  if (Array.isArray(record.errors)) {
+    for (const item of record.errors) {
+      if (!item || typeof item !== "object") continue;
+      const reason = text((item as { reason?: unknown }).reason);
+      if (reason) reasons.push(reason);
+    }
+  }
+  return {
+    code: typeof record.code === "number" ? record.code : null,
+    status: text(record.status),
+    message: text(record.message),
+    reasons,
+    quotaZero,
+  };
+}
+
+function accountsFailure(
+  reason: GoogleAccountsFailureReason,
+  httpStatus: number | null,
+  body: unknown,
+): GoogleAccountsResult {
+  const parts = googleErrorParts(body);
+  return {
+    ok: false,
+    reason,
+    httpStatus,
+    googleCode: parts.code,
+    googleStatus: parts.status,
+    googleReason: parts.reasons[0] ?? null,
+    googleMessage: redactGoogleErrorMessage(parts.message),
+  };
+}
+
+function messageSaysApiDisabled(message: string | null): boolean {
+  const value = message?.toLowerCase() ?? "";
+  return value.includes("has not been used in project") || value.includes("it is disabled");
+}
+
+function messageSaysAccessNotApproved(message: string | null): boolean {
+  const value = message?.toLowerCase() ?? "";
+  return value.includes("not been granted access")
+    || value.includes("not been approved")
+    || value.includes("access is not approved");
+}
+
+export function classifyGoogleAccountsResponse(status: number, body: unknown): GoogleAccountsResult {
+  if (status >= 200 && status < 300) {
+    const accounts = body && typeof body === "object"
+      ? (body as { accounts?: unknown }).accounts
+      : undefined;
+    if (Array.isArray(accounts)) {
+      const parsed = parseGoogleAccounts(body);
+      if (accounts.length > 0 && parsed.length === 0) return accountsFailure("unavailable", status, body);
+      return { ok: true, accounts: parsed };
+    }
+    return accountsFailure("unavailable", status, body);
+  }
+  const parts = googleErrorParts(body);
+  if (parts.reasons.some((reason) => API_DISABLED_REASONS.has(reason)) || messageSaysApiDisabled(parts.message)) {
+    return accountsFailure("api_disabled", status, body);
+  }
+  if (parts.quotaZero || messageSaysAccessNotApproved(parts.message)) {
+    return accountsFailure("access_not_approved", status, body);
+  }
+  if (status === 429) return accountsFailure("rate_limited", status, body);
+  if (status === 403) return accountsFailure("forbidden", status, body);
+  return accountsFailure("unavailable", status, body);
 }
 
 export function parseGoogleLocations(body: unknown, accountName: string): GoogleBusinessLocation[] {

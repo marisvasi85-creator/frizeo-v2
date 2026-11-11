@@ -13,6 +13,13 @@ const ERRORS: Record<string, string> = {
   forbidden: "Doar owner sau manager pot alege locațiile.",
   capability_off: "Integrarea Google Business este oprită pentru acest salon.",
   save_failed: "Locațiile nu au putut fi salvate.",
+  no_locations: "Google nu a întors niciun cont Business Profile. Nu s-a inventat o locație.",
+  accounts_forbidden: "Google a refuzat listarea conturilor Business Profile. Conexiunea nu a fost salvată.",
+  rate_limited: "Google a limitat temporar cererile către Business Profile. Conexiunea nu a fost salvată.",
+  api_disabled: "API-ul Google pentru conturile Business Profile este dezactivat. Conexiunea nu a fost salvată.",
+  access_not_approved: "Accesul proiectului Google la Business Profile nu este aprobat. Conexiunea nu a fost salvată.",
+  accounts_network: "Google Business nu a putut fi contactat. Conexiunea nu a fost salvată.",
+  accounts_unavailable: "Google nu a putut lista conturile Business Profile. Conexiunea nu a fost salvată.",
 };
 
 export default function GoogleDestinationPicker() {

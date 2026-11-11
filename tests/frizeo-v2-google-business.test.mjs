@@ -22,6 +22,7 @@ import {
   publicGoogleConnection,
   readGoogleToken,
 } from "../lib/integrations/google-business/flow.ts";
+import { listGoogleAccounts } from "../lib/integrations/google-business/api.ts";
 import { buildGoogleLocalPost, publishLocalPost } from "../lib/integrations/google-business/publish.ts";
 import { getProviderAdapter } from "../lib/integrations/providers/registry.ts";
 import { writeMarketingPublishHandoff, takeMarketingPublishHandoff } from "../lib/marketing-ai/publishHandoff.ts";
@@ -284,4 +285,151 @@ test("marketing handoff keeps only a public booking link for the Google button",
     bookingUrl: "https://frizeo.ro/booking/demo-barber-salon",
   }), true);
   assert.equal(takeMarketingPublishHandoff(storage)?.bookingUrl, "https://frizeo.ro/booking/demo-barber-salon");
+});
+
+async function captureAccounts(http) {
+  const lines = [];
+  const original = console.error;
+  console.error = (...args) => {
+    lines.push(args.map((part) => String(part)).join(" "));
+  };
+  try {
+    const result = await listGoogleAccounts({
+      accessToken: "ya29.super-secret-token",
+      http,
+    });
+    return { result, log: lines.join("\n") };
+  } finally {
+    console.error = original;
+  }
+}
+
+test("google account list keeps a real 200 empty list separate from API errors", async () => {
+  const found = await captureAccounts(async () => ({
+    status: 200,
+    body: { accounts: [{ name: "accounts/123", accountName: "Frizeo" }] },
+  }));
+  assert.equal(found.result.ok, true);
+  if (found.result.ok) {
+    assert.deepEqual(found.result.accounts, [{ name: "accounts/123", accountName: "Frizeo" }]);
+  }
+  assert.equal(found.log, "");
+
+  const empty = await captureAccounts(async () => ({ status: 200, body: { accounts: [] } }));
+  assert.deepEqual(empty.result, { ok: true, accounts: [] });
+  assert.equal(empty.log, "");
+
+  const unrecognized = await captureAccounts(async () => ({ status: 200, body: { accounts: [{ name: "not-an-account" }] } }));
+  assert.equal(unrecognized.result.ok, false);
+  if (!unrecognized.result.ok) assert.equal(unrecognized.result.reason, "unavailable");
+});
+
+test("google account list reports 403, disabled API, and unapproved access without secrets", async () => {
+  const forbidden = await captureAccounts(async () => ({
+    status: 403,
+    body: {
+      error: {
+        code: 403,
+        status: "PERMISSION_DENIED",
+        message: "The caller does not have permission",
+      },
+    },
+  }));
+  assert.equal(forbidden.result.ok, false);
+  if (!forbidden.result.ok) {
+    assert.equal(forbidden.result.reason, "forbidden");
+    assert.equal(forbidden.result.httpStatus, 403);
+    assert.equal(forbidden.result.googleCode, 403);
+    assert.equal(forbidden.result.googleMessage, "The caller does not have permission");
+  }
+  assert.match(forbidden.log, /"httpStatus":403/);
+  assert.match(forbidden.log, /PERMISSION_DENIED/);
+  assert.equal(forbidden.log.includes("ya29.super-secret-token"), false);
+
+  const disabled = await captureAccounts(async () => ({
+    status: 403,
+    body: {
+      error: {
+        code: 403,
+        status: "PERMISSION_DENIED",
+        message: "API disabled for owner@frizeo.ro token ya29.super-secret-token https://console.developers.google.com/apis/api/x?key=secret",
+        details: [{ reason: "SERVICE_DISABLED", metadata: { quota_limit_value: "0" } }],
+      },
+    },
+  }));
+  assert.equal(disabled.result.ok, false);
+  if (!disabled.result.ok) {
+    assert.equal(disabled.result.reason, "api_disabled");
+    assert.equal(disabled.result.googleReason, "SERVICE_DISABLED");
+    assert.equal(disabled.result.googleMessage.includes("owner@frizeo.ro"), false);
+    assert.equal(disabled.result.googleMessage.includes("ya29"), false);
+    assert.equal(disabled.result.googleMessage.includes("http"), false);
+  }
+  assert.equal(disabled.log.includes("owner@frizeo.ro"), false);
+  assert.equal(disabled.log.includes("ya29"), false);
+  assert.equal(disabled.log.includes("key=secret"), false);
+
+  const unapproved = await captureAccounts(async () => ({
+    status: 403,
+    body: {
+      error: {
+        code: 403,
+        status: "PERMISSION_DENIED",
+        message: "Quota exceeded",
+        details: [{ reason: "RATE_LIMIT_EXCEEDED", metadata: { quota_limit_value: "0" } }],
+      },
+    },
+  }));
+  assert.equal(unapproved.result.ok, false);
+  if (!unapproved.result.ok) assert.equal(unapproved.result.reason, "access_not_approved");
+});
+
+test("google account list reports 429 and network failures without turning them into an empty list", async () => {
+  const limited = await captureAccounts(async () => ({
+    status: 429,
+    body: {
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded for quota metric Requests",
+      },
+    },
+  }));
+  assert.equal(limited.result.ok, false);
+  if (!limited.result.ok) {
+    assert.equal(limited.result.reason, "rate_limited");
+    assert.equal(limited.result.httpStatus, 429);
+    assert.equal(limited.result.googleCode, 429);
+  }
+  assert.match(limited.log, /"httpStatus":429/);
+  assert.match(limited.log, /Quota exceeded for quota metric Requests/);
+  assert.equal(limited.log.includes("ya29.super-secret-token"), false);
+
+  const quotaZero = await captureAccounts(async () => ({
+    status: 429,
+    body: {
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        message: "Quota exceeded",
+        details: [{ reason: "RATE_LIMIT_EXCEEDED", metadata: { quota_limit_value: "0" } }],
+      },
+    },
+  }));
+  assert.equal(quotaZero.result.ok, false);
+  if (!quotaZero.result.ok) assert.equal(quotaZero.result.reason, "access_not_approved");
+
+  const network = await captureAccounts(async () => {
+    throw new Error("connect ECONNRESET ya29.super-secret-token owner@frizeo.ro");
+  });
+  assert.equal(network.result.ok, false);
+  if (!network.result.ok) {
+    assert.equal(network.result.reason, "network");
+    assert.equal(network.result.httpStatus, null);
+    assert.equal(network.result.googleMessage, null);
+  }
+  assert.equal(network.log.includes("ya29"), false);
+  assert.equal(network.log.includes("ECONNRESET"), false);
+  assert.equal(network.log.includes("owner@frizeo.ro"), false);
+  assert.equal(Array.isArray(network.result.accounts), false);
 });

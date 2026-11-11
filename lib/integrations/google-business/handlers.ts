@@ -22,9 +22,11 @@ import {
 import {
   buildGoogleAuthorizeUrl,
   decideGoogleConnect,
+  googleAccountsFailureNotice,
   planGoogleDestinationSave,
   presentGooglePublishJob,
   stagingGoogleSettingsUrl,
+  type GoogleAccountsFailureReason,
   type GoogleNotice,
 } from "@/lib/integrations/google-business/flow";
 import {
@@ -41,6 +43,13 @@ import {
 function googleRedirect(notice: GoogleNotice): NextResponse {
   const key = notice === "select" || notice === "saved" ? "google" : "google_error";
   return NextResponse.redirect(stagingGoogleSettingsUrl({ [key]: notice }), 303);
+}
+
+function accountsFailureStatus(reason: GoogleAccountsFailureReason): number {
+  if (reason === "rate_limited") return 429;
+  if (reason === "network") return 504;
+  if (reason === "forbidden" || reason === "api_disabled" || reason === "access_not_approved") return 403;
+  return 502;
 }
 
 async function googleCapabilityEnabled(tenantId: string): Promise<boolean> {
@@ -182,13 +191,9 @@ export async function finishGoogleCallback(request: Request) {
     return googleRedirect("exchange_failed");
   }
 
-  let accounts;
-  try {
-    accounts = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: token.accessToken });
-  } catch {
-    return googleRedirect("timeout");
-  }
-  const account = accounts[0];
+  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: token.accessToken });
+  if (!listed.ok) return googleRedirect(googleAccountsFailureNotice(listed.reason));
+  const account = listed.accounts[0];
   if (!account) return googleRedirect("no_locations");
   const saved = await upsertGoogleConnection({
     tenantId: context.session.tenantId,
@@ -228,14 +233,15 @@ export async function listGoogleBusinessLocations(_request: Request) {
   if (secret.expiresAt && new Date(secret.expiresAt).getTime() <= Date.now()) {
     return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
   }
-  let accounts;
-  try {
-    accounts = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
-  } catch {
-    return NextResponse.json({ error: "timeout" }, { status: 504 });
+  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
+  if (!listed.ok) {
+    return NextResponse.json(
+      { error: googleAccountsFailureNotice(listed.reason) },
+      { status: accountsFailureStatus(listed.reason) },
+    );
   }
   const locations = [];
-  for (const account of accounts) {
+  for (const account of listed.accounts) {
     try {
       locations.push(...await listGoogleLocations({
         http: createGoogleHttp(),
@@ -273,14 +279,18 @@ export async function selectGoogleDestinations(request: Request) {
     : [];
   const secret = await readGoogleAccessToken(context.session.tenantId);
   if (!secret.ok) return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
-  let accounts;
-  try {
-    accounts = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
-  } catch {
-    return NextResponse.json({ error: "timeout" }, { status: 504 });
+  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
+  if (!listed.ok) {
+    return NextResponse.json(
+      { error: googleAccountsFailureNotice(listed.reason) },
+      { status: accountsFailureStatus(listed.reason) },
+    );
+  }
+  if (listed.accounts.length === 0) {
+    return NextResponse.json({ error: "no_locations" }, { status: 409 });
   }
   const discovered = [];
-  for (const account of accounts) {
+  for (const account of listed.accounts) {
     discovered.push(...await listGoogleLocations({
       http: createGoogleHttp(),
       accessToken: secret.accessToken,

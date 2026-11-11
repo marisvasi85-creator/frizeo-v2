@@ -3,10 +3,10 @@ import {
   type GoogleBusinessConfig,
 } from "@/lib/integrations/google-business/config";
 import {
-  parseGoogleAccounts,
+  classifyGoogleAccountsResponse,
   parseGoogleLocations,
   parseGoogleToken,
-  type GoogleBusinessAccount,
+  type GoogleAccountsResult,
   type GoogleBusinessLocation,
   type ParsedGoogleToken,
 } from "@/lib/integrations/google-business/flow";
@@ -55,17 +55,52 @@ export async function exchangeGoogleCode(input: {
   return parseGoogleToken(response.body);
 }
 
+function logGoogleAccountsFailure(result: Extract<GoogleAccountsResult, { ok: false }>, secret: string): void {
+  console.error(JSON.stringify({
+    source: "google_business_accounts",
+    httpStatus: result.httpStatus,
+    googleCode: result.googleCode,
+    googleStatus: result.googleStatus,
+    googleReason: result.googleReason,
+    googleMessage: result.googleMessage?.includes(secret)
+      ? result.googleMessage.split(secret).join("[redacted]")
+      : result.googleMessage,
+    reason: result.reason,
+  }));
+}
+
 export async function listGoogleAccounts(input: {
   http: GoogleHttp;
   accessToken: string;
-}): Promise<GoogleBusinessAccount[]> {
-  const response = await input.http({
-    url: "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
-    method: "GET",
-    headers: { Authorization: `Bearer ${input.accessToken}` },
-  });
-  if (response.status < 200 || response.status >= 300) return [];
-  return parseGoogleAccounts(response.body);
+}): Promise<GoogleAccountsResult> {
+  let response: { status: number; body: unknown };
+  try {
+    response = await input.http({
+      url: "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+      method: "GET",
+      headers: { Authorization: `Bearer ${input.accessToken}` },
+    });
+  } catch {
+    const failure: GoogleAccountsResult = {
+      ok: false,
+      reason: "network",
+      httpStatus: null,
+      googleCode: null,
+      googleStatus: null,
+      googleReason: null,
+      googleMessage: null,
+    };
+    logGoogleAccountsFailure(failure, input.accessToken);
+    return failure;
+  }
+  const result = classifyGoogleAccountsResponse(response.status, response.body);
+  if (!result.ok) {
+    if (result.googleMessage) {
+      result.googleMessage = result.googleMessage.split(input.accessToken).join("[redacted]");
+    }
+    logGoogleAccountsFailure(result, input.accessToken);
+  }
+  return result;
 }
 
 export async function listGoogleLocations(input: {
