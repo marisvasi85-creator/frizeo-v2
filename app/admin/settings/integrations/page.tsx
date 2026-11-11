@@ -23,6 +23,12 @@ import {
   type MetaNotice,
 } from "@/lib/integrations/meta/flow";
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
+import { assertTikTokConfig } from "@/lib/integrations/tiktok/config";
+import {
+  decideTikTokConnect,
+  publicTikTokConnection,
+  type TikTokNotice,
+} from "@/lib/integrations/tiktok/flow";
 import { presentConnection } from "@/lib/integrations/presentation";
 import { safeErrorText } from "@/lib/integrations/redaction";
 import {
@@ -89,6 +95,24 @@ const GOOGLE_NOTICES: Record<GoogleNotice, string> = {
   calendar_scope: "Tokenul include Google Calendar. Conexiunea Business Profile nu a fost salvată.",
 };
 
+const TIKTOK_NOTICES: Record<TikTokNotice, string> = {
+  connected: "Contul TikTok a fost conectat pentru acest salon. Publicarea rămâne oprită.",
+  denied: "Autorizarea TikTok a fost refuzată. Nu s-a creat o conexiune.",
+  expired: "Sesiunea de conectare TikTok a expirat.",
+  consumed: "Sesiunea de conectare TikTok a fost deja folosită.",
+  mismatch: "Conectarea TikTok nu corespunde utilizatorului sau salonului curent.",
+  exchange_failed: "TikTok nu a confirmat tokenul. Conexiunea nu a fost salvată.",
+  permissions: "TikTok nu a acordat exact permisiunea de identificare a contului. Conexiunea nu a fost salvată.",
+  unconfigured: "TikTok nu este configurat pe server.",
+  forbidden: "Doar owner sau manager pot administra conexiunea TikTok.",
+  production: "Conectarea TikTok nu este activă în producție.",
+  disconnected: "Accesul local TikTok a fost eliminat. Publicarea rămâne oprită.",
+  invalid: "Conectarea TikTok nu a putut fi finalizată.",
+  unknown_expiry: "TikTok nu a comunicat expirarea tokenului. Conexiunea nu a fost salvată.",
+  account_mismatch: "TikTok nu a confirmat același cont. Conexiunea nu a fost salvată.",
+  network: "TikTok nu a putut fi contactat. Conexiunea nu a fost salvată.",
+};
+
 const STATUS_LABEL: Record<string, string> = {
   not_connected: "Neconectat",
   connected: "Conectat",
@@ -100,7 +124,14 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function IntegrationSettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ meta?: string; meta_error?: string; google?: string; google_error?: string }>;
+  searchParams: Promise<{
+    meta?: string;
+    meta_error?: string;
+    google?: string;
+    google_error?: string;
+    tiktok?: string;
+    tiktok_error?: string;
+  }>;
 }) {
   const session = await getAdminSession();
   if (!session?.user) redirect("/login");
@@ -111,6 +142,7 @@ export default async function IntegrationSettingsPage({
   const params = await searchParams;
   const notice = noticeFrom(params.meta) ?? noticeFrom(params.meta_error);
   const googleNotice = googleNoticeFrom(params.google) ?? googleNoticeFrom(params.google_error);
+  const tiktokNotice = tiktokNoticeFrom(params.tiktok) ?? tiktokNoticeFrom(params.tiktok_error);
   const [connections, capabilities, destinations, googleDestinations] = await Promise.all([
     loadConnections(session.tenantId),
     loadCapabilities(session.tenantId),
@@ -141,6 +173,21 @@ export default async function IntegrationSettingsPage({
     production,
   });
   const googleStatus = googleConnection?.status ?? "not_connected";
+  const tiktokConfigured = assertTikTokConfig(process.env, { production }).ok;
+  const tiktokGate = decideTikTokConnect({
+    authenticated: true,
+    role: session.role,
+    configured: tiktokConfigured,
+    production,
+  });
+  const tiktokConnection = connections.find((row) => row.provider === "tiktok") ?? null;
+  const tiktokPublic = tiktokConnection
+    ? publicTikTokConnection({
+        displayName: tiktokConnection.displayName,
+        status: tiktokConnection.status,
+        scopes: tiktokConnection.scopes,
+      })
+    : null;
 
   return (
     <div className="space-y-6">
@@ -156,6 +203,11 @@ export default async function IntegrationSettingsPage({
       {googleNotice && (
         <p className="rounded-xl border border-frz-line bg-frz-card px-4 py-3 text-sm text-frz-ink">
           {GOOGLE_NOTICES[googleNotice]}
+        </p>
+      )}
+      {tiktokNotice && (
+        <p className="rounded-xl border border-frz-line bg-frz-card px-4 py-3 text-sm text-frz-ink">
+          {TIKTOK_NOTICES[tiktokNotice]}
         </p>
       )}
 
@@ -277,8 +329,57 @@ export default async function IntegrationSettingsPage({
         </div>
       </AdminCard>
 
+      <AdminCard>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-frz-ink">TikTok</h2>
+            <p className="mt-1 text-sm text-frz-muted">
+              Status: {STATUS_LABEL[tiktokConnection?.status ?? "not_connected"] ?? tiktokConnection?.status}
+            </p>
+            <p className="mt-1 text-sm text-frz-muted">
+              Publicare: {capabilities["marketing.publish.tiktok"] ? "activă" : "oprită"}
+            </p>
+            {tiktokPublic?.displayName && (
+              <p className="mt-2 text-sm text-frz-ink">Cont conectat: {tiktokPublic.displayName}</p>
+            )}
+            {tiktokPublic && tiktokPublic.scopes.length > 0 && (
+              <p className="mt-1 text-sm text-frz-muted">
+                Permisiuni acordate: {tiktokPublic.scopes.join(", ")}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tiktokGate.ok && (
+              <form action="/api/integrations/tiktok/connect" method="post">
+                <AdminButton type="submit" variant={tiktokConnection ? "secondary" : "primary"}>
+                  {tiktokConnection ? "Reconectează" : "Conectează TikTok"}
+                </AdminButton>
+              </form>
+            )}
+            {tiktokGate.ok && tiktokConnection && (
+              <form action="/api/integrations/tiktok/disconnect" method="post">
+                <AdminButton type="submit" variant="ghost">Deconectează</AdminButton>
+              </form>
+            )}
+            {!tiktokGate.ok && !tiktokConnection && (
+              <>
+                <AdminButton type="button" variant="secondary" disabled>Conectează</AdminButton>
+                <AdminButton type="button" variant="ghost" disabled>Reconectează</AdminButton>
+                <AdminButton type="button" variant="ghost" disabled>Deconectează</AdminButton>
+              </>
+            )}
+          </div>
+          {!tiktokGate.ok && (
+            <p className="text-sm text-frz-muted">
+              {TIKTOK_NOTICES[tiktokGate.reason === "production" ? "production" : tiktokGate.reason === "forbidden" ? "forbidden" : "unconfigured"]}
+              {" "}Publicarea rămâne oprită.
+            </p>
+          )}
+        </div>
+      </AdminCard>
+
       <div className="grid gap-4">
-        {INTEGRATION_PROVIDERS.filter((provider) => provider !== "meta" && provider !== "google_business").map((provider) => {
+        {INTEGRATION_PROVIDERS.filter((provider) => provider !== "meta" && provider !== "google_business" && provider !== "tiktok").map((provider) => {
           const connection = connections.find((row) => row.provider === provider) ?? null;
           const view = presentConnection(connection?.status ?? null);
           const publishCapability = publishFlag(provider, capabilities);
@@ -324,6 +425,11 @@ function noticeFrom(value: string | undefined): MetaNotice | null {
 function googleNoticeFrom(value: string | undefined): GoogleNotice | null {
   if (!value || !(value in GOOGLE_NOTICES)) return null;
   return value as GoogleNotice;
+}
+
+function tiktokNoticeFrom(value: string | undefined): TikTokNotice | null {
+  if (!value || !(value in TIKTOK_NOTICES)) return null;
+  return value as TikTokNotice;
 }
 
 function publishFlag(provider: IntegrationProvider, capabilities: CapabilityMap): boolean {

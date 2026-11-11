@@ -1,0 +1,124 @@
+import {
+  decryptIntegrationSecret,
+  encryptIntegrationSecret,
+} from "@/lib/integrations/crypto";
+import { encodeTikTokToken } from "@/lib/integrations/tiktok/flow";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? value as Record<string, unknown> : null;
+}
+
+export function encryptTikTokSecret(plaintext: string): { ciphertext: string; nonce: string } | null {
+  const encrypted = encryptIntegrationSecret(plaintext);
+  if ("error" in encrypted) return null;
+  return {
+    ciphertext: encrypted.ciphertext.toString("base64"),
+    nonce: encrypted.nonce.toString("base64"),
+  };
+}
+
+export function decryptTikTokSecret(ciphertext: string, nonce: string): string | null {
+  const plaintext = decryptIntegrationSecret({
+    ciphertext: Buffer.from(ciphertext, "base64"),
+    nonce: Buffer.from(nonce, "base64"),
+    keyVersion: 1,
+  });
+  return typeof plaintext === "string" && plaintext.length > 0 ? plaintext : null;
+}
+
+export async function insertTikTokOAuthState(input: {
+  tenantId: string;
+  userId: string;
+  stateHash: string;
+  pkceCiphertext: string;
+  pkceNonce: string;
+  expiresAt: string;
+}): Promise<boolean> {
+  const { error } = await supabaseAdmin.rpc("tiktok_oauth_state_insert", {
+    p_tenant_id: input.tenantId,
+    p_user_id: input.userId,
+    p_state_hash: input.stateHash,
+    p_pkce_ciphertext: input.pkceCiphertext,
+    p_pkce_nonce: input.pkceNonce,
+    p_expires_at: input.expiresAt,
+  });
+  if (error) {
+    console.error("tiktok_oauth_state_insert_failed");
+    return false;
+  }
+  return true;
+}
+
+export async function consumeTikTokOAuthState(stateHash: string): Promise<
+  | { outcome: "ok"; tenantId: string; userId: string; pkceCiphertext: string; pkceNonce: string }
+  | { outcome: "missing" | "consumed" | "expired" | "provider_mismatch" }
+> {
+  const { data, error } = await supabaseAdmin.rpc("tiktok_oauth_state_consume", {
+    p_state_hash: stateHash,
+  });
+  const row = asRecord(data);
+  if (error || !row) return { outcome: "missing" };
+  if (row.outcome === "ok" && row.provider === "tiktok") {
+    return {
+      outcome: "ok",
+      tenantId: String(row.tenant_id ?? ""),
+      userId: String(row.user_id ?? ""),
+      pkceCiphertext: String(row.pkce_ciphertext ?? ""),
+      pkceNonce: String(row.pkce_nonce ?? ""),
+    };
+  }
+  if (row.outcome === "consumed" || row.outcome === "expired" || row.outcome === "provider_mismatch") {
+    return { outcome: row.outcome };
+  }
+  return { outcome: "missing" };
+}
+
+export async function upsertTikTokConnection(input: {
+  tenantId: string;
+  userId: string;
+  openId: string;
+  displayName: string;
+  scopes: string[];
+  tokenExpiresAt: string;
+  accessToken: string;
+  refreshToken: string;
+  refreshExpiresIn: number | null;
+}): Promise<boolean> {
+  const encrypted = encryptTikTokSecret(encodeTikTokToken({
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+    obtainedAt: new Date().toISOString(),
+    refreshExpiresIn: input.refreshExpiresIn,
+  }));
+  if (!encrypted) return false;
+  const { error } = await supabaseAdmin.rpc("tiktok_upsert_connection", {
+    p_tenant_id: input.tenantId,
+    p_provider_account_id: input.openId,
+    p_display_name: input.displayName,
+    p_status: "connected",
+    p_scopes: input.scopes,
+    p_connected_by: input.userId,
+    p_token_expires_at: input.tokenExpiresAt,
+    p_last_error: null,
+    p_ciphertext: encrypted.ciphertext,
+    p_nonce: encrypted.nonce,
+    p_key_version: 1,
+  });
+  if (error) {
+    console.error("tiktok_upsert_connection_failed");
+    return false;
+  }
+  return true;
+}
+
+export async function deleteTikTokConnection(tenantId: string): Promise<boolean> {
+  const { error } = await supabaseAdmin.rpc("tiktok_disconnect", {
+    p_tenant_id: tenantId,
+  });
+  if (error) {
+    console.error("tiktok_disconnect_failed");
+    return false;
+  }
+  return true;
+}
