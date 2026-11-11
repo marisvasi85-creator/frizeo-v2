@@ -9,6 +9,7 @@ export type MarketingPublishHandoff = {
   mimeType: "image/png" | "image/jpeg";
   imageBase64: string;
   bookingUrl?: string | null;
+  publishDestination?: "google_business_location";
 };
 
 type StorageLike = {
@@ -50,6 +51,7 @@ export function writeMarketingPublishHandoff(
     bytes: Uint8Array;
     mimeType: MarketingPublishHandoff["mimeType"];
     bookingUrl?: string | null;
+    publishDestination?: "google_business_location" | null;
   },
 ): boolean {
   if (input.bytes.length === 0 || input.bytes.length > MAX_IMAGE_BYTES) return false;
@@ -61,6 +63,9 @@ export function writeMarketingPublishHandoff(
     mimeType: input.mimeType,
     imageBase64: bytesToBase64(input.bytes),
     ...(bookingUrl ? { bookingUrl } : {}),
+    ...(input.publishDestination === "google_business_location"
+      ? { publishDestination: "google_business_location" as const }
+      : {}),
   };
   try {
     storage.setItem(HANDOFF_KEY, JSON.stringify(payload));
@@ -87,6 +92,9 @@ export function takeMarketingPublishHandoff(storage: StorageLike): MarketingPubl
       mimeType: parsed.mimeType,
       imageBase64: parsed.imageBase64,
       ...(bookingUrl ? { bookingUrl } : {}),
+      ...(parsed.publishDestination === "google_business_location"
+        ? { publishDestination: "google_business_location" as const }
+        : {}),
     };
   } catch {
     return null;
@@ -98,6 +106,7 @@ export function saveMarketingPublishHandoff(input: {
   bytes: Uint8Array;
   mimeType: MarketingPublishHandoff["mimeType"];
   bookingUrl?: string | null;
+  publishDestination?: "google_business_location" | null;
 }): boolean {
   if (typeof sessionStorage === "undefined") return false;
   return writeMarketingPublishHandoff(sessionStorage, input);

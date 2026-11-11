@@ -128,6 +128,26 @@ test("publish caption and card drop markdown bold before Meta sees them", () => 
   assert.equal(withoutMarkdownBold("**Frizeo**"), "Frizeo");
 });
 
+test("google handoff keeps the image and marks the business location", () => {
+  const storage = memoryStorage();
+  assert.equal(writeMarketingPublishHandoff(storage, {
+    caption: "Programare la salon",
+    bytes: Uint8Array.from([4]),
+    mimeType: "image/jpeg",
+    bookingUrl: "https://frizeo.ro/booking/demo",
+    publishDestination: "google_business_location",
+  }), true);
+  const handoff = takeMarketingPublishHandoff(storage);
+  assert.equal(handoff?.publishDestination, "google_business_location");
+  assert.equal(handoff?.bookingUrl, "https://frizeo.ro/booking/demo");
+  assert.equal(writeMarketingPublishHandoff(storage, {
+    caption: "Doar Meta",
+    bytes: Uint8Array.from([4]),
+    mimeType: "image/png",
+  }), true);
+  assert.equal(takeMarketingPublishHandoff(storage)?.publishDestination, undefined);
+});
+
 test("publish page receives the handoff and does not publish it", () => {
   const client = readFileSync(join(root, "app/admin/marketing-ai/MarketingAIClient.tsx"), "utf8");
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");

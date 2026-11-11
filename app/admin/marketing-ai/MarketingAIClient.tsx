@@ -100,6 +100,7 @@ export default function MarketingAIClient({
   usage: initialUsage,
   initialSocialLinks,
   initialHistory,
+  googleBusinessConnected,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -109,6 +110,7 @@ export default function MarketingAIClient({
   usage: UsageStatus;
   initialSocialLinks: SocialLinks;
   initialHistory: MarketingAIHistoryBatch[];
+  googleBusinessConnected: boolean;
 }) {
   const router = useRouter();
   const seasonal = useMemo(() => getSeasonalActions(), []);
@@ -384,6 +386,7 @@ export default function MarketingAIClient({
         setError("Nu am putut pregăti imaginea pentru publicare.");
         return;
       }
+      const googleBusiness = exportChannel === "google_business";
       const bookingUrl = trackedLinks.instagram || cardBranding.bookingUrl;
       const copy = publishImageCopy({
         title: draft.title,
@@ -406,15 +409,23 @@ export default function MarketingAIClient({
       const image = jpeg ?? card;
       const mimeType = jpeg ? "image/jpeg" : "image/png";
       const saved = saveMarketingPublishHandoff({
-        caption: publishCaption({
-          content: draft.content,
-          callToAction: draft.callToAction,
-          hashtags: draft.hashtags,
-          bookingUrl,
-        }),
+        caption: (googleBusiness
+          ? publishCaption({
+            content: draft.content,
+            callToAction: draft.callToAction,
+            hashtags: [],
+            bookingUrl: null,
+          })
+          : publishCaption({
+            content: draft.content,
+            callToAction: draft.callToAction,
+            hashtags: draft.hashtags,
+            bookingUrl,
+          })).slice(0, googleBusiness ? 1500 : undefined),
         bytes: new Uint8Array(await image.arrayBuffer()),
         mimeType,
         bookingUrl,
+        ...(googleBusiness ? { publishDestination: "google_business_location" as const } : {}),
       });
       if (!saved) {
         setError("Imaginea nu a putut fi transferată. Publicarea nu a pornit.");
@@ -586,6 +597,19 @@ export default function MarketingAIClient({
               </button>
             ))}
           </div>
+          {channel === "google_business" && (
+            <div className="space-y-2 text-sm text-frz-ink">
+              <p>Textul pentru Google Business are maximum 1500 de caractere, cu ton profesional și îndemn la programare.</p>
+              {!googleBusinessConnected && (
+                <p>
+                  Google Business nu este conectat pentru acest salon.{" "}
+                  <AdminButton href="/admin/settings/integrations" size="sm" variant="secondary">
+                    Deschide Integrări
+                  </AdminButton>
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -697,6 +721,7 @@ export default function MarketingAIClient({
             value={draft.content}
             onChange={(event) => updateDraft({ content: event.target.value })}
             rows={8}
+            maxLength={exportChannel === "google_business" ? 1500 : undefined}
             className="w-full bg-frz-fog border border-frz-line rounded-lg px-4 py-3 text-sm"
           />
           <textarea

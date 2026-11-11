@@ -112,6 +112,7 @@ export default function PublishComposer({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [bookingUrl, setBookingUrl] = useState<string | null>(null);
+  const [needsGoogleConnection, setNeedsGoogleConnection] = useState(false);
   const [selected, setSelected] = useState<string[]>(destinations.map((item) => item.id));
   const [message, setMessage] = useState<string | null>(null);
   const [outcomes, setOutcomes] = useState<HistoryJob[]>([]);
@@ -164,8 +165,17 @@ export default function PublishComposer({
     chooseFile(new File([buffer], handoff.fileName, { type: handoff.mimeType }));
     setCaption(withoutMarkdownBold(handoff.caption));
     setBookingUrl(bookingLinkForRealPublish(handoff.bookingUrl));
-    setSelected(destinations.map((destination) => destination.id));
-    setMessage("Imaginea și textul au venit din Marketing AI. Poți bifa Facebook, Instagram sau ambele, apoi confirmă publicarea manual.");
+    const googleOnly = handoff.publishDestination === "google_business_location";
+    const nextSelected = googleOnly
+      ? destinations
+        .filter((destination) => destination.destinationType === "google_business_location")
+        .map((destination) => destination.id)
+      : destinations.map((destination) => destination.id);
+    setSelected(nextSelected);
+    setNeedsGoogleConnection(googleOnly && nextSelected.length === 0);
+    setMessage(googleOnly
+      ? "Imaginea și textul au venit din Marketing AI. Destinația este Google Business. Confirmă publicarea manual."
+      : "Imaginea și textul au venit din Marketing AI. Poți bifa Facebook, Instagram sau ambele, apoi confirmă publicarea manual.");
   }, [destinations]);
 
   function toggle(id: string) {
@@ -556,6 +566,12 @@ export default function PublishComposer({
         Testul mock salvează o schiță locală pentru destinațiile alese. Nu se face niciun apel către Meta.
       </p>
       {message && <p className="text-sm text-frz-ink">{message}</p>}
+      {needsGoogleConnection && (
+        <p className="text-sm text-frz-ink">
+          Google Business nu este conectat pentru acest salon.{" "}
+          <a href="/admin/settings/integrations" className="underline">Deschide Integrări</a>
+        </p>
+      )}
       {outcomes.length > 0 && (
         <ul className="grid gap-2" aria-label="Rezultat pe destinație">
           {outcomes.map((job) => (

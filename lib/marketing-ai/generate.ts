@@ -16,6 +16,17 @@ export { publicGenerateError, shouldUseTemplateFallback } from "./providerErrors
 
 export { isMarketingAIConfigured, getMarketingAIStatus } from "./providers";
 
+const GOOGLE_BUSINESS_SUMMARY_MAX = 1500;
+
+function fitGoogleBusiness(variants: GenerateMarketingResult[]): GenerateMarketingResult[] {
+  return variants.map((variant) => ({
+    ...variant,
+    content: variant.content.trim().slice(0, GOOGLE_BUSINESS_SUMMARY_MAX).trim(),
+    hashtags: [],
+    callToAction: variant.callToAction.trim().slice(0, 120) || "Programează-te online.",
+  }));
+}
+
 function normalizeResult(
   parsed: Partial<GenerateMarketingResult>,
 ): GenerateMarketingResult {
@@ -93,7 +104,9 @@ export async function generateMarketingContent(
   const normalizedInput = { ...input, variantCount };
 
   if (config.provider === "template") {
-    const variants = generateTemplateVariants(context, normalizedInput);
+    const variants = input.channel === "google_business"
+      ? fitGoogleBusiness(generateTemplateVariants(context, normalizedInput))
+      : generateTemplateVariants(context, normalizedInput);
     return { variants, result: variants[0] };
   }
 
@@ -120,7 +133,9 @@ export async function generateMarketingContent(
       temperature: config.temperature,
     });
 
-    const variants = parseModelVariants(raw, variantCount);
+    const variants = input.channel === "google_business"
+      ? fitGoogleBusiness(parseModelVariants(raw, variantCount))
+      : parseModelVariants(raw, variantCount);
     // Pad with template variants if model returned fewer than expected
     if (variants.length < variantCount) {
       const fillers = generateTemplateVariants(context, normalizedInput).slice(
@@ -136,7 +151,9 @@ export async function generateMarketingContent(
     console.error("MARKETING AI PROVIDER ERROR:", message);
 
     if (shouldUseTemplateFallback(message)) {
-      const variants = generateTemplateVariants(context, normalizedInput);
+      const variants = input.channel === "google_business"
+        ? fitGoogleBusiness(generateTemplateVariants(context, normalizedInput))
+        : generateTemplateVariants(context, normalizedInput);
       return {
         variants,
         result: variants[0],

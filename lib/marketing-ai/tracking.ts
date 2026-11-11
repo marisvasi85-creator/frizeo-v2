@@ -5,6 +5,7 @@ export const MARKETING_UTM_SOURCES = [
   "whatsapp",
   "qr",
   "story",
+  "google_business",
 ] as const;
 
 export type MarketingUtmSource = (typeof MARKETING_UTM_SOURCES)[number];

@@ -65,6 +65,14 @@ export default async function MarketingAIPage() {
     duration: service.duration,
   }));
 
+  const { count: googleDestinationCount } = await supabaseAdmin
+    .from("marketing_destinations")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", barber.tenant_id)
+    .eq("provider", "google_business")
+    .eq("destination_type", "google_business_location")
+    .eq("status", "active");
+
   const aiStatus = getMarketingAIStatus();
 
   const socialSource = defaultBarberRow ?? barber;
@@ -112,6 +120,7 @@ export default async function MarketingAIPage() {
             usage={usage}
             initialSocialLinks={initialSocialLinks}
             initialHistory={initialHistory}
+            googleBusinessConnected={(googleDestinationCount ?? 0) > 0}
           />
         </>
       )}

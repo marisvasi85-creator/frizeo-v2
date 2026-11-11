@@ -95,6 +95,9 @@ function channelInstruction(
   if (channel === "tiktok") {
     return "Canal TikTok. Caption scurt. CTA: „Link în bio”. Nu pretinde că URL-ul din caption e clickabil.";
   }
+  if (channel === "google_business") {
+    return "Canal Google Business Profile. Ton profesional și natural, fără slang și fără „link în bio”. Promovează serviciile reale din listă și încheie cu un îndemn clar la programare. Nu pune URL-ul în text: butonul Rezervă este adăugat la publicare. hashtags rămâne un array gol. content are maximum 1500 de caractere.";
+  }
   return "Canal Instagram. CTA de tip „Link în bio”. Nu pretinde că URL-ul din caption este clickabil.";
 }
 
@@ -150,6 +153,9 @@ export function buildMarketingPrompt(
 
   const channel = input.channel || "instagram";
   const channelRules = channelInstruction(channel, input.trackedBookingUrl);
+  const lengthRule = channel === "google_business"
+    ? "content: maximum 1500 de caractere. Nu depăși limita."
+    : LENGTH_RULES[input.contentType];
 
   const extra = sanitizeExtraNotes(input.extraNotes);
   const extraBlock = extra
@@ -172,6 +178,10 @@ export function buildMarketingPrompt(
   const cityHashtagRule = context.cityHint
     ? `- Include hashtag cu orașul „${context.cityHint}” (ex. #${context.cityHint.replace(/\s+/g, "")}) unde e natural`
     : "- Dacă apare un oraș în adresă, folosește-l în hashtag-uri";
+  const hashtagRule = channel === "google_business"
+    ? "- hashtags: array gol"
+    : `- Hashtag-urile trebuie relevante pentru România (frizerie, barbershop)
+${cityHashtagRule}`;
 
   return `Ești copywriter pentru frizerii din România. Generează ${variantCount} variante DISTINCTE de conținut de marketing în limba română pentru: ${label}.
 
@@ -179,7 +189,7 @@ DATE SALON:
 ${formatSalonBlock(context)}
 
 TON:
-${TONE_INSTRUCTIONS[tone]}
+${TONE_INSTRUCTIONS[tone]}${channel === "google_business" ? "\nPentru Google Business, păstrează un ton profesional și natural." : ""}
 
 INSTRUCȚIUNI TIP CONȚINUT:
 ${typeInstructions[input.contentType]}
@@ -190,7 +200,7 @@ CANAL:
 ${channelRules}
 
 LUNGIME:
-${LENGTH_RULES[input.contentType]}
+${lengthRule}
 
 REGULI:
 - Variantele trebuie să difere ca hook și formulare, nu doar să schimbe 2 cuvinte
@@ -198,9 +208,8 @@ REGULI:
 - Folosește diacritice românești
 - Nu inventa prețuri, reduceri, recenzii, disponibilitate sau tipul de tunsoare dacă nu sunt în date
 - Dacă serviciul are preț afișat în date, poți menționa prețul; altfel nu inventa
-- Include mereu un call-to-action spre linkul de programare
-- Hashtag-urile trebuie relevante pentru România (frizerie, barbershop)
-${cityHashtagRule}
+- Include mereu un call-to-action spre programare
+${hashtagRule}
 - title: max 60 caractere
 - callToAction: max 120 caractere
 - Răspunde DOAR cu JSON valid, fără markdown, în formatul:

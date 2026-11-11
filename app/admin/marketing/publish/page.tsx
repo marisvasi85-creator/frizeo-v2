@@ -96,7 +96,7 @@ export default async function MarketingPublishPage() {
     <div className="grid gap-4">
       <AdminPageHeader
         title="Publicare"
-        subtitle="Facebook și Instagram. Poți aduce o postare din Marketing AI și o confirmi manual."
+        subtitle="Facebook, Instagram și Google Business. Poți aduce o postare din Marketing AI și o confirmi manual."
       />
       <AdminCard>
         {integrationEnabled && options.length > 0 ? (

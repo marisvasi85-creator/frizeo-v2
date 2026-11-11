@@ -5,6 +5,7 @@ export const MARKETING_CHANNELS = [
   "whatsapp",
   "facebook",
   "tiktok",
+  "google_business",
 ] as const;
 
 export type MarketingChannel = (typeof MARKETING_CHANNELS)[number];
@@ -16,6 +17,7 @@ export const MARKETING_CHANNEL_LABELS: Record<MarketingChannel, string> = {
   whatsapp: "WhatsApp",
   facebook: "Facebook",
   tiktok: "TikTok",
+  google_business: "Google Business",
 };
 
 export function isMarketingChannel(value: string): value is MarketingChannel {
@@ -30,6 +32,7 @@ export function channelUsesFullBookingUrl(channel: MarketingChannel): boolean {
 export function utmSourceForChannel(channel: MarketingChannel): string {
   if (channel === "reel") return "instagram";
   if (channel === "story") return "story";
+  if (channel === "google_business") return "google_business";
   return channel;
 }
 

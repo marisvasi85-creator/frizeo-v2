@@ -58,11 +58,59 @@ function cta(context: MarketingContext, input: GenerateMarketingInput): string {
   return ctaForChannel(channel, input.trackedBookingUrl || null);
 }
 
+function googleBusinessPost(
+  context: MarketingContext,
+  input: GenerateMarketingInput,
+  variantIndex: number,
+): GenerateMarketingResult {
+  const service = pickService(context, input.serviceId);
+  const listed = context.services.slice(0, 4).map((item) => item.name);
+  const promoted = service?.name || (listed.length ? listed.join(", ") : "serviciile salonului");
+  const price = service?.showPrice && service.price != null ? `, ${service.price} lei` : "";
+  const city = context.cityHint ? ` din ${context.cityHint}` : "";
+  const extra = input.extraNotes?.trim()
+    ? `\n\n${input.extraNotes.trim().slice(0, 200)}`
+    : "";
+  const slotLine = openSlotTemplateLine(input.openSlots || []);
+  const bodies = input.contentType === "open_slots"
+    ? slotLine
+      ? [
+          `La ${context.salonName} mai sunt locuri pentru ${promoted}: ${slotLine}.`,
+          `${context.barberName} are locuri în program: ${slotLine}. Serviciul rămâne ${promoted}.`,
+          `Poți rezerva ${promoted} la ${context.salonName} în zilele cu loc: ${slotLine}.`,
+        ]
+      : [
+          `Nu am o listă confirmată de locuri libere pentru ${context.barberName}.`,
+          `Programul lui ${context.barberName} nu are zile libere confirmate.`,
+          `${context.salonName} nu are o listă nouă de locuri pentru ${promoted}.`,
+        ]
+    : input.contentType === "work_promo"
+      ? [
+          `Lucrare nouă la ${context.salonName}. ${context.barberName} a terminat acum${service ? `: ${service.name}` : ""}.`,
+          `Rezultat proaspăt de la ${context.barberName}, la ${context.salonName}${service ? `. Serviciu: ${service.name}` : ""}.`,
+          `${context.barberName} arată o lucrare făcută la ${context.salonName}${service ? `, pentru ${service.name}` : ""}.`,
+        ]
+      : [
+          `${context.salonName}${city} te așteaptă cu ${promoted}${price}. ${context.barberName} lucrează pe îndelete.`,
+          `Dacă vrei ${promoted}, programarea la ${context.barberName} se face online, la ${context.salonName}.`,
+          `${promoted}${service ? ` (${service.duration} min${price})` : ""} la ${context.salonName}. ${context.barberName} te primește la ora aleasă.`,
+        ];
+  return {
+    title: variantIndex === 0 ? "Google Business" : `Google Business ${variantIndex + 1}`,
+    content: `${bodies[variantIndex % 3]}${extra}`.trim().slice(0, 1500).trim(),
+    hashtags: [],
+    callToAction: "Programează-te online.",
+  };
+}
+
 function buildByType(
   context: MarketingContext,
   input: GenerateMarketingInput,
   variantIndex: number,
 ): GenerateMarketingResult {
+  if (input.channel === "google_business") {
+    return googleBusinessPost(context, input, variantIndex);
+  }
   const service = pickService(context, input.serviceId);
   const serviceLine = service
     ? `${service.name} (${service.duration} min)`

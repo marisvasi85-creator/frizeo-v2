@@ -157,6 +157,44 @@ test("selected service is included for every content type and hidden prices stay
   assert.doesNotMatch(hidden, /120 lei/);
 });
 
+test("google business variants stay within 1500 characters and invite a booking", () => {
+  const variants = generateTemplateVariants(context, {
+    contentType: "service_promo",
+    serviceId: "svc-1",
+    channel: "google_business",
+  });
+  assert.equal(variants.length, 3);
+  assert.equal(new Set(variants.map((item) => item.content)).size, 3);
+  for (const variant of variants) {
+    assert.ok(variant.content.length <= 1500);
+    assert.match(variant.content, /Tuns/);
+    assert.match(variant.callToAction, /Programează-te/);
+    assert.equal(variant.hashtags.length, 0);
+    assert.doesNotMatch(`${variant.content} ${variant.callToAction}`, /link în bio/i);
+  }
+  const work = generateTemplateVariants(context, {
+    contentType: "work_promo",
+    channel: "google_business",
+  });
+  for (const variant of work) {
+    assert.doesNotMatch(variant.content, /fade|taper|buzz|undercut/i);
+  }
+  const prompt = buildMarketingPrompt(context, {
+    contentType: "instagram_post",
+    channel: "google_business",
+    serviceId: "svc-1",
+  });
+  assert.match(prompt, /1500/);
+  assert.match(prompt, /profesional și natural/);
+  assert.match(prompt, /programare/);
+  assert.match(prompt, /hashtags: array gol/);
+  const instagram = buildMarketingPrompt(context, {
+    contentType: "instagram_post",
+    channel: "instagram",
+  });
+  assert.match(instagram, /Link în bio/);
+});
+
 test("template variants are distinct, including season, service, work and open slots", () => {
   const batch = "22222222-2222-4222-8222-222222222222";
   for (const contentType of MARKETING_CONTENT_TYPES) {

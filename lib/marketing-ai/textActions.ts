@@ -138,5 +138,6 @@ export function ctaForChannel(
   if (channel === "reel" || channel === "tiktok") {
     return "Link în bio — programează-te.";
   }
+  if (channel === "google_business") return "Programează-te online.";
   return "Link în bio — programează-te online.";
 }
