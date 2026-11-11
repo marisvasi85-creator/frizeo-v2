@@ -80,6 +80,7 @@ export async function upsertTikTokConnection(input: {
   openId: string;
   displayName: string;
   scopes: string[];
+  uploadConsent: boolean;
   tokenExpiresAt: string;
   accessToken: string;
   refreshToken: string;
@@ -98,6 +99,8 @@ export async function upsertTikTokConnection(input: {
     p_display_name: input.displayName,
     p_status: "connected",
     p_scopes: input.scopes,
+    p_upload_consent: input.uploadConsent,
+    p_direct_post_consent: false,
     p_connected_by: input.userId,
     p_token_expires_at: input.tokenExpiresAt,
     p_last_error: null,
@@ -110,6 +113,27 @@ export async function upsertTikTokConnection(input: {
     return false;
   }
   return true;
+}
+
+export async function prepareTikTokDraft(input: {
+  tenantId: string;
+  userId: string;
+  idempotencyKey: string;
+  caption: string;
+  mediaObjectPath: string;
+}): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabaseAdmin.rpc("tiktok_publish_prepare", {
+    p_tenant_id: input.tenantId,
+    p_created_by: input.userId,
+    p_idempotency_key: input.idempotencyKey,
+    p_caption: input.caption,
+    p_media_object_path: input.mediaObjectPath,
+  });
+  if (error) {
+    console.error("tiktok_publish_prepare_failed");
+    return null;
+  }
+  return asRecord(data);
 }
 
 export async function deleteTikTokConnection(tenantId: string): Promise<boolean> {

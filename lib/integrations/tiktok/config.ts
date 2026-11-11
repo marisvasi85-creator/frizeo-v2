@@ -1,6 +1,10 @@
 import { isProduction } from "@/lib/app/environment";
 
 export const TIKTOK_SCOPE = "user.info.basic";
+export const TIKTOK_UPLOAD_SCOPE = "video.upload";
+export const TIKTOK_PUBLISH_SCOPE = "video.publish";
+export const TIKTOK_DIRECT_POST_ENABLED = false;
+export const TIKTOK_CONTENT_POSTING_LIVE = false;
 export const TIKTOK_REDIRECT_URI =
   "https://staging.frizeo.ro/api/integrations/tiktok/callback";
 export const TIKTOK_AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/";

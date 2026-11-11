@@ -1,7 +1,9 @@
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
 import {
   TIKTOK_AUTHORIZE_URL,
+  TIKTOK_PUBLISH_SCOPE,
   TIKTOK_SCOPE,
+  TIKTOK_UPLOAD_SCOPE,
   isTikTokOpenId,
   type TikTokConfig,
 } from "@/lib/integrations/tiktok/config";
@@ -21,7 +23,12 @@ export type TikTokNotice =
   | "invalid"
   | "unknown_expiry"
   | "account_mismatch"
-  | "network";
+  | "network"
+  | "upload_granted"
+  | "upload_not_granted"
+  | "direct_post_inactive";
+
+export type TikTokConsent = "identity" | "upload";
 
 export type TikTokConnectDecision =
   | { ok: true }
@@ -40,15 +47,56 @@ export function decideTikTokConnect(input: {
   return { ok: true };
 }
 
+export function scopesForConsent(consent: TikTokConsent): string {
+  if (consent === "upload") return `${TIKTOK_SCOPE},${TIKTOK_UPLOAD_SCOPE}`;
+  return TIKTOK_SCOPE;
+}
+
+export function directPostConsent(): { ok: false; reason: "direct_post_inactive" } {
+  return { ok: false, reason: "direct_post_inactive" };
+}
+
+export function readTikTokConsent(value: unknown): TikTokConsent | "direct_post" | null {
+  if (value === "upload") return "upload";
+  if (value === "identity" || value == null || value === "") return "identity";
+  if (value === "direct_post") return "direct_post";
+  return null;
+}
+
+export function encodePkceMaterial(verifier: string, consent: TikTokConsent): string {
+  return JSON.stringify({ v: 1, verifier, consent });
+}
+
+export function readPkceMaterial(plaintext: string): { verifier: string; consent: TikTokConsent } | null {
+  if (!plaintext.startsWith("{")) {
+    return plaintext.length >= 43 ? { verifier: plaintext, consent: "identity" } : null;
+  }
+  try {
+    const parsed = JSON.parse(plaintext) as { verifier?: unknown; consent?: unknown };
+    if (typeof parsed.verifier !== "string" || parsed.verifier.length < 43) return null;
+    if (parsed.consent === "upload" || parsed.consent === "identity") {
+      return { verifier: parsed.verifier, consent: parsed.consent };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildTikTokAuthorizeUrl(input: {
   config: Pick<TikTokConfig, "clientKey" | "redirectUri" | "scope">;
   state: string;
   codeChallenge: string;
+  scope?: string;
 }): string {
+  const scope = input.scope ?? input.config.scope;
+  if (scope.split(",").includes(TIKTOK_PUBLISH_SCOPE)) {
+    throw new Error("direct_post_inactive");
+  }
   const url = new URL(TIKTOK_AUTHORIZE_URL);
   url.searchParams.set("client_key", input.config.clientKey);
   url.searchParams.set("response_type", "code");
-  url.searchParams.set("scope", input.config.scope);
+  url.searchParams.set("scope", scope);
   url.searchParams.set("redirect_uri", input.config.redirectUri);
   url.searchParams.set("state", input.state);
   url.searchParams.set("code_challenge", input.codeChallenge);
@@ -72,10 +120,6 @@ export function tikTokScopes(value: string | null): string[] {
   return value.split(/[,\s]+/).map((scope) => scope.trim()).filter(Boolean);
 }
 
-export function tikTokScopeAllowed(scopes: readonly string[]): boolean {
-  return scopes.length === 1 && scopes[0] === TIKTOK_SCOPE;
-}
-
 export type ParsedTikTokToken =
   | {
       ok: true;
@@ -85,13 +129,22 @@ export type ParsedTikTokToken =
       refreshExpiresIn: number | null;
       openId: string;
       scopes: string[];
+      grantedUpload: boolean;
     }
   | {
       ok: false;
-      reason: "invalid_token" | "missing_scope" | "publish_scope" | "missing_refresh" | "missing_expiry" | "invalid_account";
+      reason:
+        | "invalid_token"
+        | "missing_scope"
+        | "publish_scope"
+        | "upload_not_requested"
+        | "unexpected_scope"
+        | "missing_refresh"
+        | "missing_expiry"
+        | "invalid_account";
     };
 
-export function parseTikTokToken(body: unknown): ParsedTikTokToken {
+export function parseTikTokToken(body: unknown, consent: TikTokConsent = "identity"): ParsedTikTokToken {
   if (!body || typeof body !== "object") return { ok: false, reason: "invalid_token" };
   const record = body as {
     error?: unknown;
@@ -109,10 +162,8 @@ export function parseTikTokToken(body: unknown): ParsedTikTokToken {
   const scopes = tikTokScopes(text(record.scope));
   if (!accessToken || !openId) return { ok: false, reason: "invalid_token" };
   if (!isTikTokOpenId(openId)) return { ok: false, reason: "invalid_account" };
-  if (scopes.some((scope) => scope.toLowerCase().includes("publish") || scope.toLowerCase().includes("video."))) {
-    return { ok: false, reason: "publish_scope" };
-  }
-  if (!tikTokScopeAllowed(scopes)) return { ok: false, reason: "missing_scope" };
+  const accepted = acceptTikTokScopes(scopes, consent);
+  if (!accepted.ok) return accepted;
   if (!refreshToken) return { ok: false, reason: "missing_refresh" };
   if (typeof record.expires_in !== "number" || !Number.isFinite(record.expires_in) || record.expires_in <= 0) {
     return { ok: false, reason: "missing_expiry" };
@@ -129,7 +180,29 @@ export function parseTikTokToken(body: unknown): ParsedTikTokToken {
     expiresIn: record.expires_in,
     refreshExpiresIn,
     openId,
-    scopes,
+    scopes: accepted.scopes,
+    grantedUpload: accepted.grantedUpload,
+  };
+}
+
+export function acceptTikTokScopes(
+  scopes: readonly string[],
+  consent: TikTokConsent,
+): { ok: true; scopes: string[]; grantedUpload: boolean } | {
+  ok: false;
+  reason: "missing_scope" | "publish_scope" | "upload_not_requested" | "unexpected_scope";
+} {
+  const unique = [...new Set(scopes)];
+  if (!unique.includes(TIKTOK_SCOPE)) return { ok: false, reason: "missing_scope" };
+  if (unique.includes(TIKTOK_PUBLISH_SCOPE)) return { ok: false, reason: "publish_scope" };
+  const extras = unique.filter((scope) => scope !== TIKTOK_SCOPE && scope !== TIKTOK_UPLOAD_SCOPE);
+  if (extras.length > 0) return { ok: false, reason: "unexpected_scope" };
+  const grantedUpload = unique.includes(TIKTOK_UPLOAD_SCOPE);
+  if (grantedUpload && consent !== "upload") return { ok: false, reason: "upload_not_requested" };
+  return {
+    ok: true,
+    scopes: grantedUpload ? [TIKTOK_SCOPE, TIKTOK_UPLOAD_SCOPE] : [TIKTOK_SCOPE],
+    grantedUpload,
   };
 }
 
@@ -197,7 +270,7 @@ export function publicTikTokConnection(input: {
   return {
     displayName: input.displayName,
     status: input.status,
-    scopes: input.scopes.filter((scope) => scope === TIKTOK_SCOPE),
+    scopes: input.scopes.filter((scope) => scope === TIKTOK_SCOPE || scope === TIKTOK_UPLOAD_SCOPE),
   };
 }
 

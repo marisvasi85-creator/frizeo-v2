@@ -8,6 +8,7 @@ import {
   parseTikTokUser,
   redactTikTokErrorMessage,
   type ParsedTikTokToken,
+  type TikTokConsent,
 } from "@/lib/integrations/tiktok/flow";
 
 export type TikTokHttp = (input: {
@@ -61,6 +62,7 @@ export async function exchangeTikTokCode(input: {
   config: TikTokConfig;
   code: string;
   codeVerifier: string;
+  consent?: TikTokConsent;
 }): Promise<ParsedTikTokToken | { ok: false; reason: "network" }> {
   let response: { status: number; body: unknown };
   try {
@@ -86,7 +88,7 @@ export async function exchangeTikTokCode(input: {
     logTikTokFailure("tiktok_token_exchange", response.status, response.body, input.config.clientSecret);
     return { ok: false, reason: "invalid_token" };
   }
-  const parsed = parseTikTokToken(response.body);
+  const parsed = parseTikTokToken(response.body, input.consent ?? "identity");
   if (!parsed.ok) {
     logTikTokFailure("tiktok_token_exchange", response.status, response.body, input.config.clientSecret);
   }

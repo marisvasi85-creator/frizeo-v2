@@ -9,7 +9,12 @@ import { createTikTokHttp, exchangeTikTokCode, fetchTikTokUser } from "@/lib/int
 import {
   buildTikTokAuthorizeUrl,
   decideTikTokConnect,
+  encodePkceMaterial,
+  readPkceMaterial,
+  readTikTokConsent,
+  scopesForConsent,
   stagingTikTokSettingsUrl,
+  type TikTokConsent,
   type TikTokNotice,
 } from "@/lib/integrations/tiktok/flow";
 import {
@@ -18,6 +23,7 @@ import {
   deleteTikTokConnection,
   encryptTikTokSecret,
   insertTikTokOAuthState,
+  prepareTikTokDraft,
   upsertTikTokConnection,
 } from "@/lib/integrations/tiktok/store";
 
@@ -66,13 +72,19 @@ export async function startTikTokConnect(request: Request) {
     return tikTokRedirect(notice);
   }
 
+  const form = await request.formData().catch(() => null);
+  const consentChoice = readTikTokConsent(form?.get("consent"));
+  if (consentChoice === "direct_post") return tikTokRedirect("direct_post_inactive");
+  if (!consentChoice) return tikTokRedirect("invalid");
+  const consent: TikTokConsent = consentChoice;
+
   const issued = createOAuthState({
     tenantId: context.session.tenantId,
     userId: context.session.user.id,
     provider: "tiktok",
   });
   if ("error" in issued) return tikTokRedirect("unconfigured");
-  const encrypted = encryptTikTokSecret(issued.pkceVerifier);
+  const encrypted = encryptTikTokSecret(encodePkceMaterial(issued.pkceVerifier, consent));
   if (!encrypted) return tikTokRedirect("unconfigured");
   const stored = await insertTikTokOAuthState({
     tenantId: context.session.tenantId,
@@ -87,6 +99,7 @@ export async function startTikTokConnect(request: Request) {
     config: context.config,
     state: issued.state,
     codeChallenge: issued.pkceChallenge,
+    scope: scopesForConsent(consent),
   }), 303);
 }
 
@@ -124,22 +137,32 @@ export async function finishTikTokCallback(request: Request) {
   if (consumed.tenantId !== context.session.tenantId || consumed.userId !== context.session.user.id) {
     return tikTokRedirect("mismatch");
   }
-  const verifier = decryptTikTokSecret(consumed.pkceCiphertext, consumed.pkceNonce);
-  if (!verifier) return tikTokRedirect("invalid");
+  const material = decryptTikTokSecret(consumed.pkceCiphertext, consumed.pkceNonce);
+  const pkce = material ? readPkceMaterial(material) : null;
+  if (!pkce) return tikTokRedirect("invalid");
 
   const token = await exchangeTikTokCode({
     http: createTikTokHttp(),
     config: context.config,
     code,
-    codeVerifier: verifier,
+    codeVerifier: pkce.verifier,
+    consent: pkce.consent,
   });
   if (!token.ok) {
     if (token.reason === "network") return tikTokRedirect("network");
-    if (token.reason === "missing_scope" || token.reason === "publish_scope") return tikTokRedirect("permissions");
+    if (
+      token.reason === "missing_scope"
+      || token.reason === "publish_scope"
+      || token.reason === "upload_not_requested"
+      || token.reason === "unexpected_scope"
+    ) return tikTokRedirect("permissions");
     if (token.reason === "missing_expiry") return tikTokRedirect("unknown_expiry");
     if (token.reason === "invalid_account") return tikTokRedirect("account_mismatch");
     return tikTokRedirect("exchange_failed");
   }
+
+  const granted = parseStoredScopes(token.scopes, pkce.consent);
+  if (!granted) return tikTokRedirect("permissions");
 
   const user = await fetchTikTokUser({
     http: createTikTokHttp(),
@@ -156,14 +179,66 @@ export async function finishTikTokCallback(request: Request) {
     userId: context.session.user.id,
     openId: user.openId,
     displayName: user.displayName,
-    scopes: [TIKTOK_SCOPE],
+    scopes: granted.scopes,
+    uploadConsent: granted.uploadConsent,
     tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000).toISOString(),
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
     refreshExpiresIn: token.refreshExpiresIn,
   });
   if (!saved) return tikTokRedirect("invalid");
+  if (pkce.consent === "upload" && granted.uploadConsent) return tikTokRedirect("upload_granted");
+  if (pkce.consent === "upload") return tikTokRedirect("upload_not_granted");
   return tikTokRedirect("connected");
+}
+
+function parseStoredScopes(
+  scopes: string[],
+  consent: TikTokConsent,
+): { scopes: string[]; uploadConsent: boolean } | null {
+  if (!scopes.includes(TIKTOK_SCOPE) || scopes.includes("video.publish")) return null;
+  const upload = scopes.includes("video.upload");
+  if (upload && consent !== "upload") return null;
+  if (scopes.some((scope) => scope !== TIKTOK_SCOPE && scope !== "video.upload")) return null;
+  return {
+    scopes: upload ? [TIKTOK_SCOPE, "video.upload"] : [TIKTOK_SCOPE],
+    uploadConsent: upload,
+  };
+}
+
+export async function prepareTikTokInboxDraft(request: Request) {
+  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  const session = await getAdminSession();
+  if (!session?.user || !session.tenantId) {
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  if (!canAdministerIntegrations(session.role)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  const limited = await enforceRateLimit(request, {
+    bucket: "tiktok-draft",
+    limit: 10,
+    windowSeconds: 600,
+    identifier: session.user.id,
+  });
+  if (limited) return limited;
+  const body = await request.json().catch(() => null) as {
+    idempotencyKey?: unknown;
+    caption?: unknown;
+    mediaObjectPath?: unknown;
+  } | null;
+  if (!body || typeof body.idempotencyKey !== "string" || typeof body.caption !== "string" || typeof body.mediaObjectPath !== "string") {
+    return NextResponse.json({ error: "invalid", externalCall: false }, { status: 400 });
+  }
+  const prepared = await prepareTikTokDraft({
+    tenantId: session.tenantId,
+    userId: session.user.id,
+    idempotencyKey: body.idempotencyKey,
+    caption: body.caption,
+    mediaObjectPath: body.mediaObjectPath,
+  });
+  if (!prepared) return NextResponse.json({ error: "invalid", externalCall: false }, { status: 400 });
+  return NextResponse.json({ ...prepared, externalCall: false });
 }
 
 export async function disconnectTikTok(_request: Request) {

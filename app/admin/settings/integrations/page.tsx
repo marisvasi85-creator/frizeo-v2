@@ -111,6 +111,9 @@ const TIKTOK_NOTICES: Record<TikTokNotice, string> = {
   unknown_expiry: "TikTok nu a comunicat expirarea tokenului. Conexiunea nu a fost salvată.",
   account_mismatch: "TikTok nu a confirmat același cont. Conexiunea nu a fost salvată.",
   network: "TikTok nu a putut fi contactat. Conexiunea nu a fost salvată.",
+  upload_granted: "TikTok a permis încărcarea ca draft. Publicarea directă rămâne oprită.",
+  upload_not_granted: "TikTok nu a acordat încărcarea. Contul rămâne doar identificat.",
+  direct_post_inactive: "Direct Post nu este activat. Permisiunea de publicare nu a fost cerută.",
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -357,6 +360,15 @@ export default async function IntegrationSettingsPage({
               </form>
             )}
             {tiktokGate.ok && tiktokConnection && (
+              <form action="/api/integrations/tiktok/connect" method="post">
+                <input type="hidden" name="consent" value="upload" />
+                <AdminButton type="submit" variant="secondary">Permite încărcarea ca draft</AdminButton>
+              </form>
+            )}
+            {tiktokGate.ok && tiktokConnection && (
+              <AdminButton type="button" variant="ghost" disabled>Direct Post</AdminButton>
+            )}
+            {tiktokGate.ok && tiktokConnection && (
               <form action="/api/integrations/tiktok/disconnect" method="post">
                 <AdminButton type="submit" variant="ghost">Deconectează</AdminButton>
               </form>
@@ -369,6 +381,11 @@ export default async function IntegrationSettingsPage({
               </>
             )}
           </div>
+          {tiktokGate.ok && tiktokConnection && (
+            <p className="text-sm text-frz-muted">
+              Încărcarea ca draft cere separat consimțământul video.upload. Direct Post și video.publish rămân oprite.
+            </p>
+          )}
           {!tiktokGate.ok && (
             <p className="text-sm text-frz-muted">
               {TIKTOK_NOTICES[tiktokGate.reason === "production" ? "production" : tiktokGate.reason === "forbidden" ? "forbidden" : "unconfigured"]}
