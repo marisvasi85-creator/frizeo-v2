@@ -1,9 +1,10 @@
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
 import type { TikTokHttp } from "@/lib/integrations/tiktok/api";
+import { DEMO_BARBER_TENANT_ID } from "@/lib/integrations/tiktok/demoTenant";
 import { initTikTokPhotoInbox, type TikTokPostError } from "@/lib/integrations/tiktok/posting";
 
 export const TIKTOK_DRAFT_TEST_ENV = "TIKTOK_DRAFT_TEST";
-export const DEMO_BARBER_TENANT_ID = "5d9862a1-fd85-46f2-9c7e-635e813e067c";
+export { DEMO_BARBER_TENANT_ID };
 
 export function tikTokDraftTestEnabled(
   env: Record<string, string | undefined> = process.env,

@@ -1,4 +1,4 @@
-import { DEMO_BARBER_TENANT_ID } from "@/lib/integrations/tiktok/draftTest";
+import { DEMO_BARBER_TENANT_ID } from "@/lib/integrations/tiktok/demoTenant";
 
 const SENT_AS_DRAFT =
   "Materialul a fost trimis ca draft în TikTok. Nu este publicat. Continuă din notificarea din aplicația TikTok.";

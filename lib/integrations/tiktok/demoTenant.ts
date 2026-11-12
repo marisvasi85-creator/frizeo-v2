@@ -1,0 +1,1 @@
+export const DEMO_BARBER_TENANT_ID = "5d9862a1-fd85-46f2-9c7e-635e813e067c";

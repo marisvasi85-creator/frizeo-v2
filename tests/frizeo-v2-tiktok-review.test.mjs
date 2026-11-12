@@ -73,7 +73,8 @@ test("the review screen reuses the draft adapter and does not enable direct post
   assert.match(handlers, /uploadTikTokDraftJpeg/);
   assert.match(handlers, /performTikTokDraftTest/);
   assert.match(review, /!scopes\.has\("video\.publish"\)/);
-  assert.doesNotMatch(review, /marketing\.publish\.tiktok/);
+  assert.doesNotMatch(review, /marketing\.publish\.tiktok|draftTest|next\/headers/);
+  assert.doesNotMatch(read("lib/integrations/tiktok/demoTenant.ts"), /import /);
   assert.doesNotMatch(read("lib/integrations/tiktok/config.ts"), /TIKTOK_DIRECT_POST_ENABLED = true/);
   assert.doesNotMatch(read("lib/integrations/tiktok/config.ts"), /TIKTOK_CONTENT_POSTING_LIVE = true/);
 });
