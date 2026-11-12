@@ -386,6 +386,11 @@ export default async function IntegrationSettingsPage({
               Încărcarea ca draft cere separat consimțământul video.upload. Direct Post și video.publish rămân oprite.
             </p>
           )}
+          {tiktokGate.ok && tiktokPublic?.scopes.includes("video.upload") && !tiktokPublic.scopes.includes("video.publish") && (
+            <p className="text-sm text-frz-muted">
+              Draftul se trimite din Marketing AI, cu butonul „Trimite ca draft în TikTok”. Postarea nu se publică din Frizeo.
+            </p>
+          )}
           {!tiktokGate.ok && (
             <p className="text-sm text-frz-muted">
               {TIKTOK_NOTICES[tiktokGate.reason === "production" ? "production" : tiktokGate.reason === "forbidden" ? "forbidden" : "unconfigured"]}

@@ -1,7 +1,10 @@
+import { randomUUID } from "node:crypto";
 import {
   decryptIntegrationSecret,
   encryptIntegrationSecret,
 } from "@/lib/integrations/crypto";
+import { MARKETING_PUBLISH_BUCKET } from "@/lib/integrations/meta/publish/flags";
+import { marketingImagePath } from "@/lib/integrations/meta/publish/image";
 import { encodeTikTokToken, readTikTokToken } from "@/lib/integrations/tiktok/flow";
 import { DEMO_BARBER_TENANT_ID } from "@/lib/integrations/tiktok/draftTest";
 import {
@@ -266,6 +269,20 @@ export async function settleTikTokDraft(input: {
     return false;
   }
   return true;
+}
+
+export async function uploadTikTokDraftJpeg(bytes: Buffer): Promise<string | null> {
+  const path = marketingImagePath(DEMO_BARBER_TENANT_ID, randomUUID());
+  if (!path || bytes.length === 0) return null;
+  const { error } = await supabaseAdmin.storage.from(MARKETING_PUBLISH_BUCKET).upload(path, bytes, {
+    contentType: "image/jpeg",
+    upsert: false,
+  });
+  if (error) {
+    console.error("tiktok_draft_image_upload_failed");
+    return null;
+  }
+  return path;
 }
 
 export async function insertTikTokMediaGrant(input: {

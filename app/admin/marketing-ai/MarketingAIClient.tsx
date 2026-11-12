@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminButton from "../components/AdminButton";
 import AdminCard from "../components/AdminCard";
@@ -16,6 +16,7 @@ import { historyItemToResult } from "@/lib/marketing-ai/historyTypes";
 import { formatOpenSlotDayHeading } from "@/lib/marketing-ai/openSlotCopy";
 import { getSeasonalActions } from "@/lib/marketing-ai/seasonal";
 import { publishCaption, publishImageCopy } from "@/lib/marketing-ai/publishCardCopy";
+import { tikTokDraftReviewMessage } from "@/lib/integrations/tiktok/draftReview";
 import { saveMarketingPublishHandoff } from "@/lib/marketing-ai/publishHandoff";
 import { copyTextToClipboard } from "@/lib/marketing-ai/share";
 import { applyTextAction, type MarketingDraft } from "@/lib/marketing-ai/textActions";
@@ -101,6 +102,7 @@ export default function MarketingAIClient({
   initialSocialLinks,
   initialHistory,
   googleBusinessConnected,
+  tikTokDraft = false,
 }: {
   role: string | null;
   barbers: BarberOption[];
@@ -111,6 +113,7 @@ export default function MarketingAIClient({
   initialSocialLinks: SocialLinks;
   initialHistory: MarketingAIHistoryBatch[];
   googleBusinessConnected: boolean;
+  tikTokDraft?: boolean;
 }) {
   const router = useRouter();
   const seasonal = useMemo(() => getSeasonalActions(), []);
@@ -144,6 +147,9 @@ export default function MarketingAIClient({
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [preparingPublish, setPreparingPublish] = useState(false);
+  const [sendingTikTok, setSendingTikTok] = useState(false);
+  const [tikTokNotice, setTikTokNotice] = useState("");
+  const tikTokAttempt = useRef<{ signature: string; key: string; path: string } | null>(null);
 
   const canPickBarber =
     (role === "owner" || role === "manager") && barbers.length > 1;
@@ -373,6 +379,79 @@ export default function MarketingAIClient({
       });
     } catch {
       return null;
+    }
+  }
+
+  async function sendTikTokDraft() {
+    if (!tikTokDraft || !draft || sendingTikTok) return;
+    const caption = publishCaption({
+      content: draft.content,
+      callToAction: draft.callToAction,
+      hashtags: draft.hashtags,
+      bookingUrl: trackedLinks.instagram || null,
+    }).slice(0, 4000);
+    const signature = `${draft.title}\n${caption}`;
+    if (!caption.trim()) {
+      setTikTokNotice(tikTokDraftReviewMessage({ error: "invalid" }));
+      return;
+    }
+    setSendingTikTok(true);
+    setTikTokNotice("");
+    try {
+      const cardBranding = await ensureBranding();
+      if (!cardBranding) {
+        setTikTokNotice(tikTokDraftReviewMessage({ error: "invalid_image" }));
+        return;
+      }
+      const card = await renderBrandedCardToBlob({
+        ...cardBranding,
+        format: "square",
+        title: draft.title,
+        content: draft.content,
+        callToAction: draft.callToAction,
+        photoUrl: goal === "work" ? photoUrl : null,
+      });
+      const jpeg = await jpegBlob(card);
+      if (!jpeg) {
+        setTikTokNotice(tikTokDraftReviewMessage({ error: "invalid_image" }));
+        return;
+      }
+      if (!tikTokAttempt.current || tikTokAttempt.current.signature !== signature) {
+        tikTokAttempt.current = { signature, key: crypto.randomUUID(), path: "" };
+      }
+      const attempt = tikTokAttempt.current;
+      if (!attempt.path) {
+        const body = new FormData();
+        body.set("image", new File([jpeg], "marketing-ai.jpg", { type: "image/jpeg" }));
+        const uploaded = await fetch("/api/integrations/tiktok/draft-image", { method: "POST", body });
+        const stored = await uploaded.json().catch(() => ({})) as {
+          mediaObjectPath?: string;
+          error?: string;
+        };
+        if (!uploaded.ok || !stored.mediaObjectPath) {
+          setTikTokNotice(tikTokDraftReviewMessage({ error: stored.error }));
+          return;
+        }
+        attempt.path = stored.mediaObjectPath;
+      }
+      const response = await fetch("/api/integrations/tiktok/draft", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          idempotencyKey: attempt.key,
+          caption,
+          mediaObjectPath: attempt.path,
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as {
+        outcome?: string;
+        error?: string;
+      };
+      setTikTokNotice(tikTokDraftReviewMessage(result));
+    } catch {
+      setTikTokNotice(tikTokDraftReviewMessage({}));
+    } finally {
+      setSendingTikTok(false);
     }
   }
 
@@ -779,6 +858,25 @@ export default function MarketingAIClient({
               <p className="text-xs text-frz-muted">
                 Transferă imaginea pătrată și textul în Publicare. Nu se publică automat.
               </p>
+            </div>
+          )}
+          {tikTokDraft && canPreparePublish && (
+            <div className="space-y-2">
+              <AdminButton
+                type="button"
+                variant="primary"
+                loading={sendingTikTok}
+                loadingLabel="Se trimite draftul..."
+                onClick={() => void sendTikTokDraft()}
+              >
+                Trimite ca draft în TikTok
+              </AdminButton>
+              <p className="text-xs text-frz-muted">
+                Trimite imaginea pătrată în inbox-ul TikTok. Nu publică postarea.
+              </p>
+              {tikTokNotice && (
+                <p className="text-sm text-frz-ink" role="status">{tikTokNotice}</p>
+              )}
             </div>
           )}
         </AdminCard>

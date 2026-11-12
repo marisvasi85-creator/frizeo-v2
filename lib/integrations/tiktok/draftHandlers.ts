@@ -17,6 +17,7 @@ import {
   hashMediaToken,
   mediaObjectPath,
 } from "@/lib/integrations/tiktok/mediaGrant";
+import { prepareMarketingImage } from "@/lib/integrations/meta/publish/image";
 import { createTikTokHttp } from "@/lib/integrations/tiktok/api";
 import {
   claimTikTokDraft,
@@ -24,8 +25,41 @@ import {
   openTikTokDraftAccessToken,
   readTikTokDraftConnection,
   settleTikTokDraft,
+  uploadTikTokDraftJpeg,
 } from "@/lib/integrations/tiktok/store";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
+
+async function authorizeTikTokDraft(request: Request) {
+  if (isProduction() || !isStagingHostname(hostnameFromRequest(request))) {
+    return {
+      response: NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 }),
+    };
+  }
+  const session = await getAdminSession();
+  const secret = session?.tenantId === DEMO_BARBER_TENANT_ID && canAdministerIntegrations(session.role)
+    ? await readTikTokDraftConnection(session.tenantId)
+    : null;
+  const access = decideTikTokDraftAccess({
+    production: false,
+    stagingHost: true,
+    authenticated: Boolean(session?.user && session.tenantId),
+    role: session?.role ?? null,
+    tenantId: session?.tenantId ?? null,
+    userId: session?.user.id ?? null,
+    connectedBy: secret && secret.ok ? secret.connectedBy : null,
+    configured: assertTikTokConfig(process.env, { production: false }).ok,
+    gateEnabled: tikTokDraftTestEnabled(),
+  });
+  if (!access.ok || !session?.user || !secret?.ok) {
+    return {
+      response: NextResponse.json(
+        { error: access.ok ? "unauthenticated" : access.error, externalCall: false },
+        { status: access.ok ? 401 : access.status },
+      ),
+    };
+  }
+  return { response: null, userId: session.user.id, access, secret };
+}
 
 function claimFrom(row: Record<string, unknown> | null): DraftClaim {
   const outcome = typeof row?.outcome === "string" ? row.outcome : "invalid";
@@ -47,33 +81,40 @@ function claimFrom(row: Record<string, unknown> | null): DraftClaim {
   return { outcome: "invalid" };
 }
 
-export async function startTikTokDraftTest(request: Request) {
-  if (isProduction() || !isStagingHostname(hostnameFromRequest(request))) {
-    return NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 });
-  }
-  const session = await getAdminSession();
-  const secret = session?.tenantId === DEMO_BARBER_TENANT_ID && canAdministerIntegrations(session.role)
-    ? await readTikTokDraftConnection(session.tenantId)
-    : null;
-  const access = decideTikTokDraftAccess({
-    production: false,
-    stagingHost: true,
-    authenticated: Boolean(session?.user && session.tenantId),
-    role: session?.role ?? null,
-    tenantId: session?.tenantId ?? null,
-    userId: session?.user.id ?? null,
-    connectedBy: secret && secret.ok ? secret.connectedBy : null,
-    configured: assertTikTokConfig(process.env, { production: false }).ok,
-    gateEnabled: tikTokDraftTestEnabled(),
+export async function storeTikTokDraftImage(request: Request) {
+  const authorized = await authorizeTikTokDraft(request);
+  if (authorized.response) return authorized.response;
+  const limited = await enforceRateLimit(request, {
+    bucket: "tiktok-draft-image",
+    limit: 5,
+    windowSeconds: 600,
+    identifier: authorized.userId,
   });
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error, externalCall: false }, { status: access.status });
+  if (limited) return limited;
+  const form = await request.formData().catch(() => null);
+  const file = form?.get("image");
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "invalid", externalCall: false }, { status: 400 });
   }
+  const prepared = await prepareMarketingImage(Buffer.from(await file.arrayBuffer()));
+  if (!prepared.ok) {
+    return NextResponse.json({ error: prepared.reason, externalCall: false }, { status: 400 });
+  }
+  const mediaObjectPath = await uploadTikTokDraftJpeg(prepared.jpeg);
+  if (!mediaObjectPath) {
+    return NextResponse.json({ error: "storage", externalCall: false }, { status: 502 });
+  }
+  return NextResponse.json({ mediaObjectPath, externalCall: false });
+}
+
+export async function startTikTokDraftTest(request: Request) {
+  const authorized = await authorizeTikTokDraft(request);
+  if (authorized.response) return authorized.response;
   const limited = await enforceRateLimit(request, {
     bucket: "tiktok-draft-test",
     limit: 5,
     windowSeconds: 600,
-    identifier: session?.user.id ?? "anonymous",
+    identifier: authorized.userId,
   });
   if (limited) return limited;
   const body = await request.json().catch(() => null) as {
@@ -85,10 +126,10 @@ export async function startTikTokDraftTest(request: Request) {
   const caption = typeof body?.caption === "string" ? body.caption : "";
   const mediaObjectPathValue = typeof body?.mediaObjectPath === "string" ? body.mediaObjectPath : "";
   const objectPath = mediaObjectPath(DEMO_BARBER_TENANT_ID, mediaObjectPathValue);
-  if (!session?.user || !/^[A-Za-z0-9_-]{16,80}$/.test(idempotencyKey) || !caption.trim() || !objectPath) {
+  if (!/^[A-Za-z0-9_-]{16,80}$/.test(idempotencyKey) || !caption.trim() || !objectPath) {
     return NextResponse.json({ error: "invalid", externalCall: false }, { status: 400 });
   }
-  const userId = session.user.id;
+  const { userId, access, secret } = authorized;
 
   const result = await performTikTokDraftTest({
     access,

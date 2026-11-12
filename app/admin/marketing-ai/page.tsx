@@ -1,5 +1,8 @@
 import { redirect } from "next/navigation";
+import { isProduction, isStaging } from "@/lib/app/environment";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
+import { tikTokDraftReviewAvailable } from "@/lib/integrations/tiktok/draftReview";
+import { tikTokDraftTestEnabled } from "@/lib/integrations/tiktok/draftTest";
 import { sessionActsAsBarber } from "../components/adminNav";
 import { getMarketingAIStatus } from "@/lib/marketing-ai/generate";
 import { listMarketingAIHistory } from "@/lib/marketing-ai/history";
@@ -65,6 +68,18 @@ export default async function MarketingAIPage() {
     duration: service.duration,
   }));
 
+  const { data: tikTokConnection } = await supabaseAdmin
+    .from("marketing_connections")
+    .select("status, scopes, connected_by")
+    .eq("tenant_id", barber.tenant_id)
+    .eq("provider", "tiktok")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const tikTokScopes = Array.isArray(tikTokConnection?.scopes)
+    ? tikTokConnection.scopes.filter((scope): scope is string => typeof scope === "string")
+    : [];
+
   const { count: googleDestinationCount } = await supabaseAdmin
     .from("marketing_destinations")
     .select("id", { count: "exact", head: true })
@@ -121,6 +136,19 @@ export default async function MarketingAIPage() {
             initialSocialLinks={initialSocialLinks}
             initialHistory={initialHistory}
             googleBusinessConnected={(googleDestinationCount ?? 0) > 0}
+            tikTokDraft={tikTokDraftReviewAvailable({
+              production: isProduction(),
+              staging: isStaging(),
+              tenantId: barber.tenant_id,
+              role,
+              userId: session.user.id,
+              connectedBy: typeof tikTokConnection?.connected_by === "string"
+                ? tikTokConnection.connected_by
+                : null,
+              status: typeof tikTokConnection?.status === "string" ? tikTokConnection.status : null,
+              scopes: tikTokScopes,
+              gateEnabled: tikTokDraftTestEnabled(),
+            })}
           />
         </>
       )}
