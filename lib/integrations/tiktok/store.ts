@@ -2,7 +2,7 @@ import {
   decryptIntegrationSecret,
   encryptIntegrationSecret,
 } from "@/lib/integrations/crypto";
-import { encodeTikTokToken } from "@/lib/integrations/tiktok/flow";
+import { encodeTikTokToken, readTikTokToken } from "@/lib/integrations/tiktok/flow";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -134,6 +134,101 @@ export async function prepareTikTokDraft(input: {
     return null;
   }
   return asRecord(data);
+}
+
+export async function readTikTokDraftConnection(tenantId: string): Promise<
+  | { ok: true; connectedBy: string; scopes: string[]; ciphertext: string; nonce: string }
+  | { ok: false }
+> {
+  const { data, error } = await supabaseAdmin.rpc("tiktok_read_connection_secret", {
+    p_tenant_id: tenantId,
+  });
+  const row = asRecord(data);
+  if (error || !row || row.found !== true || typeof row.connected_by !== "string") return { ok: false };
+  const scopes = Array.isArray(row.scopes) ? row.scopes.filter((scope) => typeof scope === "string") : [];
+  if (typeof row.ciphertext !== "string" || typeof row.nonce !== "string") return { ok: false };
+  return { ok: true, connectedBy: row.connected_by, scopes, ciphertext: row.ciphertext, nonce: row.nonce };
+}
+
+export function openTikTokDraftAccessToken(ciphertext: string, nonce: string): string | null {
+  const plaintext = decryptTikTokSecret(ciphertext, nonce);
+  return plaintext ? readTikTokToken(plaintext)?.accessToken ?? null : null;
+}
+
+export async function claimTikTokDraft(input: {
+  tenantId: string;
+  userId: string;
+  idempotencyKey: string;
+  caption: string;
+  mediaObjectPath: string;
+}): Promise<Record<string, unknown> | null> {
+  const { data, error } = await supabaseAdmin.rpc("tiktok_draft_claim", {
+    p_tenant_id: input.tenantId,
+    p_created_by: input.userId,
+    p_idempotency_key: input.idempotencyKey,
+    p_caption: input.caption,
+    p_media_object_path: input.mediaObjectPath,
+  });
+  if (error) {
+    console.error("tiktok_draft_claim_failed");
+    return null;
+  }
+  return asRecord(data);
+}
+
+export async function settleTikTokDraft(input: {
+  tenantId: string;
+  jobId: string;
+  kind: "success" | "ambiguous" | "rejected";
+  publishId?: string | null;
+  safeError?: string | null;
+}): Promise<boolean> {
+  const { error } = await supabaseAdmin.rpc("tiktok_draft_settle", {
+    p_tenant_id: input.tenantId,
+    p_job_id: input.jobId,
+    p_kind: input.kind,
+    p_publish_id: input.publishId ?? null,
+    p_safe_error: input.safeError ?? null,
+  });
+  if (error) {
+    console.error("tiktok_draft_settle_failed");
+    return false;
+  }
+  return true;
+}
+
+export async function insertTikTokMediaGrant(input: {
+  tenantId: string;
+  tokenHash: string;
+  objectPath: string;
+  expiresAt: string;
+}): Promise<boolean> {
+  const { error } = await supabaseAdmin.rpc("tiktok_media_grant_insert", {
+    p_tenant_id: input.tenantId,
+    p_token_hash: input.tokenHash,
+    p_object_path: input.objectPath,
+    p_expires_at: input.expiresAt,
+  });
+  if (error) {
+    console.error("tiktok_media_grant_insert_failed");
+    return false;
+  }
+  return true;
+}
+
+export async function readTikTokMediaGrant(tokenHash: string): Promise<
+  | { tenantId: string; objectPath: string; expiresAt: string }
+  | null
+> {
+  const { data, error } = await supabaseAdmin.rpc("tiktok_media_grant_read", {
+    p_token_hash: tokenHash,
+  });
+  const row = asRecord(data);
+  if (error || !row || row.outcome !== "ok") return null;
+  if (typeof row.tenant_id !== "string" || typeof row.object_path !== "string" || typeof row.expires_at !== "string") {
+    return null;
+  }
+  return { tenantId: row.tenant_id, objectPath: row.object_path, expiresAt: row.expires_at };
 }
 
 export async function deleteTikTokConnection(tenantId: string): Promise<boolean> {

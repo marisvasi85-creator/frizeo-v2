@@ -172,7 +172,9 @@ async function callWithRetry(input: {
   http: TikTokHttp;
   request: Parameters<TikTokHttp>[0];
   kind: "init" | "status";
+  maxAttempts?: 1 | 2;
 }): Promise<{ calls: number; result: CallResult }> {
+  const maxAttempts = input.maxAttempts ?? 2;
   let calls = 0;
   const once = async (): Promise<CallResult> => {
     calls += 1;
@@ -183,6 +185,7 @@ async function callWithRetry(input: {
     }
   };
   const first = await once();
+  if (maxAttempts < 2) return { calls, result: first };
   const retryNetwork = "thrown" in first;
   const retryStatus = input.kind === "status" && !("thrown" in first) && first.status === 429;
   if (retryNetwork || retryStatus) {
@@ -204,16 +207,20 @@ export async function initTikTokPhotoInbox(input: {
   accessToken: string;
   scopes: readonly string[];
   capabilityEnabled: boolean;
+  draftTest?: boolean;
   liveEnabled?: boolean;
+  maxAttempts?: 1 | 2;
   existingPublishId?: string | null;
   caption: string;
   imageUrl: string;
 }): Promise<
   | { ok: true; publishId: string; externalCall: true; attempts: number }
-  | { ok: false; reason: TikTokPostError; externalCall: boolean; attempts: number }
+  | { ok: false; reason: TikTokPostError; externalCall: boolean; attempts: number; ambiguous?: boolean }
 > {
   const liveEnabled = input.liveEnabled ?? TIKTOK_CONTENT_POSTING_LIVE;
-  if (!input.capabilityEnabled) return { ok: false, reason: "capability_off", externalCall: false, attempts: 0 };
+  if (!input.draftTest && !input.capabilityEnabled) {
+    return { ok: false, reason: "capability_off", externalCall: false, attempts: 0 };
+  }
   if (!liveEnabled) return { ok: false, reason: "live_off", externalCall: false, attempts: 0 };
   if (!input.scopes.includes(TIKTOK_SCOPE) || !input.scopes.includes(TIKTOK_UPLOAD_SCOPE)) {
     return { ok: false, reason: "upload_scope_required", externalCall: false, attempts: 0 };
@@ -231,6 +238,7 @@ export async function initTikTokPhotoInbox(input: {
 
   const called = await callWithRetry({
     kind: "init",
+    maxAttempts: input.maxAttempts,
     http: input.http,
     request: {
       url: TIKTOK_PHOTO_INIT_URL,
@@ -247,10 +255,10 @@ export async function initTikTokPhotoInbox(input: {
     },
   });
   if ("thrown" in called.result) {
-    return { ok: false, reason: "network", externalCall: true, attempts: called.calls };
+    return { ok: false, reason: "network", externalCall: true, attempts: called.calls, ambiguous: true };
   }
   if (called.result.status === 429) {
-    return { ok: false, reason: "rate_limited", externalCall: true, attempts: called.calls };
+    return { ok: false, reason: "rate_limited", externalCall: true, attempts: called.calls, ambiguous: false };
   }
   const data = called.result.body && typeof called.result.body === "object"
     ? (called.result.body as { data?: { publish_id?: unknown } }).data
@@ -269,7 +277,8 @@ export async function initTikTokPhotoInbox(input: {
       : safeTikTokPostError(code) === "rate_limited"
         ? "rate_limited"
         : "unconfirmed";
-    return { ok: false, reason, externalCall: true, attempts: called.calls };
+    const ambiguous = called.result.status >= 500 || called.result.status === 200;
+    return { ok: false, reason, externalCall: true, attempts: called.calls, ambiguous };
   }
   return { ok: true, publishId, externalCall: true, attempts: called.calls };
 }
