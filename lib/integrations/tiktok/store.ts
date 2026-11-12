@@ -203,6 +203,29 @@ export async function readKnownTikTokStatusJob(tenantId: string): Promise<KnownT
   };
 }
 
+export async function reconcileTikTokDraftStatus(input: {
+  tenantId: string;
+  jobId: string;
+  publishId: string;
+  status: "failed" | "pending" | "published";
+  safeError: string | null;
+}): Promise<boolean> {
+  if (input.tenantId !== DEMO_BARBER_TENANT_ID) return false;
+  const { data, error } = await supabaseAdmin.rpc("tiktok_draft_reconcile", {
+    p_tenant_id: input.tenantId,
+    p_job_id: input.jobId,
+    p_publish_id: input.publishId,
+    p_status: input.status,
+    p_safe_error: input.safeError,
+  });
+  if (error) {
+    console.error("tiktok_draft_reconcile_failed");
+    return false;
+  }
+  const outcome = asRecord(data)?.outcome;
+  return outcome === "saved" || outcome === "unchanged";
+}
+
 export async function claimTikTokDraft(input: {
   tenantId: string;
   userId: string;

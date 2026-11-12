@@ -9,12 +9,15 @@ import {
   decideTikTokStatusAccess,
   performKnownTikTokStatusCheck,
   requestedKnownPublishId,
+  TIKTOK_KNOWN_STATUS_JOB_ID,
+  TIKTOK_KNOWN_STATUS_PUBLISH_ID,
   type KnownStatusResult,
 } from "@/lib/integrations/tiktok/statusCheck";
 import {
   openTikTokDraftAccessToken,
   readKnownTikTokStatusJob,
   readTikTokDraftConnection,
+  reconcileTikTokDraftStatus,
 } from "@/lib/integrations/tiktok/store";
 
 function statusCode(result: KnownStatusResult): number {
@@ -59,6 +62,13 @@ export async function readKnownTikTokDraftStatus(request: Request) {
       if (!secret?.ok) return null;
       return openTikTokDraftAccessToken(secret.ciphertext, secret.nonce);
     },
+    recordStatus: (record) => reconcileTikTokDraftStatus({
+      tenantId: DEMO_BARBER_TENANT_ID,
+      jobId: TIKTOK_KNOWN_STATUS_JOB_ID,
+      publishId: TIKTOK_KNOWN_STATUS_PUBLISH_ID,
+      status: record.status,
+      safeError: record.safeError,
+    }),
   });
   const payload: KnownStatusResult = {
     externalCall: result.externalCall,
@@ -68,6 +78,7 @@ export async function readKnownTikTokDraftStatus(request: Request) {
     ...(result.status !== undefined ? { status: result.status } : {}),
     ...(result.failReason !== undefined ? { failReason: result.failReason } : {}),
     ...(result.tikTokMessage ? { tikTokMessage: result.tikTokMessage } : {}),
+    ...(result.saved !== undefined ? { saved: result.saved } : {}),
   };
   return NextResponse.json(payload, { status: statusCode(result) });
 }

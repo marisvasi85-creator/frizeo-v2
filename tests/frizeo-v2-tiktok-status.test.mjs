@@ -9,6 +9,7 @@ import {
   TIKTOK_KNOWN_STATUS_JOB_ID,
   TIKTOK_KNOWN_STATUS_PUBLISH_ID,
   decideTikTokStatusAccess,
+  tikTokStatusRecord,
   fetchKnownTikTokDraftStatus,
   knownTikTokStatusJobMatches,
   performKnownTikTokStatusCheck,
@@ -237,6 +238,35 @@ test("ownership and scope are checked before any TikTok call or token decrypt", 
   assert.equal(calls, 1);
   assert.equal(decrypts, 1);
   assert.equal(JSON.stringify(ready).includes(token), false);
+
+  const recorded = [];
+  const failed = await performKnownTikTokStatusCheck({
+    access: { ok: true },
+    publishId: TIKTOK_KNOWN_STATUS_PUBLISH_ID,
+    http: async () => ({
+      status: 200,
+      body: {
+        data: { status: "FAILED", fail_reason: "picture_size_check_failed" },
+        error: { code: "ok", message: "" },
+      },
+    }),
+    readJob: async () => job(),
+    readScopes: () => ["user.info.basic", "video.upload"],
+    loadToken: async () => token,
+    recordStatus: async (record) => {
+      recorded.push(record);
+      return true;
+    },
+  });
+  assert.equal(failed.status, "FAILED");
+  assert.equal(failed.failReason, "picture_size_check_failed");
+  assert.equal(failed.saved, true);
+  assert.deepEqual(recorded, [{ status: "failed", safeError: "picture_size_check_failed" }]);
+  assert.deepEqual(tikTokStatusRecord({ status: "FAILED", failReason: "not a code" }), {
+    status: "failed",
+    safeError: "provider_error",
+  });
+  assert.equal(tikTokStatusRecord({ status: "SEND_TO_USER_INBOX", failReason: null })?.status, "pending");
 });
 
 test("the route is a manual staging POST and does not write jobs or enable publish", () => {
@@ -244,7 +274,7 @@ test("the route is a manual staging POST and does not write jobs or enable publi
   const handler = readFileSync(join(root, "lib/integrations/tiktok/statusHandlers.ts"), "utf8");
   const check = readFileSync(join(root, "lib/integrations/tiktok/statusCheck.ts"), "utf8");
   const store = readFileSync(join(root, "lib/integrations/tiktok/store.ts"), "utf8");
-  const reader = slice(store, "export async function readKnownTikTokStatusJob", "export async function claimTikTokDraft");
+  const reader = slice(store, "export async function readKnownTikTokStatusJob", "export async function reconcileTikTokDraftStatus");
   assert.equal(route.includes("export function POST"), true);
   assert.equal(route.includes("export function GET"), false);
   assert.equal(route.includes("readKnownTikTokDraftStatus(request)"), true);

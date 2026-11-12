@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { TIKTOK_PHOTO_MAX_BYTES, normalizeTikTokPhoto } from "@/lib/integrations/tiktok/photoNormalize";
 
 export const TIKTOK_MEDIA_ORIGIN = "https://staging.frizeo.ro";
 export const TIKTOK_MEDIA_TTL_MS = 15 * 60 * 1000;
@@ -58,8 +59,8 @@ export async function serveTikTokDraftImage(input: {
   const path = mediaObjectPath(grant.tenantId, grant.objectPath);
   if (!path) return { status: 404 };
   const bytes = await input.readObject(path);
-  if (!bytes || bytes.length === 0 || bytes.length > 8_388_608 || !isJpeg(bytes)) {
-    return { status: 404 };
-  }
-  return { status: 200, body: bytes };
+  if (!bytes || bytes.length === 0 || bytes.length > TIKTOK_PHOTO_MAX_BYTES) return { status: 404 };
+  const normalized = await normalizeTikTokPhoto(bytes);
+  if (!normalized) return { status: 404 };
+  return { status: 200, body: normalized };
 }

@@ -104,7 +104,29 @@ export type KnownStatusResult = {
   status?: string | null;
   failReason?: string | null;
   tikTokMessage?: string | null;
+  saved?: boolean;
 };
+
+export function tikTokStatusRecord(input: {
+  status: string | null;
+  failReason: string | null;
+}): { status: "failed" | "pending" | "published"; safeError: string | null } | null {
+  if (input.status === "FAILED") {
+    const safeError = input.failReason && /^[a-z0-9_]{1,64}$/.test(input.failReason)
+      ? input.failReason
+      : "provider_error";
+    return { status: "failed", safeError };
+  }
+  if (input.status === "PUBLISH_COMPLETE") return { status: "published", safeError: null };
+  if (
+    input.status === "SEND_TO_USER_INBOX"
+    || input.status === "PROCESSING_DOWNLOAD"
+    || input.status === "PROCESSING_UPLOAD"
+  ) {
+    return { status: "pending", safeError: null };
+  }
+  return null;
+}
 
 export async function fetchKnownTikTokDraftStatus(input: {
   http: TikTokHttp;
@@ -172,6 +194,7 @@ export async function performKnownTikTokStatusCheck(input: {
   readJob: () => Promise<KnownTikTokStatusJob | null>;
   readScopes: () => string[] | null;
   loadToken: () => Promise<string | null>;
+  recordStatus?: (record: { status: "failed" | "pending" | "published"; safeError: string | null }) => Promise<boolean>;
 }): Promise<KnownStatusResult> {
   if (!input.access.ok) {
     return { error: input.access.error, externalCall: false };
@@ -193,9 +216,16 @@ export async function performKnownTikTokStatusCheck(input: {
   }
   const accessToken = await input.loadToken();
   if (!accessToken) return { error: "token_unavailable", externalCall: false };
-  return fetchKnownTikTokDraftStatus({
+  const result = await fetchKnownTikTokDraftStatus({
     http: input.http,
     accessToken,
     publishId: input.publishId,
   });
+  const record = tikTokStatusRecord({
+    status: result.status ?? null,
+    failReason: result.failReason ?? null,
+  });
+  if (!result.externalCall || !record || !input.recordStatus) return result;
+  const saved = await input.recordStatus(record);
+  return { ...result, saved };
 }
