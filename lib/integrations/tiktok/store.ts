@@ -3,6 +3,11 @@ import {
   encryptIntegrationSecret,
 } from "@/lib/integrations/crypto";
 import { encodeTikTokToken, readTikTokToken } from "@/lib/integrations/tiktok/flow";
+import { DEMO_BARBER_TENANT_ID } from "@/lib/integrations/tiktok/draftTest";
+import {
+  TIKTOK_KNOWN_STATUS_JOB_ID,
+  type KnownTikTokStatusJob,
+} from "@/lib/integrations/tiktok/statusCheck";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -153,6 +158,49 @@ export async function readTikTokDraftConnection(tenantId: string): Promise<
 export function openTikTokDraftAccessToken(ciphertext: string, nonce: string): string | null {
   const plaintext = decryptTikTokSecret(ciphertext, nonce);
   return plaintext ? readTikTokToken(plaintext)?.accessToken ?? null : null;
+}
+
+export async function readKnownTikTokStatusJob(tenantId: string): Promise<KnownTikTokStatusJob | null> {
+  if (tenantId !== DEMO_BARBER_TENANT_ID) return null;
+  const { data: connections, error: connectionError } = await supabaseAdmin
+    .from("marketing_connections")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .eq("provider", "tiktok")
+    .eq("status", "connected")
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  const connectionId = connections?.[0]?.id;
+  if (connectionError || typeof connectionId !== "string") {
+    if (connectionError) console.error("tiktok_known_status_connection_read_failed");
+    return null;
+  }
+  const { data, error } = await supabaseAdmin
+    .from("integration_publish_jobs")
+    .select("id, tenant_id, provider, idempotency_key, provider_post_id, marketing_destinations!inner(tenant_id, provider, connection_id)")
+    .eq("id", TIKTOK_KNOWN_STATUS_JOB_ID)
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  if (error || !data) {
+    if (error) console.error("tiktok_known_status_job_read_failed");
+    return null;
+  }
+  const destination = asRecord(
+    Array.isArray(data.marketing_destinations)
+      ? data.marketing_destinations[0]
+      : data.marketing_destinations,
+  );
+  return {
+    id: String(data.id ?? ""),
+    tenantId: String(data.tenant_id ?? ""),
+    provider: String(data.provider ?? ""),
+    idempotencyKey: typeof data.idempotency_key === "string" ? data.idempotency_key : null,
+    destinationTenantId: typeof destination?.tenant_id === "string" ? destination.tenant_id : "",
+    destinationProvider: typeof destination?.provider === "string" ? destination.provider : "",
+    destinationConnectionId: typeof destination?.connection_id === "string" ? destination.connection_id : "",
+    connectionId,
+    providerPostId: typeof data.provider_post_id === "string" ? data.provider_post_id : null,
+  };
 }
 
 export async function claimTikTokDraft(input: {
