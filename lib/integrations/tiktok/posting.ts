@@ -12,7 +12,7 @@ export const TIKTOK_VIDEO_DIRECT_URL = "https://open.tiktokapis.com/v2/post/publ
 export const TIKTOK_STATUS_URL = "https://open.tiktokapis.com/v2/post/publish/status/fetch/";
 export const TIKTOK_CREATOR_INFO_URL = "https://open.tiktokapis.com/v2/post/publish/creator_info/query/";
 
-const PUBLISH_ID = /^v_[A-Za-z0-9][A-Za-z0-9._~-]{7,160}$/;
+const PUBLISH_ID = /^[vp]_[A-Za-z0-9][A-Za-z0-9._~-]{7,160}$/;
 const ALLOWED_HOSTS = new Set([
   "staging.frizeo.ro",
   "www.frizeo.ro",
@@ -265,22 +265,35 @@ export async function initTikTokPhotoInbox(input: {
     : null;
   const publishId = text(data?.publish_id);
   const code = errorCode(called.result.body);
+  const accepted = Boolean(publishId && isTikTokPublishId(publishId));
+  console.error(JSON.stringify({
+    source: "tiktok_photo_init",
+    httpStatus: called.result.status,
+    tikTokCode: code,
+    publishIdAccepted: accepted,
+  }));
   if (
-    called.result.status < 200
-    || called.result.status >= 300
-    || (code && code !== "ok")
-    || !publishId
-    || !isTikTokPublishId(publishId)
+    called.result.status >= 200
+    && called.result.status < 300
+    && (!code || code === "ok")
+    && accepted
+    && publishId
   ) {
-    const reason = called.result.status === 429
-      ? "rate_limited"
-      : safeTikTokPostError(code) === "rate_limited"
-        ? "rate_limited"
-        : "unconfirmed";
-    const ambiguous = called.result.status >= 500 || called.result.status === 200;
-    return { ok: false, reason, externalCall: true, attempts: called.calls, ambiguous };
+    return { ok: true, publishId, externalCall: true, attempts: called.calls };
   }
-  return { ok: true, publishId, externalCall: true, attempts: called.calls };
+  const definiteFailure = Boolean(code && code !== "ok" && called.result.status < 500);
+  const reason = called.result.status === 429 || safeTikTokPostError(code) === "rate_limited"
+    ? "rate_limited"
+    : definiteFailure
+      ? "provider_error"
+      : "unconfirmed";
+  return {
+    ok: false,
+    reason,
+    externalCall: true,
+    attempts: called.calls,
+    ambiguous: !definiteFailure && (called.result.status >= 500 || called.result.status === 200),
+  };
 }
 
 export async function initTikTokDirectPost(input: {

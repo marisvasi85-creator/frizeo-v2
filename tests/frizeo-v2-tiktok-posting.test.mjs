@@ -23,6 +23,7 @@ import {
   initTikTokPhotoInbox,
   initTikTokVideoInbox,
   interpretTikTokStatus,
+  isTikTokPublishId,
   tikTokIdempotencyDecision,
   tikTokMediaUrl,
 } from "../lib/integrations/tiktok/posting.ts";
@@ -163,6 +164,60 @@ test("a simulated inbox upload retries only a dropped request and keeps one publ
   });
   assert.equal(duplicate.reason, "already_started");
   assert.equal(duplicate.externalCall, false);
+});
+
+test("a documented photo publish id is saved and a definite error is not reconciled", async () => {
+  const photoId = "p_pub_url~v2.123456789";
+  assert.equal(isTikTokPublishId(photoId), true);
+  assert.equal(isTikTokPublishId("v_pub_url~v2.123456789"), true);
+  const request = buildPhotoInboxRequest({
+    title: "Titlu",
+    description: "Descriere",
+    imageUrl: image,
+  });
+  assert.equal(request.post_mode, "MEDIA_UPLOAD");
+  assert.equal(request.media_type, "PHOTO");
+  assert.equal(request.source_info.source, "PULL_FROM_URL");
+  assert.equal(request.source_info.photo_cover_index, 0);
+  const accepted = await initTikTokPhotoInbox({
+    http: async () => ({
+      status: 200,
+      body: { data: { publish_id: photoId }, error: { code: "ok", message: "", log_id: "log" } },
+    }),
+    accessToken: "access-value",
+    scopes: ["user.info.basic", "video.upload"],
+    capabilityEnabled: false,
+    draftTest: true,
+    liveEnabled: true,
+    maxAttempts: 1,
+    caption: "Program de vineri",
+    imageUrl: image,
+  });
+  assert.equal(accepted.ok, true);
+  if (accepted.ok) assert.equal(accepted.publishId, photoId);
+
+  const rejected = await initTikTokPhotoInbox({
+    http: async () => ({
+      status: 200,
+      body: { data: {}, error: { code: "invalid_param", message: "access-value" } },
+    }),
+    accessToken: "access-value",
+    scopes: ["user.info.basic", "video.upload"],
+    capabilityEnabled: false,
+    draftTest: true,
+    liveEnabled: true,
+    maxAttempts: 1,
+    caption: "Program de vineri",
+    imageUrl: image,
+  });
+  assert.equal(rejected.ok, false);
+  if (!rejected.ok) {
+    assert.equal(rejected.ambiguous, false);
+    assert.equal(rejected.reason, "provider_error");
+  }
+  const migration = readFileSync(join(root, "supabase/migrations/20261112101500_frizeo_v2_tiktok_photo_publish_id.sql"), "utf8");
+  assert.match(migration, /\^\[vp\]_/);
+  assert.equal(migration.includes("1eeeaa87-9a8c-49eb-8a60-459ed0b7034d"), false);
 });
 
 test("direct post and video upload are prepared but never sent", async () => {
