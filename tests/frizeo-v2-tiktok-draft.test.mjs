@@ -269,6 +269,18 @@ test("an ambiguous TikTok response is reconciled once and is not retried", async
   if (!server.ok) assert.equal(server.ambiguous, true);
 });
 
+test("one unidentified unknown job does not block a different draft key", () => {
+  const migration = readFileSync(join(root, "supabase/migrations/20261112103000_frizeo_v2_tiktok_second_draft.sql"), "utf8");
+  const index = migration.slice(migration.indexOf("create unique index"), migration.indexOf("create or replace function"));
+  assert.match(index, /'initiating', 'pending', 'publishing'/);
+  assert.equal(index.includes("'unknown'"), false);
+  assert.match(migration, /v_unknown >= 2/);
+  assert.match(migration, /status = 'unknown'/);
+  assert.match(migration, /provider_post_id is null/);
+  assert.equal(migration.includes("1eeeaa87-9a8c-49eb-8a60-459ed0b7034d"), false);
+  assert.equal(migration.includes("update public.integration_publish_jobs"), false);
+});
+
 test("the draft migration does not enable publishing or direct post", () => {
   const migration = readFileSync(join(root, "supabase/migrations/20261112093000_frizeo_v2_tiktok_draft_test.sql"), "utf8");
   const mediaRoute = readFileSync(join(root, "app/api/integrations/tiktok/media/[token]/route.ts"), "utf8");
