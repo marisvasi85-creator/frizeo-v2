@@ -184,6 +184,50 @@ test("tiktok token exchange accepts only the identity scope and keeps the open i
   assert.equal(log.includes("socket hang up"), false);
 });
 
+test("reconnect accepts the previously granted upload scope in any order", () => {
+  const token = {
+    access_token: "act.example",
+    refresh_token: "rft.example",
+    expires_in: 86400,
+    refresh_expires_in: 31536000,
+    open_id: "open-id.1",
+  };
+  const reversed = parseTikTokToken({
+    ...token,
+    scope: "video.upload,user.info.basic",
+  }, "identity");
+  assert.equal(reversed.ok, true);
+  if (reversed.ok) {
+    assert.deepEqual(reversed.scopes, ["user.info.basic", "video.upload"]);
+    assert.equal(reversed.grantedUpload, true);
+  }
+  const spaced = parseTikTokToken({
+    ...token,
+    scope: "user.info.basic, video.upload",
+  }, "identity");
+  assert.equal(spaced.ok, true);
+  if (spaced.ok) assert.deepEqual(spaced.scopes, ["user.info.basic", "video.upload"]);
+  const requested = parseTikTokToken({
+    ...token,
+    scope: "user.info.basic,video.upload",
+  }, "upload");
+  assert.equal(requested.ok, true);
+  if (requested.ok) assert.equal(requested.grantedUpload, true);
+  assert.equal(parseTikTokToken({ ...token, scope: "video.upload" }, "identity").reason, "missing_scope");
+  assert.equal(parseTikTokToken({ ...token, scope: "" }, "upload").reason, "missing_scope");
+  assert.equal(parseTikTokToken({ ...token, scope: "user.info.basic" }, "upload").reason, "missing_scope");
+  assert.equal(parseTikTokToken({
+    ...token,
+    scope: "user.info.basic,video.list",
+  }, "identity").reason, "unexpected_scope");
+  const identityOnly = parseTikTokToken({ ...token, scope: "user.info.basic" }, "identity");
+  assert.equal(identityOnly.ok, true);
+  if (identityOnly.ok) {
+    assert.deepEqual(identityOnly.scopes, ["user.info.basic"]);
+    assert.equal(identityOnly.grantedUpload, false);
+  }
+});
+
 test("tiktok rejects publish scopes, empty identity, and a mismatched profile", () => {
   assert.equal(parseTikTokToken({
     access_token: "a",

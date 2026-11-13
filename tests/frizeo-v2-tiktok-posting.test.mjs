@@ -62,11 +62,14 @@ test("upload consent is explicit and direct post stays inactive", () => {
   }));
   const material = readPkceMaterial(encodePkceMaterial("a".repeat(43), "upload"));
   assert.deepEqual(material, { verifier: "a".repeat(43), consent: "upload" });
-  assert.equal(acceptTikTokScopes(["user.info.basic", "video.upload"], "identity").reason, "upload_not_requested");
+  const kept = acceptTikTokScopes(["video.upload", "user.info.basic"], "identity");
+  assert.equal(kept.ok, true);
+  if (kept.ok) {
+    assert.deepEqual(kept.scopes, ["user.info.basic", "video.upload"]);
+    assert.equal(kept.grantedUpload, true);
+  }
   assert.equal(acceptTikTokScopes(["user.info.basic", "video.publish"], "upload").reason, "publish_scope");
-  const granted = acceptTikTokScopes(["user.info.basic"], "upload");
-  assert.equal(granted.ok, true);
-  if (granted.ok) assert.equal(granted.grantedUpload, false);
+  assert.equal(acceptTikTokScopes(["user.info.basic"], "upload").reason, "missing_scope");
 });
 
 test("photo inbox stays local unless a test explicitly enables the call", async () => {

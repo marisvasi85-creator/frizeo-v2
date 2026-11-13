@@ -137,7 +137,6 @@ export type ParsedTikTokToken =
         | "invalid_token"
         | "missing_scope"
         | "publish_scope"
-        | "upload_not_requested"
         | "unexpected_scope"
         | "missing_refresh"
         | "missing_expiry"
@@ -190,15 +189,17 @@ export function acceptTikTokScopes(
   consent: TikTokConsent,
 ): { ok: true; scopes: string[]; grantedUpload: boolean } | {
   ok: false;
-  reason: "missing_scope" | "publish_scope" | "upload_not_requested" | "unexpected_scope";
+  reason: "missing_scope" | "publish_scope" | "unexpected_scope";
 } {
   const unique = [...new Set(scopes)];
   if (!unique.includes(TIKTOK_SCOPE)) return { ok: false, reason: "missing_scope" };
   if (unique.includes(TIKTOK_PUBLISH_SCOPE)) return { ok: false, reason: "publish_scope" };
   const extras = unique.filter((scope) => scope !== TIKTOK_SCOPE && scope !== TIKTOK_UPLOAD_SCOPE);
   if (extras.length > 0) return { ok: false, reason: "unexpected_scope" };
+  if (consent === "upload" && !unique.includes(TIKTOK_UPLOAD_SCOPE)) {
+    return { ok: false, reason: "missing_scope" };
+  }
   const grantedUpload = unique.includes(TIKTOK_UPLOAD_SCOPE);
-  if (grantedUpload && consent !== "upload") return { ok: false, reason: "upload_not_requested" };
   return {
     ok: true,
     scopes: grantedUpload ? [TIKTOK_SCOPE, TIKTOK_UPLOAD_SCOPE] : [TIKTOK_SCOPE],

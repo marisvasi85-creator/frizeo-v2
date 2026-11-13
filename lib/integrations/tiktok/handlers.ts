@@ -4,9 +4,10 @@ import { isProduction } from "@/lib/app/environment";
 import { createOAuthState, hashOAuthState } from "@/lib/integrations/oauth/state";
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
-import { assertTikTokConfig, TIKTOK_SCOPE } from "@/lib/integrations/tiktok/config";
+import { assertTikTokConfig } from "@/lib/integrations/tiktok/config";
 import { createTikTokHttp, exchangeTikTokCode, fetchTikTokUser } from "@/lib/integrations/tiktok/api";
 import {
+  acceptTikTokScopes,
   buildTikTokAuthorizeUrl,
   decideTikTokConnect,
   encodePkceMaterial,
@@ -153,7 +154,6 @@ export async function finishTikTokCallback(request: Request) {
     if (
       token.reason === "missing_scope"
       || token.reason === "publish_scope"
-      || token.reason === "upload_not_requested"
       || token.reason === "unexpected_scope"
     ) return tikTokRedirect("permissions");
     if (token.reason === "missing_expiry") return tikTokRedirect("unknown_expiry");
@@ -187,7 +187,7 @@ export async function finishTikTokCallback(request: Request) {
     refreshExpiresIn: token.refreshExpiresIn,
   });
   if (!saved) return tikTokRedirect("invalid");
-  if (pkce.consent === "upload" && granted.uploadConsent) return tikTokRedirect("upload_granted");
+  if (granted.uploadConsent) return tikTokRedirect("upload_granted");
   if (pkce.consent === "upload") return tikTokRedirect("upload_not_granted");
   return tikTokRedirect("connected");
 }
@@ -196,14 +196,9 @@ function parseStoredScopes(
   scopes: string[],
   consent: TikTokConsent,
 ): { scopes: string[]; uploadConsent: boolean } | null {
-  if (!scopes.includes(TIKTOK_SCOPE) || scopes.includes("video.publish")) return null;
-  const upload = scopes.includes("video.upload");
-  if (upload && consent !== "upload") return null;
-  if (scopes.some((scope) => scope !== TIKTOK_SCOPE && scope !== "video.upload")) return null;
-  return {
-    scopes: upload ? [TIKTOK_SCOPE, "video.upload"] : [TIKTOK_SCOPE],
-    uploadConsent: upload,
-  };
+  const accepted = acceptTikTokScopes(scopes, consent);
+  if (!accepted.ok) return null;
+  return { scopes: accepted.scopes, uploadConsent: accepted.grantedUpload };
 }
 
 export async function prepareTikTokInboxDraft(request: Request) {
