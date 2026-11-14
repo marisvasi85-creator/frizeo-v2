@@ -182,6 +182,41 @@ test("google mock post keeps a 1500 character summary and a public book link", (
   assert.equal(ready.body.media?.[0].mediaFormat, "PHOTO");
 });
 
+test("google mock without a booking link omits Rezervă and markdown", () => {
+  const plain = buildGoogleLocalPost({
+    summary: "**Program** de vineri",
+    bookingUrl: null,
+  });
+  assert.equal(plain.ok, true);
+  if (!plain.ok) return;
+  assert.equal(plain.body.summary, "Program de vineri");
+  assert.equal(plain.body.summary.includes("**"), false);
+  assert.equal(Object.hasOwn(plain.body, "callToAction"), false);
+  const blank = buildGoogleLocalPost({ summary: "Program", bookingUrl: "   " });
+  assert.equal(blank.ok, true);
+  if (!blank.ok) return;
+  assert.equal(Object.hasOwn(blank.body, "callToAction"), false);
+  assert.equal(buildGoogleLocalPost({ summary: "****", bookingUrl: null }).ok, false);
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20261114051851_frizeo_v2_google_mock_without_booking.sql"),
+    "utf8",
+  );
+  assert.match(migration, /replace\(coalesce\(p_caption, ''\), '\*\*', ''\)/);
+  assert.match(migration, /when v_booking = '' then '\{\}'::jsonb/);
+  assert.match(migration, /'mock'/);
+  assert.equal(migration.includes("'live'"), false);
+  assert.equal(migration.includes("mybusiness.googleapis.com"), false);
+  assert.equal(migration.includes("graph.facebook.com"), false);
+  assert.equal(migration.includes("open.tiktokapis.com"), false);
+  const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
+  const mockStart = composer.indexOf("async function runMock");
+  const mockBody = composer.slice(mockStart, composer.indexOf("async function cleanup"));
+  assert.equal(mockBody.includes("ERRORS.booking_link_missing"), false);
+  assert.match(mockBody, /bookingUrl: bookingUrl \?\? ""/);
+  assert.match(mockBody, /fără butonul Rezervă/);
+  assert.match(composer, /Nu se face niciun apel către Google, Meta sau TikTok/);
+});
+
 test("prepared live adapter accepts a text post id and does not invent one", async () => {
   const post = buildGoogleLocalPost({
     summary: "Programare",

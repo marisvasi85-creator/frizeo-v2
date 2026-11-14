@@ -122,6 +122,7 @@ export default function PublishComposer({
     setJobs(history);
   }, [historyKey, history]);
   const previewRef = useRef<string | null>(null);
+  const handoffApplied = useRef(false);
   previewRef.current = previewUrl;
   useEffect(() => () => {
     if (previewRef.current) URL.revokeObjectURL(previewRef.current);
@@ -156,8 +157,10 @@ export default function PublishComposer({
   }
 
   useEffect(() => {
+    if (handoffApplied.current) return;
     const handoff = readMarketingPublishHandoff();
     if (!handoff) return;
+    handoffApplied.current = true;
     const bytes = base64ToBytes(handoff.imageBase64);
     if (!bytes) return;
     const buffer = new ArrayBuffer(bytes.byteLength);
@@ -247,14 +250,15 @@ export default function PublishComposer({
   async function runMock() {
     if (busy) return;
     const plainCaption = withoutMarkdownBold(caption);
+    if (!plainCaption.trim()) {
+      setMessage("Textul nu poate fi gol.");
+      return;
+    }
     if (selectedGoogle.length > 0 && plainCaption.trim().length > 1500) {
       setMessage(ERRORS.summary_too_long);
       return;
     }
-    if (selectedGoogle.length > 0 && !bookingUrl) {
-      setMessage(ERRORS.booking_link_missing);
-      return;
-    }
+    setCaption(plainCaption);
     if (!keyRef.current) keyRef.current = crypto.randomUUID();
     const idempotencyKey = keyRef.current;
     setBusy(true);
@@ -298,7 +302,7 @@ export default function PublishComposer({
             caption: plainCaption.trim(),
             destinationIds: selectedGoogle.map((destination) => destination.id),
             mediaObjectPath: path,
-            bookingUrl,
+            bookingUrl: bookingUrl ?? "",
           }),
         });
         const payload = await response.json().catch(() => null) as {
@@ -318,9 +322,15 @@ export default function PublishComposer({
       }
       setJobs((current) => [...collected, ...current]);
       setOutcomes(collected);
-      setMessage(selectedGoogle.length > 0 && selectedMeta.length === 0
-        ? "Testul mock a fost salvat local. Nu s-a trimis nimic către Google."
-        : "Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
+      const googleOnly = selectedGoogle.length > 0 && selectedMeta.length === 0;
+      const missingBook = selectedGoogle.length > 0 && !bookingUrl;
+      setMessage(googleOnly
+        ? missingBook
+          ? "Testul mock a fost salvat local, fără butonul Rezervă. Lipsește linkul public de programare. Nu s-a trimis nimic către Google."
+          : "Testul mock a fost salvat local. Nu s-a trimis nimic către Google."
+        : missingBook
+          ? "Testul mock a fost salvat local. Google este fără butonul Rezervă. Nu s-a trimis nimic către Facebook, Instagram sau Google."
+          : "Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
       keyRef.current = null;
       router.refresh();
     } finally {
@@ -527,7 +537,9 @@ export default function PublishComposer({
       {selectedGoogle.length > 0 && (
         <p className="text-sm text-frz-ink">
           Buton Google: Rezervă
-          {bookingUrl ? ` · ${bookingUrl}` : " · lipsește linkul public de programare"}
+          {bookingUrl
+            ? ` · ${bookingUrl}`
+            : " · lipsește linkul public de programare. Simularea se salvează fără butonul Rezervă."}
         </p>
       )}
       <fieldset className="grid gap-2">
@@ -563,7 +575,7 @@ export default function PublishComposer({
             : "Publicarea reală este oprită. Butonul Publică este dezactivat și nu trimite conținut către Facebook sau Instagram."}
       </p>
       <p className="text-sm text-frz-muted">
-        Testul mock salvează o schiță locală pentru destinațiile alese. Nu se face niciun apel către Meta.
+        Testul mock salvează o schiță locală pentru destinațiile alese. Nu se face niciun apel către Google, Meta sau TikTok.
       </p>
       {message && <p className="text-sm text-frz-ink">{message}</p>}
       {needsGoogleConnection && (

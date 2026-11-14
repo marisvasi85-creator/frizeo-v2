@@ -15,7 +15,7 @@ export type GoogleLocalPost = {
   languageCode: "ro";
   summary: string;
   topicType: "STANDARD";
-  callToAction: { actionType: "BOOK"; url: string };
+  callToAction?: { actionType: "BOOK"; url: string };
   media?: Array<{ mediaFormat: "PHOTO"; sourceUrl: string }>;
 };
 
@@ -28,13 +28,14 @@ export function buildGoogleLocalPost(input: {
   if (!summary || summary.length > GOOGLE_BUSINESS_SUMMARY_MAX || summary.includes("\u0000")) {
     return { ok: false, reason: "summary" };
   }
-  const callToAction = googleBookAction(input.bookingUrl);
-  if (!callToAction) return { ok: false, reason: "booking_link" };
+  const requestedBooking = input.bookingUrl?.trim() ?? "";
+  const callToAction = requestedBooking ? googleBookAction(requestedBooking) : null;
+  if (requestedBooking && !callToAction) return { ok: false, reason: "booking_link" };
   const body: GoogleLocalPost = {
     languageCode: "ro",
     summary,
     topicType: "STANDARD",
-    callToAction,
+    ...(callToAction ? { callToAction } : {}),
   };
   if (input.imageUrl) {
     let image: URL;
