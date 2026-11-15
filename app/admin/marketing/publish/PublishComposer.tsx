@@ -52,6 +52,13 @@ const ERRORS: Record<string, string> = {
   destination_mismatch: "Destinația nu aparține acestui salon.",
   idempotency_conflict: "Aceeași acțiune a fost trimisă cu date diferite.",
   destination_busy: "Această destinație are deja o publicare în curs sau cu rezultat necunoscut. Nu se trimite o a doua postare.",
+  image_not_allowed: "Primul test Google acceptă doar text. Imaginea nu este trimisă.",
+  booking_not_allowed: "Primul test Google nu include butonul Rezervă.",
+  location_ineligible: "Locația nu este eligibilă pentru contul Google conectat la acest salon.",
+  token_unavailable: "Conexiunea Google Business trebuie refăcută. Nu s-a trimis postarea.",
+  token_refresh_failed: "Tokenul Google Business nu a putut fi reînnoit. Nu s-a trimis postarea.",
+  summary: "Textul Google nu este valid.",
+  ambiguous: "Google nu a confirmat rezultatul. Nu trimite din nou până la verificare.",
   needs_reconnect: "Conexiunea Meta trebuie refăcută manual.",
   save_failed: "Publicarea nu a putut fi salvată.",
   upload_failed: "Imaginea nu a putut fi salvată.",
@@ -99,15 +106,18 @@ function labelFor(type: string, name: string | null): string {
 
 export default function PublishComposer({
   liveAvailable,
+  googleLiveAvailable,
   destinations,
   history,
 }: {
   liveAvailable: boolean;
+  googleLiveAvailable: boolean;
   destinations: DestinationOption[];
   history: HistoryJob[];
 }) {
   const router = useRouter();
   const keyRef = useRef<string | null>(null);
+  const googleKeyRef = useRef<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
@@ -332,6 +342,61 @@ export default function PublishComposer({
           ? "Testul mock a fost salvat local. Google este fără butonul Rezervă. Nu s-a trimis nimic către Facebook, Instagram sau Google."
           : "Testul mock a fost salvat local. Nu s-a trimis nimic către Facebook sau Instagram.");
       keyRef.current = null;
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runGoogleLive() {
+    if (!googleLiveAvailable || busy || selectedGoogle.length !== 1) return;
+    const plainCaption = withoutMarkdownBold(caption);
+    if (!plainCaption.trim()) {
+      setMessage("Textul nu poate fi gol.");
+      return;
+    }
+    if (plainCaption.trim().length > 1500) {
+      setMessage(ERRORS.summary_too_long);
+      return;
+    }
+    setCaption(plainCaption);
+    if (!googleKeyRef.current) googleKeyRef.current = crypto.randomUUID();
+    const idempotencyKey = googleKeyRef.current;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/integrations/google-business/publish/live", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idempotencyKey,
+          caption: plainCaption,
+          destinationIds: selectedGoogle.map((destination) => destination.id),
+          mediaObjectPath: "",
+          bookingUrl: "",
+        }),
+      });
+      const payload = await response.json().catch(() => null) as {
+        error?: string;
+        jobs?: HistoryJob[];
+      } | null;
+      if (payload?.jobs?.[0]) {
+        setJobs((current) => [payload.jobs![0], ...current.filter((job) => job.id !== payload.jobs![0].id)]);
+        setOutcomes(payload.jobs);
+      }
+      if (!response.ok || !payload?.jobs?.[0]) {
+        setMessage(ERRORS[payload?.error ?? ""] ?? "Publicarea Google nu a putut fi pornită.");
+        return;
+      }
+      const job = payload.jobs[0];
+      if (!openLive(job)) googleKeyRef.current = null;
+      setMessage(job.status === "published"
+        ? "Textul a fost publicat pe Google Business. Nu conține imagine și nu are butonul Rezervă."
+        : job.status === "unknown"
+          ? ERRORS.ambiguous
+          : job.status === "pending" || job.status === "publishing"
+            ? "Publicarea Google este în curs. Nu trimite din nou."
+            : (ERRORS[job.safeError ?? ""] ?? "Publicarea Google nu a reușit."));
       router.refresh();
     } finally {
       setBusy(false);
@@ -566,7 +631,20 @@ export default function PublishComposer({
         <AdminButton type="button" variant="secondary" disabled={busy || selected.length === 0} onClick={runMock}>
           Rulează testul mock
         </AdminButton>
+        <AdminButton
+          type="button"
+          variant="secondary"
+          disabled={!googleLiveAvailable || busy || selectedGoogle.length !== 1}
+          onClick={googleLiveAvailable ? runGoogleLive : undefined}
+        >
+          Publică textul pe Google
+        </AdminButton>
       </div>
+      <p className="text-sm text-frz-muted">
+        {googleLiveAvailable
+          ? "Publicarea Google este pornită pentru acest salon. Butonul trimite doar textul, fără imagine și fără butonul Rezervă."
+          : "Publicarea Google este oprită. Primul test real va trimite doar text, fără imagine și fără butonul Rezervă."}
+      </p>
       <p className="text-sm text-frz-muted">
         {destinationBusy
           ? "O destinație bifată are o publicare în curs sau cu rezultat necunoscut. Butonul Publică rămâne dezactivat și nu trimite o a doua postare."
@@ -598,9 +676,10 @@ export default function PublishComposer({
         <h2 className="text-lg font-semibold text-frz-ink">Istoric</h2>
         {jobs.length === 0 && <p className="text-sm text-frz-muted">Nu există publicări salvate.</p>}
         {jobs.map((job) => {
+          const googleJob = job.destinationType === "google_business_location";
           const terminal = job.status === "draft" || job.status === "published" || job.status === "failed" || job.status === "cancelled" || job.status === "released";
-          const canRelease = job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
-          const canVerify = job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId) && job.safeError !== "publish_in_flight";
+          const canRelease = !googleJob && job.executionMode === "live" && job.status === "unknown" && job.safeError === "ambiguous";
+          const canVerify = !googleJob && job.executionMode === "live" && job.status === "publishing" && Boolean(job.providerContainerId) && job.safeError !== "publish_in_flight";
           const canCheckInstagram = job.executionMode === "live" && job.status === "unknown" && job.destinationType === "instagram_business";
           const instagramHit = instagramLookup?.jobId === job.id ? instagramLookup : null;
           return (
@@ -645,7 +724,7 @@ export default function PublishComposer({
                   </AdminButton>
                 </div>
               )}
-              {terminal && job.assetId && (
+              {terminal && job.assetId && !googleJob && (
                 <div className="mt-2">
                   <AdminButton type="button" variant="ghost" onClick={() => cleanup(job.assetId)}>
                     Șterge imaginea

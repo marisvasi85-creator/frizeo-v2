@@ -116,6 +116,35 @@ export async function upsertGoogleConnection(input: {
   return true;
 }
 
+export async function saveGoogleAccessToken(input: {
+  tenantId: string;
+  accessToken: string;
+  refreshToken: string;
+  expiresAt: string;
+  scopes: string[] | null;
+}): Promise<boolean> {
+  const encrypted = encryptGoogleSecret(encodeGoogleToken({
+    accessToken: input.accessToken,
+    refreshToken: input.refreshToken,
+    obtainedAt: new Date().toISOString(),
+  }));
+  if (!encrypted) return false;
+  const { data, error } = await supabaseAdmin.rpc("google_business_store_access_token", {
+    p_tenant_id: input.tenantId,
+    p_ciphertext: encrypted.ciphertext,
+    p_nonce: encrypted.nonce,
+    p_key_version: 1,
+    p_token_expires_at: input.expiresAt,
+    p_scopes: input.scopes,
+  });
+  const row = asRecord(data);
+  if (error || row?.updated !== true) {
+    console.error("google_business_store_access_token_failed");
+    return false;
+  }
+  return true;
+}
+
 export async function readGoogleAccessToken(tenantId: string): Promise<
   | { ok: true; connectionId: string; accessToken: string; refreshToken: string; expiresAt: string | null }
   | { ok: false; reason: "missing" | "decrypt_failed" }

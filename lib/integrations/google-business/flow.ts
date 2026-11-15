@@ -10,6 +10,13 @@ import {
 } from "@/lib/integrations/google-business/config";
 
 export const GOOGLE_BUSINESS_SUMMARY_MAX = 1500;
+const GOOGLE_BUSINESS_OPTIONAL_SCOPES = new Set([
+  "openid",
+  "email",
+  "profile",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+]);
 
 export type GoogleNotice =
   | "select"
@@ -35,7 +42,8 @@ export type GoogleNotice =
   | "accounts_unavailable"
   | "invalid"
   | "unknown_expiry"
-  | "calendar_scope";
+  | "calendar_scope"
+  | "unexpected_scope";
 
 export type GoogleBusinessAccount = {
   name: string;
@@ -278,11 +286,26 @@ export function parseGoogleLocations(body: unknown, accountName: string): Google
 }
 
 export type ParsedGoogleToken =
-  | { ok: true; accessToken: string; refreshToken: string; expiresIn: number }
+  | { ok: true; accessToken: string; refreshToken: string; expiresIn: number; scopes: string[] }
   | {
       ok: false;
-      reason: "invalid_token" | "missing_scope" | "calendar_scope" | "missing_refresh" | "missing_expiry";
+      reason: "invalid_token" | "missing_scope" | "calendar_scope" | "unexpected_scope" | "missing_refresh" | "missing_expiry";
     };
+
+export function acceptGoogleScopes(scopes: readonly string[]):
+  | { ok: true; scopes: string[] }
+  | { ok: false; reason: "missing_scope" | "calendar_scope" | "unexpected_scope" } {
+  const unique = [...new Set(scopes.map((scope) => scope.trim()).filter((scope) => scope.length > 0))];
+  if (unique.some((scope) => scope.toLowerCase().includes("calendar"))) {
+    return { ok: false, reason: "calendar_scope" };
+  }
+  if (!unique.includes(GOOGLE_BUSINESS_SCOPE)) return { ok: false, reason: "missing_scope" };
+  const extras = unique.filter((scope) => scope !== GOOGLE_BUSINESS_SCOPE);
+  if (extras.some((scope) => !GOOGLE_BUSINESS_OPTIONAL_SCOPES.has(scope))) {
+    return { ok: false, reason: "unexpected_scope" };
+  }
+  return { ok: true, scopes: [GOOGLE_BUSINESS_SCOPE, ...extras] };
+}
 
 export function parseGoogleToken(body: unknown): ParsedGoogleToken {
   if (!body || typeof body !== "object") return { ok: false, reason: "invalid_token" };
@@ -296,18 +319,73 @@ export function parseGoogleToken(body: unknown): ParsedGoogleToken {
   const refreshToken = text(record.refresh_token);
   const scope = text(record.scope);
   if (!accessToken || !scope) return { ok: false, reason: "invalid_token" };
-  const scopes = scope.split(/\s+/);
-  if (scopes.some((item) => item.toLowerCase().includes("calendar"))) {
-    return { ok: false, reason: "calendar_scope" };
-  }
-  if (scopes.length !== 1 || scopes[0] !== GOOGLE_BUSINESS_SCOPE) {
-    return { ok: false, reason: "missing_scope" };
-  }
+  const accepted = acceptGoogleScopes(scope.split(/\s+/));
+  if (!accepted.ok) return accepted;
   if (!refreshToken) return { ok: false, reason: "missing_refresh" };
   if (typeof record.expires_in !== "number" || !Number.isFinite(record.expires_in) || record.expires_in <= 0) {
     return { ok: false, reason: "missing_expiry" };
   }
-  return { ok: true, accessToken, refreshToken, expiresIn: record.expires_in };
+  return { ok: true, accessToken, refreshToken, expiresIn: record.expires_in, scopes: accepted.scopes };
+}
+
+export function parseGoogleRefresh(body: unknown, currentRefreshToken: string):
+  | { ok: true; accessToken: string; refreshToken: string; expiresIn: number; scopes: string[] | null }
+  | { ok: false; reason: "refresh_failed" | "missing_scope" | "calendar_scope" | "unexpected_scope" | "missing_expiry" } {
+  if (!body || typeof body !== "object" || !currentRefreshToken) {
+    return { ok: false, reason: "refresh_failed" };
+  }
+  const record = body as {
+    access_token?: unknown;
+    refresh_token?: unknown;
+    expires_in?: unknown;
+    scope?: unknown;
+  };
+  const accessToken = text(record.access_token);
+  if (!accessToken) return { ok: false, reason: "refresh_failed" };
+  if (typeof record.expires_in !== "number" || !Number.isFinite(record.expires_in) || record.expires_in <= 0) {
+    return { ok: false, reason: "missing_expiry" };
+  }
+  const scope = text(record.scope);
+  let scopes: string[] | null = null;
+  if (scope) {
+    const accepted = acceptGoogleScopes(scope.split(/\s+/));
+    if (!accepted.ok) return accepted;
+    scopes = accepted.scopes;
+  }
+  return {
+    ok: true,
+    accessToken,
+    refreshToken: text(record.refresh_token) ?? currentRefreshToken,
+    expiresIn: record.expires_in,
+    scopes,
+  };
+}
+
+export function googleAccessTokenNeedsRefresh(expiresAt: string | null, now = Date.now()): boolean {
+  if (!expiresAt) return true;
+  const time = Date.parse(expiresAt);
+  if (!Number.isFinite(time)) return true;
+  return time - now <= 60_000;
+}
+
+export function decideGoogleLivePublish(input: {
+  authenticated: boolean;
+  role: string | null;
+  integrationEnabled: boolean;
+  liveCapabilityEnabled: boolean;
+  envLiveEnabled: boolean;
+  configured: boolean;
+  production: boolean;
+}):
+  | { ok: true }
+  | { ok: false; reason: "unauthenticated" | "production" | "unconfigured" | "forbidden" | "capability_off" | "live_off" } {
+  if (!input.authenticated) return { ok: false, reason: "unauthenticated" };
+  if (input.production) return { ok: false, reason: "production" };
+  if (!input.configured) return { ok: false, reason: "unconfigured" };
+  if (!canAdministerIntegrations(input.role)) return { ok: false, reason: "forbidden" };
+  if (!input.integrationEnabled) return { ok: false, reason: "capability_off" };
+  if (!input.liveCapabilityEnabled || !input.envLiveEnabled) return { ok: false, reason: "live_off" };
+  return { ok: true };
 }
 
 export function encodeGoogleToken(input: {
@@ -422,5 +500,58 @@ export function presentGooglePublishJob(value: unknown): GooglePublishJobView | 
     providerContainerId: null,
     providerPostId: typeof postId === "string" ? postId : null,
     caption: typeof row.caption === "string" ? row.caption : null,
+  };
+}
+
+export type GoogleLiveJobView = {
+  id: string;
+  assetId: string;
+  destinationId: string;
+  destinationType: "google_business_location";
+  displayName: string | null;
+  providerDestinationId: string;
+  status: string;
+  executionMode: "live";
+  attempts: number;
+  safeError: string | null;
+  providerPostId: string | null;
+  caption: string;
+  bookingUrl: string;
+  mediaObjectPath: string | null;
+};
+
+export function presentGoogleLiveJob(value: unknown): GoogleLiveJobView | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  if (row.destination_type !== "google_business_location") return null;
+  if (row.execution_mode !== "live") return null;
+  if (typeof row.id !== "string" || typeof row.asset_id !== "string" || typeof row.destination_id !== "string") {
+    return null;
+  }
+  if (typeof row.provider_destination_id !== "string" || !isGoogleLocationId(row.provider_destination_id)) {
+    return null;
+  }
+  if (typeof row.caption !== "string" || typeof row.attempts !== "number") return null;
+  const postId = row.provider_post_id;
+  if (postId !== null && postId !== undefined && (typeof postId !== "string" || !isGooglePostId(postId))) {
+    return null;
+  }
+  const media = row.media_object_path;
+  if (media !== null && media !== undefined && typeof media !== "string") return null;
+  return {
+    id: row.id,
+    assetId: row.asset_id,
+    destinationId: row.destination_id,
+    destinationType: "google_business_location",
+    displayName: typeof row.display_name === "string" ? row.display_name : null,
+    providerDestinationId: row.provider_destination_id,
+    status: typeof row.status === "string" ? row.status : "pending",
+    executionMode: "live",
+    attempts: row.attempts,
+    safeError: typeof row.safe_error === "string" ? row.safe_error : null,
+    providerPostId: typeof postId === "string" ? postId : null,
+    caption: row.caption,
+    bookingUrl: typeof row.booking_url === "string" ? row.booking_url : "",
+    mediaObjectPath: typeof media === "string" ? media : null,
   };
 }

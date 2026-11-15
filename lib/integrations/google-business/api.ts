@@ -5,6 +5,7 @@ import {
 import {
   classifyGoogleAccountsResponse,
   parseGoogleLocations,
+  parseGoogleRefresh,
   parseGoogleToken,
   type GoogleAccountsResult,
   type GoogleBusinessLocation,
@@ -53,6 +54,32 @@ export async function exchangeGoogleCode(input: {
   }
   if (response.status < 200 || response.status >= 300) return { ok: false, reason: "invalid_token" };
   return parseGoogleToken(response.body);
+}
+
+export async function refreshGoogleBusinessToken(input: {
+  http: GoogleHttp;
+  config: GoogleBusinessConfig;
+  refreshToken: string;
+}): Promise<ReturnType<typeof parseGoogleRefresh>> {
+  let response: { status: number; body: unknown };
+  try {
+    const body = new URLSearchParams({
+      client_id: input.config.clientId,
+      client_secret: input.config.clientSecret,
+      refresh_token: input.refreshToken,
+      grant_type: "refresh_token",
+    });
+    response = await input.http({
+      url: GOOGLE_BUSINESS_TOKEN_URL,
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+    });
+  } catch {
+    return { ok: false, reason: "refresh_failed" };
+  }
+  if (response.status < 200 || response.status >= 300) return { ok: false, reason: "refresh_failed" };
+  return parseGoogleRefresh(response.body, input.refreshToken);
 }
 
 function logGoogleAccountsFailure(result: Extract<GoogleAccountsResult, { ok: false }>, secret: string): void {

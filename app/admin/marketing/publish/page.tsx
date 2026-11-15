@@ -4,6 +4,7 @@ import AdminPageHeader from "@/app/admin/components/AdminPageHeader";
 import PublishComposer from "@/app/admin/marketing/publish/PublishComposer";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isProduction } from "@/lib/app/environment";
+import { googleBusinessLiveEnvEnabled } from "@/lib/integrations/google-business/config";
 import { metaPublishLiveEnvEnabled } from "@/lib/integrations/meta/publish/flags";
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -33,7 +34,12 @@ export default async function MarketingPublishPage() {
       .from("tenant_capabilities")
       .select("capability, enabled")
       .eq("tenant_id", session.tenantId)
-      .in("capability", ["marketing.publish.meta", "marketing.publish.meta.live"]),
+      .in("capability", [
+        "marketing.publish.meta",
+        "marketing.publish.meta.live",
+        "marketing.publish.google_business",
+        "marketing.publish.google_business.live",
+      ]),
     supabase
       .from("marketing_destinations")
       .select("id, destination_type, display_name, status")
@@ -55,6 +61,13 @@ export default async function MarketingPublishPage() {
     (row) => row.capability === "marketing.publish.meta.live" && row.enabled === true,
   );
   const liveAvailable = integrationEnabled && liveCapability && metaPublishLiveEnvEnabled();
+  const googleIntegrationEnabled = (capabilities ?? []).some(
+    (row) => row.capability === "marketing.publish.google_business" && row.enabled === true,
+  );
+  const googleLiveCapability = (capabilities ?? []).some(
+    (row) => row.capability === "marketing.publish.google_business.live" && row.enabled === true,
+  );
+  const googleLiveAvailable = googleIntegrationEnabled && googleLiveCapability && googleBusinessLiveEnvEnabled();
   const options = (destinations ?? []).flatMap((row) => {
     if (
       row.destination_type !== "facebook_page"
@@ -99,9 +112,10 @@ export default async function MarketingPublishPage() {
         subtitle="Facebook, Instagram și Google Business. Poți aduce o postare din Marketing AI și o confirmi manual."
       />
       <AdminCard>
-        {integrationEnabled && options.length > 0 ? (
+        {(integrationEnabled || googleIntegrationEnabled) && options.length > 0 ? (
           <PublishComposer
             liveAvailable={liveAvailable}
+            googleLiveAvailable={googleLiveAvailable}
             destinations={options}
             history={history}
           />
@@ -109,7 +123,9 @@ export default async function MarketingPublishPage() {
           <p className="text-sm text-frz-muted">
             {integrationEnabled
               ? "Alege mai întâi paginile și conturile Instagram din Integrări."
-              : "Integrarea Meta este oprită pentru acest salon."}
+              : googleIntegrationEnabled
+                ? "Alege mai întâi locația Google Business din Integrări."
+                : "Integrarea Meta este oprită pentru acest salon."}
           </p>
         )}
       </AdminCard>

@@ -6,24 +6,35 @@ import { fileURLToPath } from "node:url";
 import { encryptIntegrationSecret, decryptIntegrationSecret } from "../lib/integrations/crypto.ts";
 import {
   assertGoogleBusinessConfig,
+  googleBusinessLiveEnvEnabled,
   GOOGLE_BUSINESS_SCOPE,
   isGooglePostId,
   isMetaPostId,
 } from "../lib/integrations/google-business/config.ts";
 import {
+  acceptGoogleScopes,
   buildGoogleAuthorizeUrl,
   decideGoogleConnect,
+  decideGoogleLivePublish,
   encodeGoogleToken,
+  googleAccessTokenNeedsRefresh,
   parseGoogleAccounts,
   parseGoogleLocations,
+  parseGoogleRefresh,
   parseGoogleToken,
   planGoogleDestinationSave,
+  presentGoogleLiveJob,
   presentGooglePublishJob,
   publicGoogleConnection,
   readGoogleToken,
 } from "../lib/integrations/google-business/flow.ts";
-import { listGoogleAccounts } from "../lib/integrations/google-business/api.ts";
-import { buildGoogleLocalPost, publishLocalPost } from "../lib/integrations/google-business/publish.ts";
+import { listGoogleAccounts, refreshGoogleBusinessToken } from "../lib/integrations/google-business/api.ts";
+import {
+  buildGoogleLocalPost,
+  buildGoogleTextPost,
+  classifyGoogleLocalPostResponse,
+  publishLocalPost,
+} from "../lib/integrations/google-business/publish.ts";
 import { getProviderAdapter } from "../lib/integrations/providers/registry.ts";
 import { writeMarketingPublishHandoff, takeMarketingPublishHandoff } from "../lib/marketing-ai/publishHandoff.ts";
 
@@ -115,19 +126,40 @@ test("google token storage stays encrypted and out of the public connection", ()
   }
 });
 
-test("google token response rejects calendar and any scope other than business.manage", () => {
+test("google reconnect keeps business.manage and legitimate extra scopes", () => {
   assert.equal(parseGoogleToken({
     access_token: "a",
     refresh_token: "r",
     expires_in: 3600,
     scope: "https://www.googleapis.com/auth/calendar",
   }).ok, false);
+  assert.equal(acceptGoogleScopes([GOOGLE_BUSINESS_SCOPE, "https://www.googleapis.com/auth/calendar"]).ok, false);
+  const extras = parseGoogleToken({
+    access_token: "a",
+    refresh_token: "r",
+    expires_in: 3600,
+    scope: `openid email ${GOOGLE_BUSINESS_SCOPE} profile`,
+  });
+  assert.equal(extras.ok, true);
+  if (!extras.ok) return;
+  assert.deepEqual(extras.scopes, [
+    GOOGLE_BUSINESS_SCOPE,
+    "openid",
+    "email",
+    "profile",
+  ]);
   assert.equal(parseGoogleToken({
     access_token: "a",
     refresh_token: "r",
     expires_in: 3600,
-    scope: `${GOOGLE_BUSINESS_SCOPE} openid`,
-  }).ok, false);
+    scope: "openid email",
+  }).reason, "missing_scope");
+  assert.equal(parseGoogleToken({
+    access_token: "a",
+    refresh_token: "r",
+    expires_in: 3600,
+    scope: `${GOOGLE_BUSINESS_SCOPE} https://www.googleapis.com/auth/youtube`,
+  }).reason, "unexpected_scope");
   const parsed = parseGoogleToken({
     access_token: "a",
     refresh_token: "r",
@@ -248,7 +280,17 @@ test("prepared live adapter accepts a text post id and does not invent one", asy
     post: post.body,
     http: async () => ({ status: 200, body: {} }),
   });
-  assert.deepEqual(missing, { ok: false, reason: "unconfirmed", externalCall: true });
+  assert.deepEqual(missing, {
+    ok: false,
+    reason: "unconfirmed",
+    safeError: "ambiguous",
+    httpStatus: 200,
+    externalCall: true,
+  });
+  assert.equal(classifyGoogleLocalPostResponse(400, { error: { status: "INVALID_ARGUMENT" } }).safeError, "invalid_parameter");
+  assert.equal(classifyGoogleLocalPostResponse(403, {}).safeError, "forbidden");
+  assert.equal(classifyGoogleLocalPostResponse(429, {}).safeError, "rate_limited");
+  assert.equal(classifyGoogleLocalPostResponse(500, {}).outcome, "unknown");
 });
 
 test("google job ids stay text and meta numeric ids still match", () => {
@@ -281,12 +323,47 @@ test("google job ids stay text and meta numeric ids still match", () => {
   assert.equal(view?.executionMode, "mock");
 });
 
-test("google live route cannot call Google and the lab adapter stays closed", async () => {
+test("google live stays off unless the salon capability and the env flag are both on", async () => {
+  assert.deepEqual(decideGoogleLivePublish({
+    authenticated: true,
+    role: "owner",
+    integrationEnabled: true,
+    liveCapabilityEnabled: false,
+    envLiveEnabled: true,
+    configured: true,
+    production: false,
+  }), { ok: false, reason: "live_off" });
+  assert.deepEqual(decideGoogleLivePublish({
+    authenticated: true,
+    role: "owner",
+    integrationEnabled: true,
+    liveCapabilityEnabled: true,
+    envLiveEnabled: false,
+    configured: true,
+    production: false,
+  }), { ok: false, reason: "live_off" });
+  assert.equal(googleBusinessLiveEnvEnabled({}), false);
+  assert.equal(googleBusinessLiveEnvEnabled({ GOOGLE_BUSINESS_PUBLISH_LIVE: "TRUE" }), false);
+  assert.equal(googleBusinessLiveEnvEnabled({ GOOGLE_BUSINESS_PUBLISH_LIVE: "true" }), true);
+  assert.equal(decideGoogleLivePublish({
+    authenticated: true,
+    role: "manager",
+    integrationEnabled: true,
+    liveCapabilityEnabled: true,
+    envLiveEnabled: true,
+    configured: true,
+    production: false,
+  }).ok, true);
   const live = readFileSync(join(root, "lib/integrations/google-business/handlers.ts"), "utf8");
   const liveFn = live.slice(live.indexOf("export async function publishGoogleLive"));
-  assert.match(liveFn, /live_off/);
-  assert.equal(liveFn.includes("publishLocalPost"), false);
-  assert.equal(liveFn.includes("mybusiness.googleapis.com"), false);
+  assert.match(liveFn, /decideGoogleLivePublish/);
+  assert.match(liveFn, /marketing\.publish\.google_business\.live/);
+  assert.match(liveFn, /image_not_allowed/);
+  assert.match(liveFn, /booking_not_allowed/);
+  assert.ok(liveFn.indexOf("decideGoogleLivePublish") < liveFn.indexOf("publishLocalPost"));
+  assert.equal(liveFn.includes("graph.facebook.com"), false);
+  assert.equal(liveFn.includes("open.tiktokapis.com"), false);
+  assert.equal(live.includes("lib/google/refreshAccessToken"), false);
   const mockFn = live.slice(live.indexOf("export async function publishGoogleMock"), live.indexOf("export async function publishGoogleLive"));
   assert.match(mockFn, /google_business_publish_prepare/);
   assert.match(mockFn, /externalCall: false/);
@@ -467,4 +544,98 @@ test("google account list reports 429 and network failures without turning them 
   assert.equal(network.log.includes("ECONNRESET"), false);
   assert.equal(network.log.includes("owner@frizeo.ro"), false);
   assert.equal(Array.isArray(network.result.accounts), false);
+});
+
+test("google business refresh uses its own client and keeps the previous refresh token", async () => {
+  const expired = new Date(Date.now() - 60_000).toISOString();
+  assert.equal(googleAccessTokenNeedsRefresh(expired), true);
+  assert.equal(googleAccessTokenNeedsRefresh(new Date(Date.now() + 10 * 60_000).toISOString()), false);
+  let posted = "";
+  const refreshed = await refreshGoogleBusinessToken({
+    config: {
+      clientId: "business-client",
+      clientSecret: "business-secret",
+      redirectUri: "https://staging.frizeo.ro/api/integrations/google-business/callback",
+      scope: GOOGLE_BUSINESS_SCOPE,
+    },
+    refreshToken: "stored-refresh",
+    http: async (input) => {
+      posted = input.body ?? "";
+      return {
+        status: 200,
+        body: { access_token: "new-access", expires_in: 3600, scope: `${GOOGLE_BUSINESS_SCOPE} openid` },
+      };
+    },
+  });
+  assert.equal(refreshed.ok, true);
+  if (!refreshed.ok) return;
+  assert.equal(refreshed.accessToken, "new-access");
+  assert.equal(refreshed.refreshToken, "stored-refresh");
+  assert.deepEqual(refreshed.scopes, [GOOGLE_BUSINESS_SCOPE, "openid"]);
+  assert.match(posted, /client_id=business-client/);
+  assert.match(posted, /grant_type=refresh_token/);
+  assert.equal(posted.includes("calendar-client"), false);
+  assert.equal(parseGoogleRefresh({
+    access_token: "a",
+    expires_in: 3600,
+    scope: "https://www.googleapis.com/auth/calendar",
+  }, "stored-refresh").ok, false);
+  const api = readFileSync(join(root, "lib/integrations/google-business/api.ts"), "utf8");
+  assert.equal(api.includes("lib/google/refreshAccessToken"), false);
+  assert.equal(api.includes("GOOGLE_CLIENT_ID"), false);
+});
+
+test("first google live post is text only and a 4xx does not look unconfirmed", () => {
+  const text = buildGoogleTextPost("**Program** de vineri");
+  assert.equal(text.ok, true);
+  if (!text.ok) return;
+  assert.equal(text.body.summary, "Program de vineri");
+  assert.equal(Object.hasOwn(text.body, "callToAction"), false);
+  assert.equal(Object.hasOwn(text.body, "media"), false);
+  assert.equal(buildGoogleTextPost("****").ok, false);
+  const view = presentGoogleLiveJob({
+    id: "job-1",
+    asset_id: "asset-1",
+    destination_id: "dest-1",
+    destination_type: "google_business_location",
+    provider_destination_id: "accounts/111/locations/222",
+    execution_mode: "live",
+    status: "pending",
+    attempts: 0,
+    caption: "Program de vineri",
+    booking_url: null,
+    media_object_path: null,
+    provider_post_id: null,
+    safe_error: null,
+  });
+  assert.equal(view?.executionMode, "live");
+  assert.equal(view?.mediaObjectPath, null);
+  assert.equal(presentGoogleLiveJob({
+    id: "job-1",
+    asset_id: "asset-1",
+    destination_id: "dest-1",
+    destination_type: "google_business_location",
+    provider_destination_id: "accounts/111/locations/222",
+    execution_mode: "mock",
+    status: "draft",
+    attempts: 0,
+    caption: "Program",
+  }), null);
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20261115064049_frizeo_v2_google_business_live_prep.sql"),
+    "utf8",
+  );
+  assert.match(migration, /marketing\.publish\.google_business\.live/);
+  assert.match(migration, /image_not_allowed/);
+  assert.match(migration, /booking_not_allowed/);
+  assert.match(migration, /location_ineligible/);
+  assert.equal(migration.includes("insert into public.tenant_capabilities"), false);
+  assert.equal(migration.includes("mybusiness.googleapis.com"), false);
+  const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
+  const googleLive = composer.slice(composer.indexOf("async function runGoogleLive"), composer.indexOf("async function cleanup"));
+  assert.match(googleLive, /mediaObjectPath: ""/);
+  assert.match(googleLive, /bookingUrl: ""/);
+  assert.equal(googleLive.includes("/api/integrations/meta/publish/live"), false);
+  assert.match(composer, /Publică textul pe Google/);
+  assert.match(composer, /googleJob/);
 });

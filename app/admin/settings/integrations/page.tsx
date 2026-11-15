@@ -93,6 +93,7 @@ const GOOGLE_NOTICES: Record<GoogleNotice, string> = {
   invalid: "Conectarea Google Business nu a putut fi finalizată.",
   unknown_expiry: "Google nu a comunicat expirarea tokenului. Conexiunea nu a fost salvată.",
   calendar_scope: "Tokenul include Google Calendar. Conexiunea Business Profile nu a fost salvată.",
+  unexpected_scope: "Tokenul conține permisiuni neacceptate. Conexiunea nu a fost salvată.",
 };
 
 const TIKTOK_NOTICES: Record<TikTokNotice, string> = {

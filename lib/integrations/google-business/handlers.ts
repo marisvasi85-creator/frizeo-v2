@@ -14,21 +14,28 @@ import {
   exchangeGoogleCode,
   listGoogleAccounts,
   listGoogleLocations,
+  refreshGoogleBusinessToken,
 } from "@/lib/integrations/google-business/api";
 import {
   assertGoogleBusinessConfig,
-  GOOGLE_BUSINESS_SCOPE,
+  googleBusinessLiveEnvEnabled,
+  type GoogleBusinessConfig,
 } from "@/lib/integrations/google-business/config";
 import {
   buildGoogleAuthorizeUrl,
   decideGoogleConnect,
+  decideGoogleLivePublish,
+  googleAccessTokenNeedsRefresh,
   googleAccountsFailureNotice,
   planGoogleDestinationSave,
+  presentGoogleLiveJob,
   presentGooglePublishJob,
   stagingGoogleSettingsUrl,
   type GoogleAccountsFailureReason,
+  type GoogleLiveJobView,
   type GoogleNotice,
 } from "@/lib/integrations/google-business/flow";
+import { buildGoogleTextPost, publishLocalPost } from "@/lib/integrations/google-business/publish";
 import {
   consumeGoogleOAuthState,
   decryptGoogleSecret,
@@ -37,6 +44,7 @@ import {
   insertGoogleOAuthState,
   readGoogleAccessToken,
   replaceGoogleDestinations,
+  saveGoogleAccessToken,
   upsertGoogleConnection,
 } from "@/lib/integrations/google-business/store";
 
@@ -52,15 +60,47 @@ function accountsFailureStatus(reason: GoogleAccountsFailureReason): number {
   return 502;
 }
 
-async function googleCapabilityEnabled(tenantId: string): Promise<boolean> {
+async function googleCapabilityEnabled(
+  tenantId: string,
+  capability = "marketing.publish.google_business",
+): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from("tenant_capabilities")
     .select("enabled")
     .eq("tenant_id", tenantId)
-    .eq("capability", "marketing.publish.google_business")
+    .eq("capability", capability)
     .maybeSingle();
   if (error || !data) return false;
   return data.enabled === true;
+}
+
+async function ensureGoogleBusinessAccess(input: {
+  tenantId: string;
+  config: GoogleBusinessConfig;
+}): Promise<
+  | { ok: true; accessToken: string; connectionId: string }
+  | { ok: false; reason: "needs_reconnect" | "token_refresh_failed" }
+> {
+  const secret = await readGoogleAccessToken(input.tenantId);
+  if (!secret.ok) return { ok: false, reason: "needs_reconnect" };
+  if (!googleAccessTokenNeedsRefresh(secret.expiresAt)) {
+    return { ok: true, accessToken: secret.accessToken, connectionId: secret.connectionId };
+  }
+  const refreshed = await refreshGoogleBusinessToken({
+    http: createGoogleHttp(),
+    config: input.config,
+    refreshToken: secret.refreshToken,
+  });
+  if (!refreshed.ok) return { ok: false, reason: "token_refresh_failed" };
+  const saved = await saveGoogleAccessToken({
+    tenantId: input.tenantId,
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken,
+    expiresAt: new Date(Date.now() + refreshed.expiresIn * 1000).toISOString(),
+    scopes: refreshed.scopes,
+  });
+  if (!saved) return { ok: false, reason: "token_refresh_failed" };
+  return { ok: true, accessToken: refreshed.accessToken, connectionId: secret.connectionId };
 }
 
 async function loadContext() {
@@ -187,6 +227,7 @@ export async function finishGoogleCallback(request: Request) {
   if (!token.ok) {
     if (token.reason === "calendar_scope") return googleRedirect("calendar_scope");
     if (token.reason === "missing_scope") return googleRedirect("permissions");
+    if (token.reason === "unexpected_scope") return googleRedirect("unexpected_scope");
     if (token.reason === "missing_expiry") return googleRedirect("unknown_expiry");
     return googleRedirect("exchange_failed");
   }
@@ -201,7 +242,7 @@ export async function finishGoogleCallback(request: Request) {
     providerAccountId: account.name,
     displayName: account.accountName,
     status: "setup_required",
-    scopes: [GOOGLE_BUSINESS_SCOPE],
+    scopes: token.scopes,
     tokenExpiresAt: new Date(Date.now() + token.expiresIn * 1000).toISOString(),
     lastError: null,
     accessToken: token.accessToken,
@@ -228,12 +269,13 @@ export async function listGoogleBusinessLocations(_request: Request) {
     const error = gate.reason === "capability_off" ? "capability_off" : gate.reason;
     return NextResponse.json({ error }, { status: gate.reason === "forbidden" ? 403 : 403 });
   }
-  const secret = await readGoogleAccessToken(context.session.tenantId);
-  if (!secret.ok) return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
-  if (secret.expiresAt && new Date(secret.expiresAt).getTime() <= Date.now()) {
-    return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
-  }
-  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
+  if (!context.config) return NextResponse.json({ error: "unconfigured" }, { status: 403 });
+  const access = await ensureGoogleBusinessAccess({
+    tenantId: context.session.tenantId,
+    config: context.config,
+  });
+  if (!access.ok) return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
+  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: access.accessToken });
   if (!listed.ok) {
     return NextResponse.json(
       { error: googleAccountsFailureNotice(listed.reason) },
@@ -245,7 +287,7 @@ export async function listGoogleBusinessLocations(_request: Request) {
     try {
       locations.push(...await listGoogleLocations({
         http: createGoogleHttp(),
-        accessToken: secret.accessToken,
+        accessToken: access.accessToken,
         accountName: account.name,
       }));
     } catch {
@@ -277,9 +319,13 @@ export async function selectGoogleDestinations(request: Request) {
   const selectedIds = Array.isArray(body?.destinationIds)
     ? body.destinationIds.filter((id): id is string => typeof id === "string")
     : [];
-  const secret = await readGoogleAccessToken(context.session.tenantId);
-  if (!secret.ok) return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
-  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: secret.accessToken });
+  if (!context.config) return NextResponse.json({ error: "unconfigured" }, { status: 403 });
+  const access = await ensureGoogleBusinessAccess({
+    tenantId: context.session.tenantId,
+    config: context.config,
+  });
+  if (!access.ok) return NextResponse.json({ error: "needs_reconnect" }, { status: 409 });
+  const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: access.accessToken });
   if (!listed.ok) {
     return NextResponse.json(
       { error: googleAccountsFailureNotice(listed.reason) },
@@ -293,7 +339,7 @@ export async function selectGoogleDestinations(request: Request) {
   for (const account of listed.accounts) {
     discovered.push(...await listGoogleLocations({
       http: createGoogleHttp(),
-      accessToken: secret.accessToken,
+      accessToken: access.accessToken,
       accountName: account.name,
     }));
   }
@@ -305,7 +351,7 @@ export async function selectGoogleDestinations(request: Request) {
   if (!plan.ok) return NextResponse.json({ error: plan.reason }, { status: 400 });
   const saved = await replaceGoogleDestinations({
     tenantId: context.session.tenantId,
-    connectionId: secret.connectionId,
+    connectionId: access.connectionId,
     destinations: plan.rows,
   });
   if (!saved) return NextResponse.json({ error: "save_failed" }, { status: 500 });
@@ -380,16 +426,213 @@ export async function publishGoogleMock(request: Request) {
   return NextResponse.json({ jobs, externalCall: false });
 }
 
+function liveStatus(reason: string): number {
+  if (reason === "unauthenticated") return 401;
+  if (reason === "production") return 404;
+  if (
+    reason === "destination_mismatch"
+    || reason === "location_ineligible"
+    || reason === "forbidden"
+    || reason === "capability_off"
+    || reason === "live_off"
+    || reason === "unconfigured"
+    || reason === "origin"
+  ) return 403;
+  return 400;
+}
+
+async function settleGoogleLive(input: {
+  tenantId: string;
+  jobId: string;
+  status: "published" | "failed" | "unknown";
+  providerPostId?: string | null;
+  safeError?: string | null;
+}): Promise<GoogleLiveJobView | null> {
+  const { data, error } = await supabaseAdmin.rpc("google_business_live_settle", {
+    p_tenant_id: input.tenantId,
+    p_job_id: input.jobId,
+    p_status: input.status,
+    p_provider_post_id: input.providerPostId ?? "",
+    p_safe_error: input.safeError ?? "",
+  });
+  const row = data && typeof data === "object" ? data as { job?: unknown } : null;
+  if (error || !row) return null;
+  return presentGoogleLiveJob(row.job);
+}
+
 export async function publishGoogleLive(request: Request) {
   if (isProduction() || !publishHostAllowed(request)) {
     return NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 });
+  }
+  if (!publishOriginAllowed(request)) {
+    return NextResponse.json({ error: "origin", externalCall: false }, { status: 403 });
   }
   const session = await getAdminSession();
   if (!session?.user || !session.tenantId) {
     return NextResponse.json({ error: "unauthenticated", externalCall: false }, { status: 401 });
   }
-  if (!canAdministerIntegrations(session.role)) {
-    return NextResponse.json({ error: "forbidden", externalCall: false }, { status: 403 });
+  const production = isProduction();
+  const configResult = assertGoogleBusinessConfig(process.env, { production });
+  const [integrationEnabled, liveCapabilityEnabled] = await Promise.all([
+    googleCapabilityEnabled(session.tenantId),
+    googleCapabilityEnabled(session.tenantId, "marketing.publish.google_business.live"),
+  ]);
+  const decision = decideGoogleLivePublish({
+    authenticated: true,
+    role: session.role,
+    integrationEnabled,
+    liveCapabilityEnabled,
+    envLiveEnabled: googleBusinessLiveEnvEnabled(),
+    configured: configResult.ok,
+    production,
+  });
+  if (!decision.ok || !configResult.ok) {
+    const reason = decision.ok ? "unconfigured" : decision.reason === "production" ? "not_configured" : decision.reason;
+    const status = decision.ok ? 403 : decision.reason === "unauthenticated" ? 401 : decision.reason === "production" ? 404 : 403;
+    return NextResponse.json({ error: reason, externalCall: false }, { status });
   }
-  return NextResponse.json({ error: "live_off", externalCall: false }, { status: 403 });
+
+  const body = await request.json().catch(() => null) as {
+    idempotencyKey?: unknown;
+    caption?: unknown;
+    mediaObjectPath?: unknown;
+    bookingUrl?: unknown;
+    destinationIds?: unknown;
+  } | null;
+  const mediaObjectPath = typeof body?.mediaObjectPath === "string" ? body.mediaObjectPath.trim() : "";
+  const bookingUrl = typeof body?.bookingUrl === "string" ? body.bookingUrl.trim() : "";
+  if (mediaObjectPath) {
+    return NextResponse.json({ error: "image_not_allowed", externalCall: false }, { status: 400 });
+  }
+  if (bookingUrl) {
+    return NextResponse.json({ error: "booking_not_allowed", externalCall: false }, { status: 400 });
+  }
+  const destinationIds = Array.isArray(body?.destinationIds)
+    ? body.destinationIds.filter((id): id is string => typeof id === "string")
+    : [];
+  const { data, error } = await supabaseAdmin.rpc("google_business_publish_live_prepare", {
+    p_tenant_id: session.tenantId,
+    p_created_by: session.user.id,
+    p_idempotency_key: typeof body?.idempotencyKey === "string" ? body.idempotencyKey : "",
+    p_caption: typeof body?.caption === "string" ? body.caption : "",
+    p_media_object_path: "",
+    p_booking_url: "",
+    p_destination_ids: destinationIds,
+  });
+  const row = data && typeof data === "object" ? data as { outcome?: unknown; jobs?: unknown } : null;
+  if (error || !row) {
+    return NextResponse.json({ error: "save_failed", externalCall: false }, { status: 500 });
+  }
+  const outcome = typeof row.outcome === "string" ? row.outcome : "invalid";
+  const prepared = Array.isArray(row.jobs) ? row.jobs.flatMap((job) => {
+    const view = presentGoogleLiveJob(job);
+    return view ? [view] : [];
+  }) : [];
+  if (outcome !== "created" && outcome !== "replay") {
+    return NextResponse.json({ error: outcome, externalCall: false }, { status: liveStatus(outcome) });
+  }
+  const job = prepared[0];
+  if (!job || prepared.length !== 1) {
+    return NextResponse.json({ error: "invalid", externalCall: false }, { status: 400 });
+  }
+  if (outcome === "replay" && (job.status !== "pending" || job.attempts !== 0)) {
+    return NextResponse.json({ jobs: [job], externalCall: false });
+  }
+  if (job.mediaObjectPath || job.bookingUrl) {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: job.id,
+      status: "failed",
+      safeError: job.mediaObjectPath ? "image_not_allowed" : "booking_not_allowed",
+    });
+    return NextResponse.json({
+      error: job.mediaObjectPath ? "image_not_allowed" : "booking_not_allowed",
+      jobs: settled ? [settled] : [job],
+      externalCall: false,
+    }, { status: 400 });
+  }
+  const post = buildGoogleTextPost(job.caption);
+  if (!post.ok) {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: job.id,
+      status: "failed",
+      safeError: "summary",
+    });
+    return NextResponse.json({
+      error: "summary",
+      jobs: settled ? [settled] : [job],
+      externalCall: false,
+    }, { status: 400 });
+  }
+
+  const access = await ensureGoogleBusinessAccess({
+    tenantId: session.tenantId,
+    config: configResult.config,
+  });
+  if (!access.ok) {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: job.id,
+      status: "failed",
+      safeError: access.reason === "needs_reconnect" ? "token_unavailable" : "token_refresh_failed",
+    });
+    return NextResponse.json({
+      error: access.reason === "needs_reconnect" ? "token_unavailable" : "token_refresh_failed",
+      jobs: settled ? [settled] : [job],
+      externalCall: false,
+    }, { status: 409 });
+  }
+
+  const { data: claimData, error: claimError } = await supabaseAdmin.rpc("google_business_live_claim", {
+    p_tenant_id: session.tenantId,
+    p_job_id: job.id,
+  });
+  const claim = claimData && typeof claimData === "object"
+    ? claimData as { outcome?: unknown; job?: unknown }
+    : null;
+  const claimed = presentGoogleLiveJob(claim?.job);
+  if (claimError || claim?.outcome !== "claimed" || !claimed) {
+    return NextResponse.json({
+      jobs: claimed ? [claimed] : [job],
+      externalCall: false,
+    });
+  }
+
+  const published = await publishLocalPost({
+    http: createGoogleHttp(),
+    accessToken: access.accessToken,
+    locationId: claimed.providerDestinationId,
+    post: post.body,
+  });
+  console.error(JSON.stringify({
+    source: "google_business_local_post",
+    httpStatus: published.ok ? 200 : published.reason === "invalid_location" ? null : published.httpStatus,
+    outcome: published.ok ? "published" : published.reason,
+    safeError: published.ok ? null : published.reason === "invalid_location" ? "invalid_location" : published.safeError,
+  }));
+  if (!published.ok && published.reason === "invalid_location") {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: claimed.id,
+      status: "failed",
+      safeError: "location_ineligible",
+    });
+    return NextResponse.json({
+      error: "location_ineligible",
+      jobs: settled ? [settled] : [claimed],
+      externalCall: false,
+    }, { status: 403 });
+  }
+  const settled = await settleGoogleLive({
+    tenantId: session.tenantId,
+    jobId: claimed.id,
+    status: published.ok ? "published" : published.reason === "rejected" ? "failed" : "unknown",
+    providerPostId: published.ok ? published.providerPostId : null,
+    safeError: published.ok ? null : published.safeError,
+  });
+  if (!settled) {
+    return NextResponse.json({ error: "ambiguous", jobs: [claimed], externalCall: true }, { status: 502 });
+  }
+  return NextResponse.json({ jobs: [settled], externalCall: true });
 }
