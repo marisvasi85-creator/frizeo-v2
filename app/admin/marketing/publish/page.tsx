@@ -17,17 +17,6 @@ export default async function MarketingPublishPage() {
   if (!session.tenantId || !canAdministerIntegrations(session.role)) {
     redirect("/admin/dashboard");
   }
-  if (isProduction()) {
-    return (
-      <AdminCard>
-        <AdminPageHeader
-          title="Publicare"
-          subtitle="Publicarea Meta nu este disponibilă în producție."
-        />
-      </AdminCard>
-    );
-  }
-
   const supabase = await createSupabaseServerClient();
   const [{ data: capabilities }, { data: destinations }, { data: jobs }] = await Promise.all([
     supabase
@@ -48,7 +37,7 @@ export default async function MarketingPublishPage() {
       .eq("status", "active"),
     supabase
       .from("integration_publish_jobs")
-      .select("id, asset_id, destination_id, status, execution_mode, safe_error, provider_container_id, marketing_destinations(display_name, destination_type), integration_assets(body)")
+      .select("id, asset_id, destination_id, status, execution_mode, safe_error, provider_container_id, provider_post_id, marketing_destinations(display_name, destination_type), integration_assets(body)")
       .eq("tenant_id", session.tenantId)
       .order("created_at", { ascending: false })
       .limit(20),
@@ -68,6 +57,17 @@ export default async function MarketingPublishPage() {
     (row) => row.capability === "marketing.publish.google_business.live" && row.enabled === true,
   );
   const googleLiveAvailable = googleIntegrationEnabled && googleLiveCapability && googleBusinessLiveEnvEnabled();
+  const production = isProduction();
+  if (production && !googleIntegrationEnabled) {
+    return (
+      <AdminCard>
+        <AdminPageHeader
+          title="Publicare"
+          subtitle="Publicarea Google Business nu este activată pentru producție."
+        />
+      </AdminCard>
+    );
+  }
   const options = (destinations ?? []).flatMap((row) => {
     if (
       row.destination_type !== "facebook_page"
@@ -101,9 +101,14 @@ export default async function MarketingPublishPage() {
       executionMode: row.execution_mode,
       safeError: row.safe_error,
       providerContainerId: row.provider_container_id,
+      providerPostId: row.provider_post_id,
       caption: asset?.body ?? null,
     }];
   });
+
+  const visibleDestinations = production
+    ? options.filter((destination) => destination.destinationType === "google_business_location")
+    : options;
 
   return (
     <div className="grid gap-4">
@@ -112,11 +117,11 @@ export default async function MarketingPublishPage() {
         subtitle="Facebook, Instagram și Google Business. Poți aduce o postare din Marketing AI și o confirmi manual."
       />
       <AdminCard>
-        {(integrationEnabled || googleIntegrationEnabled) && options.length > 0 ? (
+        {(production ? googleIntegrationEnabled : integrationEnabled || googleIntegrationEnabled) && visibleDestinations.length > 0 ? (
           <PublishComposer
-            liveAvailable={liveAvailable}
+            liveAvailable={production ? false : liveAvailable}
             googleLiveAvailable={googleLiveAvailable}
-            destinations={options}
+            destinations={visibleDestinations}
             history={history}
           />
         ) : (

@@ -26,6 +26,7 @@ type HistoryJob = {
   executionMode: string;
   safeError: string | null;
   providerContainerId: string | null;
+  providerPostId?: string | null;
   caption: string | null;
 };
 
@@ -62,6 +63,7 @@ const ERRORS: Record<string, string> = {
   image_required: "Testul Google are nevoie de o imagine JPEG, PNG sau WEBP.",
   image_not_allowed: "Imaginea nu poate fi trimisă către Google.",
   booking_not_allowed: "Primul test Google nu include butonul Rezervă.",
+  booking_link: "Linkul Rezervă trebuie să fie un URL public https://frizeo.ro/booking/… sau https://www.frizeo.ro/booking/…",
   location_ineligible: "Locația nu este eligibilă pentru contul Google conectat la acest salon.",
   token_unavailable: "Conexiunea Google Business trebuie refăcută. Nu s-a trimis postarea.",
   token_refresh_failed: "Tokenul Google Business nu a putut fi reînnoit. Nu s-a trimis postarea.",
@@ -407,7 +409,7 @@ export default function PublishComposer({
           caption: plainCaption,
           destinationIds: selectedGoogle.map((destination) => destination.id),
           mediaObjectPath,
-          bookingUrl: "",
+          bookingUrl: bookingUrl ?? "",
         }),
       });
       const payload = await response.json().catch(() => null) as {
@@ -679,8 +681,8 @@ export default function PublishComposer({
       </div>
       <p className="text-sm text-frz-muted">
         {googleLiveAvailable
-          ? "Publicarea Google este pornită pentru acest salon. Butonul trimite textul și imaginea selectată, fără butonul Rezervă."
-          : "Publicarea Google este oprită. Când este pornită doar pentru acest salon, testul trimite textul și imaginea, fără butonul Rezervă."}
+          ? "Publicarea Google este pornită pentru acest salon. Butonul trimite textul și imaginea. Rezervă este inclus doar pentru un link public frizeo.ro/booking."
+          : "Publicarea Google este oprită. Când este pornită, testul trimite textul și imaginea. Rezervă este inclus doar pentru un link public frizeo.ro/booking."}
       </p>
       <p className="text-sm text-frz-muted">
         {destinationBusy
@@ -725,6 +727,7 @@ export default function PublishComposer({
                 {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
               </p>
               {job.caption && <p className="mt-1 text-sm text-frz-muted">{job.caption}</p>}
+              {googleJob && job.providerPostId && <p className="mt-1 text-sm text-frz-muted">ID Google: {job.providerPostId}</p>}
               {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
               {job.safeError && !canRelease && (
                 <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (googleJob ? googlePublishError(job.safeError, "Publicarea nu a putut fi confirmată.") : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."))}</p>

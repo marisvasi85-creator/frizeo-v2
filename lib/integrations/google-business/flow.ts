@@ -68,7 +68,6 @@ export function decideGoogleConnect(input: {
   production: boolean;
 }): GoogleConnectDecision {
   if (!input.authenticated) return { ok: false, reason: "unauthenticated" };
-  if (input.production) return { ok: false, reason: "production" };
   if (!input.configured) return { ok: false, reason: "unconfigured" };
   if (!canAdministerIntegrations(input.role)) return { ok: false, reason: "forbidden" };
   if (!input.capabilityEnabled) return { ok: false, reason: "capability_off" };
@@ -94,10 +93,15 @@ export function buildGoogleAuthorizeUrl(input: {
   return url.toString();
 }
 
-export function stagingGoogleSettingsUrl(params: Record<string, string>): string {
-  const url = new URL("https://staging.frizeo.ro/admin/settings/integrations");
+export function googleSettingsUrl(host: string, params: Record<string, string>): string {
+  const allowed = host === "staging.frizeo.ro" || host === "www.frizeo.ro" || host === "frizeo.ro";
+  const url = new URL(`https://${allowed ? host : "staging.frizeo.ro"}/admin/settings/integrations`);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
   return url.toString();
+}
+
+export function stagingGoogleSettingsUrl(params: Record<string, string>): string {
+  return googleSettingsUrl("staging.frizeo.ro", params);
 }
 
 function text(value: unknown): string | null {
@@ -380,7 +384,6 @@ export function decideGoogleLivePublish(input: {
   | { ok: true }
   | { ok: false; reason: "unauthenticated" | "production" | "unconfigured" | "forbidden" | "capability_off" | "live_off" } {
   if (!input.authenticated) return { ok: false, reason: "unauthenticated" };
-  if (input.production) return { ok: false, reason: "production" };
   if (!input.configured) return { ok: false, reason: "unconfigured" };
   if (!canAdministerIntegrations(input.role)) return { ok: false, reason: "forbidden" };
   if (!input.integrationEnabled) return { ok: false, reason: "capability_off" };

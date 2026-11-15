@@ -72,12 +72,17 @@ export function buildGoogleImagePost(input: {
   summary: string;
   imageUrl: string;
   tenantId: string;
-}): { ok: true; body: GoogleLocalPost } | { ok: false; reason: "summary" | "image" } {
+  storageHost: string | null;
+  bookingUrl?: string | null;
+}): { ok: true; body: GoogleLocalPost } | { ok: false; reason: "summary" | "image" | "booking_link" } {
   const summary = input.summary.replace(/\*\*/g, "").trim();
   if (!summary || summary.length > GOOGLE_BUSINESS_SUMMARY_MAX || summary.includes("\u0000")) {
     return { ok: false, reason: "summary" };
   }
-  const image = googleSignedImageUrl(input.imageUrl, input.tenantId);
+  const requestedBooking = input.bookingUrl?.trim() ?? "";
+  const callToAction = requestedBooking ? googleBookAction(requestedBooking) : null;
+  if (requestedBooking && !callToAction) return { ok: false, reason: "booking_link" };
+  const image = googleSignedImageUrl(input.imageUrl, input.tenantId, input.storageHost);
   if (!image) return { ok: false, reason: "image" };
   return {
     ok: true,
@@ -85,8 +90,50 @@ export function buildGoogleImagePost(input: {
       languageCode: "ro",
       summary,
       topicType: "STANDARD",
+      ...(callToAction ? { callToAction } : {}),
       media: [{ mediaFormat: "PHOTO", sourceUrl: image.toString() }],
     },
+  };
+}
+
+export async function readGoogleLocalPost(input: {
+  http: GoogleHttp;
+  accessToken: string;
+  providerPostId: string;
+}): Promise<
+  | { ok: true; summary: string; hasPhoto: boolean; callToAction: boolean; state: string | null }
+  | { ok: false; reason: "invalid_post" | "rejected" | "unconfirmed" }
+> {
+  if (!isGooglePostId(input.providerPostId) || !input.accessToken) {
+    return { ok: false, reason: "invalid_post" };
+  }
+  let response: { status: number; body: unknown };
+  try {
+    response = await input.http({
+      url: `https://mybusiness.googleapis.com/v4/${input.providerPostId}`,
+      method: "GET",
+      headers: { Authorization: `Bearer ${input.accessToken}` },
+    });
+  } catch {
+    return { ok: false, reason: "unconfirmed" };
+  }
+  if (response.status < 200 || response.status >= 300) {
+    return { ok: false, reason: response.status >= 500 ? "unconfirmed" : "rejected" };
+  }
+  const body = response.body && typeof response.body === "object"
+    ? response.body as { summary?: unknown; media?: unknown; callToAction?: unknown; state?: unknown }
+    : null;
+  const summary = typeof body?.summary === "string" ? body.summary : "";
+  const media = Array.isArray(body?.media) ? body.media : [];
+  const hasPhoto = media.some((item) => (
+    Boolean(item) && typeof item === "object" && (item as { mediaFormat?: unknown }).mediaFormat === "PHOTO"
+  ));
+  return {
+    ok: true,
+    summary,
+    hasPhoto,
+    callToAction: Boolean(body?.callToAction),
+    state: typeof body?.state === "string" ? body.state : null,
   };
 }
 

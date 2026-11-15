@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
-import { isProduction } from "@/lib/app/environment";
+import { hostnameFromRequest, isProduction } from "@/lib/app/environment";
 import { createOAuthState, hashOAuthState } from "@/lib/integrations/oauth/state";
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
-import {
-  publishHostAllowed,
-  publishOriginAllowed,
-} from "@/lib/integrations/meta/publish/flags";
+import { bookingLinkForRealPublish } from "@/lib/marketing-ai/publishCardCopy";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
@@ -19,6 +16,10 @@ import {
 import {
   assertGoogleBusinessConfig,
   googleBusinessLiveEnvEnabled,
+  googlePublishHostAllowed,
+  googlePublishOriginAllowed,
+  googleStorageHost,
+  isGooglePostId,
   type GoogleBusinessConfig,
 } from "@/lib/integrations/google-business/config";
 import {
@@ -30,7 +31,7 @@ import {
   planGoogleDestinationSave,
   presentGoogleLiveJob,
   presentGooglePublishJob,
-  stagingGoogleSettingsUrl,
+  googleSettingsUrl,
   type GoogleAccountsFailureReason,
   type GoogleLiveJobView,
   type GoogleNotice,
@@ -41,7 +42,7 @@ import {
   prepareGooglePostImage,
   resolveGooglePostImage,
 } from "@/lib/integrations/google-business/image";
-import { buildGoogleImagePost, publishLocalPost } from "@/lib/integrations/google-business/publish";
+import { buildGoogleImagePost, publishLocalPost, readGoogleLocalPost } from "@/lib/integrations/google-business/publish";
 import { marketingImagePath, pathBelongsToTenant } from "@/lib/integrations/meta/publish/image";
 import { MARKETING_PUBLISH_BUCKET } from "@/lib/integrations/meta/publish/flags";
 import {
@@ -56,9 +57,24 @@ import {
   upsertGoogleConnection,
 } from "@/lib/integrations/google-business/store";
 
-function googleRedirect(notice: GoogleNotice): NextResponse {
+function googleRedirect(request: Request, notice: GoogleNotice): NextResponse {
   const key = notice === "select" || notice === "saved" ? "google" : "google_error";
-  return NextResponse.redirect(stagingGoogleSettingsUrl({ [key]: notice }), 303);
+  return NextResponse.redirect(googleSettingsUrl(hostnameFromRequest(request), { [key]: notice }), 303);
+}
+
+function googleLoginUrl(request: Request): string {
+  const host = hostnameFromRequest(request);
+  if (host === "staging.frizeo.ro" || host === "www.frizeo.ro" || host === "frizeo.ro") {
+    return `https://${host}/login`;
+  }
+  return "https://staging.frizeo.ro/login";
+}
+
+function googleClosed(request: Request): NextResponse | null {
+  if (!googlePublishHostAllowed(hostnameFromRequest(request), isProduction())) {
+    return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  }
+  return null;
 }
 
 function accountsFailureStatus(reason: GoogleAccountsFailureReason): number {
@@ -128,7 +144,8 @@ async function loadContext() {
 }
 
 export async function startGoogleConnect(request: Request) {
-  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  const closed = googleClosed(request);
+  if (closed) return closed;
   const context = await loadContext();
   const limited = await enforceRateLimit(request, {
     bucket: "google-business-connect",
@@ -146,7 +163,7 @@ export async function startGoogleConnect(request: Request) {
   });
   if (!context.session?.user || !context.session.tenantId || !context.config || !gate.ok) {
     if (!context.session?.user) {
-      return NextResponse.redirect("https://staging.frizeo.ro/login", 303);
+      return NextResponse.redirect(googleLoginUrl(request), 303);
     }
     const notice: GoogleNotice =
       gate.ok ? "unconfigured"
@@ -154,7 +171,7 @@ export async function startGoogleConnect(request: Request) {
       : gate.reason === "capability_off" ? "capability"
       : gate.reason === "production" ? "production"
       : "unconfigured";
-    return googleRedirect(notice);
+    return googleRedirect(request, notice);
   }
 
   const issued = createOAuthState({
@@ -162,9 +179,9 @@ export async function startGoogleConnect(request: Request) {
     userId: context.session.user.id,
     provider: "google_business",
   });
-  if ("error" in issued) return googleRedirect("unconfigured");
+  if ("error" in issued) return googleRedirect(request, "unconfigured");
   const encrypted = encryptGoogleSecret(issued.pkceVerifier);
-  if (!encrypted) return googleRedirect("unconfigured");
+  if (!encrypted) return googleRedirect(request, "unconfigured");
   const stored = await insertGoogleOAuthState({
     tenantId: context.session.tenantId,
     userId: context.session.user.id,
@@ -173,7 +190,7 @@ export async function startGoogleConnect(request: Request) {
     pkceNonce: encrypted.nonce,
     expiresAt: issued.expiresAt,
   });
-  if (!stored) return googleRedirect("invalid");
+  if (!stored) return googleRedirect(request, "invalid");
   return NextResponse.redirect(buildGoogleAuthorizeUrl({
     config: context.config,
     state: issued.state,
@@ -182,10 +199,11 @@ export async function startGoogleConnect(request: Request) {
 }
 
 export async function finishGoogleCallback(request: Request) {
-  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  const closed = googleClosed(request);
+  if (closed) return closed;
   const context = await loadContext();
   if (!context.session?.user || !context.session.tenantId || !context.config) {
-    return googleRedirect("mismatch");
+    return googleRedirect(request, "mismatch");
   }
   const gate = decideGoogleConnect({
     authenticated: true,
@@ -201,15 +219,15 @@ export async function finishGoogleCallback(request: Request) {
       : gate.reason === "forbidden" ? "forbidden"
       : gate.reason === "unconfigured" ? "unconfigured"
       : "mismatch";
-    return googleRedirect(notice);
+    return googleRedirect(request, notice);
   }
 
   const url = new URL(request.url);
-  if (url.searchParams.get("error")) return googleRedirect("denied");
+  if (url.searchParams.get("error")) return googleRedirect(request, "denied");
   const code = url.searchParams.get("code") ?? "";
   const state = url.searchParams.get("state") ?? "";
   const stateHash = hashOAuthState(state);
-  if (!code || !stateHash) return googleRedirect("invalid");
+  if (!code || !stateHash) return googleRedirect(request, "invalid");
   const consumed = await consumeGoogleOAuthState(stateHash);
   if (consumed.outcome !== "ok") {
     const notice: GoogleNotice =
@@ -218,13 +236,13 @@ export async function finishGoogleCallback(request: Request) {
         : consumed.outcome === "provider_mismatch"
           ? "mismatch"
           : "invalid";
-    return googleRedirect(notice);
+    return googleRedirect(request, notice);
   }
   if (consumed.tenantId !== context.session.tenantId || consumed.userId !== context.session.user.id) {
-    return googleRedirect("mismatch");
+    return googleRedirect(request, "mismatch");
   }
   const verifier = decryptGoogleSecret(consumed.pkceCiphertext, consumed.pkceNonce);
-  if (!verifier) return googleRedirect("invalid");
+  if (!verifier) return googleRedirect(request, "invalid");
 
   const token = await exchangeGoogleCode({
     http: createGoogleHttp(),
@@ -233,17 +251,17 @@ export async function finishGoogleCallback(request: Request) {
     codeVerifier: verifier,
   });
   if (!token.ok) {
-    if (token.reason === "calendar_scope") return googleRedirect("calendar_scope");
-    if (token.reason === "missing_scope") return googleRedirect("permissions");
-    if (token.reason === "unexpected_scope") return googleRedirect("unexpected_scope");
-    if (token.reason === "missing_expiry") return googleRedirect("unknown_expiry");
-    return googleRedirect("exchange_failed");
+    if (token.reason === "calendar_scope") return googleRedirect(request, "calendar_scope");
+    if (token.reason === "missing_scope") return googleRedirect(request, "permissions");
+    if (token.reason === "unexpected_scope") return googleRedirect(request, "unexpected_scope");
+    if (token.reason === "missing_expiry") return googleRedirect(request, "unknown_expiry");
+    return googleRedirect(request, "exchange_failed");
   }
 
   const listed = await listGoogleAccounts({ http: createGoogleHttp(), accessToken: token.accessToken });
-  if (!listed.ok) return googleRedirect(googleAccountsFailureNotice(listed.reason));
+  if (!listed.ok) return googleRedirect(request, googleAccountsFailureNotice(listed.reason));
   const account = listed.accounts[0];
-  if (!account) return googleRedirect("no_locations");
+  if (!account) return googleRedirect(request, "no_locations");
   const saved = await upsertGoogleConnection({
     tenantId: context.session.tenantId,
     userId: context.session.user.id,
@@ -256,12 +274,13 @@ export async function finishGoogleCallback(request: Request) {
     accessToken: token.accessToken,
     refreshToken: token.refreshToken,
   });
-  if (!saved) return googleRedirect("invalid");
-  return googleRedirect("select");
+  if (!saved) return googleRedirect(request, "invalid");
+  return googleRedirect(request, "select");
 }
 
-export async function listGoogleBusinessLocations(_request: Request) {
-  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+export async function listGoogleBusinessLocations(request: Request) {
+  const closed = googleClosed(request);
+  if (closed) return closed;
   const context = await loadContext();
   if (!context.session?.user || !context.session.tenantId) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
@@ -312,7 +331,8 @@ export async function listGoogleBusinessLocations(_request: Request) {
 }
 
 export async function selectGoogleDestinations(request: Request) {
-  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  const closed = googleClosed(request);
+  if (closed) return closed;
   const context = await loadContext();
   if (!context.session?.user || !context.session.tenantId) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
@@ -363,25 +383,26 @@ export async function selectGoogleDestinations(request: Request) {
     destinations: plan.rows,
   });
   if (!saved) return NextResponse.json({ error: "save_failed" }, { status: 500 });
-  return googleRedirect("saved");
+  return googleRedirect(request, "saved");
 }
 
-export async function disconnectGoogle(_request: Request) {
-  if (isProduction()) return NextResponse.json({ error: "not_configured" }, { status: 404 });
+export async function disconnectGoogle(request: Request) {
+  const closed = googleClosed(request);
+  if (closed) return closed;
   const session = await getAdminSession();
   if (!session?.user || !session.tenantId) {
-    return NextResponse.redirect("https://staging.frizeo.ro/login", 303);
+    return NextResponse.redirect(googleLoginUrl(request), 303);
   }
-  if (!canAdministerIntegrations(session.role)) return googleRedirect("forbidden");
+  if (!canAdministerIntegrations(session.role)) return googleRedirect(request, "forbidden");
   const removed = await deleteGoogleConnection(session.tenantId);
-  return googleRedirect(removed ? "disconnected" : "invalid");
+  return googleRedirect(request, removed ? "disconnected" : "invalid");
 }
 
 export async function publishGoogleMock(request: Request) {
-  if (isProduction() || !publishHostAllowed(request)) {
+  if (!googlePublishHostAllowed(hostnameFromRequest(request), isProduction())) {
     return NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 });
   }
-  if (!publishOriginAllowed(request)) {
+  if (!googlePublishOriginAllowed(request, isProduction())) {
     return NextResponse.json({ error: "origin", externalCall: false }, { status: 403 });
   }
   const session = await getAdminSession();
@@ -468,10 +489,10 @@ async function probeGooglePostImage(url: string): Promise<{
 }
 
 export async function uploadGooglePostImage(request: Request) {
-  if (isProduction() || !publishHostAllowed(request)) {
+  if (!googlePublishHostAllowed(hostnameFromRequest(request), isProduction())) {
     return NextResponse.json({ error: "not_configured" }, { status: 404 });
   }
-  if (!publishOriginAllowed(request)) {
+  if (!googlePublishOriginAllowed(request, isProduction())) {
     return NextResponse.json({ error: "origin" }, { status: 403 });
   }
   const session = await getAdminSession();
@@ -545,10 +566,10 @@ async function settleGoogleLive(input: {
 }
 
 export async function publishGoogleLive(request: Request) {
-  if (isProduction() || !publishHostAllowed(request)) {
+  if (!googlePublishHostAllowed(hostnameFromRequest(request), isProduction())) {
     return NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 });
   }
-  if (!publishOriginAllowed(request)) {
+  if (!googlePublishOriginAllowed(request, isProduction())) {
     return NextResponse.json({ error: "origin", externalCall: false }, { status: 403 });
   }
   const session = await getAdminSession();
@@ -584,15 +605,16 @@ export async function publishGoogleLive(request: Request) {
     destinationIds?: unknown;
   } | null;
   const mediaObjectPath = typeof body?.mediaObjectPath === "string" ? body.mediaObjectPath.trim() : "";
-  const bookingUrl = typeof body?.bookingUrl === "string" ? body.bookingUrl.trim() : "";
+  const rawBooking = typeof body?.bookingUrl === "string" ? body.bookingUrl.trim() : "";
+  const bookingUrl = bookingLinkForRealPublish(rawBooking) ?? "";
   if (!mediaObjectPath) {
     return NextResponse.json({ error: "image_required", externalCall: false }, { status: 400 });
   }
   if (!pathBelongsToTenant(mediaObjectPath, session.tenantId)) {
     return NextResponse.json({ error: "invalid_image", externalCall: false }, { status: 400 });
   }
-  if (bookingUrl) {
-    return NextResponse.json({ error: "booking_not_allowed", externalCall: false }, { status: 400 });
+  if (rawBooking && !bookingUrl) {
+    return NextResponse.json({ error: "booking_link", externalCall: false }, { status: 400 });
   }
   const destinationIds = Array.isArray(body?.destinationIds)
     ? body.destinationIds.filter((id): id is string => typeof id === "string")
@@ -603,7 +625,7 @@ export async function publishGoogleLive(request: Request) {
     p_idempotency_key: typeof body?.idempotencyKey === "string" ? body.idempotencyKey : "",
     p_caption: typeof body?.caption === "string" ? body.caption : "",
     p_media_object_path: mediaObjectPath,
-    p_booking_url: "",
+    p_booking_url: bookingUrl,
     p_destination_ids: destinationIds,
   });
   const row = data && typeof data === "object" ? data as { outcome?: unknown; jobs?: unknown } : null;
@@ -625,22 +647,37 @@ export async function publishGoogleLive(request: Request) {
   if (outcome === "replay" && (job.status !== "pending" || job.attempts !== 0)) {
     return NextResponse.json({ jobs: [job], externalCall: false });
   }
-  if (!job.mediaObjectPath || job.bookingUrl) {
+  if (!job.mediaObjectPath) {
     const settled = await settleGoogleLive({
       tenantId: session.tenantId,
       jobId: job.id,
       status: "failed",
-      safeError: job.bookingUrl ? "booking_not_allowed" : "image_required",
+      safeError: "image_required",
     });
     return NextResponse.json({
-      error: job.bookingUrl ? "booking_not_allowed" : "image_required",
+      error: "image_required",
       jobs: settled ? [settled] : [job],
       externalCall: false,
     }, { status: 400 });
   }
+  if (job.bookingUrl && !bookingLinkForRealPublish(job.bookingUrl)) {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: job.id,
+      status: "failed",
+      safeError: "booking_link",
+    });
+    return NextResponse.json({
+      error: "booking_link",
+      jobs: settled ? [settled] : [job],
+      externalCall: false,
+    }, { status: 400 });
+  }
+  const storageHost = googleStorageHost();
   const image = await resolveGooglePostImage({
     tenantId: session.tenantId,
     mediaObjectPath: job.mediaObjectPath,
+    storageHost,
     sign: signGooglePostImage,
     probe: probeGooglePostImage,
   });
@@ -661,16 +698,18 @@ export async function publishGoogleLive(request: Request) {
     summary: job.caption,
     imageUrl: image.sourceUrl,
     tenantId: session.tenantId,
+    storageHost,
+    bookingUrl: job.bookingUrl,
   });
   if (!post.ok) {
     const settled = await settleGoogleLive({
       tenantId: session.tenantId,
       jobId: job.id,
       status: "failed",
-      safeError: post.reason === "image" ? "invalid_image" : "summary",
+      safeError: post.reason === "image" ? "invalid_image" : post.reason,
     });
     return NextResponse.json({
-      error: post.reason === "image" ? "invalid_image" : "summary",
+      error: post.reason === "image" ? "invalid_image" : post.reason,
       jobs: settled ? [settled] : [job],
       externalCall: false,
     }, { status: 400 });
@@ -745,4 +784,67 @@ export async function publishGoogleLive(request: Request) {
     return NextResponse.json({ error: "ambiguous", jobs: [claimed], externalCall: true }, { status: 502 });
   }
   return NextResponse.json({ jobs: [settled], externalCall: true });
+}
+
+export async function readPublishedGooglePost(request: Request) {
+  if (!googlePublishHostAllowed(hostnameFromRequest(request), isProduction())) {
+    return NextResponse.json({ error: "not_configured", externalCall: false }, { status: 404 });
+  }
+  const session = await getAdminSession();
+  if (!session?.user || !session.tenantId) {
+    return NextResponse.json({ error: "unauthenticated", externalCall: false }, { status: 401 });
+  }
+  if (!canAdministerIntegrations(session.role)) {
+    return NextResponse.json({ error: "forbidden", externalCall: false }, { status: 403 });
+  }
+  const configResult = assertGoogleBusinessConfig(process.env, { production: isProduction() });
+  if (!configResult.ok) {
+    return NextResponse.json({ error: "unconfigured", externalCall: false }, { status: 403 });
+  }
+  const { data, error } = await supabaseAdmin
+    .from("integration_publish_jobs")
+    .select("attempts, provider_post_id, integration_assets!inner(body)")
+    .eq("tenant_id", session.tenantId)
+    .eq("provider", "google_business")
+    .eq("execution_mode", "live")
+    .eq("status", "published");
+  const rows = Array.isArray(data) ? data : [];
+  const row = rows[0];
+  const asset = row && (Array.isArray(row.integration_assets) ? row.integration_assets[0] : row.integration_assets);
+  const caption = asset && typeof asset.body === "string" ? asset.body : "";
+  const providerPostId = row && typeof row.provider_post_id === "string" ? row.provider_post_id : "";
+  if (error || rows.length !== 1 || !caption || !isGooglePostId(providerPostId)) {
+    return NextResponse.json({ error: "not_found", externalCall: false }, { status: 404 });
+  }
+  const access = await ensureGoogleBusinessAccess({
+    tenantId: session.tenantId,
+    config: configResult.config,
+  });
+  if (!access.ok) {
+    return NextResponse.json({ error: access.reason, externalCall: false }, { status: 403 });
+  }
+  const read = await readGoogleLocalPost({
+    http: createGoogleHttp(),
+    accessToken: access.accessToken,
+    providerPostId,
+  });
+  if (!read.ok) {
+    return NextResponse.json({
+      error: read.reason,
+      summaryMatches: false,
+      hasPhoto: false,
+      callToAction: false,
+      externalCall: true,
+    }, { status: read.reason === "rejected" ? 400 : 502 });
+  }
+  const summaryMatches = read.summary === caption;
+  return NextResponse.json({
+    verified: summaryMatches && read.hasPhoto,
+    summaryMatches,
+    hasPhoto: read.hasPhoto,
+    callToAction: read.callToAction,
+    state: read.state,
+    attempts: row.attempts,
+    externalCall: true,
+  });
 }

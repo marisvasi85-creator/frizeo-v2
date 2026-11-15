@@ -42,6 +42,7 @@ import {
   buildGoogleTextPost,
   classifyGoogleLocalPostResponse,
   publishLocalPost,
+  readGoogleLocalPost,
 } from "../lib/integrations/google-business/publish.ts";
 import { getProviderAdapter } from "../lib/integrations/providers/registry.ts";
 import { writeMarketingPublishHandoff, takeMarketingPublishHandoff } from "../lib/marketing-ai/publishHandoff.ts";
@@ -79,6 +80,7 @@ test("google oauth is separate from calendar and requests only business.manage",
     GOOGLE_BUSINESS_CLIENT_SECRET: "secret",
     GOOGLE_CLIENT_ID: "calendar-client",
     INTEGRATION_TOKEN_ENCRYPTION_KEY: key,
+    NEXT_PUBLIC_SUPABASE_URL: "https://fanxxytfuhnakfdzwssd.supabase.co",
   }, { production: false });
   assert.equal(shared.ok, false);
 
@@ -87,9 +89,35 @@ test("google oauth is separate from calendar and requests only business.manage",
     GOOGLE_BUSINESS_CLIENT_SECRET: "secret",
     GOOGLE_CLIENT_ID: "calendar-client",
     INTEGRATION_TOKEN_ENCRYPTION_KEY: key,
+    NEXT_PUBLIC_SUPABASE_URL: "https://fanxxytfuhnakfdzwssd.supabase.co",
   }, { production: false });
   assert.equal(ready.ok, true);
   if (!ready.ok) return;
+  assert.equal(ready.config.redirectUri, "https://staging.frizeo.ro/api/integrations/google-business/callback");
+  const production = assertGoogleBusinessConfig({
+    GOOGLE_BUSINESS_CLIENT_ID: "business-client",
+    GOOGLE_BUSINESS_CLIENT_SECRET: "secret",
+    INTEGRATION_TOKEN_ENCRYPTION_KEY: key,
+    NEXT_PUBLIC_SUPABASE_URL: "https://shsompeyazrvswnjmlmw.supabase.co",
+  }, { production: true });
+  assert.equal(production.ok, true);
+  if (production.ok) {
+    assert.equal(production.config.redirectUri, "https://www.frizeo.ro/api/integrations/google-business/callback");
+  }
+  assert.equal(assertGoogleBusinessConfig({
+    GOOGLE_BUSINESS_CLIENT_ID: "business-client",
+    GOOGLE_BUSINESS_CLIENT_SECRET: "secret",
+    INTEGRATION_TOKEN_ENCRYPTION_KEY: key,
+    NEXT_PUBLIC_SUPABASE_URL: "https://shsompeyazrvswnjmlmw.supabase.co",
+    GOOGLE_BUSINESS_REDIRECT_URI: "https://staging.frizeo.ro/api/integrations/google-business/callback",
+  }, { production: true }).ok, false);
+  assert.equal(assertGoogleBusinessConfig({
+    GOOGLE_BUSINESS_CLIENT_ID: "business-client",
+    GOOGLE_BUSINESS_CLIENT_SECRET: "secret",
+    INTEGRATION_TOKEN_ENCRYPTION_KEY: key,
+    NEXT_PUBLIC_SUPABASE_URL: "https://fanxxytfuhnakfdzwssd.supabase.co",
+    GOOGLE_BUSINESS_REDIRECT_URI: "https://www.frizeo.ro/api/integrations/google-business/callback",
+  }, { production: false }).ok, false);
   const url = new URL(buildGoogleAuthorizeUrl({
     config: ready.config,
     state: "state-1",
@@ -362,12 +390,21 @@ test("google live stays off unless the salon capability and the env flag are bot
     configured: true,
     production: false,
   }).ok, true);
+  assert.equal(decideGoogleLivePublish({
+    authenticated: true,
+    role: "owner",
+    integrationEnabled: true,
+    liveCapabilityEnabled: true,
+    envLiveEnabled: true,
+    configured: true,
+    production: true,
+  }).ok, true);
   const live = readFileSync(join(root, "lib/integrations/google-business/handlers.ts"), "utf8");
   const liveFn = live.slice(live.indexOf("export async function publishGoogleLive"));
   assert.match(liveFn, /decideGoogleLivePublish/);
   assert.match(liveFn, /marketing\.publish\.google_business\.live/);
   assert.match(liveFn, /image_required/);
-  assert.match(liveFn, /booking_not_allowed/);
+  assert.match(liveFn, /booking_link/);
   assert.match(liveFn, /resolveGooglePostImage/);
   assert.ok(liveFn.indexOf("decideGoogleLivePublish") < liveFn.indexOf("resolveGooglePostImage"));
   assert.ok(liveFn.indexOf("resolveGooglePostImage") < liveFn.indexOf("publishLocalPost"));
@@ -644,7 +681,7 @@ test("first google live post is text only and a 4xx does not look unconfirmed", 
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
   const googleLive = composer.slice(composer.indexOf("async function runGoogleLive"), composer.indexOf("async function cleanup"));
   assert.match(googleLive, /mediaObjectPath,/);
-  assert.match(googleLive, /bookingUrl: ""/);
+  assert.match(googleLive, /bookingUrl: bookingUrl \?\? ""/);
   assert.match(googleLive, /uploadGoogleImage/);
   assert.equal(googleLive.includes("/api/integrations/meta/publish/media"), false);
   assert.equal(googleLive.includes("/api/integrations/meta/publish/live"), false);
@@ -677,19 +714,41 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   assert.equal((await prepareGooglePostImage(Buffer.from("not-an-image"))).reason, "unsupported_type");
   assert.equal((await prepareGooglePostImage(await noisyJpeg(100, 80))).ok, false);
   const url = signedImageUrl();
-  assert.equal(googleSignedImageUrl("http://fanxxytfuhnakfdzwssd.supabase.co/storage/v1/object/sign/marketing-publish/x.jpg?token=aaaaaaaaaaaaaaaaaaaa", TENANT), null);
-  assert.equal(googleSignedImageUrl(url.replace("token=", "access_token="), TENANT), null);
-  const post = buildGoogleImagePost({ summary: "**Program** de vineri", imageUrl: url, tenantId: TENANT });
+  const storageHost = "fanxxytfuhnakfdzwssd.supabase.co";
+  assert.equal(googleSignedImageUrl("http://fanxxytfuhnakfdzwssd.supabase.co/storage/v1/object/sign/marketing-publish/x.jpg?token=aaaaaaaaaaaaaaaaaaaa", TENANT, storageHost), null);
+  assert.equal(googleSignedImageUrl(url.replace("token=", "access_token="), TENANT, storageHost), null);
+  assert.equal(googleSignedImageUrl(url.replace(storageHost, "shsompeyazrvswnjmlmw.supabase.co"), TENANT, storageHost), null);
+  assert.equal(googleSignedImageUrl(url, TENANT, "shsompeyazrvswnjmlmw.supabase.co"), null);
+  const post = buildGoogleImagePost({ summary: "**Program** de vineri", imageUrl: url, tenantId: TENANT, storageHost });
   assert.equal(post.ok, true);
   if (!post.ok) return;
   assert.equal(post.body.summary, "Program de vineri");
   assert.equal(post.body.media?.[0].mediaFormat, "PHOTO");
   assert.equal(post.body.media?.[0].sourceUrl, url);
   assert.equal(Object.hasOwn(post.body, "callToAction"), false);
+  const booked = buildGoogleImagePost({
+    summary: "Program de vineri",
+    imageUrl: url,
+    tenantId: TENANT,
+    storageHost,
+    bookingUrl: "https://www.frizeo.ro/booking/demo",
+  });
+  assert.equal(booked.ok, true);
+  if (booked.ok) {
+    assert.deepEqual(booked.body.callToAction, { actionType: "BOOK", url: "https://www.frizeo.ro/booking/demo" });
+  }
+  assert.equal(buildGoogleImagePost({
+    summary: "Program de vineri",
+    imageUrl: url,
+    tenantId: TENANT,
+    storageHost,
+    bookingUrl: "https://staging.frizeo.ro/booking/demo",
+  }).ok, false);
   let probed = 0;
   const resolved = await resolveGooglePostImage({
     tenantId: TENANT,
     mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    storageHost,
     sign: async () => url,
     probe: async () => {
       probed += 1;
@@ -701,6 +760,7 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   const unreachable = await resolveGooglePostImage({
     tenantId: TENANT,
     mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    storageHost,
     sign: async () => url,
     probe: async () => null,
   });
@@ -708,6 +768,7 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   const wrongType = await resolveGooglePostImage({
     tenantId: TENANT,
     mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    storageHost,
     sign: async () => url,
     probe: async () => ({ status: 200, contentType: "text/html", bytes: prepared.jpeg }),
   });
@@ -715,6 +776,7 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   const otherTenant = await resolveGooglePostImage({
     tenantId: "11111111-1111-4111-8111-1111111111a1",
     mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    storageHost,
     sign: async () => url,
     probe: async () => ({ status: 200, contentType: "image/jpeg", bytes: prepared.jpeg }),
   });
@@ -728,6 +790,14 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   assert.match(migration, /booking_not_allowed/);
   assert.equal(migration.includes("insert into public.tenant_capabilities"), false);
   assert.equal(migration.includes("mybusiness.googleapis.com"), false);
+  const productionMigration = readFileSync(
+    join(root, "supabase/migrations/20261115095424_frizeo_v2_google_production_post.sql"),
+    "utf8",
+  );
+  assert.match(productionMigration, /booking_link/);
+  assert.match(productionMigration, /jsonb_build_object\('url', v_booking\)/);
+  assert.equal(productionMigration.includes("insert into public.tenant_capabilities"), false);
+  assert.equal(productionMigration.includes("mybusiness.googleapis.com"), false);
   const published = await publishLocalPost({
     accessToken: "token-not-logged",
     locationId: "accounts/111/locations/222",
@@ -745,4 +815,40 @@ test("google live image post uses one temporary signed photo and no Rezervă but
   assert.equal(published.reason, "rejected");
   assert.equal(published.safeError, "invalid_parameter");
   assert.equal(published.externalCall, true);
+});
+
+test("reading an existing google post is a GET and does not create another post", async () => {
+  const postId = "accounts/112806710478406135410/locations/12379241755064931156/localPosts/4032301889267759555";
+  let method = "";
+  const read = await readGoogleLocalPost({
+    accessToken: "token-not-logged",
+    providerPostId: postId,
+    http: async (input) => {
+      method = input.method;
+      assert.equal(input.url, `https://mybusiness.googleapis.com/v4/${postId}`);
+      assert.equal(input.url.includes("token-not-logged"), false);
+      assert.equal(input.body, undefined);
+      return {
+        status: 200,
+        body: {
+          summary: "Program de vineri",
+          media: [{ mediaFormat: "PHOTO", sourceUrl: "https://lh3.googleusercontent.com/hidden" }],
+          state: "LIVE",
+        },
+      };
+    },
+  });
+  assert.equal(method, "GET");
+  assert.deepEqual(read, { ok: true, summary: "Program de vineri", hasPhoto: true, callToAction: false, state: "LIVE" });
+  assert.equal(JSON.stringify(read).includes("googleusercontent"), false);
+  const route = readFileSync(
+    join(root, "app/api/integrations/google-business/publish/live/route.ts"),
+    "utf8",
+  );
+  const reader = readFileSync(join(root, "lib/integrations/google-business/handlers.ts"), "utf8");
+  const readFn = reader.slice(reader.indexOf("export async function readPublishedGooglePost"));
+  assert.match(route, /export function GET/);
+  assert.match(readFn, /readGoogleLocalPost/);
+  assert.equal(readFn.includes("publishLocalPost"), false);
+  assert.equal(readFn.includes("sourceUrl"), false);
 });

@@ -1,5 +1,6 @@
 import sharp from "sharp";
-import { MARKETING_PUBLISH_BUCKET, STAGING_SUPABASE_HOST } from "@/lib/integrations/meta/publish/flags";
+import { googleStorageHost } from "@/lib/integrations/google-business/config";
+import { MARKETING_PUBLISH_BUCKET } from "@/lib/integrations/meta/publish/flags";
 import { pathBelongsToTenant, sniffImageMime } from "@/lib/integrations/meta/publish/image";
 
 export const GOOGLE_IMAGE_MIN_BYTES = 10_240;
@@ -9,16 +10,21 @@ export const GOOGLE_IMAGE_SIGN_SECONDS = 1800;
 
 const INPUT_MAX_BYTES = 8_388_608;
 
-export function googleSignedImageUrl(value: string, tenantId: string): URL | null {
+export function googleSignedImageUrl(
+  value: string,
+  tenantId: string,
+  storageHost = googleStorageHost(),
+): URL | null {
   let url: URL;
   try {
     url = new URL(value);
   } catch {
     return null;
   }
+  if (!storageHost) return null;
   if (url.protocol !== "https:") return null;
   if (url.username || url.password || url.hash) return null;
-  if (url.hostname !== STAGING_SUPABASE_HOST) return null;
+  if (url.hostname !== storageHost) return null;
   const prefix = `/storage/v1/object/sign/${MARKETING_PUBLISH_BUCKET}/`;
   if (!url.pathname.startsWith(prefix)) return null;
   const objectPath = decodeURIComponent(url.pathname.slice(prefix.length));
@@ -103,6 +109,7 @@ export async function readGoogleJpeg(bytes: Buffer): Promise<
 export async function resolveGooglePostImage(input: {
   tenantId: string;
   mediaObjectPath: string;
+  storageHost: string | null;
   sign: (path: string) => Promise<string | null>;
   probe: (url: string) => Promise<{ status: number; contentType: string | null; bytes: Buffer } | null>;
 }): Promise<{ ok: true; sourceUrl: string } | { ok: false; reason: "invalid_image" }> {
@@ -111,7 +118,7 @@ export async function resolveGooglePostImage(input: {
   }
   const signed = await input.sign(input.mediaObjectPath);
   if (!signed) return { ok: false, reason: "invalid_image" };
-  const url = googleSignedImageUrl(signed, input.tenantId);
+  const url = googleSignedImageUrl(signed, input.tenantId, input.storageHost);
   if (!url) return { ok: false, reason: "invalid_image" };
   const probed = await input.probe(url.toString());
   if (!probed || probed.status !== 200) return { ok: false, reason: "invalid_image" };
