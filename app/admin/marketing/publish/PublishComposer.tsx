@@ -35,6 +35,13 @@ function openLive(job: { executionMode: string; status: string }): boolean {
   );
 }
 
+function googlePublishError(code: string | null | undefined, fallback: string): string {
+  if (code === "invalid_image") {
+    return "Imaginea Google trebuie să fie JPEG, PNG sau WEBP, între 10 KB și 5 MB, cu ambele laturi de cel puțin 250 px.";
+  }
+  return ERRORS[code ?? ""] ?? fallback;
+}
+
 const ERRORS: Record<string, string> = {
   not_configured: "Publicarea Meta nu este disponibilă.",
   origin: "Cererea nu vine din staging.frizeo.ro.",
@@ -52,7 +59,8 @@ const ERRORS: Record<string, string> = {
   destination_mismatch: "Destinația nu aparține acestui salon.",
   idempotency_conflict: "Aceeași acțiune a fost trimisă cu date diferite.",
   destination_busy: "Această destinație are deja o publicare în curs sau cu rezultat necunoscut. Nu se trimite o a doua postare.",
-  image_not_allowed: "Primul test Google acceptă doar text. Imaginea nu este trimisă.",
+  image_required: "Testul Google are nevoie de o imagine JPEG, PNG sau WEBP.",
+  image_not_allowed: "Imaginea nu poate fi trimisă către Google.",
   booking_not_allowed: "Primul test Google nu include butonul Rezervă.",
   location_ineligible: "Locația nu este eligibilă pentru contul Google conectat la acest salon.",
   token_unavailable: "Conexiunea Google Business trebuie refăcută. Nu s-a trimis postarea.",
@@ -118,6 +126,7 @@ export default function PublishComposer({
   const router = useRouter();
   const keyRef = useRef<string | null>(null);
   const googleKeyRef = useRef<string | null>(null);
+  const googleMediaRef = useRef<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
@@ -160,6 +169,8 @@ export default function PublishComposer({
   function chooseFile(next: File | null) {
     setFile(next);
     setMediaPath(null);
+    googleMediaRef.current = null;
+    googleKeyRef.current = null;
     setPreviewUrl((current) => {
       if (current) URL.revokeObjectURL(current);
       return next ? URL.createObjectURL(next) : null;
@@ -348,6 +359,27 @@ export default function PublishComposer({
     }
   }
 
+  async function uploadGoogleImage(): Promise<string | null> {
+    if (googleMediaRef.current) return googleMediaRef.current;
+    if (!file) {
+      setMessage(ERRORS.image_required);
+      return null;
+    }
+    const body = new FormData();
+    body.set("image", file);
+    const response = await fetch("/api/integrations/google-business/publish/media", {
+      method: "POST",
+      body,
+    });
+    const payload = await response.json().catch(() => null) as { mediaObjectPath?: string; error?: string } | null;
+    if (!response.ok || !payload?.mediaObjectPath) {
+      setMessage(googlePublishError(payload?.error, "Imaginea nu a putut fi încărcată."));
+      return null;
+    }
+    googleMediaRef.current = payload.mediaObjectPath;
+    return payload.mediaObjectPath;
+  }
+
   async function runGoogleLive() {
     if (!googleLiveAvailable || busy || selectedGoogle.length !== 1) return;
     const plainCaption = withoutMarkdownBold(caption);
@@ -365,6 +397,8 @@ export default function PublishComposer({
     setBusy(true);
     setMessage(null);
     try {
+      const mediaObjectPath = await uploadGoogleImage();
+      if (!mediaObjectPath) return;
       const response = await fetch("/api/integrations/google-business/publish/live", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -372,7 +406,7 @@ export default function PublishComposer({
           idempotencyKey,
           caption: plainCaption,
           destinationIds: selectedGoogle.map((destination) => destination.id),
-          mediaObjectPath: "",
+          mediaObjectPath,
           bookingUrl: "",
         }),
       });
@@ -385,18 +419,21 @@ export default function PublishComposer({
         setOutcomes(payload.jobs);
       }
       if (!response.ok || !payload?.jobs?.[0]) {
-        setMessage(ERRORS[payload?.error ?? ""] ?? "Publicarea Google nu a putut fi pornită.");
+        setMessage(googlePublishError(payload?.error, "Publicarea Google nu a putut fi pornită."));
         return;
       }
       const job = payload.jobs[0];
-      if (!openLive(job)) googleKeyRef.current = null;
+      if (!openLive(job)) {
+        googleKeyRef.current = null;
+        googleMediaRef.current = null;
+      }
       setMessage(job.status === "published"
-        ? "Textul a fost publicat pe Google Business. Nu conține imagine și nu are butonul Rezervă."
+        ? "Textul și imaginea au fost publicate pe Google Business. Nu are butonul Rezervă."
         : job.status === "unknown"
           ? ERRORS.ambiguous
           : job.status === "pending" || job.status === "publishing"
             ? "Publicarea Google este în curs. Nu trimite din nou."
-            : (ERRORS[job.safeError ?? ""] ?? "Publicarea Google nu a reușit."));
+            : googlePublishError(job.safeError, "Publicarea Google nu a reușit."));
       router.refresh();
     } finally {
       setBusy(false);
@@ -634,16 +671,16 @@ export default function PublishComposer({
         <AdminButton
           type="button"
           variant="secondary"
-          disabled={!googleLiveAvailable || busy || selectedGoogle.length !== 1}
+          disabled={!googleLiveAvailable || busy || selectedGoogle.length !== 1 || !file}
           onClick={googleLiveAvailable ? runGoogleLive : undefined}
         >
-          Publică textul pe Google
+          Publică textul și imaginea pe Google
         </AdminButton>
       </div>
       <p className="text-sm text-frz-muted">
         {googleLiveAvailable
-          ? "Publicarea Google este pornită pentru acest salon. Butonul trimite doar textul, fără imagine și fără butonul Rezervă."
-          : "Publicarea Google este oprită. Primul test real va trimite doar text, fără imagine și fără butonul Rezervă."}
+          ? "Publicarea Google este pornită pentru acest salon. Butonul trimite textul și imaginea selectată, fără butonul Rezervă."
+          : "Publicarea Google este oprită. Când este pornită doar pentru acest salon, testul trimite textul și imaginea, fără butonul Rezervă."}
       </p>
       <p className="text-sm text-frz-muted">
         {destinationBusy
@@ -667,7 +704,7 @@ export default function PublishComposer({
           {outcomes.map((job) => (
             <li key={job.id} className="rounded-xl border border-frz-line p-3 text-sm text-frz-ink">
               {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
-              {job.safeError ? ` · ${ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."}` : ""}
+              {job.safeError ? ` · ${job.destinationType === "google_business_location" ? googlePublishError(job.safeError, "Publicarea nu a putut fi confirmată.") : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată.")}` : ""}
             </li>
           ))}
         </ul>
@@ -690,7 +727,7 @@ export default function PublishComposer({
               {job.caption && <p className="mt-1 text-sm text-frz-muted">{job.caption}</p>}
               {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
               {job.safeError && !canRelease && (
-                <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată.")}</p>
+                <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (googleJob ? googlePublishError(job.safeError, "Publicarea nu a putut fi confirmată.") : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."))}</p>
               )}
               {canVerify && (
                 <div className="mt-2">

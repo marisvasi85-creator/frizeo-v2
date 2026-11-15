@@ -2,6 +2,7 @@ import {
   GOOGLE_BUSINESS_SUMMARY_MAX,
   googleBookAction,
 } from "@/lib/integrations/google-business/flow";
+import { googleSignedImageUrl } from "@/lib/integrations/google-business/image";
 import { isGoogleLocationId, isGooglePostId } from "@/lib/integrations/google-business/config";
 
 export type GoogleHttp = (input: {
@@ -63,6 +64,28 @@ export function buildGoogleTextPost(summary: string):
       languageCode: "ro",
       summary: text,
       topicType: "STANDARD",
+    },
+  };
+}
+
+export function buildGoogleImagePost(input: {
+  summary: string;
+  imageUrl: string;
+  tenantId: string;
+}): { ok: true; body: GoogleLocalPost } | { ok: false; reason: "summary" | "image" } {
+  const summary = input.summary.replace(/\*\*/g, "").trim();
+  if (!summary || summary.length > GOOGLE_BUSINESS_SUMMARY_MAX || summary.includes("\u0000")) {
+    return { ok: false, reason: "summary" };
+  }
+  const image = googleSignedImageUrl(input.imageUrl, input.tenantId);
+  if (!image) return { ok: false, reason: "image" };
+  return {
+    ok: true,
+    body: {
+      languageCode: "ro",
+      summary,
+      topicType: "STANDARD",
+      media: [{ mediaFormat: "PHOTO", sourceUrl: image.toString() }],
     },
   };
 }

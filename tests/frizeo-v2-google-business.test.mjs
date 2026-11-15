@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import sharp from "sharp";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import test from "node:test";
@@ -30,6 +31,13 @@ import {
 } from "../lib/integrations/google-business/flow.ts";
 import { listGoogleAccounts, refreshGoogleBusinessToken } from "../lib/integrations/google-business/api.ts";
 import {
+  googleSignedImageUrl,
+  prepareGooglePostImage,
+  readGoogleJpeg,
+  resolveGooglePostImage,
+} from "../lib/integrations/google-business/image.ts";
+import {
+  buildGoogleImagePost,
   buildGoogleLocalPost,
   buildGoogleTextPost,
   classifyGoogleLocalPostResponse,
@@ -358,9 +366,11 @@ test("google live stays off unless the salon capability and the env flag are bot
   const liveFn = live.slice(live.indexOf("export async function publishGoogleLive"));
   assert.match(liveFn, /decideGoogleLivePublish/);
   assert.match(liveFn, /marketing\.publish\.google_business\.live/);
-  assert.match(liveFn, /image_not_allowed/);
+  assert.match(liveFn, /image_required/);
   assert.match(liveFn, /booking_not_allowed/);
-  assert.ok(liveFn.indexOf("decideGoogleLivePublish") < liveFn.indexOf("publishLocalPost"));
+  assert.match(liveFn, /resolveGooglePostImage/);
+  assert.ok(liveFn.indexOf("decideGoogleLivePublish") < liveFn.indexOf("resolveGooglePostImage"));
+  assert.ok(liveFn.indexOf("resolveGooglePostImage") < liveFn.indexOf("publishLocalPost"));
   assert.equal(liveFn.includes("graph.facebook.com"), false);
   assert.equal(liveFn.includes("open.tiktokapis.com"), false);
   assert.equal(live.includes("lib/google/refreshAccessToken"), false);
@@ -633,9 +643,106 @@ test("first google live post is text only and a 4xx does not look unconfirmed", 
   assert.equal(migration.includes("mybusiness.googleapis.com"), false);
   const composer = readFileSync(join(root, "app/admin/marketing/publish/PublishComposer.tsx"), "utf8");
   const googleLive = composer.slice(composer.indexOf("async function runGoogleLive"), composer.indexOf("async function cleanup"));
-  assert.match(googleLive, /mediaObjectPath: ""/);
+  assert.match(googleLive, /mediaObjectPath,/);
   assert.match(googleLive, /bookingUrl: ""/);
+  assert.match(googleLive, /uploadGoogleImage/);
+  assert.equal(googleLive.includes("/api/integrations/meta/publish/media"), false);
   assert.equal(googleLive.includes("/api/integrations/meta/publish/live"), false);
-  assert.match(composer, /Publică textul pe Google/);
+  assert.match(composer, /Publică textul și imaginea pe Google/);
+  assert.match(composer, /ambele laturi de cel puțin 250 px/);
   assert.match(composer, /googleJob/);
+});
+
+const TENANT = "5d9862a1-fd85-46f2-9c7e-635e813e067c";
+const OBJECT = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
+function signedImageUrl() {
+  return `https://fanxxytfuhnakfdzwssd.supabase.co/storage/v1/object/sign/marketing-publish/${TENANT}/${OBJECT}.jpg?token=${"a".repeat(40)}`;
+}
+
+async function noisyJpeg(width, height) {
+  const raw = Buffer.alloc(width * height * 3);
+  for (let index = 0; index < raw.length; index += 1) raw[index] = (index * 17) % 251;
+  return sharp(raw, { raw: { width, height, channels: 3 } }).jpeg({ quality: 95 }).toBuffer();
+}
+
+test("google live image post uses one temporary signed photo and no Rezervă button", async () => {
+  const jpeg = await noisyJpeg(400, 300);
+  assert.ok(jpeg.length >= 10_240);
+  const prepared = await prepareGooglePostImage(jpeg);
+  assert.equal(prepared.ok, true);
+  if (!prepared.ok) return;
+  assert.equal(prepared.width <= 1200 && prepared.height <= 1200, true);
+  assert.equal(await readGoogleJpeg(prepared.jpeg).then((result) => result.ok), true);
+  assert.equal((await prepareGooglePostImage(Buffer.from("not-an-image"))).reason, "unsupported_type");
+  assert.equal((await prepareGooglePostImage(await noisyJpeg(100, 80))).ok, false);
+  const url = signedImageUrl();
+  assert.equal(googleSignedImageUrl("http://fanxxytfuhnakfdzwssd.supabase.co/storage/v1/object/sign/marketing-publish/x.jpg?token=aaaaaaaaaaaaaaaaaaaa", TENANT), null);
+  assert.equal(googleSignedImageUrl(url.replace("token=", "access_token="), TENANT), null);
+  const post = buildGoogleImagePost({ summary: "**Program** de vineri", imageUrl: url, tenantId: TENANT });
+  assert.equal(post.ok, true);
+  if (!post.ok) return;
+  assert.equal(post.body.summary, "Program de vineri");
+  assert.equal(post.body.media?.[0].mediaFormat, "PHOTO");
+  assert.equal(post.body.media?.[0].sourceUrl, url);
+  assert.equal(Object.hasOwn(post.body, "callToAction"), false);
+  let probed = 0;
+  const resolved = await resolveGooglePostImage({
+    tenantId: TENANT,
+    mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    sign: async () => url,
+    probe: async () => {
+      probed += 1;
+      return { status: 200, contentType: "image/jpeg", bytes: prepared.jpeg };
+    },
+  });
+  assert.equal(probed, 1);
+  assert.equal(resolved.ok, true);
+  const unreachable = await resolveGooglePostImage({
+    tenantId: TENANT,
+    mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    sign: async () => url,
+    probe: async () => null,
+  });
+  assert.deepEqual(unreachable, { ok: false, reason: "invalid_image" });
+  const wrongType = await resolveGooglePostImage({
+    tenantId: TENANT,
+    mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    sign: async () => url,
+    probe: async () => ({ status: 200, contentType: "text/html", bytes: prepared.jpeg }),
+  });
+  assert.deepEqual(wrongType, { ok: false, reason: "invalid_image" });
+  const otherTenant = await resolveGooglePostImage({
+    tenantId: "11111111-1111-4111-8111-1111111111a1",
+    mediaObjectPath: `${TENANT}/${OBJECT}.jpg`,
+    sign: async () => url,
+    probe: async () => ({ status: 200, contentType: "image/jpeg", bytes: prepared.jpeg }),
+  });
+  assert.deepEqual(otherTenant, { ok: false, reason: "invalid_image" });
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20261115070801_frizeo_v2_google_live_image.sql"),
+    "utf8",
+  );
+  assert.match(migration, /image_required/);
+  assert.match(migration, /invalid_image/);
+  assert.match(migration, /booking_not_allowed/);
+  assert.equal(migration.includes("insert into public.tenant_capabilities"), false);
+  assert.equal(migration.includes("mybusiness.googleapis.com"), false);
+  const published = await publishLocalPost({
+    accessToken: "token-not-logged",
+    locationId: "accounts/111/locations/222",
+    post: post.body,
+    http: async (input) => {
+      const body = JSON.parse(input.body ?? "{}");
+      assert.equal(body.media[0].sourceUrl, url);
+      assert.equal(body.callToAction, undefined);
+      assert.equal(input.url.includes("token-not-logged"), false);
+      return { status: 400, body: { error: { status: "INVALID_ARGUMENT" } } };
+    },
+  });
+  assert.equal(published.ok, false);
+  if (published.ok || published.reason === "invalid_location") return;
+  assert.equal(published.reason, "rejected");
+  assert.equal(published.safeError, "invalid_parameter");
+  assert.equal(published.externalCall, true);
 });

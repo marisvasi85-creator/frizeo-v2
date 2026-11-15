@@ -35,7 +35,15 @@ import {
   type GoogleLiveJobView,
   type GoogleNotice,
 } from "@/lib/integrations/google-business/flow";
-import { buildGoogleTextPost, publishLocalPost } from "@/lib/integrations/google-business/publish";
+import {
+  GOOGLE_IMAGE_MAX_BYTES,
+  GOOGLE_IMAGE_SIGN_SECONDS,
+  prepareGooglePostImage,
+  resolveGooglePostImage,
+} from "@/lib/integrations/google-business/image";
+import { buildGoogleImagePost, publishLocalPost } from "@/lib/integrations/google-business/publish";
+import { marketingImagePath, pathBelongsToTenant } from "@/lib/integrations/meta/publish/image";
+import { MARKETING_PUBLISH_BUCKET } from "@/lib/integrations/meta/publish/flags";
 import {
   consumeGoogleOAuthState,
   decryptGoogleSecret,
@@ -426,6 +434,82 @@ export async function publishGoogleMock(request: Request) {
   return NextResponse.json({ jobs, externalCall: false });
 }
 
+async function signGooglePostImage(path: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin.storage
+    .from(MARKETING_PUBLISH_BUCKET)
+    .createSignedUrl(path, GOOGLE_IMAGE_SIGN_SECONDS);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
+async function probeGooglePostImage(url: string): Promise<{
+  status: number;
+  contentType: string | null;
+  bytes: Buffer;
+} | null> {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "manual",
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const contentType = response.headers.get("content-type");
+    if (response.status !== 200) return { status: response.status, contentType, bytes: Buffer.alloc(0) };
+    const declared = Number(response.headers.get("content-length") ?? "0");
+    if (Number.isFinite(declared) && declared > GOOGLE_IMAGE_MAX_BYTES) {
+      return { status: 200, contentType, bytes: Buffer.alloc(0) };
+    }
+    const bytes = Buffer.from(await response.arrayBuffer());
+    return { status: 200, contentType, bytes: bytes.subarray(0, GOOGLE_IMAGE_MAX_BYTES + 1) };
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadGooglePostImage(request: Request) {
+  if (isProduction() || !publishHostAllowed(request)) {
+    return NextResponse.json({ error: "not_configured" }, { status: 404 });
+  }
+  if (!publishOriginAllowed(request)) {
+    return NextResponse.json({ error: "origin" }, { status: 403 });
+  }
+  const session = await getAdminSession();
+  if (!session?.user || !session.tenantId) {
+    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  }
+  if (!canAdministerIntegrations(session.role)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  if (!(await googleCapabilityEnabled(session.tenantId))) {
+    return NextResponse.json({ error: "capability_off" }, { status: 403 });
+  }
+  let form: FormData;
+  try {
+    form = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+  }
+  const file = form.get("image");
+  if (!(file instanceof File) || file.size <= 0 || file.size > 8_388_608) {
+    return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+  }
+  const prepared = await prepareGooglePostImage(Buffer.from(await file.arrayBuffer()));
+  if (!prepared.ok) return NextResponse.json({ error: prepared.reason }, { status: 400 });
+  const path = marketingImagePath(session.tenantId, crypto.randomUUID());
+  if (!path || !pathBelongsToTenant(path, session.tenantId)) {
+    return NextResponse.json({ error: "invalid_image" }, { status: 400 });
+  }
+  const { error } = await supabaseAdmin.storage
+    .from(MARKETING_PUBLISH_BUCKET)
+    .upload(path, prepared.jpeg, { contentType: "image/jpeg", upsert: false });
+  if (error) {
+    console.error("google_business_image_upload_failed");
+    return NextResponse.json({ error: "upload_failed" }, { status: 500 });
+  }
+  return NextResponse.json({ mediaObjectPath: path, externalCall: false });
+}
+
 function liveStatus(reason: string): number {
   if (reason === "unauthenticated") return 401;
   if (reason === "production") return 404;
@@ -501,8 +585,11 @@ export async function publishGoogleLive(request: Request) {
   } | null;
   const mediaObjectPath = typeof body?.mediaObjectPath === "string" ? body.mediaObjectPath.trim() : "";
   const bookingUrl = typeof body?.bookingUrl === "string" ? body.bookingUrl.trim() : "";
-  if (mediaObjectPath) {
-    return NextResponse.json({ error: "image_not_allowed", externalCall: false }, { status: 400 });
+  if (!mediaObjectPath) {
+    return NextResponse.json({ error: "image_required", externalCall: false }, { status: 400 });
+  }
+  if (!pathBelongsToTenant(mediaObjectPath, session.tenantId)) {
+    return NextResponse.json({ error: "invalid_image", externalCall: false }, { status: 400 });
   }
   if (bookingUrl) {
     return NextResponse.json({ error: "booking_not_allowed", externalCall: false }, { status: 400 });
@@ -515,7 +602,7 @@ export async function publishGoogleLive(request: Request) {
     p_created_by: session.user.id,
     p_idempotency_key: typeof body?.idempotencyKey === "string" ? body.idempotencyKey : "",
     p_caption: typeof body?.caption === "string" ? body.caption : "",
-    p_media_object_path: "",
+    p_media_object_path: mediaObjectPath,
     p_booking_url: "",
     p_destination_ids: destinationIds,
   });
@@ -538,29 +625,52 @@ export async function publishGoogleLive(request: Request) {
   if (outcome === "replay" && (job.status !== "pending" || job.attempts !== 0)) {
     return NextResponse.json({ jobs: [job], externalCall: false });
   }
-  if (job.mediaObjectPath || job.bookingUrl) {
+  if (!job.mediaObjectPath || job.bookingUrl) {
     const settled = await settleGoogleLive({
       tenantId: session.tenantId,
       jobId: job.id,
       status: "failed",
-      safeError: job.mediaObjectPath ? "image_not_allowed" : "booking_not_allowed",
+      safeError: job.bookingUrl ? "booking_not_allowed" : "image_required",
     });
     return NextResponse.json({
-      error: job.mediaObjectPath ? "image_not_allowed" : "booking_not_allowed",
+      error: job.bookingUrl ? "booking_not_allowed" : "image_required",
       jobs: settled ? [settled] : [job],
       externalCall: false,
     }, { status: 400 });
   }
-  const post = buildGoogleTextPost(job.caption);
+  const image = await resolveGooglePostImage({
+    tenantId: session.tenantId,
+    mediaObjectPath: job.mediaObjectPath,
+    sign: signGooglePostImage,
+    probe: probeGooglePostImage,
+  });
+  if (!image.ok) {
+    const settled = await settleGoogleLive({
+      tenantId: session.tenantId,
+      jobId: job.id,
+      status: "failed",
+      safeError: "invalid_image",
+    });
+    return NextResponse.json({
+      error: "invalid_image",
+      jobs: settled ? [settled] : [job],
+      externalCall: false,
+    }, { status: 400 });
+  }
+  const post = buildGoogleImagePost({
+    summary: job.caption,
+    imageUrl: image.sourceUrl,
+    tenantId: session.tenantId,
+  });
   if (!post.ok) {
     const settled = await settleGoogleLive({
       tenantId: session.tenantId,
       jobId: job.id,
       status: "failed",
-      safeError: "summary",
+      safeError: post.reason === "image" ? "invalid_image" : "summary",
     });
     return NextResponse.json({
-      error: "summary",
+      error: post.reason === "image" ? "invalid_image" : "summary",
       jobs: settled ? [settled] : [job],
       externalCall: false,
     }, { status: 400 });
