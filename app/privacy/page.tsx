@@ -333,54 +333,63 @@ export default function PrivacyPage() {
         <li>informații despre browser și dispozitiv.</li>
       </ul>
 
-      <h2>4. Temeiurile legale (GDPR)</h2>
-      <p>Prelucrăm datele în baza următoarelor temeiuri:</p>
-
-      <h3>Executarea contractului</h3>
-      <ul>
-        <li>furnizarea serviciului Frizeo;</li>
-        <li>administrarea conturilor;</li>
-        <li>gestionarea programărilor.</li>
-      </ul>
-
-      <h3>Interes legitim</h3>
-      <ul>
-        <li>securitatea platformei;</li>
-        <li>prevenirea fraudelor;</li>
-        <li>îmbunătățirea serviciului;</li>
-        <li>diagnosticarea erorilor.</li>
-      </ul>
-
-      <h3>Consimțământ</h3>
-      <p>Pentru:</p>
-      <ul>
-        <li>Google Analytics;</li>
-        <li>Meta Pixel;</li>
-        <li>TikTok Pixel;</li>
-        <li>Microsoft Clarity;</li>
-        <li>alte cookie-uri de marketing.</li>
-      </ul>
+      <h2>4. Cine decide și pe ce temei</h2>
       <p>
-        Acestea sunt activate doar după acceptarea bannerului de cookie-uri.
-        Pixelii sunt separați de conectarea OAuth a paginii, contului TikTok
-        sau profilului Google Business.
+        Pentru contul salonului, abonament și facturile Frizeo, operator este{" "}
+        {c.name}. Pentru programările clienților, operator este salonul.
+        Frizeo prelucrează acele programări doar ca să furnizeze serviciul
+        cerut de salon și este persoană împuternicită. Termenii nu țin locul
+        acordului de prelucrare dintre Frizeo și salon.
+      </p>
+      <p>
+        Autorizarea dată pe ecranul Meta, TikTok sau Google permite aplicației
+        să acceseze contul ales. Ea nu este consimțământul GDPR folosit pentru
+        cookie-urile de analiză și marketing.
       </p>
 
-      <h3>Executarea contractului pentru integrările opționale</h3>
+      <h3>Proprietarii de saloane</h3>
       <p>
-        Pentru conectarea și publicarea cerute de salon, temeiul executării
-        contractului, art. 6 alin. (1) lit. b din GDPR, este doar o propunere.
-        Nu este o decizie juridică confirmată. Operatorul trebuie să o
-        confirme sau să o înlocuiască înainte de promovarea în producție.
+        Contul, abonamentul și funcțiile cerute de proprietar sunt necesare
+        pentru executarea contractului, art. 6 alin. (1) lit. b din GDPR.
+        Facturile Frizeo sunt păstrate pentru obligația legală, art. 6 alin.
+        (1) lit. c. Jurnalele de securitate și limitarea abuzurilor se bazează
+        pe interesul legitim, art. 6 alin. (1) lit. f.
+      </p>
+
+      <h3>Manageri și angajați</h3>
+      <p>
+        Contul lor există ca să poată folosi platforma cumpărată de salon.
+        Frizeo îl prelucrează pentru executarea acelui contract. Salonul
+        decide pe cine invită și rămâne responsabil pentru datele clienților
+        pe care aceștia le văd.
+      </p>
+
+      <h3>Clienții care se programează</h3>
+      <p>
+        Numele, telefonul, emailul opțional și detaliile programării sunt
+        prelucrate pentru salon. Frizeo nu cere un consimțământ separat pentru
+        programare și nu folosește aceste date pentru reclamele proprii.
+      </p>
+
+      <h3>Integrările Meta, TikTok, Google Business și Calendar</h3>
+      <p>
+        Conectarea și publicarea pornesc doar când un owner sau manager le
+        cere din cont. Păstrarea tokenului și trimiterea textului sau a
+        imaginii cerute sunt parte din executarea contractului cu salonul,
+        art. 6 alin. (1) lit. b. Tokenul este păstrat cât timp conexiunea este
+        folosită.
+      </p>
+
+      <h3>Vizitatori și tehnologii de analiză</h3>
+      <p>
+        Cookie-ul de autentificare este necesar pentru cont. Meta Pixel,
+        TikTok Pixel, Google Analytics și Microsoft Clarity pornesc doar după
+        acceptarea din banner, pe baza consimțământului, art. 6 alin. (1) lit.
+        a. Refuzul lasă site-ul utilizabil.
       </p>
 
       <h3>Obligație legală</h3>
-      <p>Pentru:</p>
-      <ul>
-        <li>contabilitate;</li>
-        <li>obligații fiscale;</li>
-        <li>arhivarea documentelor.</li>
-      </ul>
+      <p>Pentru facturile și evidențele contabile ale Frizeo.</p>
 
       <h2>5. Destinatarii datelor</h2>
       <p>
@@ -391,16 +400,31 @@ export default function PrivacyPage() {
       <ul>
         <li>Supabase (bază de date și autentificare)</li>
         <li>Vercel (hosting)</li>
-        <li>Zoho sau furnizorul de email</li>
-        <li>SMSO (notificări SMS)</li>
-        <li>Stripe (procesare plăți)</li>
-        <li>FGO (emitere facturi fiscale, când este configurat)</li>
-        <li>Google (Google Calendar, Google Business Profile și Google Analytics)</li>
-        <li>OpenAI și/sau Google Gemini (Marketing AI și Assistant, când sunt activate)</li>
-        <li>Notion (sincronizare internă operațională, când este configurată)</li>
-        <li>Meta Platforms Ireland Ltd. (Facebook, Instagram și Meta Pixel)</li>
-        <li>TikTok Technology Limited (conectare, încărcare și TikTok Pixel)</li>
-        <li>Microsoft (Microsoft Clarity)</li>
+        <li>furnizorul de email configurat pentru notificări;</li>
+        <li>NOOH MEDIA S.R.L. (SMSO), pentru SMS, când planul include SMS;</li>
+        <li>Stripe, pentru plata abonamentului;</li>
+        <li>FGO, pentru facturi, când facturarea este configurată;</li>
+        <li>
+          Google Ireland Limited și Google LLC, pentru Calendar, Business
+          Profile, Analytics și, când este folosit, Gemini;
+        </li>
+        <li>
+          OpenAI Ireland Limited, pentru Marketing AI sau Assistant, când
+          aceste funcții sunt folosite;
+        </li>
+        <li>Notion, pentru evidența internă, când sincronizarea este pornită;</li>
+        <li>
+          Meta Platforms Ireland Limited și Meta Platforms, Inc., pentru
+          Facebook, Instagram și Meta Pixel;
+        </li>
+        <li>
+          TikTok Technology Limited, pentru conectare, încărcare și TikTok
+          Pixel;
+        </li>
+        <li>
+          Microsoft Ireland Operations Limited și Microsoft Corporation, pentru
+          Microsoft Clarity.
+        </li>
       </ul>
       <p>
         Datele sunt transmise numai în măsura necesară furnizării serviciilor.
@@ -411,81 +435,136 @@ export default function PrivacyPage() {
         linkul public de programare.
       </p>
       <p>
-        Meta, TikTok și Google pot prelucra aceste date și în afara României
-        sau a Spațiului Economic European. Această politică nu stabilește
-        mecanismul de transfer, cum ar fi o decizie de adecvare sau clauze
-        contractuale. Operatorul trebuie să confirme mecanismul pentru fiecare
-        furnizor înainte de promovarea în producție.
+        Unii furnizori pot prelucra date în afara României sau a Spațiului Economic European.
+        Mai jos sunt mecanismele publicate de ei la 15
+        noiembrie 2026. Frizeo nu adaugă o garanție proprie peste documentele
+        lor, iar înscrierea într-un program poate fi retrasă de furnizor.
       </p>
-      <p>
-        Saloanele care utilizează Frizeo pot acționa ca operatori independenți
-        pentru datele propriilor clienți.
-      </p>
-      <p>
-        În aceste situații Frizeo acționează ca persoană împuternicită de
-        operator.
-      </p>
-
-      <h2>6. Perioada de stocare</h2>
-      <p>Datele sunt păstrate numai atât timp cât este necesar.</p>
-      <p>Perioade orientative:</p>
       <ul>
-        <li>cont activ: pe durata utilizării serviciului;</li>
         <li>
-          programări: până la 24 luni după efectuarea acestora;
+          Meta Ireland indică EU–US Data Privacy Framework pentru transferul
+          către Meta Platforms, Inc.{" "}
+          <ExtLink href="https://www.facebook.com/legal/EU_data_transfer_addendum">
+            Addendum-ul Meta
+          </ExtLink>{" "}
+          și{" "}
+          <ExtLink href="https://www.dataprivacyframework.gov/participant/4452">
+            lista oficială
+          </ExtLink>
+          .
         </li>
         <li>
-          documente fiscale: conform obligațiilor legale (în general 10 ani);
+          TikTok Technology Limited descrie stocarea în Statele Unite, Malaysia
+          și Singapore și folosirea deciziilor de adecvare sau a clauzelor
+          contractuale standard.{" "}
+          <ExtLink href="https://www.tiktok.com/legal/page/eea/privacy-policy/en">
+            Politica TikTok pentru SEE
+          </ExtLink>
+          .
         </li>
         <li>
-          cont șters: date șterse sau anonimizate în maximum 90 de zile, cu
-          excepția obligațiilor legale.
+          Google LLC este înscris în EU–US Data Privacy Framework și indică
+          clauze contractuale standard acolo unde o decizie de adecvare nu
+          acoperă transferul.{" "}
+          <ExtLink href="https://policies.google.com/privacy/frameworks">
+            Cadrele publicate de Google
+          </ExtLink>
+          .
+        </li>
+        <li>
+          Microsoft Corporation este înscris în EU–US Data Privacy Framework.
+          Pentru Clarity, clienții din UE contractează cu Microsoft Ireland
+          Operations Limited, iar transferul intern folosește clauze
+          contractuale standard.{" "}
+          <ExtLink href="https://learn.microsoft.com/en-us/clarity/faq">
+            Întrebările Microsoft Clarity
+          </ExtLink>
+          .
+        </li>
+        <li>
+          Stripe, LLC este înscris în EU–US Data Privacy Framework, cu clauze
+          contractuale standard dacă acest mecanism nu poate fi folosit.{" "}
+          <ExtLink href="https://stripe.com/legal/dta">
+            Addendum-ul Stripe
+          </ExtLink>
+          .
+        </li>
+        <li>
+          Supabase Pte. Ltd. include clauze contractuale standard în acordul
+          său de prelucrare. Baza de date stă în regiunea aleasă pentru
+          proiect; suportul și unele jurnale pot fi prelucrate în afara ei.{" "}
+          <ExtLink href="https://supabase.com/legal/privacy-resources/data-residency-and-transfers-faq">
+            Explicația Supabase
+          </ExtLink>
+          .
+        </li>
+        <li>
+          Vercel Inc. este înscris în EU–US Data Privacy Framework, iar acordul
+          său spune că prelucrarea principală este în Statele Unite și include
+          clauze contractuale standard.{" "}
+          <ExtLink href="https://vercel.com/legal/dpa">Acordul Vercel</ExtLink>.
+        </li>
+        <li>
+          OpenAI Ireland Limited indică decizii de adecvare sau clauze
+          contractuale standard, nu EU–US Data Privacy Framework.{" "}
+          <ExtLink href="https://openai.com/policies/eu-privacy-policy/">
+            Politica OpenAI pentru UE
+          </ExtLink>
+          .
         </li>
       </ul>
       <p>
-        Termenul de mai sus nu acoperă automat conexiunile Meta, TikTok și
-        Google Business Profile și nici fișierele lor. Această politică nu
-        alege un număr de zile pentru ele.
+        Pentru datele clienților care se programează, salonul este operator, iar
+        Frizeo este persoană împuternicită.
       </p>
 
-      <h3>Date Google Calendar</h3>
+      <h2>6. Perioada de stocare</h2>
+      <p>Datele sunt păstrate numai atât timp cât este necesar pentru scopul descris.</p>
+      <ul>
+        <li>contul activ: pe durata folosirii serviciului;</li>
+        <li>
+          programările: rămân în contul salonului. Frizeo nu le șterge automat
+          după un număr de luni și nu le șterge când pleacă un singur
+          utilizator;
+        </li>
+        <li>
+          facturile și evidențele contabile: cel puțin 5 ani, calculați de la 1
+          iulie a anului următor încheierii exercițiului financiar în care au
+          fost întocmite, conform art. 25 din Legea contabilității nr. 82/1991,
+          modificat prin Legea nr. 36/2023. Aplicația nu le șterge la ștergerea
+          contului și nu le șterge automat la expirarea termenului;
+        </li>
+        <li>
+          tokenurile Google Calendar, Meta, TikTok și Google Business Profile:
+          cât timp conexiunea este folosită. Deconectarea din Frizeo le șterge.
+          Ștergerea contului șterge tokenurile Google Calendar ale acelui
+          utilizator. Revocarea din contul Meta, TikTok sau Google oprește
+          accesul viitor, dar nu șterge singură tokenul deja salvat;
+        </li>
+        <li>
+          campaniile folosite și istoricul unei publicări: cât timp țin de
+          conexiunea sau de publicarea respectivă. La deconectare se șterge
+          istoricul legat de acea conexiune. Istoricul rămas în cont nu este
+          șters automat;
+        </li>
+        <li>
+          textul și imaginea care nu mai au conexiune activă și nu au istoric
+          de publicare: nu sunt șterse automat. Pot fi cerute la{" "}
+          <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>.
+        </li>
+      </ul>
       <p>
-        OAuth Access Token și Refresh Token sunt păstrate numai cât timp
-        conexiunea Google Calendar este activă.
+        O cerere semnată de Meta, la scoaterea aplicației sau la ștergerea
+        datelor, închide doar conexiunile Meta ale contului Facebook care a
+        semnat-o. O semnătură care nu se verifică nu șterge nimic. TikTok,
+        Google, programările și facturile nu intră în acea cerere. Postarea deja
+        publicată rămâne pe platforma respectivă.
       </p>
       <p>
-        La deconectarea Google Calendar, revocarea accesului sau ștergerea
-        contului Frizeo, aceste token-uri sunt șterse definitiv.
-      </p>
-
-      <h3>Datele integrărilor Meta, TikTok și Google Business Profile</h3>
-      <p>
-        Tokenul unei integrări este șters din Frizeo când salonul o
-        deconectează din Integrări. Odată cu conexiunea se șterg destinațiile
-        salvate și rândurile de publicare legate de ele.
-      </p>
-      <p>
-        Textul unei campanii și fișierul privat rămân după deconectare dacă
-        nu mai există un rând de publicare. Aplicația le poate șterge doar
-        când operatorul setează variabila{" "}
-        <code>MARKETING_DATA_RETENTION_DAYS</code> la un număr întreg de zile.
-        Până atunci nu se șterge nimic automat. Numărul nu este stabilit aici
-        și nu reprezintă o perioadă legală confirmată. Ștergerea automată nu
-        atinge conexiunile active, joburile de publicare, programările sau
-        documentele fiscale.
-      </p>
-      <p>
-        Postarea deja trimisă rămâne la Meta, TikTok sau Google, după
-        regulile acelei platforme. Deconectarea din Frizeo nu o șterge acolo.
-      </p>
-      <p>
-        O cerere semnată de Meta, la deautorizare sau la ștergerea datelor,
-        închide doar conexiunile Meta ale contului Facebook care a semnat-o.
-        Semnătura invalidă nu șterge nimic. TikTok și Google nu sunt atinse.
-      </p>
-      <p>
-        Ștergerea contului unui utilizator nu deconectează automat aceste
-        integrări, pentru că aparțin salonului. Instrucțiunile sunt pe pagina{" "}
+        Ștergerea contului are un răgaz de 7 zile, în care poate fi anulată.
+        După finalizare se șterge utilizatorul, se anonimizează profilul de
+        frizer și se șterg tokenurile lui de Google Calendar. Integrările
+        salonului rămân, pentru că aparțin salonului. Pașii sunt pe pagina{" "}
         <a href="/stergere-date">Ștergerea datelor din integrări</a>.
       </p>
 
@@ -518,7 +597,14 @@ export default function PrivacyPage() {
         Telefon / WhatsApp Business:{" "}
         <a href={`tel:${c.phoneE164}`}>{c.phone}</a>
       </p>
-      <p>Vom răspunde în termen de maximum 30 de zile.</p>
+      <p>
+        Răspundem fără întârzieri nejustificate și, de regulă, într-o lună de la
+        primirea cererii. Termenul poate fi prelungit cu cel mult două luni
+        când cererea este complexă sau când sunt multe cereri. Te anunțăm în
+        prima lună dacă prelungim termenul și de ce. Putem cere informațiile
+        necesare ca să confirmăm identitatea. Dacă nu dăm curs cererii, îți
+        spunem motivul și că poți sesiza ANSPDCP sau instanța.
+      </p>
 
       <h2>8. Securitate</h2>
       <p>
@@ -531,9 +617,7 @@ export default function PrivacyPage() {
         <li>parole stocate exclusiv sub formă hash;</li>
         <li>acces restricționat la infrastructura backend;</li>
         <li>autentificare și autorizare pentru accesul la date;</li>
-        <li>
-          autentificare și autorizare pentru accesul la date.
-        </li>
+        <li>tokenuri de integrare păstrate cifrat, separat de datele publice.</li>
       </ul>
 
       <h3>Protecția datelor Google</h3>

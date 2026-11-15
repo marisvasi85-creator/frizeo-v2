@@ -24,8 +24,10 @@ test("privacy policy describes the integration data that the code actually uses"
   assert.match(privacy, /\/stergere-date/);
   assert.doesNotMatch(privacy, /Nu solicităm alte permisiuni Google/);
   assert.doesNotMatch(privacy, /callback de ștergere/);
-  assert.match(privacy, /MARKETING_DATA_RETENTION_DAYS/);
-  assert.match(privacy, /Nu este o decizie juridică confirmată/);
+  assert.match(privacy, /într-o lună/);
+  assert.doesNotMatch(privacy, /MARKETING_DATA_RETENTION_DAYS/);
+  assert.doesNotMatch(privacy, /decizie juridică confirmată/);
+  assert.doesNotMatch(privacy, /în general 10 ani/);
 });
 
 test("terms, cookies, and the public deletion page stay consistent", () => {
@@ -37,8 +39,11 @@ test("terms, cookies, and the public deletion page stay consistent", () => {
   assert.match(terms, /href="\/stergere-date"/);
   assert.match(cookies, /Meta Pixel și TikTok Pixel/);
   assert.match(cookies, /href="\/stergere-date"/);
-  assert.match(deletion, /MARKETING_DATA_RETENTION_DAYS/);
+  assert.match(deletion, /nu sunt șterse\s+automat/);
   assert.match(deletion, /Cererea semnată de Meta/);
+  assert.doesNotMatch(deletion, /MARKETING_DATA_RETENTION_DAYS/);
+  assert.doesNotMatch(cookies, /tenant_id/);
+  assert.doesNotMatch(cookies, /frizeo_cookie_consent/);
   assert.match(deletion, /English summary for platform reviewers/);
   assert.doesNotMatch(deletion, /redirect\("\/login"\)/);
   assert.match(calendar, /business\.manage/);

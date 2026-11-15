@@ -27,17 +27,15 @@ export default function CookiesPage() {
 
       <h2>2. Ce cookie-uri folosim</h2>
 
-      <h3>Cookie-uri esențiale (obligatorii)</h3>
+      <h3>Cookie-uri esențiale</h3>
       <p>
-        Necesare pentru login, securitate și navigare în contul de admin. Fără
-        ele, platforma nu funcționează corect.
+        Necesare pentru login, securitate și păstrarea sesiunii. Fără ele,
+        contul nu poate fi folosit. Salonul activ este reținut în cont, nu
+        într-un cookie separat.
       </p>
       <ul>
         <li>
-          <strong>Sesiune Supabase Auth</strong> — autentificare utilizator
-        </li>
-        <li>
-          <strong>tenant_id</strong> — salonul activ selectat (conturi multi-salon)
+          <strong>Sesiune de autentificare</strong> — te menține conectat
         </li>
       </ul>
 
@@ -55,8 +53,9 @@ export default function CookiesPage() {
           (TikTok Technology Limited)
         </li>
         <li>
-          <strong>Google Analytics 4</strong> — statistici anonime de trafic
-          (Google Ireland Ltd.)
+          <strong>Google Analytics 4</strong> — statistici de trafic (Google
+          Ireland Ltd.). Dacă este configurat Google Tag Manager, el poate
+          încărca această măsurare, tot doar după acceptare.
         </li>
         <li>
           <strong>Microsoft Clarity</strong> — statistici de utilizare și
@@ -68,11 +67,16 @@ export default function CookiesPage() {
         Poți refuza cu „Doar esențiale” — site-ul funcționează normal fără ele.
       </p>
 
-      <h2>3. Stocare locală (localStorage)</h2>
+      <h2>3. Alegerea salvată în browser</h2>
       <p>
-        Bannerul de cookies salvează preferința ta în localStorage sub cheia{" "}
-        <code>frizeo_cookie_consent</code> — nu este un cookie, dar are rol
-        similar (reține dacă ai acceptat).
+        Bannerul reține în browser dacă ai acceptat sau ai ales doar
+        cookie-urile esențiale. Nu este un cookie, dar are același rol: nu te
+        mai întrebăm la fiecare pagină.
+      </p>
+      <p>
+        Bannerul apare pe paginile publice. Nu apare pe login, resetarea
+        parolei, acceptarea unei invitații sau în interiorul contului. Dacă ai
+        acceptat înainte, Clarity poate continua și în cont.
       </p>
 
       <h2>4. Cum controlezi cookie-urile</h2>

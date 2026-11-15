@@ -57,8 +57,9 @@ test("marketing retention stays off unless the operator sets a bounded day count
   assert.equal(marketingRetentionDays({}), null);
   assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "" }), null);
   assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "0" }), null);
+  assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "30" }), null);
   assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "90" }), 90);
-  assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "3651" }), null);
+  assert.equal(marketingRetentionDays({ MARKETING_DATA_RETENTION_DAYS: "365" }), null);
   assert.equal(isRetentionMediaPath("tenant/file.jpg"), false);
   const path = "5d9862a1-fd85-46f2-9c7e-635e813e067c/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.jpg";
   const candidates = readRetentionCandidates({

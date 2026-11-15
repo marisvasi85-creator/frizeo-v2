@@ -48,9 +48,10 @@ export default function CookieBanner() {
     >
       <div className="max-w-4xl mx-auto bg-[#161618] border border-white/10 text-white rounded-xl p-5 shadow-2xl flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1 text-sm text-white/80">
-          Folosim cookie-uri esențiale pentru autentificare. Dacă accepți, putem
-          folosi și Meta Pixel, TikTok Pixel, Google Analytics și Microsoft
-          Clarity pentru statistici anonime.{" "}
+          Folosim cookie-uri esențiale pentru autentificare. Dacă accepți,
+          încărcăm Meta Pixel, TikTok Pixel, Google Analytics și Microsoft
+          Clarity, pentru măsurarea vizitelor și, la Clarity, pentru modul de
+          utilizare.{" "}
           <Link href="/cookies" className="text-blue-400 underline">
             Politica cookies
           </Link>

@@ -46,30 +46,25 @@ export default function IntegrationDataDeletionPage() {
           Google, după regulile acelei platforme;
         </li>
         <li>
-          textul păstrat într-o campanie Frizeo și fișierul din spațiul privat
-          de publicare rămân până când operatorul setează{" "}
-          <code>MARKETING_DATA_RETENTION_DAYS</code>; numărul de zile nu este
-          ales în acest document și, nesetat, nu șterge nimic;
+          textul și imaginea care nu au istoric de publicare nu sunt șterse
+          automat. Le poți cere la{" "}
+          <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>, din adresa
+          contului, spunând salonul și integrarea;
         </li>
         <li>
           ștergerea contului unui utilizator nu deconectează integrările
-          salonului și nu șterge programările sau documentele fiscale.
+          salonului și nu șterge programările sau facturile.
         </li>
       </ul>
-      <p>
-        Pentru ștergerea acestor rămășițe, scrie la{" "}
-        <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a> din adresa
-        contului și spune salonul și integrarea. Nu există în aplicație un
-        termen automat pentru acest pas.
-      </p>
 
       <h2>3. Cererea semnată de Meta</h2>
       <p>
         Meta poate trimite o cerere semnată când utilizatorul scoate aplicația
-        Frizeo sau cere ștergerea datelor. Frizeo verifică semnătura cu secretul
-        aplicației. Dacă semnătura este validă, sunt închise doar conexiunile
-        Meta ale acelui cont Facebook, inclusiv tokenul, paginile, conturile
-        Instagram și joburile legate. O semnătură invalidă nu șterge nimic.
+        Frizeo sau cere ștergerea datelor. Frizeo verifică semnătura. Dacă ea
+        este validă, sunt închise doar conexiunile Meta ale acelui cont
+        Facebook, inclusiv tokenul, paginile, conturile Instagram și istoricul
+        de publicare legat de ele. O semnătură care nu se verifică nu șterge
+        nimic.
       </p>
       <p>
         Pentru ștergerea datelor, Meta primește un cod și o pagină de stare.
@@ -107,8 +102,8 @@ export default function IntegrationDataDeletionPage() {
 
       <h2>5. Ștergerea contului Frizeo</h2>
       <p>
-        Din Cont poți cere ștergerea utilizatorului. Există un răgaz în care
-        cererea poate fi anulată, apoi finalizarea. La finalizare se șterg
+        Din Cont poți cere ștergerea utilizatorului. Cererea poate fi anulată
+        timp de 7 zile, apoi se finalizează. La finalizare se șterg
         tokenurile Google Calendar ale frizerului. Nu se șterg evenimentele
         deja create în calendarul Google.
       </p>
@@ -117,7 +112,16 @@ export default function IntegrationDataDeletionPage() {
         <a href="/privacy">Politica de confidențialitate</a>.
       </p>
 
-      <h2>6. Contact</h2>
+      <h2>6. Drepturile privind datele</h2>
+      <p>
+        Cererea de acces, rectificare, ștergere, restricționare, opoziție sau
+        portabilitate se trimite la{" "}
+        <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>. Răspunsul
+        vine, de regulă, într-o lună. Detaliile și excepțiile sunt în{" "}
+        <a href="/privacy">Politica de confidențialitate</a>.
+      </p>
+
+      <h2>7. Contact</h2>
       <p>
         <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>
       </p>
@@ -142,12 +146,11 @@ export default function IntegrationDataDeletionPage() {
       </p>
       <p>
         A post already sent stays on that platform. Leftover campaign text
-        and private media files are deleted only after the operator sets
-        MARKETING_DATA_RETENTION_DAYS. No number is chosen here; while it is
-        unset, nothing is deleted automatically. Active connections, publish
-        jobs, bookings, and invoices are outside that job. Deleting one
-        Frizeo user does not by itself disconnect the salon’s integration.
-        Those leftovers can be requested at {c.privacyEmail}. Google Calendar
+        and private media files are not deleted automatically. They can be
+        requested at {c.privacyEmail}. Active connections, publish history,
+        bookings, and invoices are not removed by that request unless the
+        message asks to disconnect the integration. Deleting one Frizeo user
+        does not by itself disconnect the salon’s integration. Google Calendar
         tokens are removed when the Frizeo user deletion completes. Existing
         Google Calendar events are not deleted.
       </p>

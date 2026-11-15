@@ -138,6 +138,13 @@ export default function TermsPage() {
         Datele folosite și retragerea accesului sunt descrise în{" "}
         <a href="/privacy">Politica de confidențialitate</a> și pe pagina{" "}
         <a href="/stergere-date">Ștergerea datelor din integrări</a>.
+        Autorizarea de pe platformă nu înlocuiește consimțământul pentru
+        cookie-urile de analiză.
+      </p>
+      <p>
+        Pentru programările clienților, salonul este operator, iar Frizeo este
+        persoană împuternicită. Acești termeni nu țin locul acordului de
+        prelucrare.
       </p>
 
       <h2>3. Cont și eligibilitate</h2>

@@ -1,15 +1,15 @@
-const DAYS = /^[0-9]{1,4}$/;
 const MEDIA_PATH =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$/;
+
+/** Orphan campaign text and private images only. Publish history is not covered. */
+export const ORPHAN_MARKETING_RETENTION_DAYS = 90;
 
 export function marketingRetentionDays(
   env: Record<string, string | undefined>,
 ): number | null {
   const raw = env.MARKETING_DATA_RETENTION_DAYS?.trim() ?? "";
-  if (!DAYS.test(raw)) return null;
-  const days = Number(raw);
-  if (!Number.isInteger(days) || days < 1 || days > 3650) return null;
-  return days;
+  if (raw !== String(ORPHAN_MARKETING_RETENTION_DAYS)) return null;
+  return ORPHAN_MARKETING_RETENTION_DAYS;
 }
 
 export function isRetentionMediaPath(path: string): boolean {

@@ -302,16 +302,14 @@ export default function GoogleCalendarDataPage() {
         Datele Google sunt păstrate doar atât timp cât este necesar pentru
         furnizarea funcționalității de sincronizare Calendar.
       </p>
-      <p>Token-urile OAuth sunt șterse definitiv atunci când:</p>
-      <ul>
-        <li>
-          utilizatorul deconectează Google Calendar din Frizeo;
-        </li>
-        <li>
-          utilizatorul revocă accesul aplicației din contul Google;
-        </li>
-        <li>utilizatorul își șterge contul Frizeo.</li>
-      </ul>
+      <p>
+        Token-urile sunt păstrate cât timp conexiunea este folosită și sunt
+        șterse din Frizeo când utilizatorul deconectează Google Calendar sau
+        când ștergerea contului se finalizează. Revocarea din contul Google
+        oprește accesul viitor. Ea nu șterge singură tokenul deja salvat; pentru
+        asta este nevoie și de deconectarea din Frizeo sau de ștergerea
+        contului.
+      </p>
 
       <h2>10. Revocarea accesului</h2>
       <p>
