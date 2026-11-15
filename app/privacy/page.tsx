@@ -368,10 +368,10 @@ export default function PrivacyPage() {
 
       <h3>Executarea contractului pentru integrările opționale</h3>
       <p>
-        Pentru conectarea și publicarea cerute de salon propunem temeiul
-        executării contractului, art. 6 alin. (1) lit. b din GDPR. Salonul
-        pornește integrarea ca parte a serviciului Frizeo. Temeiul este propus
-        și trebuie confirmat de operator înainte de promovarea în producție.
+        Pentru conectarea și publicarea cerute de salon, temeiul executării
+        contractului, art. 6 alin. (1) lit. b din GDPR, este doar o propunere.
+        Nu este o decizie juridică confirmată. Operatorul trebuie să o
+        confirme sau să o înlocuiască înainte de promovarea în producție.
       </p>
 
       <h3>Obligație legală</h3>
@@ -444,8 +444,8 @@ export default function PrivacyPage() {
       </ul>
       <p>
         Termenul de mai sus nu acoperă automat conexiunile Meta, TikTok și
-        Google Business Profile și nici fișierele lor, descrise separat mai
-        jos. Nu există o altă perioadă automată pentru ele.
+        Google Business Profile și nici fișierele lor. Această politică nu
+        alege un număr de zile pentru ele.
       </p>
 
       <h3>Date Google Calendar</h3>
@@ -465,10 +465,23 @@ export default function PrivacyPage() {
         salvate și rândurile de publicare legate de ele.
       </p>
       <p>
-        Textul păstrat în campanie și fișierul din spațiul privat de publicare
-        nu au o perioadă automată de ștergere în aplicație. Nu stabilim aici
-        una. Postarea deja trimisă rămâne la Meta, TikTok sau Google, după
+        Textul unei campanii și fișierul privat rămân după deconectare dacă
+        nu mai există un rând de publicare. Aplicația le poate șterge doar
+        când operatorul setează variabila{" "}
+        <code>MARKETING_DATA_RETENTION_DAYS</code> la un număr întreg de zile.
+        Până atunci nu se șterge nimic automat. Numărul nu este stabilit aici
+        și nu reprezintă o perioadă legală confirmată. Ștergerea automată nu
+        atinge conexiunile active, joburile de publicare, programările sau
+        documentele fiscale.
+      </p>
+      <p>
+        Postarea deja trimisă rămâne la Meta, TikTok sau Google, după
         regulile acelei platforme. Deconectarea din Frizeo nu o șterge acolo.
+      </p>
+      <p>
+        O cerere semnată de Meta, la deautorizare sau la ștergerea datelor,
+        închide doar conexiunile Meta ale contului Facebook care a semnat-o.
+        Semnătura invalidă nu șterge nimic. TikTok și Google nu sunt atinse.
       </p>
       <p>
         Ștergerea contului unui utilizator nu deconectează automat aceste

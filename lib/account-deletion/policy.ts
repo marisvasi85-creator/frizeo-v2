@@ -45,7 +45,7 @@ export const ACCOUNT_DELETION_TABLE_POLICY: AccountDeletionTablePolicy[] = [
   { table: "marketing_destinations", disposition: "KEEP", notes: "Removed only with their connection. Account deletion does not disconnect the salon." },
   { table: "integration_publish_jobs", disposition: "KEEP", notes: "Removed with the destination on disconnect. Account deletion does not delete them." },
   { table: "integration_assets", disposition: "KEEP", notes: "Caption and media path can remain after disconnect. No automatic retention period is encoded." },
-  { table: "storage:marketing-publish", disposition: "KEEP", notes: "Private publish files. Disconnect and account deletion do not delete them." },
+  { table: "storage:marketing-publish", disposition: "KEEP", notes: "Private publish files. Account deletion does not delete them. Optional MARKETING_DATA_RETENTION_DAYS can remove unreferenced leftovers only." },
   { table: "platform_tenant_notes", disposition: "KEEP", notes: "Ops notes; author_user_id is not an Auth FK." },
   { table: "tenant_lifecycle_state", disposition: "KEEP", notes: "Tenant lifecycle." },
   { table: "account_deletion_requests", disposition: "KEEP", notes: "Audit row. user_id SET NULL after Auth delete." },

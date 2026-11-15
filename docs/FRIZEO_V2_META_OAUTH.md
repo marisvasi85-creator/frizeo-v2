@@ -59,9 +59,9 @@ There is no worker, cron, or automatic retry. An ambiguous result stays `unknown
 
 Scheduling, Reels, Stories, comments, insights, ads, webhooks, crons, and polling are not implemented. Account deletion is unchanged. Marketing AI is not connected to publishing.
 
-Meta App Review later needs two separate endpoints, not the current account-deletion flow:
+Meta App Review uses two endpoints, separate from Frizeo account deletion:
 
 - Deauthorize callback: `POST /api/integrations/meta/deauthorize`
-- Data deletion request: `POST /api/integrations/meta/data-deletion`, returning a confirmation code and a status URL
+- Data deletion request: `POST /api/integrations/meta/data-deletion`, returning a confirmation code and `https://<host>/stergere-date/meta/<code>`
 
-Those routes are not implemented. The unpublished app can be tested with users who have a role on the Meta app.
+Both require a valid Meta `signed_request`. They delete only `marketing_connections` where `provider = 'meta'` and `provider_account_id` is that Facebook user. Cascaded secrets, destinations, and linked publish jobs go with the connection. Other providers, bookings, and invoices stay. The public instructions remain at `/stergere-date`.
