@@ -525,9 +525,10 @@ export default function PrivacyPage() {
         <li>
           programările: rămân în contul salonului cât timp salonul folosește
           serviciul. Frizeo nu le șterge automat după un număr de luni și nu le
-          șterge când pleacă un singur utilizator. Salonul nu are încă un
-          export complet sau un buton de închidere; cererea se trimite la{" "}
-          <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>;
+          șterge când pleacă un singur utilizator. Exportul sau ștergerea lor
+          se cere la{" "}
+          <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>. Acordul
+          de prelucrare este la <a href="/dpa">/dpa</a>;
         </li>
         <li>
           facturile și evidențele contabile: cel puțin 5 ani, calculați de la 1

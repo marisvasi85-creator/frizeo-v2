@@ -35,13 +35,13 @@ Politica folosește executarea contractului pentru cont și pentru integrarea ce
 
 ## Acord art. 28
 
-`docs/DPA_PROIECT.md`, versiunea `dpa-proiect-2026-11-15-915`, urmează structura Deciziei (UE) 2021/915 fără să înlocuiască textul oficial. Nu este semnat și nu este aprobat. Opțiunea pentru subîmputerniciți și termenul de notificare nu sunt alese. Evidența furnizorilor este `docs/GDPR_TRANSFERS.md`. Pagina publică este `/dpa`.
+`docs/dpa/versions/dpa-2026-11-15.md` este acordul public la `/dpa`. Este acordul Frizeo pentru art. 28, verificat după Decizia (UE) 2021/915, nu textul oficial al clauzelor standard. Autorizarea subîmputerniciților este generală, anunțul este de 30 de zile, legea este cea română, iar acceptarea nu are taxă. Textul versiunii rămâne la `/dpa/v/dpa-2026-11-15`.
 
-Acceptarea electronică există în `/admin/dpa` și în `app/api/salon/dpa/route.ts`. Răspunde 404 cât timp `DPA_ACCEPTANCE_ENABLED` nu este exact `true`. Nu blochează utilizatorii, nu modifică signup-ul și nu marchează conturile existente. Variabila nu a fost setată. O înregistrare, când va fi pornită, păstrează versiunea, hash-ul SHA-256, ownerul, tenantul și momentul de pe server.
+Acceptarea electronică este în `/admin/dpa`. Pe staging este deschisă doar pentru Demo Barber Salon. Celelalte saloane o văd oprită. Nu blochează programările, nu modifică signup-ul și nu creează acceptări pentru conturile existente. Înregistrarea păstrează tenantul, utilizatorul, datele juridice, reprezentantul, versiunea, hash-ul, momentul de pe server și metoda `electronic_dashboard`.
 
 ## Decizii rămase
 
-1. Aprobarea textului DPA, inclusiv legea română propusă, răspunderea, prețul și termenul de obiecție la un subîmputernicit nou. Recomandare: completați termenul și limita de răspundere înainte de orice semnare. Consecință: până atunci saloanele nu au acord art. 28.
+1. Publicarea acordului în Production și momentul de la care acceptarea devine vizibilă pentru toate saloanele. Textul include deja legea română, autorizarea generală și termenul de 30 de zile. Recomandare: testați acceptarea pe Demo Barber Salon, apoi decideți publicarea. Consecință: până atunci acordul nu este activ pentru saloanele din Production.
 2. Validarea `docs/GDPR_LIA.md` și un termen pentru jurnalele de server. Recomandare: confirmați scopul de securitate și fixați termenul. Consecință: fără termen, păstrarea IP-urilor rămâne neplafonată în cod.
 3. Pornirea curățării de 90 de zile. Recomandare: rămâne oprită până la o decizie. Consecință: textele și imaginile orfane rămân.
 4. Contractele lipsă din `docs/GDPR_TRANSFERS.md`, în special email, SMS, FGO, Notion și lipsa unei garanții proprii TikTok. Recomandare: nu porniți TikTok în producție pe baza politicii publice. Consecință: App Review poate vedea URL-urile, dar transferul TikTok nu este închis contractual.

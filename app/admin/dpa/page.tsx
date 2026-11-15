@@ -1,69 +1,89 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import AdminPageHeader from "../components/AdminPageHeader";
 import DpaAcceptanceForm from "./DpaAcceptanceForm";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
-import { dpaAcceptanceEnabled } from "@/lib/dpa/acceptance";
-import { DPA_DRAFT_VERSION, dpaDocumentHash } from "@/lib/dpa/document";
+import { hostnameFromHeaderStore, isStaging } from "@/lib/app/environment";
+import { dpaAcceptanceEnabledForTenant } from "@/lib/dpa/access";
+import { DPA_VERSION, dpaDocumentHash } from "@/lib/dpa/document";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function AdminDpaPage() {
   const session = await getAdminSession();
   if (!session?.user) redirect("/login");
 
-  const enabled = dpaAcceptanceEnabled(process.env);
+  const enabled = dpaAcceptanceEnabledForTenant({
+    tenantId: session.tenantId,
+    hostname: hostnameFromHeaderStore(await headers()),
+    stagingRuntime: isStaging(),
+  });
   const hash = dpaDocumentHash();
   const isOwner = session.role === "owner" && Boolean(session.tenantId);
-  let acceptedAt: string | null = null;
+  let proof: {
+    accepted_at: string;
+    salon_legal_name: string | null;
+    representative_name: string | null;
+  } | null = null;
   if (enabled && isOwner && session.tenantId) {
     const supabase = await createSupabaseServerClient();
     const { data } = await supabase
       .from("salon_dpa_acceptances")
-      .select("accepted_at")
+      .select("accepted_at, salon_legal_name, representative_name")
       .eq("tenant_id", session.tenantId)
-      .eq("document_version", DPA_DRAFT_VERSION)
+      .eq("document_version", DPA_VERSION)
       .maybeSingle();
-    acceptedAt = data?.accepted_at ?? null;
+    proof = data;
   }
 
-  const when = acceptedAt
+  const when = proof
     ? new Intl.DateTimeFormat("ro-RO", {
         timeZone: "Europe/Bucharest",
         dateStyle: "short",
         timeStyle: "short",
-      }).format(new Date(acceptedAt))
+      }).format(new Date(proof.accepted_at))
     : null;
 
   return (
     <div className="space-y-6 max-w-2xl">
       <AdminPageHeader
-        title="Acord de prelucrare"
-        subtitle="Proiect pentru salon. Nu este obligatoriu și nu blochează programările."
+        title="Acord date"
+        subtitle="Acordul pentru datele prelucrate în numele salonului. Nu oprește programările."
       />
-      <p className="text-sm text-frz-muted">
-        Versiune: {DPA_DRAFT_VERSION}
+      <p className="text-sm text-frz-muted break-all">
+        Versiune: {DPA_VERSION}
         <br />
         SHA-256: {hash}
       </p>
       <p className="text-sm">
-        Textul public este la <Link href="/dpa">/dpa</Link>.
+        Citește acordul la <Link href="/dpa">/dpa</Link>
+        {" "}și la <Link href={`/dpa/v/${DPA_VERSION}`}>/dpa/v/{DPA_VERSION}</Link>.
       </p>
+      {session.tenantName ? (
+        <p className="text-sm">Salonul din cont: {session.tenantName}</p>
+      ) : null}
       {!isOwner ? (
-        <p>Doar proprietarul salonului poate înregistra acceptarea.</p>
+        <p>Doar proprietarul salonului poate accepta acordul.</p>
       ) : null}
       {isOwner && !enabled ? (
         <p>
-          Înregistrarea este oprită. Contul rămâne deschis, iar utilizatorii
-          existenți nu sunt marcați ca au acceptat.
+          Acceptarea electronică nu este activă pentru acest salon. Poți citi
+          acordul. Programările rămân disponibile.
         </p>
       ) : null}
       {isOwner && enabled && when ? (
-        <p>
-          Această versiune are o înregistrare la {when} (Europe/Bucharest).
-          Proiectul rămâne nesemnat. Caseta nu este bifată dinainte.
-        </p>
+        <div className="space-y-2 text-sm">
+          <p>Acceptarea acestei versiuni este înregistrată la {when} (Europe/Bucharest).</p>
+          <p>Salon: {proof?.salon_legal_name}</p>
+          <p>Reprezentant: {proof?.representative_name}</p>
+          <p>
+            Textul acceptat: <Link href={`/dpa/v/${DPA_VERSION}`}>/dpa/v/{DPA_VERSION}</Link>
+          </p>
+        </div>
       ) : null}
-      {isOwner && enabled && !when ? <DpaAcceptanceForm version={DPA_DRAFT_VERSION} hash={hash} /> : null}
+      {isOwner && enabled && !when ? (
+        <DpaAcceptanceForm version={DPA_VERSION} hash={hash} />
+      ) : null}
     </div>
   );
 }

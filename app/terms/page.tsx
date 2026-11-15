@@ -143,8 +143,9 @@ export default function TermsPage() {
       </p>
       <p>
         Pentru programările clienților, salonul este operator, iar Frizeo este
-        persoană împuternicită. Acești termeni nu țin locul acordului de
-        prelucrare.
+        persoană împuternicită. Acordul este publicat la <a href="/dpa">/dpa</a>.
+        Acești termeni nu îl înlocuiesc. Acceptarea lui nu este cerută pentru
+        programările saloanelor care nu l-au acceptat.
       </p>
 
       <h2>3. Cont și eligibilitate</h2>

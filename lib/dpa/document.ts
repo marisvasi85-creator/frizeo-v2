@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { DPA_CANONICAL_TEXT } from "@/lib/dpa/canonicalText";
 
-/** Draft identifier. A stored row does not make this text a signed contract. */
-export const DPA_DRAFT_VERSION = "dpa-proiect-2026-11-15-915";
+export const DPA_VERSION = "dpa-2026-11-15";
+export const DPA_VERSION_DATE = "15 noiembrie 2026";
 
 export { DPA_CANONICAL_TEXT };
 
