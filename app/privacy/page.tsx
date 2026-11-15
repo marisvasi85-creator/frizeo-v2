@@ -523,9 +523,11 @@ export default function PrivacyPage() {
       <ul>
         <li>contul activ: pe durata folosirii serviciului;</li>
         <li>
-          programările: rămân în contul salonului. Frizeo nu le șterge automat
-          după un număr de luni și nu le șterge când pleacă un singur
-          utilizator;
+          programările: rămân în contul salonului cât timp salonul folosește
+          serviciul. Frizeo nu le șterge automat după un număr de luni și nu le
+          șterge când pleacă un singur utilizator. Salonul nu are încă un
+          export complet sau un buton de închidere; cererea se trimite la{" "}
+          <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>;
         </li>
         <li>
           facturile și evidențele contabile: cel puțin 5 ani, calculați de la 1
@@ -579,6 +581,12 @@ export default function PrivacyPage() {
         <li>portabilitate (unde este aplicabil);</li>
         <li>retragerea consimțământului.</li>
       </ul>
+      <p>
+        Pentru jurnalele de securitate, opoziția se trimite la{" "}
+        <a href={`mailto:${c.privacyEmail}`}>{c.privacyEmail}</a>. O putem
+        refuza doar dacă păstrarea este necesară pentru securitate sau pentru
+        o obligație legală.
+      </p>
       <p>
         Accesul la o integrare se retrage din Integrări, prin deconectare.
         Google Calendar se deconectează din Profil. Accesul poate fi retras și
