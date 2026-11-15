@@ -27,6 +27,7 @@ const publicPaths: Array<{
   { path: "/google-calendar-data", changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
   { path: "/cookies", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/stergere-date", changeFrequency: "yearly", priority: 0.4 },
 ];
 
 type ActiveBarberRow = {

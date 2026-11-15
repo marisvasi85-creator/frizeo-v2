@@ -97,6 +97,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/stergere-date" className="hover:text-black">
+                Ștergerea datelor din integrări
+              </Link>
+            </li>
+            <li>
               <CookiePreferencesButton />
             </li>
             <li>

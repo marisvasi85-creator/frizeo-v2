@@ -6,7 +6,7 @@ import { createPageMetadata } from "@/lib/site/pageMetadata";
 export const metadata = createPageMetadata({
   title: "Politica cookies",
   description:
-    "Ce cookie-uri și stocare locală folosește Frizeo, inclusiv sesiune, Stripe Checkout și Google Calendar.",
+    "Ce cookie-uri și stocare locală folosește Frizeo, inclusiv sesiune, Stripe Checkout și redirecționările OAuth.",
   path: "/cookies",
 });
 
@@ -86,12 +86,25 @@ export default function CookiesPage() {
         </li>
       </ul>
 
-      <h2>5. Cookie-uri terțe — Google OAuth</h2>
+      <h2>5. Cookie-uri terțe — conectări OAuth</h2>
       <p>
-        La conectarea Google Calendar (opțional, din contul admin), ești
+        La conectarea Google Calendar (opțional, din Profil), ești
         redirecționat către Google, care poate seta propriile cookie-uri conform
         politicii Google. Frizeo accesează Calendar doar conform{" "}
         <a href="/google-calendar-data">Utilizarea datelor Google Calendar</a>.
+      </p>
+      <p>
+        Conectarea opțională din Integrări te redirecționează către Meta
+        (Facebook și Instagram), TikTok sau Google Business Profile. Aceste
+        platforme pot seta cookie-uri pe domeniul lor. Ele sunt diferite de
+        Meta Pixel și TikTok Pixel, care rămân oprite până la consimțământul
+        din banner.
+      </p>
+      <p>
+        Datele primite după autorizare sunt descrise în{" "}
+        <a href="/privacy">Politica de confidențialitate</a>. Retragerea
+        accesului este descrisă la{" "}
+        <a href="/stergere-date">Ștergerea datelor din integrări</a>.
       </p>
 
       <h2>6. Cookie-uri terțe — Stripe</h2>

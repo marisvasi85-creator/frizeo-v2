@@ -12,7 +12,7 @@ export const LEGAL_COMPANY = {
   /** E.164 for `tel:` links, schema.org and WhatsApp. */
   phoneE164: "+40753332181",
   website: "https://www.frizeo.ro",
-  lastUpdated: "15 septembrie 2026",
+  lastUpdated: "15 noiembrie 2026",
 };
 
 export function companyTelHref(): string {

@@ -26,6 +26,7 @@ Constrângeri:
 - Nu ștergem `tenants`.
 - Nu ștergem `bookings` (le anulăm pe cele viitoare active ale barberului care pleacă).
 - Nu ștergem evenimente din Google Calendar-ul utilizatorului.
+- Nu deconectăm Meta, TikTok sau Google Business Profile și nu ștergem fișierele din bucket-ul privat `marketing-publish`. Acestea aparțin salonului. Deconectarea din Integrări șterge conexiunea, tokenul, destinațiile și joburile legate de ele.
 - Nu ștergem facturi fiscale / istoricul Stripe.
 - Nu folosim `ON DELETE CASCADE` de la Auth către `barbers`.
 - Nu promovăm automat un membru ca owner.

@@ -6,7 +6,7 @@ import { createPageMetadata } from "@/lib/site/pageMetadata";
 export const metadata = createPageMetadata({
   title: "Politica de confidențialitate",
   description:
-    "Cum prelucrăm datele personale în Frizeo: conturi salon, programări, plăți Stripe, Google Calendar și drepturile tale GDPR.",
+    "Cum prelucrăm datele personale în Frizeo: conturi salon, programări, plăți Stripe, Google Calendar și integrările Meta, TikTok și Google Business Profile.",
   path: "/privacy",
 });
 
@@ -196,9 +196,17 @@ export default function PrivacyPage() {
         Frizeo accesează exclusiv datele necesare pentru furnizarea acestor
         funcționalități.
       </p>
-      <p>Nu solicităm alte permisiuni Google.</p>
       <p>
-        Nu accesăm Gmail, Google Drive, Google Photos sau alte produse Google.
+        Conexiunea Google Calendar nu solicită alte permisiuni decât cele două
+        de mai sus.
+      </p>
+      <p>
+        Nu accesăm conținutul Gmail, Google Drive sau Google Photos prin
+        conexiunea Calendar.
+      </p>
+      <p>
+        Google Business Profile este o conexiune separată, descrisă la
+        secțiunea 3.5. Nu este folosită pentru Calendar.
       </p>
       <p>Pentru informații suplimentare:</p>
       <p>
@@ -225,7 +233,94 @@ export default function PrivacyPage() {
         ).
       </p>
 
-      <h3>3.5 Date tehnice</h3>
+      <h3>3.5 Meta, TikTok și Google Business Profile (opționale)</h3>
+      <p>
+        Conectarea Facebook, Instagram, TikTok sau Google Business Profile
+        este opțională și pornește doar din Integrări, de către un owner sau
+        manager al salonului. Fără această acțiune, Frizeo nu cere token și nu
+        publică.
+      </p>
+      <p>Pentru Meta (Facebook și Instagram) sunt cerute permisiunile:</p>
+      <ul>
+        <li><code>business_management</code></li>
+        <li><code>pages_show_list</code></li>
+        <li><code>pages_read_engagement</code></li>
+        <li><code>pages_manage_posts</code></li>
+        <li><code>instagram_basic</code></li>
+        <li><code>instagram_content_publish</code></li>
+      </ul>
+      <p>Din contul Meta citim și păstrăm, pentru salonul care a conectat:</p>
+      <ul>
+        <li>identificatorul contului Meta și numele afișat;</li>
+        <li>identificatorul, numele și sarcinile paginilor Facebook alese;</li>
+        <li>
+          identificatorul și numele de utilizator ale contului Instagram
+          profesional legat de pagina aleasă;
+        </li>
+        <li>
+          tokenul de acces, criptat, împreună cu permisiunile acordate și data
+          de expirare.
+        </li>
+      </ul>
+      <p>
+        La o publicare, Meta primește textul și adresa temporară a imaginii.
+        Tokenul de pagină este cerut la momentul publicării și nu este păstrat
+        separat de tokenul contului. Pentru verificarea unei postări Instagram,
+        putem citi identificatorul, textul, data, tipul și adresa media ale
+        acelei postări.
+      </p>
+      <p>Pentru TikTok sunt folosite:</p>
+      <ul>
+        <li>
+          <code>user.info.basic</code>, pentru <code>open_id</code> și numele
+          afișat;
+        </li>
+        <li>
+          <code>video.upload</code>, doar dacă salonul autorizează încărcarea.
+          Ea trimite titlul, descrierea și adresa temporară a imaginii sau a
+          videoclipului către inbox-ul contului.
+        </li>
+      </ul>
+      <p>
+        Permisiunea <code>video.publish</code> nu este cerută, iar publicarea
+        directă pe TikTok nu este activată în aplicație. Tokenul TikTok este
+        păstrat criptat, cu permisiunile și expirarea.
+      </p>
+      <p>
+        Pentru Google Business Profile este cerută permisiunea{" "}
+        <code>https://www.googleapis.com/auth/business.manage</code>. Dacă
+        Google mai întoarce <code>openid</code>, <code>email</code>,{" "}
+        <code>profile</code> sau adresa din{" "}
+        <code>userinfo</code>, acestea pot fi păstrate. Un scope de Calendar
+        este refuzat pe această conexiune.
+      </p>
+      <p>Din Google Business Profile citim și păstrăm:</p>
+      <ul>
+        <li>identificatorul contului și al locației alese, plus numele locației;</li>
+        <li>tokenul de acces și tokenul de reîmprospătare, criptate;</li>
+        <li>permisiunile și expirarea tokenului.</li>
+      </ul>
+      <p>
+        La o publicare, Google primește textul în limba română, o singură
+        fotografie printr-o adresă temporară și, numai dacă există un link
+        public <code>https://frizeo.ro/booking/…</code> sau{" "}
+        <code>https://www.frizeo.ro/booking/…</code>, butonul Rezervă. Un alt
+        link nu este trimis.
+      </p>
+      <p>
+        Imaginile pregătite pentru publicare stau într-un spațiu privat.
+        Platforma primește o adresă semnată, cu durată limitată, nu acces
+        permanent la fișier. Istoricul din Frizeo poate păstra textul, calea
+        fișierului, statusul, numărul de încercări și identificatorul postării
+        de pe platformă.
+      </p>
+      <p>
+        Nu folosim aceste tokenuri sau identificatori pentru reclame Frizeo,
+        pentru profilarea vizitatorilor sau pentru antrenarea modelelor de
+        inteligență artificială.
+      </p>
+
+      <h3>3.6 Date tehnice</h3>
       <p>
         Pentru funcționarea și securitatea platformei putem prelucra:
       </p>
@@ -267,6 +362,16 @@ export default function PrivacyPage() {
       </ul>
       <p>
         Acestea sunt activate doar după acceptarea bannerului de cookie-uri.
+        Pixelii sunt separați de conectarea OAuth a paginii, contului TikTok
+        sau profilului Google Business.
+      </p>
+
+      <h3>Executarea contractului pentru integrările opționale</h3>
+      <p>
+        Pentru conectarea și publicarea cerute de salon propunem temeiul
+        executării contractului, art. 6 alin. (1) lit. b din GDPR. Salonul
+        pornește integrarea ca parte a serviciului Frizeo. Temeiul este propus
+        și trebuie confirmat de operator înainte de promovarea în producție.
       </p>
 
       <h3>Obligație legală</h3>
@@ -290,15 +395,27 @@ export default function PrivacyPage() {
         <li>SMSO (notificări SMS)</li>
         <li>Stripe (procesare plăți)</li>
         <li>FGO (emitere facturi fiscale, când este configurat)</li>
-        <li>Google (Google Calendar și Google Analytics)</li>
+        <li>Google (Google Calendar, Google Business Profile și Google Analytics)</li>
         <li>OpenAI și/sau Google Gemini (Marketing AI și Assistant, când sunt activate)</li>
         <li>Notion (sincronizare internă operațională, când este configurată)</li>
-        <li>Meta Platforms</li>
-        <li>TikTok</li>
+        <li>Meta Platforms Ireland Ltd. (Facebook, Instagram și Meta Pixel)</li>
+        <li>TikTok Technology Limited (conectare, încărcare și TikTok Pixel)</li>
         <li>Microsoft (Microsoft Clarity)</li>
       </ul>
       <p>
         Datele sunt transmise numai în măsura necesară furnizării serviciilor.
+        Meta primește datele descrise la secțiunea 3.5 atunci când salonul
+        conectează sau publică. TikTok primește identificatorul de bază și,
+        la o încărcare autorizată, textul și adresa temporară a fișierului.
+        Google Business Profile primește textul, fotografia și, când există,
+        linkul public de programare.
+      </p>
+      <p>
+        Meta, TikTok și Google pot prelucra aceste date și în afara României
+        sau a Spațiului Economic European. Această politică nu stabilește
+        mecanismul de transfer, cum ar fi o decizie de adecvare sau clauze
+        contractuale. Operatorul trebuie să confirme mecanismul pentru fiecare
+        furnizor înainte de promovarea în producție.
       </p>
       <p>
         Saloanele care utilizează Frizeo pot acționa ca operatori independenți
@@ -325,6 +442,11 @@ export default function PrivacyPage() {
           excepția obligațiilor legale.
         </li>
       </ul>
+      <p>
+        Termenul de mai sus nu acoperă automat conexiunile Meta, TikTok și
+        Google Business Profile și nici fișierele lor, descrise separat mai
+        jos. Nu există o altă perioadă automată pentru ele.
+      </p>
 
       <h3>Date Google Calendar</h3>
       <p>
@@ -334,6 +456,24 @@ export default function PrivacyPage() {
       <p>
         La deconectarea Google Calendar, revocarea accesului sau ștergerea
         contului Frizeo, aceste token-uri sunt șterse definitiv.
+      </p>
+
+      <h3>Datele integrărilor Meta, TikTok și Google Business Profile</h3>
+      <p>
+        Tokenul unei integrări este șters din Frizeo când salonul o
+        deconectează din Integrări. Odată cu conexiunea se șterg destinațiile
+        salvate și rândurile de publicare legate de ele.
+      </p>
+      <p>
+        Textul păstrat în campanie și fișierul din spațiul privat de publicare
+        nu au o perioadă automată de ștergere în aplicație. Nu stabilim aici
+        una. Postarea deja trimisă rămâne la Meta, TikTok sau Google, după
+        regulile acelei platforme. Deconectarea din Frizeo nu o șterge acolo.
+      </p>
+      <p>
+        Ștergerea contului unui utilizator nu deconectează automat aceste
+        integrări, pentru că aparțin salonului. Instrucțiunile sunt pe pagina{" "}
+        <a href="/stergere-date">Ștergerea datelor din integrări</a>.
       </p>
 
       <h2>7. Drepturile tale</h2>
@@ -347,6 +487,12 @@ export default function PrivacyPage() {
         <li>portabilitate (unde este aplicabil);</li>
         <li>retragerea consimțământului.</li>
       </ul>
+      <p>
+        Accesul la o integrare se retrage din Integrări, prin deconectare.
+        Google Calendar se deconectează din Profil. Accesul poate fi retras și
+        din contul Meta, TikTok sau Google. Pașii sunt pe pagina{" "}
+        <a href="/stergere-date">Ștergerea datelor din integrări</a>.
+      </p>
       <p>Ai dreptul să depui o plângere la:</p>
       <p>
         <ExtLink href={ANSPDCP}>{ANSPDCP}</ExtLink>
@@ -391,7 +537,8 @@ export default function PrivacyPage() {
       </p>
       <p>
         Datele Google nu sunt utilizate în alte scopuri decât cele descrise în
-        această politică.
+        această politică. Aceeași limită se aplică tokenurilor și
+        identificatorilor primiți de la Meta și TikTok.
       </p>
 
       <h2>9. Inteligență Artificială (AI)</h2>

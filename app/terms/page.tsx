@@ -121,6 +121,25 @@ export default function TermsPage() {
         </li>
       </ul>
 
+      <h3>2.2 Facebook, Instagram, TikTok și Google Business Profile</h3>
+      <p>
+        Salonul poate conecta opțional o pagină Facebook, un cont Instagram
+        profesional, un cont TikTok sau o locație Google Business Profile.
+        Conectarea pornește din Integrări și cere autorizarea pe platforma
+        respectivă.
+      </p>
+      <p>
+        Salonul este responsabil pentru conținutul pe care îl trimite și pentru
+        dreptul de a folosi pagina, contul sau locația. Conținutul publicat
+        rămâne supus regulilor acelei platforme. Deconectarea din Frizeo nu
+        șterge o postare deja publicată acolo.
+      </p>
+      <p>
+        Datele folosite și retragerea accesului sunt descrise în{" "}
+        <a href="/privacy">Politica de confidențialitate</a> și pe pagina{" "}
+        <a href="/stergere-date">Ștergerea datelor din integrări</a>.
+      </p>
+
       <h2>3. Cont și eligibilitate</h2>
       <p>Pentru utilizarea platformei trebuie:</p>
       <ul>

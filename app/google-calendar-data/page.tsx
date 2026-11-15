@@ -163,8 +163,12 @@ export default function GoogleCalendarDataPage() {
       </div>
 
       <p>
-        Frizeo nu accesează alte servicii Google și nu solicită permisiuni
-        suplimentare.
+        Conexiunea Google Calendar nu accesează Gmail, Drive sau Photos și nu
+        solicită alte permisiuni decât cele două de mai sus. O conexiune
+        separată, Google Business Profile, poate solicita permisiunea{" "}
+        <code>business.manage</code>. Ea este descrisă în{" "}
+        <a href="/privacy">Politica de confidențialitate</a> și nu este
+        folosită pentru sincronizarea calendarului.
       </p>
 
       <h2>4. Cum folosim datele Google Calendar</h2>
@@ -208,8 +212,8 @@ export default function GoogleCalendarDataPage() {
           nu utilizează date Google pentru publicitate personalizată;
         </li>
         <li>
-          nu accesează Gmail, Google Drive, Google Photos sau alte servicii
-          Google;
+          nu accesează Gmail, Google Drive sau Google Photos prin conexiunea
+          Calendar;
         </li>
         <li>
           nu utilizează datele Google în alte scopuri decât sincronizarea
@@ -377,6 +381,13 @@ export default function GoogleCalendarDataPage() {
       <p>
         Used only to identify and display the connected Google account on
         the barber profile.
+      </p>
+      <p>
+        The Calendar connection does not request any other Google scope. A
+        separate, optional Google Business Profile connection may request{" "}
+        <code>https://www.googleapis.com/auth/business.manage</code>. That
+        connection is described in the privacy policy and is not used for
+        Calendar sync.
       </p>
 
       <h3>Google User Data</h3>

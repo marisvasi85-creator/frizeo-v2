@@ -34,6 +34,11 @@ export default function BookingFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/stergere-date" className="hover:text-frz-ink">
+                Ștergerea datelor din integrări
+              </Link>
+            </li>
+            <li>
               <CookiePreferencesButton />
             </li>
             <li>
