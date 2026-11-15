@@ -55,7 +55,7 @@ test("legal pages are public and linked without an admin gate", () => {
   const robots = readRepo("app/robots.ts");
   const footer = readRepo("app/components/Footer.tsx");
   const proxy = readRepo("proxy.ts");
-  for (const path of ["/privacy", "/terms", "/cookies", "/stergere-date", "/google-calendar-data"]) {
+  for (const path of ["/privacy", "/terms", "/cookies", "/stergere-date", "/google-calendar-data", "/dpa"]) {
     assert.match(sitemap, new RegExp(path.replaceAll("/", "\\/")));
     assert.match(footer, new RegExp(`href="${path}"`));
     assert.doesNotMatch(robots, new RegExp(`"${path}"`));

@@ -29,6 +29,7 @@ export const OWNER_ADMIN_ITEMS: AdminNavItem[] = [
   { href: "/api/email/sso", label: "Frizeo Email", icon: "📧" },
   { href: "/admin/billing", label: "Abonament", icon: "💎" },
   { href: "/admin/accounting", label: "Contabilitate", icon: "📒" },
+  { href: "/admin/dpa", label: "Acord date", icon: "📄" },
   { href: "/admin/account", label: "Cont", icon: "🛡️" },
   { href: "/admin/account-deletions", label: "Ștergeri cont", icon: "🗑️" },
   { href: "/admin/billing-refunds", label: "Refund Stripe", icon: "↩️" },

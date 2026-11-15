@@ -28,6 +28,7 @@ const publicPaths: Array<{
   { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
   { path: "/cookies", changeFrequency: "yearly", priority: 0.3 },
   { path: "/stergere-date", changeFrequency: "yearly", priority: 0.4 },
+  { path: "/dpa", changeFrequency: "yearly", priority: 0.4 },
 ];
 
 type ActiveBarberRow = {

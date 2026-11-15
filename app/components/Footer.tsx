@@ -102,6 +102,11 @@ export default function Footer() {
               </Link>
             </li>
             <li>
+              <Link href="/dpa" className="hover:text-black">
+                Acord de prelucrare
+              </Link>
+            </li>
+            <li>
               <CookiePreferencesButton />
             </li>
             <li>

@@ -1,118 +1,109 @@
-# Proiect de acord de prelucrare a datelor
+# Proiect de clauze pentru art. 28 GDPR
 
-Versiune: `dpa-proiect-2026-11-15`. Data: 15 noiembrie 2026.
+Versiune: dpa-proiect-2026-11-15-915
+Data: 15 noiembrie 2026
+Decizie urmărită: Decizia de punere în aplicare (UE) 2021/915, text oficial la https://eur-lex.europa.eu/eli/dec_impl/2021/915/oj
 
-Acest text este un proiect pentru verificarea și aprobarea Electricsmart.Co SRL. Nu este semnat, nu a fost negociat cu saloanele și nu este un contract în vigoare. Acceptarea electronică este oprită. Termenii și Politica de confidențialitate nu sunt înlocuite de acest proiect.
+Acest document este un proiect pentru verificarea Electricsmart.Co SRL. Nu este semnat, nu este aprobat și nu înlocuiește textul oficial al Deciziei (UE) 2021/915. Clauza 2 a acelei decizii spune că clauzele standard nu se modifică. La semnare se atașează textul oficial, neschimbat. Acest proiect completează anexele și spune care opțiuni nu sunt alese.
 
-## 1. Părțile și rolurile
+Acceptarea electronică este oprită. O înregistrare, dacă va fi pornită, dovedește că un owner a văzut această versiune. Nu transformă proiectul într-un contract și nu acceptă documentul pentru utilizatorii existenți.
 
-Persoana împuternicită este Electricsmart.Co SRL, CUI 47684690, J02/287/2023, Socodor nr. 77, Arad, reprezentată de Maris Toader, pentru datele pe care le prelucrează la instrucțiunea salonului.
+## Roluri
 
-Operatorul este salonul care folosește Frizeo pentru programările propriilor clienți și pentru personalul pe care îl invită.
+Pentru programările clienților salonului, pentru personalul invitat și pentru integrările pornite de salon, salonul este operator, iar Electricsmart.Co SRL este persoană împuternicită. Numai această prelucrare intră în clauzele art. 28.
 
-Frizeo este operator independent, nu persoană împuternicită a salonului, pentru:
+Frizeo este operator independent, în afara acestor clauze, pentru contul de abonament, facturile emise de Frizeo către salon, jurnalele de securitate ale platformei și cookie-urile de analiză de pe site-ul Frizeo, după consimțământul vizitatorului. Autorizarea OAuth nu este consimțământ GDPR.
 
-- contul de abonament al salonului față de Frizeo;
-- facturile emise de Frizeo către salon;
-- jurnalele de securitate ale platformei;
-- cookie-urile de analiză și marketing de pe site-ul Frizeo, după consimțământul vizitatorului.
+## Clauza 1. Scop
 
-Aceste date nu intră în instrucțiunile salonului și nu sunt „datele clienților salonului”.
+Opțiunea aplicabilă este opțiunea 1: art. 28 alin. (3) și (4) din Regulamentul (UE) 2016/679. Opțiunea 2, pentru instituțiile Uniunii, nu se aplică. Clauzele nu acoperă, singure, transferurile din capitolul V. Mecanismele de transfer sunt în docs/GDPR_TRANSFERS.md și nu sunt garanții proprii Frizeo.
 
-## 2. Obiect, durată, natură și scop
+## Clauza 2. Text invariabil
 
-Frizeo găzduiește programările, notificările și conturile de personal ca să funcționeze calendarul cerut de salon. Natura prelucrării este stocare, afișare, trimitere de email sau SMS și, numai dacă salonul pornește funcția, sincronizare Calendar sau publicare către Meta, TikTok ori Google Business Profile.
+Părțile nu modifică clauzele oficiale. Pot adăuga doar informații în anexe sau garanții care nu contrazic clauzele. Acest proiect nu rescrie clauzele.
 
-Durata este durata contului salonului. La încetare se aplică secțiunea 10. Facturile Frizeo către salon rămân la Frizeo ca operator, pe termenul de la secțiunea 10, și nu sunt date prelucrate pentru salon.
+## Clauzele 3 și 4. Interpretare și ierarhie
 
-## 3. Persoane și date
+Termenii folosiți au sensul din GDPR. Dacă, după adoptare, Termenii Frizeo contrazic clauzele, clauzele prevalează pentru prelucrarea în numele salonului. Până la adoptare, Termenii nu țin locul acordului.
 
-Clienții care se programează: nume, telefon, email opțional, serviciu, dată, oră și jetonul de anulare sau reprogramare.
+## Clauza 5. Docking
 
-Personalul invitat: nume, email, telefon, rol și program.
+Clauza opțională de aderare nu este aleasă. Un salon nou nu devine parte prin simpla creare a contului.
 
-Nu intră numărul complet al cardului. Frizeo nu îl păstrează.
+## Clauza 6. Descrierea prelucrării
 
-## 4. Instrucțiuni
+Detaliile sunt în Anexa II.
 
-Instrucțiunea salonului este folosirea funcțiilor din cont: programare, calendar, notificări și integrările pe care un owner sau manager le pornește. Frizeo nu folosește datele clienților pentru reclamele proprii și nu le trimite către un model de inteligență artificială decât când salonul folosește Marketing AI sau Assistant.
+## Clauza 7. Obligațiile părților
 
-O instrucțiune care cere încălcarea legii nu este urmată. Frizeo anunță salonul dacă o instrucțiune pare ilegală.
+Instrucțiunile documentate sunt folosirea funcțiilor din cont: programare, calendar, notificări și integrările pe care un owner sau un manager le pornește. Frizeo anunță salonul dacă o instrucțiune pare ilegală și nu o urmează.
 
-Autorizarea OAuth nu este consimțământ GDPR și nu schimbă rolurile de mai sus.
+Prelucrarea pentru salon rămâne la scopurile din Anexa II.
 
-## 5. Confidențialitate și securitate
+Durata este durata contului salonului, cu excepția de la clauza 10.
 
-Persoanele cu acces au obligație de confidențialitate. Măsurile din Anexa C sunt cele din aplicație la data proiectului. Ele nu sunt un audit certificat.
+Securitatea este cea din Anexa III. Nu este un audit certificat.
 
-## 6. Subîmputerniciți
+Nu se cer date sensibile din art. 9 GDPR pentru programări. Dacă salonul le introduce în câmpuri libere, Frizeo nu le folosește pentru alt scop.
 
-Lista din Anexa B este lista folosită de aplicație. Un subîmputernicit nou, care primește date ale clienților salonului, nu este adăugat pe tăcute: Frizeo îl anunță pe salon în scris înainte de a-i transmite date.
+La cerere rezonabilă, Frizeo arată măsurile din Anexa III. Nu promite acces fizic la furnizori și nu numește un auditor.
 
-Termenul în care salonul poate obiecta nu este ales în acest proiect. Electricsmart.Co SRL îl completează înainte de semnare. Până atunci, proiectul nu creează un termen și nu dă dreptul de a opri unilateral serviciul.
+Pentru subîmputerniciți, nici opțiunea 1 (autorizare specifică prealabilă), nici opțiunea 2 (autorizare generală scrisă) nu este aleasă. Termenul dinaintea unei schimbări nu este completat. Lista din Anexa IV descrie furnizorii folosiți acum. Nu este o autorizare semnată și nu afirmă că Frizeo are un acord art. 28 cu fiecare dintre ei.
 
-Frizeo nu afirmă că a semnat un acord art. 28 cu fiecare furnizor din anexă.
+## Clauza 8. Asistență
 
-## 7. Transferuri
+Pentru datele clienților, salonul răspunde persoanei. Frizeo transmite cererea primită și ajută cu datele pe care le deține. Nu există un export complet pe care salonul să îl descarce singur. Cererea se trimite la info@frizeo.ro. Remedierea propusă, neimplementată, este un export pornit de owner.
 
-Transferurile din Anexa B folosesc mecanismele publicate de furnizori la 15 noiembrie 2026. Frizeo nu are clauze contractuale standard proprii cu TikTok. Constatatea Comisiei irlandeze pentru protecția datelor din 30 aprilie 2025, privind accesul de la distanță al TikTok din China, rămâne un punct deschis. Proiectul nu spune că acest transfer este garantat de Frizeo.
+Frizeo anunță salonul dacă observă că datele de programare sunt inexacte, când are informația. Evaluarea de impact rămâne a salonului. Frizeo furnizează descrierea din Anexa II.
 
-Detaliile și sursele sunt în `docs/GDPR_TRANSFERS.md`.
+## Clauza 9. Încălcarea securității
 
-## 8. Drepturile persoanelor
+Dacă Frizeo află de o încălcare care privește datele prelucrate pentru salon, anunță salonul fără întârziere nejustificată, cu natura încălcării, un punct de contact, consecințele probabile și măsurile luate, pe măsură ce informațiile există. Anunțul către autoritate și către persoană, pentru aceste date, este al salonului. Proiectul nu promite un termen în ore mai scurt decât legea.
 
-Pentru datele clienților, salonul răspunde persoanei. Frizeo ajută cu datele pe care le deține, dacă salonul cere asta sau dacă persoana scrie la info@frizeo.ro și salonul poate fi identificat. Ajutorul nu înseamnă că Frizeo decide temeiul salonului.
+## Clauza 10. Neconformitate și încetare
 
-Nu există un export complet al programărilor pe care salonul să îl descarce singur. Cererea se face pe email. Aceasta este o diferență față de un acord art. 28 deja operațional. Remedierea propusă, neimplementată: un export al programărilor salonului, pornit de owner, și o închidere de cont care șterge datele clienților după export, fără să șteargă facturile Frizeo.
+Dacă Frizeo nu poate respecta clauzele, anunță salonul. Suspendarea, termenul de o lună și încetarea sunt cele din textul oficial, după adoptare. Nu sunt activate în aplicație.
 
-## 9. Incidente
+La încetare, regula oficială este ștergerea sau returnarea, la alegerea salonului, cu ștergerea copiilor, în afara unei obligații legale. Aplicația nu are încă acest buton. Programările rămân până la o cerere pe email. Nu se afirmă că datele clienților pot fi păstrate nelimitat după închiderea salonului.
 
-Dacă Frizeo află de o încălcare care privește datele clienților salonului, anunță salonul fără întârziere nejustificată. Anunțul către autoritate pentru acele date este al salonului, nu al Frizeo. Pentru datele la care Frizeo este operator, Frizeo urmează art. 33 și 34 GDPR.
+Facturile Frizeo către salon sunt ale operatorului independent, nu date prelucrate pentru salon. Se păstrează cel puțin 5 ani de la 1 iulie a anului următor, conform art. 25 din Legea contabilității nr. 82/1991, modificată prin Legea nr. 36/2023. Aplicația nu le șterge automat. Instrumentul intern de ștergere a unui salon poate șterge și aceste facturi. Nu este procedura de încetare și nu trebuie folosită în locul termenului legal.
 
-Proiectul nu promite un număr de ore mai scurt decât legea și nu descrie un proces de notificare care nu există în aplicație.
+Tokenurile se șterg la deconectare. Istoricul de publicare nu se șterge automat. Textele și imaginile orfane nu se șterg automat. Mecanismul de 90 de zile există și este oprit.
 
-## 10. Ștergere sau returnare
+## Anexa I. Părțile
 
-La încetarea contului, regula proiectului este returnarea sau ștergerea datelor clienților. Aplicația nu face încă asta printr-un buton al salonului. Programările rămân până la o cerere pe email sau până la o ștergere manuală de platformă. Nu se afirmă că datele clienților pot fi păstrate nelimitat după închiderea salonului.
+Persoana împuternicită: Electricsmart.Co SRL, CUI 47684690, J02/287/2023, Socodor nr. 77, Arad, reprezentată de Maris Toader, contact info@frizeo.ro. Nu este numit un responsabil cu protecția datelor.
 
-Excepția legală care este justificată acum: facturile și evidențele contabile ale Frizeo, ca operator, se păstrează cel puțin 5 ani de la 1 iulie a anului următor încheierii exercițiului, conform art. 25 din Legea contabilității nr. 82/1991, modificată prin Legea nr. 36/2023. Aplicația nu le șterge automat la expirare.
+Operatorul: salonul care acceptă, identificat prin contul său. Numele, adresa și semnătura salonului se completează la acceptare. În acest proiect rămân necompletate. Data semnăturii nu există.
 
-Instrumentul intern de ștergere a unui salon poate șterge și facturile salonului stocate în Frizeo. Aceasta nu este procedura de încetare pentru saloane și nu trebuie folosită ca înlocuitor al termenului legal. Remedierea propusă, neimplementată: scoaterea facturilor din acea ștergere.
+## Anexa II. Prelucrarea pentru salon
 
-Tokenurile se șterg la deconectare. Istoricul de publicare nu se șterge automat la 12 luni. Textele și imaginile orfane nu se șterg automat; mecanismul de 90 de zile există, dar este oprit.
+Persoane: clienții care se programează și personalul invitat.
 
-## 11. Audit
+Date: nume, telefon, email opțional, serviciu, dată, oră și jetonul de anulare sau reprogramare. Pentru personal: nume, email, telefon, rol și program. Numărul complet al cardului nu este păstrat.
 
-La cerere rezonabilă, Frizeo arată politicile și măsurile din Anexa C. Proiectul nu promite acces fizic la Supabase, Vercel sau la ceilalți furnizori și nu numește un auditor.
+Date sensibile: nu sunt cerute.
 
-## 12. Ce rămâne de aprobat
+Natura: stocare, afișare, email sau SMS și, numai dacă salonul pornește funcția, sincronizare Calendar sau publicare către Meta, TikTok ori Google Business Profile.
 
-Legea propusă este legea română, ca în Termeni. Nu este o clauză semnată. Răspunderea, limitele, prețul, termenul de obiecție la subîmputerniciți și modul de semnare rămân la Electricsmart.Co SRL. Înregistrarea electronică nu se activează înainte de aprobarea textului.
+Scopuri: administrarea programărilor cerute de salon și trimiterea materialelor pe care salonul le cere.
 
-## Anexa A. Operațiuni
+Durată: durata contului salonului. Fără ștergere automată a programărilor.
 
-| Operațiune | Rol Frizeo | Date | Păstrare în aplicație |
-| --- | --- | --- | --- |
-| Programare | Împuternicit | Nume, telefon, email, serviciu, dată | Cât timp contul salonului există; fără ștergere automată |
-| Notificări email și SMS | Împuternicit | Contactul clientului și detaliul programării | Cât durează trimiterea și jurnalul tehnic |
-| Personal invitat | Împuternicit | Cont, rol, program | Cât timp persoana este în salon |
-| Calendar Google | Împuternicit | Token și evenimentul programării | Tokenul, până la deconectare sau ștergerea contului |
-| Meta, TikTok, Google Business | Împuternicit | Token, destinație, text, imagine | Tokenul, până la deconectare; istoricul publicării rămâne |
-| Abonament și factura Frizeo | Operator | Datele de facturare ale salonului | Termenul legal de mai sus |
-| Cookie-uri de analiză | Operator | Identificatori de browser, după acceptare | Până la retragerea acceptării sau ștergerea din browser |
+## Anexa III. Măsuri
 
-## Anexa B. Subîmputerniciți
+Traficul folosește HTTPS. Parolele sunt păstrate doar ca hash. Tokenurile de integrare sunt cifrate și nu apar în paginile publice. Accesul în cont este pe rol. Datele unui salon nu sunt instrucțiunea altui salon. Cookie-urile de analiză nu pornesc fără banner. Nu există ștergere automată a programărilor sau a istoricului de publicare.
 
-Lista completă, rolurile și mecanismele publicate sunt în `docs/GDPR_TRANSFERS.md`. Intră în prelucrarea pentru salon doar furnizorii care primesc datele clienților sau ale personalului: Supabase, Vercel, furnizorul de email configurat, NOOH MEDIA S.R.L. când planul are SMS, Google când Calendar sau Business Profile este conectat, Meta sau TikTok când salonul conectează, OpenAI sau Google Gemini când salonul folosește funcția de asistent.
+Pentru asistența la o încălcare, Frizeo transmite elementele de la clauza 9. Nu există un alt set de câmpuri în aplicație.
 
-Stripe, pentru abonamentul Frizeo, și cookie-urile de analiză sunt prelucrări ale Frizeo ca operator, nu subîmputerniciți ai salonului.
+## Anexa IV. Subîmputerniciți folosiți acum
 
-## Anexa C. Măsuri
+Lista nu este o autorizare. Intră furnizorii care pot primi datele clienților sau ale personalului: Supabase, Vercel, furnizorul de email configurat, NOOH MEDIA S.R.L. când planul are SMS, Google când Calendar sau Business Profile este conectat, Meta sau TikTok când salonul conectează, OpenAI sau Google Gemini când salonul folosește funcția de asistent.
 
-- HTTPS pentru trafic.
-- Parole păstrate doar ca hash.
-- Tokenuri de integrare cifrate și separate de paginile publice.
-- Acces la cont pe rol: owner, manager sau personal.
-- Datele unui salon nu sunt instrucțiunea altui salon; acceptarea viitoare a acestui proiect verifică salonul sesiunii.
-- Cookie-urile de analiză nu pornesc fără acceptarea din banner.
-- Nu există ștergere automată a programărilor sau a istoricului de publicare.
+Stripe, pentru abonamentul Frizeo, și cookie-urile de analiză rămân prelucrări ale Frizeo ca operator independent.
+
+Entitățile, destinațiile și mecanismele publicate sunt în docs/GDPR_TRANSFERS.md. Pentru TikTok, constatarea autorității irlandeze din 30 aprilie 2025 rămâne deschisă. Frizeo nu are clauze contractuale standard proprii cu TikTok.
+
+## Opțiuni rămase nealese
+
+Clauza 5 nu este inclusă. La clauza 7.7 nu este aleasă nici autorizarea specifică, nici autorizarea generală, iar termenul de notificare este gol. Răspunderea comercială, prețul și legea formei finale nu sunt în clauzele standard și nu sunt stabilite aici. Se propune legea română, ca în Termeni, fără să fie o clauză semnată.

@@ -35,9 +35,9 @@ Politica folosește executarea contractului pentru cont și pentru integrarea ce
 
 ## Acord art. 28
 
-`docs/DPA_PROIECT.md`, versiunea `dpa-proiect-2026-11-15`, este un proiect complet pentru verificare. Nu este semnat și nu este aprobat. Evidența furnizorilor este `docs/GDPR_TRANSFERS.md`.
+`docs/DPA_PROIECT.md`, versiunea `dpa-proiect-2026-11-15-915`, urmează structura Deciziei (UE) 2021/915 fără să înlocuiască textul oficial. Nu este semnat și nu este aprobat. Opțiunea pentru subîmputerniciți și termenul de notificare nu sunt alese. Evidența furnizorilor este `docs/GDPR_TRANSFERS.md`. Pagina publică este `/dpa`.
 
-Acceptarea electronică există în `app/api/salon/dpa/route.ts` și în tabelul `salon_dpa_acceptances`. Răspunde 404 cât timp `DPA_ACCEPTANCE_ENABLED` nu este exact `true`. Nu blochează utilizatorii și nu afișează proiectul ca acceptat. Variabila nu a fost setată.
+Acceptarea electronică există în `/admin/dpa` și în `app/api/salon/dpa/route.ts`. Răspunde 404 cât timp `DPA_ACCEPTANCE_ENABLED` nu este exact `true`. Nu blochează utilizatorii, nu modifică signup-ul și nu marchează conturile existente. Variabila nu a fost setată. O înregistrare, când va fi pornită, păstrează versiunea, hash-ul SHA-256, ownerul, tenantul și momentul de pe server.
 
 ## Decizii rămase
 
