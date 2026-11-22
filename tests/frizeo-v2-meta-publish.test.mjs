@@ -1293,6 +1293,16 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(composer, /disabled=\{!liveAvailable/);
   assert.match(composer, /destinationBusy/);
   assert.match(composer, /Deblochează pentru o încercare nouă/);
+  assert.ok(composer.indexOf("Deblochează pentru o încercare nouă") < composer.indexOf("{job.caption"));
+  assert.match(composer, /Deblocarea nu publică/);
+  const integrations = readFileSync(join(root, "app/admin/settings/integrations/page.tsx"), "utf8");
+  assert.match(integrations, /Publicarea se face din Publicare/);
+  assert.doesNotMatch(integrations, /Publicarea nu este disponibilă/);
+  const reviewGuide = readFileSync(join(root, "docs/META_APP_REVIEW_GUIDE.md"), "utf8");
+  assert.match(reviewGuide, /staging\.frizeo\.ro/);
+  assert.match(reviewGuide, /pages_manage_metadata/);
+  assert.match(reviewGuide, /not used/);
+  assert.doesNotMatch(reviewGuide, /META_APP_SECRET|password\s*[:=]/i);
   assert.match(composer, /container Instagram anterior/);
   assert.match(composer, /publish_in_flight/);
   assert.match(composer, /awaiting_publish_confirmation/);

@@ -714,7 +714,7 @@ export default function PublishComposer({
       </p>
       <p className="text-sm text-frz-muted">
         {destinationBusy
-          ? "O destinație bifată are o publicare în curs sau cu rezultat necunoscut. Butonul Publică rămâne dezactivat și nu trimite o a doua postare."
+          ? "O destinație bifată are o publicare în curs sau cu rezultat necunoscut. Butonul Publică rămâne dezactivat. Pentru un rezultat necunoscut, folosește Deblochează pentru o încercare nouă în istoric. Deblocarea nu publică și nu retrimite jobul vechi."
           : liveAvailable
             ? "Publicarea reală este pornită pentru acest salon. Butonul Publică trimite imaginea către destinațiile bifate."
             : "Publicarea reală este oprită. Butonul Publică este dezactivat și nu trimite conținut către Facebook sau Instagram."}
@@ -754,9 +754,16 @@ export default function PublishComposer({
               <p className="text-sm font-medium text-frz-ink">
                 {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
               </p>
+              {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
+              {canRelease && (
+                <div className="mt-2">
+                  <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => release(job.id)}>
+                    Deblochează pentru o încercare nouă
+                  </AdminButton>
+                </div>
+              )}
               {job.caption && <p className="mt-1 text-sm text-frz-muted">{job.caption}</p>}
               {googleJob && job.providerPostId && <p className="mt-1 text-sm text-frz-muted">ID Google: {job.providerPostId}</p>}
-              {canRelease && <p className="mt-1 text-sm text-frz-ink">{AMBIGUOUS_WARNING}</p>}
               {job.safeError && !canRelease && (
                 <p className="mt-1 text-sm text-frz-ink">{job.safeError === "ambiguous" ? AMBIGUOUS_WARNING : (googleJob ? googlePublishError(job.safeError, "Publicarea nu a putut fi confirmată.") : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată."))}</p>
               )}
@@ -785,13 +792,6 @@ export default function PublishComposer({
                 </div>
               )}
               {instagramHit && <p className="mt-1 text-sm text-frz-ink">{instagramHit.message}</p>}
-              {canRelease && (
-                <div className="mt-2">
-                  <AdminButton type="button" variant="secondary" disabled={busy} onClick={() => release(job.id)}>
-                    Deblochează pentru o încercare nouă
-                  </AdminButton>
-                </div>
-              )}
               {terminal && job.assetId && !googleJob && (
                 <div className="mt-2">
                   <AdminButton type="button" variant="ghost" onClick={() => cleanup(job.assetId)}>

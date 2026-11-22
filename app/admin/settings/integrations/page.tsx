@@ -197,7 +197,7 @@ export default async function IntegrationSettingsPage({
     <div className="space-y-6">
       <AdminPageHeader
         title="Integrări"
-        subtitle="Facebook și Instagram pot fi conectate pe staging doar când capability-ul salonului este pornit. Publicarea nu este disponibilă."
+        subtitle="Facebook și Instagram se conectează aici. Publicarea se face din Publicare și rămâne limitată la salonul autorizat."
       />
       {notice && (
         <p className="rounded-xl border border-frz-line bg-frz-card px-4 py-3 text-sm text-frz-ink">
