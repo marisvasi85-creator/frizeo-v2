@@ -281,7 +281,7 @@ export default function PublishComposer({
         if (!readyJobs.some((job) => job.status === "pending")) break;
       }
       if (!payload?.jobs) return;
-      const publishedJobs = payload.jobs;
+      const publishedJobs = await pollInstagram(payload.jobs);
       setJobs((current) => [
         ...publishedJobs,
         ...current.filter((job) => !publishedJobs.some((next) => next.id === job.id)),
@@ -291,7 +291,7 @@ export default function PublishComposer({
         ?? (selectedGoogle.length > 0
           ? "Cererea Meta a fost înregistrată. Google Business nu a fost trimis: publicarea reală este oprită."
           : "Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos."));
-      if (!payload.jobs.some(openLive)) keyRef.current = null;
+      if (!publishedJobs.some(openLive)) keyRef.current = null;
       router.refresh();
     } finally {
       setBusy(false);
@@ -602,26 +602,66 @@ export default function PublishComposer({
     }
   }
 
+  function instagramWaiting(job: HistoryJob): boolean {
+    return job.destinationType === "instagram_business"
+      && job.executionMode === "live"
+      && job.status === "publishing"
+      && Boolean(job.providerContainerId)
+      && job.safeError !== "publish_in_flight"
+      && job.safeError !== "ambiguous";
+  }
+
+  async function readVerified(jobId: string): Promise<HistoryJob | null> {
+    const response = await fetch("/api/integrations/meta/publish/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId }),
+    });
+    const payload = await response.json().catch(() => null) as {
+      error?: string;
+      jobs?: HistoryJob[];
+    } | null;
+    if (!response.ok || !payload?.jobs?.[0]) {
+      setMessage(ERRORS[payload?.error ?? ""] ?? "Statusul nu a putut fi verificat.");
+      return null;
+    }
+    return payload.jobs[0];
+  }
+
+  async function pollInstagram(jobs: HistoryJob[]): Promise<HistoryJob[]> {
+    let current = jobs;
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const waiting = current.filter(instagramWaiting);
+      if (waiting.length === 0) return current;
+      setMessage("Containerul Instagram este în procesare. Frizeo verifică statusul în cereri separate. Un rezultat necunoscut nu este retrimis.");
+      await new Promise((resolve) => setTimeout(resolve, attempt === 0 ? 2000 : 4000));
+      let stopped = false;
+      for (const job of waiting) {
+        const next = await readVerified(job.id);
+        if (!next) {
+          stopped = true;
+          break;
+        }
+        current = current.map((item) => item.id === next.id ? { ...item, ...next } : item);
+        setJobs((existing) => existing.map((item) => item.id === next.id ? { ...item, ...next } : item));
+        if (next.status === "unknown" || next.status === "failed" || next.safeError === "publish_in_flight") {
+          stopped = true;
+        }
+      }
+      setOutcomes(current);
+      if (stopped) return current;
+    }
+    return current;
+  }
+
   async function verify(jobId: string) {
     if (busy) return;
     if (!window.confirm(VERIFY_CONFIRM)) return;
     setBusy(true);
     setMessage(null);
     try {
-      const response = await fetch("/api/integrations/meta/publish/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId }),
-      });
-      const payload = await response.json().catch(() => null) as {
-        error?: string;
-        jobs?: HistoryJob[];
-      } | null;
-      if (!response.ok || !payload?.jobs?.[0]) {
-        setMessage(ERRORS[payload?.error ?? ""] ?? "Statusul nu a putut fi verificat.");
-        return;
-      }
-      const next = payload.jobs[0];
+      const next = await readVerified(jobId);
+      if (!next) return;
       setJobs((current) => current.map((job) => job.id === next.id ? { ...job, ...next } : job));
       if (next.status === "publishing") {
         setMessage("Containerul este încă în procesare. Jobul rămâne în curs.");

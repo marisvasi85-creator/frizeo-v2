@@ -15,9 +15,25 @@ export type GraphCall = {
 };
 
 export type GraphResult =
-  | { ok: true; status: number; body: unknown }
-  | { ok: false; status: number; body: unknown }
-  | { ok: false; timeout: true };
+  | { ok: true; status: number; body: unknown; elapsedMs?: number }
+  | { ok: false; status: number; body: unknown; elapsedMs?: number }
+  | { ok: false; timeout: true; elapsedMs?: number; cause?: "timeout" | "network" };
+
+const GRAPH_ID = /"id"\s*:\s*(?:"([0-9]{1,32})"|([0-9]{1,32})(?!\d))/;
+
+/** Graph can return a large id as a JSON number. JSON.parse then rounds it. The digits in the raw body are the id. */
+export function graphIdFromText(text: string): string | null {
+  const match = GRAPH_ID.exec(text);
+  const id = match?.[1] ?? match?.[2] ?? null;
+  return id && /^[0-9]{1,32}$/.test(id) ? id : null;
+}
+
+function withGraphId(text: string, parsed: unknown): unknown {
+  if (!parsed || typeof parsed !== "object" || !("id" in parsed)) return parsed;
+  const id = graphIdFromText(text);
+  if (!id) return parsed;
+  return { ...parsed, id };
+}
 
 export function buildGraphUrl(
   path: string,
@@ -49,6 +65,7 @@ export function graphErrorCode(body: unknown): number | null {
 
 export function createMetaPublishHttp(fetchImpl: typeof fetch = fetch) {
   return async (call: GraphCall): Promise<GraphResult> => {
+    const started = Date.now();
     try {
       const proof = createHmac("sha256", call.appSecret).update(call.token).digest("hex");
       const query = { ...call.query, appsecret_proof: proof };
@@ -81,10 +98,14 @@ export function createMetaPublishHttp(fetchImpl: typeof fetch = fetch) {
           parsed = null;
         }
       }
-      if (!response.ok) return { ok: false, status: response.status, body: parsed };
-      return { ok: true, status: response.status, body: parsed };
-    } catch {
-      return { ok: false, timeout: true };
+      const responseBody = withGraphId(text, parsed);
+      const elapsedMs = Date.now() - started;
+      if (!response.ok) return { ok: false, status: response.status, body: responseBody, elapsedMs };
+      return { ok: true, status: response.status, body: responseBody, elapsedMs };
+    } catch (error) {
+      const name = error instanceof Error ? error.name : "";
+      const cause = name === "TimeoutError" || name === "AbortError" ? "timeout" : "network";
+      return { ok: false, timeout: true, elapsedMs: Date.now() - started, cause };
     }
   };
 }

@@ -9,7 +9,7 @@ import { FRIZEO_V2_CAPABILITIES, resolveCapabilities } from "../lib/integrations
 import { createGraphBudget, GRAPH_BUDGET_MS, GRAPH_CALL_MAX_MS } from "../lib/integrations/meta/graph.ts";
 import { FACEBOOK_PHOTO_TIMEOUT_MS, publishFacebookPhoto } from "../lib/integrations/meta/publish/facebook.ts";
 import { publishRequestDecision } from "../lib/integrations/meta/publish/flags.ts";
-import { buildGraphUrl, createMetaPublishHttp } from "../lib/integrations/meta/publish/graphHttp.ts";
+import { buildGraphUrl, createMetaPublishHttp, graphIdFromText } from "../lib/integrations/meta/publish/graphHttp.ts";
 import {
   isMetaFetchableImageUrl,
   marketingImagePath,
@@ -20,6 +20,7 @@ import {
 import {
   createInstagramContainer,
   INSTAGRAM_CONTAINER_TIMEOUT_MS,
+  INSTAGRAM_PUBLISH_TIMEOUT_MS,
   listInstagramMedia,
   publishInstagramContainer,
   readInstagramStatus,
@@ -232,10 +233,12 @@ test("publish gates fail closed", () => {
     { ok: true },
   );
   assert.equal(INSTAGRAM_CONTAINER_TIMEOUT_MS, 5000);
+  assert.equal(INSTAGRAM_PUBLISH_TIMEOUT_MS, 5000);
   assert.equal(FACEBOOK_PHOTO_TIMEOUT_MS, 5000);
   assert.equal(GRAPH_CALL_MAX_MS, 1500);
   assert.equal(GRAPH_BUDGET_MS, 8000);
-  assert.ok(INSTAGRAM_CONTAINER_TIMEOUT_MS + (GRAPH_CALL_MAX_MS * 2) <= GRAPH_BUDGET_MS);
+  assert.ok(GRAPH_CALL_MAX_MS + INSTAGRAM_PUBLISH_TIMEOUT_MS <= GRAPH_BUDGET_MS);
+  assert.ok(INSTAGRAM_CONTAINER_TIMEOUT_MS + INSTAGRAM_PUBLISH_TIMEOUT_MS > GRAPH_BUDGET_MS);
   assert.ok(GRAPH_CALL_MAX_MS + FACEBOOK_PHOTO_TIMEOUT_MS <= GRAPH_BUDGET_MS);
   assert.ok(GRAPH_BUDGET_MS < 10_000);
 });
@@ -415,15 +418,23 @@ test("instagram container is created once and published once", async () => {
     providerDestinationId: "67890",
   });
   const store = memoryStore([pending]);
-  const result = await advancePublishJobs({
+  const started = await advancePublishJobs({
     jobs: [pending],
     ...baseInput(store, http.http),
+  });
+  assert.equal(started[0].status, "publishing");
+  assert.equal(started[0].providerContainerId, "555");
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 0);
+  const result = await advancePublishJobs({
+    jobs: [store.jobs.get(pending.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
   });
   assert.equal(result[0].status, "published");
   assert.equal(result[0].providerPostId, "888");
   assert.equal(result[0].providerContainerId, "555");
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media")).length, 1);
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 1);
+  assert.equal(http.calls.find((call) => call.path.endsWith("/media_publish")).timeoutMs, INSTAGRAM_PUBLISH_TIMEOUT_MS);
   assertNoSecrets(result);
 });
 
@@ -488,9 +499,17 @@ test("instagram does not publish again when saving the provider result fails", a
       ? Promise.resolve({ outcome: "rejected", job: { ...store.jobs.get(id) } })
       : settle(id, patch)
   );
-  const started = await advancePublishJobs({
+  const created = await advancePublishJobs({
     jobs: [pending],
     ...baseInput(store, http.http),
+  });
+  assert.equal(created[0].status, "publishing");
+  assert.equal(created[0].providerContainerId, "555");
+  assert.equal(created[0].safeError, null);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 0);
+  const started = await advancePublishJobs({
+    jobs: [store.jobs.get(pending.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
   });
   assert.equal(started[0].status, "publishing");
   assert.equal(started[0].safeError, "publish_in_flight");
@@ -789,17 +808,24 @@ test("instagram runs first and leaves facebook pending for the next request", as
     jobs: [instagram, facebook],
     ...baseInput(store, http.http),
   });
-  assert.equal(first[0].status, "published");
-  assert.equal(first[0].providerPostId, "888");
+  assert.equal(first[0].status, "publishing");
+  assert.equal(first[0].providerContainerId, "555");
   assert.equal(first[1].status, "pending");
   assert.equal(http.calls.some((call) => call.path === "12345/photos"), false);
+  assert.equal(http.calls.some((call) => call.path === "67890/media_publish"), false);
   const second = await advancePublishJobs({
     jobs: [store.jobs.get(instagram.id), store.jobs.get(facebook.id)],
     ...baseInput(store, http.http),
   });
-  assert.equal(second[0].status, "published");
+  assert.equal(second[0].status, "publishing");
   assert.equal(second[1].status, "published");
   assert.equal(second[1].providerPostId, "12345_777");
+  const verified = await advancePublishJobs({
+    jobs: [store.jobs.get(instagram.id)],
+    ...baseInput(store, http.http, { mode: "verify" }),
+  });
+  assert.equal(verified[0].status, "published");
+  assert.equal(verified[0].providerPostId, "888");
   assert.equal(http.calls.filter((call) => call.path === "67890/media").length, 1);
   assert.equal(http.calls.filter((call) => call.path === "67890/media_publish").length, 1);
 });
@@ -865,6 +891,50 @@ test("an empty graph budget does not call facebook", async () => {
   assert.equal(http.calls.length, 0);
 });
 
+test("a short remaining budget does not call media_publish", async () => {
+  const http = recorder(async (call) => {
+    assert.equal(call.method, "GET");
+    return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+  });
+  const current = job({
+    id: "12121212-1212-4212-8212-121212121212",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+    status: "publishing",
+    attempts: 1,
+    providerContainerId: "555",
+  });
+  const deferred = await advancePublishJobs({
+    jobs: [current],
+    ...baseInput(memoryStore([current]), http.http, { mode: "verify", budget: createGraphBudget(2000) }),
+  });
+  assert.equal(deferred[0].status, "publishing");
+  assert.equal(deferred[0].safeError, null);
+  assert.equal(deferred[0].providerPostId, null);
+  assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 0);
+});
+
+test("a large numeric graph id keeps the raw digits", async () => {
+  assert.equal(graphIdFromText('{"id":18135300000000001}'), "18135300000000001");
+  const http = createMetaPublishHttp(async () => (
+    new Response('{"id":18135300000000001}', { status: 200 })
+  ));
+  const result = await http({
+    method: "POST",
+    path: "67890/media",
+    form: { image_url: IMAGE, caption: "Salut" },
+    token: USER,
+    timeoutMs: 5000,
+    appSecret: "app-secret-not-a-token",
+  });
+  assert.equal(result.ok, true);
+  if (!("body" in result) || !result.body || typeof result.body !== "object") {
+    assert.fail("body missing");
+  }
+  assert.equal(result.body.id, "18135300000000001");
+  assert.equal(JSON.stringify(result).includes(USER), false);
+});
+
 test("publish http client keeps the token in the header", async () => {
   const urls = [];
   const auths = [];
@@ -927,6 +997,7 @@ test("instagram helpers cover the container lifecycle", async () => {
     budget: createGraphBudget(),
     http: async (call) => {
       assert.equal(call.form.creation_id, "555");
+      assert.equal(call.timeoutMs, INSTAGRAM_PUBLISH_TIMEOUT_MS);
       return { ok: false, timeout: true };
     },
   });
@@ -1329,7 +1400,13 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(handlers, /call\.method !== "GET"/);
   assert.match(composer, /\/api\/integrations\/meta\/publish\/verify/);
   assert.match(composer, /window\.confirm\(VERIFY_CONFIRM\)/);
-  assert.ok(composer.indexOf("window.confirm(VERIFY_CONFIRM)") < composer.indexOf("/api/integrations/meta/publish/verify"));
+  assert.match(composer, /Un rezultat necunoscut nu este retrimis/);
+  const pollAt = composer.indexOf("async function pollInstagram");
+  const verifyAt = composer.indexOf("async function verify");
+  assert.ok(pollAt > 0 && verifyAt > pollAt);
+  assert.doesNotMatch(composer.slice(pollAt, verifyAt), /window\.confirm/);
+  const verifyBody = composer.slice(verifyAt);
+  assert.ok(verifyBody.indexOf("window.confirm(VERIFY_CONFIRM)") < verifyBody.indexOf("readVerified"));
   const releaseMigration = readFileSync(
     join(root, "supabase/migrations/20261011143000_frizeo_v2_meta_publish_release_ambiguous.sql"),
     "utf8",
@@ -1337,6 +1414,14 @@ test("publish migration and routes stay fail closed", () => {
   assert.match(releaseMigration, /status = 'released'/);
   assert.match(releaseMigration, /safe_error = 'ambiguous'/);
   assert.match(releaseMigration, /grant execute on function public\.meta_publish_release_ambiguous/);
+  const traceMigration = readFileSync(
+    join(root, "supabase/migrations/20261122114500_frizeo_v2_meta_publish_trace.sql"),
+    "utf8",
+  );
+  assert.match(traceMigration, /publish_trace/);
+  assert.match(traceMigration, /meta_publish_trace/);
+  assert.match(traceMigration, /grant execute on function public\.meta_publish_trace/);
+  assert.doesNotMatch(traceMigration, /access_token|image_url|bearer /i);
   assert.doesNotMatch(releaseMigration, /status = 'failed'/);
   assert.doesNotMatch(releaseMigration, /insert into public\.tenant_capabilities/i);
   const claimFinished = readFileSync(
@@ -1357,7 +1442,7 @@ test("publish migration and routes stay fail closed", () => {
   assert.doesNotMatch(releaseBody, /readMetaAccessToken/);
   assert.doesNotMatch(releaseBody, /createMetaPublishHttp/);
   assert.doesNotMatch(releaseBody, /graph\.facebook\.com/);
-  assert.match(composer, /if \(!payload\.jobs\.some\(openLive\)\) keyRef\.current = null/);
+  assert.match(composer, /if \(!publishedJobs\.some\(openLive\)\) keyRef\.current = null/);
   assert.match(composer, /Meta nu a confirmat rezultatul/);
   assert.match(composer, /outcomeError\(job\.destinationType, job\.safeError\)/);
   assert.match(composer, /job\.status === "pending"/);

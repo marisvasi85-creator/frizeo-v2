@@ -121,6 +121,35 @@ export async function claimFinishedPublish(
   return { outcome: "not_found" };
 }
 
+export async function tracePublishJob(
+  tenantId: string,
+  jobId: string,
+  event: {
+    stage: string;
+    outcome: string;
+    durationMs: number;
+    httpStatus: number | null;
+  },
+): Promise<void> {
+  console.info(JSON.stringify({
+    event: "meta_publish_stage",
+    jobId,
+    stage: event.stage,
+    outcome: event.outcome,
+    durationMs: event.durationMs,
+    httpStatus: event.httpStatus,
+  }));
+  const { error } = await supabaseAdmin.rpc("meta_publish_trace", {
+    p_tenant_id: tenantId,
+    p_job_id: jobId,
+    p_stage: event.stage,
+    p_outcome: event.outcome,
+    p_duration_ms: event.durationMs,
+    p_http_status: event.httpStatus,
+  });
+  if (error) console.error("meta_publish_trace_failed");
+}
+
 export async function settlePublishJob(
   tenantId: string,
   jobId: string,

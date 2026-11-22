@@ -13,6 +13,7 @@ import {
   type ProviderOutcome,
   type ProviderSafeError,
 } from "@/lib/integrations/meta/publish/outcome";
+import type { PublishStageEvent } from "@/lib/integrations/meta/publish/stage";
 
 export type PublishStatus =
   | "draft"
@@ -88,6 +89,8 @@ const LOCKED_PUBLISH = new Set([
  * Facebook and Instagram each need a 5000 ms image fetch. One 8000 ms budget
  * can run only one of those fetches. The other job stays pending and unclaimed
  * so the next request can run it, instead of aborting it as unknown.
+ * Instagram container creation and media_publish are different requests.
+ * A stored container is checked and published only from verify.
  */
 
 function imageFetchBudgetMs(job: PublishJobState): number {
@@ -113,6 +116,7 @@ export async function advancePublishJobs(input: {
   claimFinished: (jobId: string, containerId: string) => Promise<ClaimResult>;
   settle: (jobId: string, patch: SettlePatch) => Promise<SettleResult>;
   signImage: () => Promise<string | null>;
+  trace?: (jobId: string, event: PublishStageEvent) => void | Promise<void>;
   now?: Date;
 }): Promise<PublishJobState[]> {
   if (!input.liveAllowed) return input.jobs;
@@ -128,6 +132,12 @@ export async function advancePublishJobs(input: {
     next.push(await advanceOne(job));
   }
   return next;
+
+  function note(jobId: string): (event: PublishStageEvent) => void {
+    return (event) => {
+      void Promise.resolve(input.trace?.(jobId, event)).catch(() => undefined);
+    };
+  }
 
   async function advanceOne(job: PublishJobState): Promise<PublishJobState> {
     if (job.executionMode !== "live") return job;
@@ -213,7 +223,7 @@ export async function advancePublishJobs(input: {
         job,
       );
     }
-    if (job.providerContainerId) return continueInstagram(job, true);
+    if (job.providerContainerId) return job;
     const imageUrl = await signOnce();
     if (!imageUrl) {
       return settleOutcome(
@@ -237,10 +247,9 @@ export async function advancePublishJobs(input: {
       appSecret: input.appSecret,
       budget,
       http: input.http,
+      note: note(job.id),
     });
-    const stored = await settleOutcome(job.id, created, input.settle, job);
-    if (stored.status !== "publishing" || !stored.providerContainerId) return stored;
-    return continueInstagram(stored, true);
+    return settleOutcome(job.id, created, input.settle, job);
   }
 
   async function verify(job: PublishJobState): Promise<PublishJobState> {
@@ -295,6 +304,7 @@ export async function advancePublishJobs(input: {
       appSecret: input.appSecret,
       budget,
       http: input.http,
+      note: note(job.id),
     });
     if (status.kind === "no_budget" || status.kind === "timeout" || status.kind === "in_progress") {
       return job;
@@ -350,6 +360,7 @@ export async function advancePublishJobs(input: {
       appSecret: input.appSecret,
       budget,
       http: input.http,
+      note: note(job.id),
     });
     return settleOutcome(job.id, published, input.settle, claimed.job);
   }

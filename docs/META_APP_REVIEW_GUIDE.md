@@ -52,7 +52,7 @@ English line: "The same owner can publish that photo to the Instagram profession
 2. Tick only **Instagram · @frizeo.ro**. Leave Facebook unticked.
 3. Use a new image or the same new caption so the post is visibly new. Do not reuse an unknown job.
 4. Press **Publică** once. Facebook and Instagram are separate requests, so one does not cut off the other's upload time.
-5. Wait until the Instagram row says **Publicat**. If it says **În curs** and a container id is present, press **Verifică statusul** once. That reads the container. It publishes only if Meta already reports `FINISHED`, and only once.
+5. Wait until the Instagram row says **Publicat**. Frizeo first stores the container, then checks it in separate requests. It calls publish only after Meta reports `FINISHED`, and only once. If the row is still **În curs** after that wait, press **Verifică statusul** once.
 6. If it says **Rezultat necunoscut**, press **Verifică pe Instagram**. That is a read of recent media. It does not create a container and does not call `media_publish`. If Frizeo finds one matching post, press **Confirmă reconcilierea**. If it finds none, press **Deblochează pentru o încercare nouă**, confirm, and make one new manual publish.
 7. Open `https://www.instagram.com/frizeo.ro/` and show the new post.
 

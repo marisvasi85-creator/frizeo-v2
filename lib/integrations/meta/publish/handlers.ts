@@ -37,6 +37,7 @@ import {
   readPublishMediaCandidate,
   releaseAmbiguousPublishJob,
   settlePublishJob,
+  tracePublishJob,
   type InstagramLookupJob,
   type PublicPublishJob,
 } from "@/lib/integrations/meta/publish/store";
@@ -298,6 +299,7 @@ export async function publishLive(request: Request) {
     ),
     settle: (jobId, patch) => settlePublishJob(prepared.gate.actor.tenantId, jobId, patch),
     signImage: () => signMarketingImage(prepared.mediaObjectPath),
+    trace: (jobId, event) => tracePublishJob(prepared.gate.actor.tenantId, jobId, event),
   });
   const jobs = result.jobs.map((job) => {
     const state = advanced.find((item) => item.id === job.id);
@@ -351,6 +353,7 @@ export async function verifyPublish(request: Request) {
     claimFinished: (id, containerId) => claimFinishedPublish(gate.actor.tenantId, id, containerId),
     settle: (id, patch) => settlePublishJob(gate.actor.tenantId, id, patch),
     signImage: async () => null,
+    trace: (id, event) => tracePublishJob(gate.actor.tenantId, id, event),
   });
   const state = advanced[0];
   return NextResponse.json({
