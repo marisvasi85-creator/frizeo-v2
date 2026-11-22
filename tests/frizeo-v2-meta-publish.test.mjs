@@ -746,13 +746,62 @@ test("facebook success survives an instagram failure", async () => {
     destinationType: "instagram_business",
     providerDestinationId: "67890",
   });
-  const result = await advancePublishJobs({
+  const store = memoryStore([facebook, instagram]);
+  const first = await advancePublishJobs({
     jobs: [facebook, instagram],
-    ...baseInput(memoryStore([facebook, instagram]), http.http),
+    ...baseInput(store, http.http),
   });
-  assert.equal(result[0].status, "published");
-  assert.equal(result[1].status, "failed");
+  assert.equal(first[0].status, "published");
+  assert.equal(first[1].status, "pending");
+  assert.equal(first[1].attempts, 0);
+  assert.equal(http.calls.some((call) => call.path === "67890/media"), false);
+  const second = await advancePublishJobs({
+    jobs: [store.jobs.get(facebook.id), store.jobs.get(instagram.id)],
+    ...baseInput(store, http.http),
+  });
+  assert.equal(second[0].status, "published");
+  assert.equal(second[1].status, "failed");
+  assert.equal(second[1].safeError, "provider_error");
   assert.equal(http.calls.filter((call) => call.path.endsWith("/media_publish")).length, 0);
+});
+
+test("instagram runs first and leaves facebook pending for the next request", async () => {
+  const http = recorder(async (call) => {
+    if (call.path === "67890/media") return { ok: true, status: 200, body: { id: "555" } };
+    if (call.path === "555") return { ok: true, status: 200, body: { status_code: "FINISHED" } };
+    if (call.path === "67890/media_publish") return { ok: true, status: 200, body: { id: "888" } };
+    if (call.path === "12345") {
+      return { ok: true, status: 200, body: { access_token: PAGE, tasks: ["CREATE_CONTENT"] } };
+    }
+    if (call.path === "12345/photos") {
+      return { ok: true, status: 200, body: { id: "999", post_id: "12345_777" } };
+    }
+    return { ok: false, status: 500, body: null };
+  });
+  const instagram = job({
+    id: "77777777-7777-4777-8777-777777777777",
+    destinationType: "instagram_business",
+    providerDestinationId: "67890",
+  });
+  const facebook = job();
+  const store = memoryStore([instagram, facebook]);
+  const first = await advancePublishJobs({
+    jobs: [instagram, facebook],
+    ...baseInput(store, http.http),
+  });
+  assert.equal(first[0].status, "published");
+  assert.equal(first[0].providerPostId, "888");
+  assert.equal(first[1].status, "pending");
+  assert.equal(http.calls.some((call) => call.path === "12345/photos"), false);
+  const second = await advancePublishJobs({
+    jobs: [store.jobs.get(instagram.id), store.jobs.get(facebook.id)],
+    ...baseInput(store, http.http),
+  });
+  assert.equal(second[0].status, "published");
+  assert.equal(second[1].status, "published");
+  assert.equal(second[1].providerPostId, "12345_777");
+  assert.equal(http.calls.filter((call) => call.path === "67890/media").length, 1);
+  assert.equal(http.calls.filter((call) => call.path === "67890/media_publish").length, 1);
 });
 
 test("double click and refresh do not create a second facebook post", async () => {
@@ -811,8 +860,8 @@ test("an empty graph budget does not call facebook", async () => {
     jobs: [pending],
     ...baseInput(memoryStore([pending]), http.http, { budget: createGraphBudget(0) }),
   });
-  assert.equal(result[0].status, "failed");
-  assert.equal(result[0].safeError, "timeout");
+  assert.equal(result[0].status, "pending");
+  assert.equal(result[0].attempts, 0);
   assert.equal(http.calls.length, 0);
 });
 
@@ -1299,6 +1348,9 @@ test("publish migration and routes stay fail closed", () => {
   assert.doesNotMatch(releaseBody, /createMetaPublishHttp/);
   assert.doesNotMatch(releaseBody, /graph\.facebook\.com/);
   assert.match(composer, /if \(!payload\.jobs\.some\(openLive\)\) keyRef\.current = null/);
+  assert.match(composer, /Meta nu a confirmat rezultatul/);
+  assert.match(composer, /outcomeError\(job\.destinationType, job\.safeError\)/);
+  assert.match(composer, /job\.status === "pending"/);
   assert.match(composer, /Publicarea reală este oprită/);
   assert.match(composer, /invalid_parameter:/);
   assert.match(composer, /Rulează testul mock/);

@@ -86,6 +86,16 @@ const ERRORS: Record<string, string> = {
   publish_in_flight: "Publicarea a fost rezervată o singură dată. Rezultatul nu este confirmat, destinația rămâne blocată și nu se retrimite.",
 };
 
+function outcomeError(destinationType: string, code: string): string {
+  if (destinationType === "google_business_location") {
+    return googlePublishError(code, "Publicarea nu a putut fi confirmată.");
+  }
+  if (code === "ambiguous") {
+    return "Meta nu a confirmat rezultatul. Nu trimite din nou până la verificare.";
+  }
+  return ERRORS[code] ?? "Publicarea nu a putut fi confirmată.";
+}
+
 const AMBIGUOUS_WARNING = "Rezultatul rămâne necunoscut, nu este un eșec confirmat. Este posibil să existe un container Instagram anterior, iar o încercare nouă poate crea o postare în plus.";
 
 const VERIFY_CONFIRM = "Se face un singur control al containerului existent. Dacă Meta îl marchează gata, publicarea continuă o singură dată. Dacă este încă în procesare, jobul rămâne în curs.";
@@ -240,29 +250,47 @@ export default function PublishComposer({
     try {
       const path = await upload();
       if (!path) return;
-      const response = await fetch("/api/integrations/meta/publish/live", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idempotencyKey,
-          caption: withoutMarkdownBold(caption),
-          destinationIds: selectedMeta.map((destination) => destination.id),
-          mediaObjectPath: path,
-        }),
+      const requestBody = JSON.stringify({
+        idempotencyKey,
+        caption: withoutMarkdownBold(caption),
+        destinationIds: selectedMeta.map((destination) => destination.id),
+        mediaObjectPath: path,
       });
-      const payload = await response.json().catch(() => null) as {
-        error?: string;
-        jobs?: HistoryJob[];
-      } | null;
-      if (!response.ok || !payload?.jobs) {
-        setMessage(ERRORS[payload?.error ?? ""] ?? "Publicarea nu a putut fi pornită.");
-        return;
+      let payload: { error?: string; jobs?: HistoryJob[] } | null = null;
+      let continuationError: string | null = null;
+      for (let step = 0; step < selectedMeta.length; step += 1) {
+        const response = await fetch("/api/integrations/meta/publish/live", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+        const nextPayload = await response.json().catch(() => null) as {
+          error?: string;
+          jobs?: HistoryJob[];
+        } | null;
+        if (!response.ok || !nextPayload?.jobs) {
+          if (!payload?.jobs) {
+            setMessage(ERRORS[nextPayload?.error ?? ""] ?? "Publicarea nu a putut fi pornită.");
+            return;
+          }
+          continuationError = ERRORS[nextPayload?.error ?? ""] ?? "Destinația rămasă nu a putut continua.";
+          break;
+        }
+        const readyJobs = nextPayload.jobs;
+        payload = nextPayload;
+        if (!readyJobs.some((job) => job.status === "pending")) break;
       }
-      setJobs((current) => [...payload.jobs!, ...current]);
-      setOutcomes(payload.jobs!);
-      setMessage(selectedGoogle.length > 0
-        ? "Cererea Meta a fost înregistrată. Google Business nu a fost trimis: publicarea reală este oprită."
-        : "Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos.");
+      if (!payload?.jobs) return;
+      const publishedJobs = payload.jobs;
+      setJobs((current) => [
+        ...publishedJobs,
+        ...current.filter((job) => !publishedJobs.some((next) => next.id === job.id)),
+      ]);
+      setOutcomes(publishedJobs);
+      setMessage(continuationError
+        ?? (selectedGoogle.length > 0
+          ? "Cererea Meta a fost înregistrată. Google Business nu a fost trimis: publicarea reală este oprită."
+          : "Cererea a fost înregistrată. Statusul fiecărei destinații este mai jos."));
       if (!payload.jobs.some(openLive)) keyRef.current = null;
       router.refresh();
     } finally {
@@ -706,7 +734,7 @@ export default function PublishComposer({
           {outcomes.map((job) => (
             <li key={job.id} className="rounded-xl border border-frz-line p-3 text-sm text-frz-ink">
               {labelFor(job.destinationType, job.displayName)} · {STATUS_LABEL[job.status] ?? job.status}
-              {job.safeError ? ` · ${job.destinationType === "google_business_location" ? googlePublishError(job.safeError, "Publicarea nu a putut fi confirmată.") : (ERRORS[job.safeError] ?? "Publicarea nu a putut fi confirmată.")}` : ""}
+              {job.safeError ? ` · ${outcomeError(job.destinationType, job.safeError)}` : ""}
             </li>
           ))}
         </ul>

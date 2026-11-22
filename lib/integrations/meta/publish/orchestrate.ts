@@ -1,8 +1,9 @@
 import { assessStoredTokenExpiry } from "@/lib/integrations/meta/flow";
-import { createGraphBudget, type GraphBudget } from "@/lib/integrations/meta/graph";
-import { publishFacebookPhoto } from "@/lib/integrations/meta/publish/facebook";
+import { createGraphBudget, GRAPH_CALL_MAX_MS, type GraphBudget } from "@/lib/integrations/meta/graph";
+import { FACEBOOK_PHOTO_TIMEOUT_MS, publishFacebookPhoto } from "@/lib/integrations/meta/publish/facebook";
 import {
   createInstagramContainer,
+  INSTAGRAM_CONTAINER_TIMEOUT_MS,
   publishInstagramContainer,
   readInstagramStatus,
 } from "@/lib/integrations/meta/publish/instagram";
@@ -84,7 +85,19 @@ const LOCKED_PUBLISH = new Set([
  * Start mode calls Graph only for a job claimed from pending in this request.
  * A finished container is claimed once, then media_publish runs once.
  * Ambiguous, unconfirmed, and in-flight results are not sent again.
+ * Facebook and Instagram each need a 5000 ms image fetch. One 8000 ms budget
+ * can run only one of those fetches. The other job stays pending and unclaimed
+ * so the next request can run it, instead of aborting it as unknown.
  */
+
+function imageFetchBudgetMs(job: PublishJobState): number {
+  if (job.destinationType === "facebook_page") {
+    return GRAPH_CALL_MAX_MS + FACEBOOK_PHOTO_TIMEOUT_MS;
+  }
+  if (job.providerContainerId) return GRAPH_CALL_MAX_MS + GRAPH_CALL_MAX_MS;
+  return INSTAGRAM_CONTAINER_TIMEOUT_MS;
+}
+
 export async function advancePublishJobs(input: {
   jobs: PublishJobState[];
   mode: "start" | "verify";
@@ -120,6 +133,7 @@ export async function advancePublishJobs(input: {
     if (job.executionMode !== "live") return job;
     if (input.mode === "verify") return verify(job);
     if (job.status !== "pending") return job;
+    if (budget.remainingMs < imageFetchBudgetMs(job)) return job;
     const claimed = await input.claim(job.id);
     if (claimed.outcome === "not_found") return job;
     if (claimed.outcome === "held") return claimed.job;
