@@ -7,13 +7,14 @@ import { createGraphBudget, GRAPH_CALL_MAX_MS } from "@/lib/integrations/meta/gr
 import { metaRateLimit } from "@/lib/integrations/meta/http";
 import { readMetaAccessToken } from "@/lib/integrations/meta/store";
 import {
-  loadPublishFlags,
   MARKETING_PUBLISH_BUCKET,
+  metaPublishLiveEnvEnabled,
   publishHostAllowed,
   publishOriginAllowed,
   publishRequestDecision,
   type PublishAction,
 } from "@/lib/integrations/meta/publish/flags";
+import { readMetaTenantCapabilities } from "@/lib/integrations/meta/tenantAccess";
 import { createMetaPublishHttp } from "@/lib/integrations/meta/publish/graphHttp";
 import { listInstagramMedia } from "@/lib/integrations/meta/publish/instagram";
 import { fetchInstagramCdnImage, rankInstagramPosts } from "@/lib/integrations/meta/publish/instagramLookup";
@@ -57,20 +58,6 @@ function blocked(request: Request): NextResponse | null {
   return null;
 }
 
-async function capabilityEnabled(
-  tenantId: string,
-  capability: "marketing.publish.meta" | "marketing.publish.meta.live",
-): Promise<boolean> {
-  const { data, error } = await supabaseAdmin
-    .from("tenant_capabilities")
-    .select("enabled")
-    .eq("tenant_id", tenantId)
-    .eq("capability", capability)
-    .maybeSingle();
-  if (error || !data) return false;
-  return data.enabled === true;
-}
-
 async function authorize(request: Request, action: PublishAction) {
   const early = blocked(request);
   if (early) return { response: early };
@@ -82,9 +69,10 @@ async function authorize(request: Request, action: PublishAction) {
   );
   if (limited) return { response: limited };
   const tenantId = session?.tenantId ?? "";
-  const flags = tenantId
-    ? await loadPublishFlags(tenantId, capabilityEnabled)
-    : { integrationEnabled: false, liveCapabilityEnabled: false, envLiveEnabled: false };
+  const meta = tenantId
+    ? await readMetaTenantCapabilities(tenantId)
+    : { integrationEnabled: false, liveCapabilityEnabled: false };
+  const flags = { ...meta, envLiveEnabled: metaPublishLiveEnvEnabled() };
   const configured = assertMetaConfig(process.env, { production: isProduction() }).ok;
   const decision = publishRequestDecision({
     production: isProduction(),

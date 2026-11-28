@@ -4,7 +4,7 @@ import { isProduction } from "@/lib/app/environment";
 import { assertMetaConfig, type MetaReadyConfig } from "@/lib/integrations/meta/config";
 import { stagingSettingsUrl, type MetaNotice } from "@/lib/integrations/meta/flow";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { readMetaTenantCapabilities } from "@/lib/integrations/meta/tenantAccess";
 
 export function metaSettingsRedirect(notice: MetaNotice): NextResponse {
   const key = notice === "select" || notice === "saved" ? "meta" : "meta_error";
@@ -30,14 +30,8 @@ export async function metaRateLimit(
 }
 
 export async function metaCapabilityEnabled(tenantId: string): Promise<boolean> {
-  const { data, error } = await supabaseAdmin
-    .from("tenant_capabilities")
-    .select("enabled")
-    .eq("tenant_id", tenantId)
-    .eq("capability", "marketing.publish.meta")
-    .maybeSingle();
-  if (error || !data) return false;
-  return data.enabled === true;
+  const flags = await readMetaTenantCapabilities(tenantId);
+  return flags.integrationEnabled;
 }
 
 export async function loadMetaRequestContext() {

@@ -3,12 +3,15 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { isValidEmail } from "@/lib/auth/credentials";
+import { RESET_PASSWORD_SENT_MESSAGE } from "@/lib/auth/passwordReset";
 
 export default function LoginPage() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetLocked, setResetLocked] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [shake, setShake] = useState(false);
@@ -75,7 +78,13 @@ export default function LoginPage() {
     }
   }
 
+  function lockReset() {
+    setResetLocked(true);
+    window.setTimeout(() => setResetLocked(false), 60_000);
+  }
+
   async function forgotPassword() {
+    if (resetting || resetLocked) return;
     setError("");
     setSuccess("");
 
@@ -86,23 +95,39 @@ export default function LoginPage() {
       return;
     }
 
-    const res = await fetch("/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ email }),
-    });
+    setResetting(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+      });
 
-    const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok || data.error) {
+      if (res.status === 429) {
+        lockReset();
+        triggerError(
+          typeof data.error === "string"
+            ? data.error
+            : "Ai cerut deja un link. Așteaptă un minut înainte de o nouă încercare.",
+        );
+        return;
+      }
+
+      if (!res.ok || data.error) {
+        triggerError("Nu am putut trimite emailul de resetare.");
+        return;
+      }
+
+      lockReset();
+      setSuccess(RESET_PASSWORD_SENT_MESSAGE);
+    } catch {
       triggerError("Nu am putut trimite emailul de resetare.");
-      return;
+    } finally {
+      setResetting(false);
     }
-
-    setSuccess(
-      "Dacă există un cont asociat acestei adrese, am trimis un link de resetare. Verifică Inbox-ul și Spam-ul."
-    );
   }
 
   return (
@@ -150,9 +175,10 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={forgotPassword}
-              className="hover:text-frz-ink"
+              disabled={resetting || resetLocked}
+              className="hover:text-frz-ink disabled:opacity-50"
             >
-              Ai uitat parola?
+              {resetting ? "Se trimite..." : "Ai uitat parola?"}
             </button>
           </div>
 

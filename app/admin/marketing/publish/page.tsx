@@ -5,7 +5,9 @@ import PublishComposer from "@/app/admin/marketing/publish/PublishComposer";
 import { getAdminSession } from "@/lib/auth/getAdminSession";
 import { isProduction } from "@/lib/app/environment";
 import { googleBusinessLiveEnvEnabled } from "@/lib/integrations/google-business/config";
+import { resolveCapabilities } from "@/lib/integrations/capabilities";
 import { metaPublishLiveEnvEnabled } from "@/lib/integrations/meta/publish/flags";
+import { currentStagingMetaOwnerAccess } from "@/lib/integrations/meta/tenantAccess";
 import { canAdministerIntegrations } from "@/lib/integrations/permissions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -43,12 +45,13 @@ export default async function MarketingPublishPage() {
       .limit(20),
   ]);
 
-  const integrationEnabled = (capabilities ?? []).some(
-    (row) => row.capability === "marketing.publish.meta" && row.enabled === true,
-  );
-  const liveCapability = (capabilities ?? []).some(
-    (row) => row.capability === "marketing.publish.meta.live" && row.enabled === true,
-  );
+  const metaResolved = resolveCapabilities(capabilities ?? [], {
+    stagingMetaOwnerAccess: capabilities
+      ? currentStagingMetaOwnerAccess()
+      : false,
+  });
+  const integrationEnabled = metaResolved["marketing.publish.meta"];
+  const liveCapability = metaResolved["marketing.publish.meta.live"];
   const liveAvailable = integrationEnabled && liveCapability && metaPublishLiveEnvEnabled();
   const googleIntegrationEnabled = (capabilities ?? []).some(
     (row) => row.capability === "marketing.publish.google_business" && row.enabled === true,

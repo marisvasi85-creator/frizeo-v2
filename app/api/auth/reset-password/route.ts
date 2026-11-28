@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isValidEmail, normalizeEmail } from "@/lib/auth/credentials";
+import { resetPasswordFailure } from "@/lib/auth/passwordReset";
 import { getAppUrl } from "@/lib/app/getAppUrl";
 import { enforceRateLimit } from "@/lib/security/rateLimit";
 
@@ -27,11 +28,9 @@ export async function POST(req: Request) {
     }
   );
 
-  if (error) {
-    return NextResponse.json(
-      { error: "Nu am putut trimite emailul de resetare." },
-      { status: 400 }
-    );
+  const failure = resetPasswordFailure(error);
+  if (!failure.ok) {
+    return NextResponse.json({ error: failure.error }, { status: failure.status });
   }
 
   return NextResponse.json({ success: true });

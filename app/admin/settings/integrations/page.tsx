@@ -16,6 +16,7 @@ import {
   type GoogleNotice,
 } from "@/lib/integrations/google-business/flow";
 import { assertMetaConfig } from "@/lib/integrations/meta/config";
+import { currentStagingMetaOwnerAccess } from "@/lib/integrations/meta/tenantAccess";
 import {
   decideMetaConnect,
   effectiveMetaStatus,
@@ -469,7 +470,9 @@ async function loadCapabilities(tenantId: string): Promise<CapabilityMap> {
     .select("capability, enabled")
     .eq("tenant_id", tenantId);
   if (error || !data) return resolveCapabilities([]);
-  return resolveCapabilities(data);
+  return resolveCapabilities(data, {
+    stagingMetaOwnerAccess: currentStagingMetaOwnerAccess(),
+  });
 }
 
 async function loadConnections(tenantId: string): Promise<PublicConnection[]> {
